@@ -1,0 +1,88 @@
+{
+  "title": "Surrogate Gradient",
+  "intro": "A spike is a step function: the neuron emits 1 when its membrane potential crosses threshold and 0 otherwise. Its derivative is zero everywhere except at the threshold, where it is infinite, so backpropagation through a spiking network gets no useful signal. Surrogate gradient methods keep the hard spike in the forward pass but use a smooth pseudo-derivative in the backward pass. That one substitution lets deep spiking networks be trained end to end with the same tools as ordinary deep learning.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The trick"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "forward:  S[t] = Heaviside(U[t] - theta)\nbackward: dS/dU ≈ sigma'(U[t] - theta)       a smooth bump centred on threshold\n\ncommon choices (x = U - theta, beta = steepness):\nfast sigmoid (SuperSpike):  1 / (1 + beta |x|)^2\nsigmoid derivative:         beta s(x) (1 - s(x)),  s = logistic(beta x)\ntriangle / piecewise linear: max(0, 1 - beta |x|)"
+    },
+    {
+      "type": "prose",
+      "text": "The network is unrolled in time like a recurrent neural network: an LIF layer is just U[t+1] = beta_m U[t] + W x[t] - S[t] theta, with a leak factor beta_m and reset by subtraction. Gradients flow back through time (BPTT) and through layers, and at every spike nonlinearity the surrogate stands in for the true derivative. The surrogate's exact shape matters surprisingly little. Zenke and Vogels (2021) found that its scale, how much gradient passes for inputs far from threshold, matters more than its form."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "The spike and its surrogate derivatives",
+        "params": [
+          {
+            "key": "beta",
+            "label": "Steepness beta",
+            "control": "range",
+            "min": 0.5,
+            "max": 20,
+            "step": 0.5,
+            "default": 5
+          }
+        ],
+        "config": {
+          "sim": "surrogate",
+          "xLabel": "U − θ (membrane potential relative to threshold)",
+          "yLabel": "value"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Increase beta. Every surrogate narrows toward the true (spike-shaped) derivative. Gradients become more accurate near threshold but vanish for neurons far from it, so silent neurons stop learning.",
+        "Decrease beta. The surrogates widen: even neurons far below threshold receive gradient, which helps a network that starts silent, but the gradient becomes a cruder approximation of what spikes actually do.",
+        "Values of beta from about 1 to 10 (in units where the threshold distance is about 1) are typical starting points."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A minimal training loop"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# PyTorch-style sketch (snnTorch, Norse and SpikingJelly provide ready-made versions)\nclass Spike(torch.autograd.Function):\n    @staticmethod\n    def forward(ctx, x):            # x = U - theta\n        ctx.save_for_backward(x)\n        return (x > 0).float()\n    @staticmethod\n    def backward(ctx, grad):\n        (x,) = ctx.saved_tensors\n        return grad / (1 + beta * x.abs()) ** 2   # fast-sigmoid surrogate\n\nfor t in range(T):\n    U = decay * U + fc(inp[t]) - S * theta    # LIF with reset by subtraction\n    S = Spike.apply(U - theta)\n    out_spikes.append(S)\nloss = criterion(torch.stack(out_spikes).sum(0), target)   # e.g. spike-count cross-entropy\nloss.backward(); optimizer.step()"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Strengths and limits"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Accuracy. Surrogate-gradient SNNs reach near-ANN accuracy on event-camera and speech benchmarks (N-MNIST, DVS Gesture, the Spiking Heidelberg Digits) with few, sparse spikes.",
+        "Learnable time constants, delays and thresholds can be trained alongside weights.",
+        "Not local. BPTT needs the whole history stored and a backward pass through time, which neither the brain nor most neuromorphic chips can do. Online approximations such as e-prop (Bellec et al. 2020) replace BPTT with eligibility traces and a broadcast learning signal, which makes them three-factor rules that sit between surrogate gradients and reward-modulated STDP.",
+        "Spike-count losses make networks rate-code. To exploit timing, use losses on first-spike times or on membrane potentials."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: surrogate gradients are the fastest way to find out whether a column architecture can solve a task at all. Train it end to end offline, then ask whether a local rule (STDP, dendritic prediction, three-factor learning) can reach the same solution. Hawkins-style columns learn online and locally, so treat backprop-trained columns as an upper bound and a debugging tool, not the final learning mechanism."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Neftci, E. O., Mostafa, H. & Zenke, F. (2019), \"Surrogate gradient learning in spiking neural networks\", IEEE Signal Processing Magazine 36(6):51-63. Zenke, F. & Ganguli, S. (2018), \"SuperSpike: supervised learning in multilayer spiking neural networks\", Neural Computation 30:1514-1541. Zenke, F. & Vogels, T. P. (2021), \"The remarkable robustness of surrogate gradient learning for instilling complex function in spiking neural networks\", Neural Computation 33:899-925. Bellec, G. et al. (2020), \"A solution to the learning dilemma for recurrent networks of spiking neurons\", Nature Communications 11:3625. Eshraghian, J. K. et al. (2023), \"Training spiking neural networks using lessons from deep learning\", Proceedings of the IEEE 111:1016-1054."
+    }
+  ]
+}

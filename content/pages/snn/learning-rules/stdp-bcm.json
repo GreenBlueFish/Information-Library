@@ -1,0 +1,95 @@
+{
+  "title": "BCM Rule",
+  "intro": "The Bienenstock-Cooper-Munro (BCM) rule (1982) is a rate-based learning law, older than STDP, that solved a problem plain Hebbian learning cannot: stability. A synapse potentiates when the postsynaptic rate is above a threshold and depresses when it is below, and the threshold itself slides with the neuron's recent average activity. Too much activity raises the bar and too little lowers it, so learning is selective and self-stabilizing at the same time.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The rule"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "dw_i/dt = eta * x_i * phi(y, theta_M)\nphi(y, theta_M) = y (y - theta_M)              the simplest choice of phi\ntheta_M = <y^2> / y_0                          sliding modification threshold: a running average of y^2\n\nx_i: presynaptic rate, y: postsynaptic rate"
+    },
+    {
+      "type": "list",
+      "items": [
+        "If y > theta_M, active inputs potentiate (LTP). If 0 < y < theta_M, active inputs depress (LTD). Inactive inputs (x_i = 0) do not change.",
+        "Because theta_M grows faster than the mean rate (it tracks y squared), a neuron that becomes very responsive raises its own threshold until most inputs depress. A neuron that falls silent lowers it until inputs can potentiate again. This is metaplasticity: plasticity of plasticity.",
+        "Under this rule, a neuron becomes selective. It ends up responding strongly to one input pattern (or a few) and weakly to the rest, which is how BCM explains the development of orientation selectivity and ocular dominance in visual cortex."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "The sliding threshold",
+        "params": [
+          {
+            "key": "avgActivity",
+            "label": "Recent average activity <y> (Hz)",
+            "control": "range",
+            "min": 2,
+            "max": 20,
+            "step": 0.5,
+            "default": 10
+          }
+        ],
+        "config": {
+          "sim": "bcm",
+          "xLabel": "postsynaptic rate y (Hz)",
+          "yLabel": "φ(y, θ_M), weight change per unit input"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to read off the plot"
+    },
+    {
+      "type": "prose",
+      "text": "Each curve is phi(y) for a neuron with a different recent history: half, equal to and one and a half times the chosen average activity. Where a curve crosses zero is theta_M. Higher average activity moves the crossing to the right and deepens the LTD region: the same input that would have caused LTP in a quiet neuron causes LTD in an active one. Slide the average up and watch the threshold move faster than linearly, because it follows y squared."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Evidence"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Monocular deprivation. Closing one eye shifts cortical responses toward the open eye, and the effect depends on prior experience in the way a sliding threshold predicts. After dark rearing, which lowers average activity and so theta_M, potentiation is easier to induce (Kirkwood, Rioult & Bear 1996).",
+        "LTD/LTP crossover. Low-frequency stimulation (around 1 Hz) induces LTD and high-frequency (around 100 Hz) induces LTP, with a crossover frequency that shifts with prior activity, as in Dudek and Bear (1992).",
+        "Molecular basis. Changes in NMDA receptor subunit composition (NR2A vs NR2B) after altered visual experience are one proposed mechanism for the moving threshold."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "BCM and spike timing"
+    },
+    {
+      "type": "prose",
+      "text": "BCM and STDP are not rivals. Izhikevich and Desai (2003) showed that pair-based STDP with nearest-neighbor spike interactions produces BCM-like rate dependence. Pfister and Gerstner (2006) showed that the triplet STDP rule averages to a BCM rule when its triplet amplitude is made to depend on the neuron's mean rate: the sliding threshold falls out of spike-timing plasticity plus homeostasis. Clopath et al.'s voltage rule has the same two-threshold shape with voltage in place of rate. See #/snn/learning-rules/stdp-triplet and #/snn/learning-rules/stdp-voltage."
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// BCM update for one neuron (rates in Hz); call every time step\nfunction bcmStep(w, x, y, s, p) {\n  s.theta += (p.dt / p.tauTheta) * (y * y / p.y0 - s.theta);  // sliding threshold\n  for (let i = 0; i < w.length; i++) {\n    w[i] += p.eta * x[i] * y * (y - s.theta) * p.dt;\n    w[i] = Math.max(0, w[i]);\n  }\n}"
+    },
+    {
+      "type": "prose",
+      "text": "The threshold must adapt faster than the weights (tauTheta of seconds to minutes against much slower learning). Otherwise the rule oscillates."
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: BCM's sliding threshold is a template for homeostasis in your column. Whatever spike-based rule you use for feedforward feature learning, add a per-neuron threshold that tracks recent activity. It keeps every cell in a useful range and pushes different cells toward different input patterns, which is the sparse, specialized code minicolumns rely on."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Bienenstock, E. L., Cooper, L. N. & Munro, P. W. (1982), \"Theory for the development of neuron selectivity: orientation specificity and binocular interaction in visual cortex\", Journal of Neuroscience 2:32-48. Cooper, L. N., Intrator, N., Blais, B. S. & Shouval, H. Z. (2004), Theory of Cortical Plasticity, World Scientific. Kirkwood, A., Rioult, M. G. & Bear, M. F. (1996), Nature 381:526-528. Dudek, S. M. & Bear, M. F. (1992), PNAS 89:4363-4367. Izhikevich, E. M. & Desai, N. S. (2003), Neural Computation 15:1511-1523. Pfister, J.-P. & Gerstner, W. (2006), Journal of Neuroscience 26:9673-9682."
+    }
+  ]
+}
