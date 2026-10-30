@@ -8,8 +8,12 @@
 // It imports every `*.test.js` module under `tests/` (each registers its cases
 // via the harness on import), then runs them and exits non-zero on any failure
 // so a human or CI notices. New test files are picked up automatically.
+//
+// `--skip <list>` leaves out the test files named in <list> (one path relative
+// to tests/ per line; `#` starts a comment). scripts/hive-test.sh passes
+// tests/known-gaps.txt this way.
 
-import { readdirSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { run } from "./harness.js";
@@ -35,7 +39,20 @@ function collectTestFiles(dir) {
   return out;
 }
 
-const files = collectTestFiles(here).sort();
+const skipAt = process.argv.indexOf("--skip");
+const skip = new Set(
+  skipAt === -1
+    ? []
+    : readFileSync(process.argv[skipAt + 1], "utf8")
+        .split("\n")
+        .map((line) => line.replace(/#.*/, "").trim())
+        .filter(Boolean),
+);
+
+const files = collectTestFiles(here)
+  .filter((file) => !skip.has(file.slice(here.length + 1)))
+  .sort();
+for (const name of skip) console.log(`skipped (known gap): ${name}`);
 if (files.length === 0) {
   console.log("No test files found (looked for *.test.js under tests/).");
   process.exit(0);
