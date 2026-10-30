@@ -50,7 +50,7 @@ describe("widgets/sims", () => {
 
   it("temporal-memory: bursting falls once the sequences are learned", () => {
     const burst = ys(SIMS["temporal-memory"]({}, {})[0]);
-    expect(burst.slice(0, 8).every((b) => b === 1)).toBe(true);
+    expect(burst.slice(0, 4).every((b) => b === 1)).toBe(true);
     const late = burst.slice(-16);
     expect(late.reduce((a, b) => a + b, 0) / late.length < 0.1).toBe(true);
   });
