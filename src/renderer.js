@@ -239,8 +239,8 @@ export function resetNavExpansion() {
  * topics. A node with children gets a disclosure button
  * (`button.nav-tree__toggle`, `aria-expanded` + `aria-controls`) that shows or
  * hides its nested list. A list is open when the reader expanded it (kept in
- * {@link expandedNavNodes}) or when it holds the active route, so the current
- * page is always visible in the tree.
+ * {@link expandedNavNodes}) or when it holds or is the active route, so the
+ * current page is always visible in the tree along with what sits under it.
  *
  * @param {TopicNode[]} nodes The sibling nodes to render at this level.
  * @param {string[]} ancestorSlugs Slug path from the root down to (not
@@ -268,7 +268,9 @@ function buildTree(nodes, ancestorSlugs, activePath) {
     if (Array.isArray(node.children) && node.children.length > 0) {
       const key = slugPath.join("/");
       const expanded =
-        expandedNavNodes.has(key) || isAncestorPath(slugPath, activePath);
+        expandedNavNodes.has(key) ||
+        isAncestorPath(slugPath, activePath) ||
+        isActivePath(slugPath, activePath);
       const title = node.title ?? node.slug;
       const childrenId = `nav-tree-children-${slugPath.join("-")}`;
 

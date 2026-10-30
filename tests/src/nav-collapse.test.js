@@ -101,6 +101,16 @@ describe("renderNav collapsible subtopics", () => {
     expect(visible(m, "#/columns/layers")).toBe(false);
   });
 
+  it("opens the active page's own subtopics", () => {
+    resetNavExpansion();
+    const m = nav(["snn", "neuron-models"]);
+    expect(
+      toggleFor(m, "#/snn/neuron-models").getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(visible(m, "#/snn/neuron-models/lif")).toBe(true);
+    expect(visible(m, "#/columns/layers")).toBe(false);
+  });
+
   it("a click expands then collapses one node, leaving others alone", () => {
     resetNavExpansion();
     const m = nav([]);
