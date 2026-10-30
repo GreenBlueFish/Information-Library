@@ -12,6 +12,9 @@
 // `--skip <list>` leaves out the test files named in <list> (one path relative
 // to tests/ per line; `#` starts a comment). scripts/hive-test.sh passes
 // tests/known-gaps.txt this way.
+//
+// `--quiet` prints only the summary and the failures, summary first (see
+// `run` in harness.js); scripts/hive-test.sh passes it too.
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -49,6 +52,8 @@ const skip = new Set(
         .filter(Boolean),
 );
 
+const quiet = process.argv.includes("--quiet");
+
 const files = collectTestFiles(here)
   .filter((file) => !skip.has(file.slice(here.length + 1)))
   .sort();
@@ -62,7 +67,7 @@ if (files.length === 0) {
 // reported as one failing case under its name, and the rest still run.
 for (const file of files) {
   const name = file.slice(here.length + 1);
-  console.log(`\n${name}`);
+  if (!quiet) console.log(`\n${name}`);
   try {
     await import(pathToFileURL(file).href);
   } catch (err) {
@@ -74,5 +79,5 @@ for (const file of files) {
   }
 }
 
-const failures = await run();
+const failures = await run({ quiet });
 process.exit(failures > 0 ? 1 : 0);
