@@ -16,7 +16,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { run } from "./harness.js";
+import { describe, it, run } from "./harness.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -58,9 +58,20 @@ if (files.length === 0) {
   process.exit(0);
 }
 
+// A file that cannot be imported (a missing module, a throw at top level) is
+// reported as one failing case under its name, and the rest still run.
 for (const file of files) {
-  console.log(`\n${file.slice(here.length + 1)}`);
-  await import(pathToFileURL(file).href);
+  const name = file.slice(here.length + 1);
+  console.log(`\n${name}`);
+  try {
+    await import(pathToFileURL(file).href);
+  } catch (err) {
+    describe(name, () => {
+      it("imports", () => {
+        throw err;
+      });
+    });
+  }
 }
 
 const failures = await run();
