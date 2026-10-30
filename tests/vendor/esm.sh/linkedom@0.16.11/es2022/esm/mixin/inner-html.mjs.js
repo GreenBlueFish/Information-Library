@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/mixin/inner-html */
+import{ELEMENT_NODE as i,DOCUMENT_FRAGMENT_NODE as E}from"../shared/constants.mjs";import{CUSTOM_ELEMENTS as e}from"../shared/symbols.mjs";import{parseFromString as p}from"../shared/parse-from-string.mjs";import{ignoreCase as N}from"../shared/utils.mjs";var f=t=>t.childNodes.join(""),D=(t,c)=>{let{ownerDocument:o}=t,{constructor:s}=o,r=new s;r[e]=o[e];let{childNodes:m}=p(r,N(t),c);t.replaceChildren(...m.map(n,o))};function n(t){switch(t.ownerDocument=this,t.nodeType){case i:case E:t.childNodes.forEach(n,this);break}return t}export{f as getInnerHtml,D as setInnerHtml};
+//# sourceMappingURL=inner-html.mjs.map

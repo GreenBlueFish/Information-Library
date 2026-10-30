@@ -9,16 +9,13 @@
 //
 // Consistent with the no-build-step constraint and the way the property tests
 // already load fast-check, this imports linkedom — a vanilla, spec-shaped DOM
-// implementation — as an ES module directly from the jsDelivr ESM CDN:
+// implementation — as an ES module directly from the esm.sh CDN, pinned:
 //
-//     import { parseHTML } from "https://cdn.jsdelivr.net/npm/linkedom/+esm";
+//     const { parseHTML } = await import("https://esm.sh/linkedom@0.16.11");
 //
-// Node 18+ resolves HTTPS import specifiers over its global `fetch`, so
-// `node tests/run.js` picks this up with no install and no bundler. This needs
-// network access on the first run. To run fully offline, vendor linkedom's ESM
-// build locally (e.g. under `tests/vendor/`) and swap the import specifier for
-// that path — the rest of this file, and every test that uses it, stays
-// unchanged.
+// scripts/hive-test.sh loads that specifier through tests/net/hooks.js, which
+// reads the committed copy in tests/vendor/, so this runs offline with no
+// install and no bundler (see tests/README.md).
 //
 // If the host already provides a DOM (e.g. a browser, or a runtime with a
 // global `document`), that DOM is used as-is and linkedom is never imported.
@@ -64,8 +61,7 @@ export function ensureDom() {
     // resolves to a release whose transitive CSSOM dependency ships an ESM
     // bundle that fails to load under Node's network-import loader, which would
     // break every DOM-using test. esm.sh bundles the (working) transitive deps
-    // for this pinned version. To run fully offline, vendor this build under
-    // `tests/vendor/` and swap the specifier — call sites stay unchanged.
+    // for this pinned version; its copy lives in tests/vendor/esm.sh/.
     const { parseHTML } = await import("https://esm.sh/linkedom@0.16.11");
 
     // A minimal, valid document shell. The runtime's HTML lives in index.html;

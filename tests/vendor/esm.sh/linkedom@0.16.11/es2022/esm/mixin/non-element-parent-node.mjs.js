@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/mixin/non-element-parent-node */
+import{ELEMENT_NODE as l}from"../shared/constants.mjs";import{END as r,NEXT as s}from"../shared/symbols.mjs";import{nonElementAsJSON as m}from"../shared/jsdon.mjs";import{ParentNode as N}from"./parent-node.mjs";var i=class extends N{getElementById(t){let{[s]:o,[r]:n}=this;for(;o!==n;){if(o.nodeType===l&&o.id===t)return o;o=o[s]}return null}cloneNode(t){let{ownerDocument:o,constructor:n}=this,e=new n(o);if(t){let{[r]:c}=e;for(let d of this.childNodes)e.insertBefore(d.cloneNode(t),c)}return e}toString(){let{childNodes:t,localName:o}=this;return`<${o}>${t.join("")}</${o}>`}toJSON(){let t=[];return m(this,t),t}};export{i as NonElementParentNode};
+//# sourceMappingURL=non-element-parent-node.mjs.map
