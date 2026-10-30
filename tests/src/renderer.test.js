@@ -87,6 +87,31 @@ class StubElement {
   querySelectorChildren(tag) {
     return this.children.filter((c) => c.tagName === String(tag).toUpperCase());
   }
+
+  // src/home.js (installHome, run by renderPage's home view) looks up its
+  // controls with single-class selectors (".home-card", ".home-search__input")
+  // and wires listeners on them. Support exactly that: a ".class" selector
+  // matched against descendants (excluding self, as in the DOM), and a no-op
+  // addEventListener since these tests assert structure, not interaction.
+  querySelectorAll(selector) {
+    const match = /^\.([\w-]+)$/.exec(String(selector).trim());
+    if (!match) throw new Error(`StubElement: unsupported selector ${selector}`);
+    const cls = match[1];
+    /** @type {StubElement[]} */
+    const out = [];
+    const walk = (node) => {
+      for (const child of node.children) {
+        if (String(child.className).split(/\s+/).includes(cls)) out.push(child);
+        walk(child);
+      }
+    };
+    walk(this);
+    return out;
+  }
+  querySelector(selector) {
+    return this.querySelectorAll(selector)[0] || null;
+  }
+  addEventListener() {}
 }
 
 /** The document stub: only createElement is needed by the code under test. */

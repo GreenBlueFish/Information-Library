@@ -1,0 +1,8 @@
+/**
+ * Bundled by jsDelivr using Rollup v4.62.2 and esbuild v0.28.1.
+ * Original file: /npm/pure-rand@8.4.2/lib/esm/distribution/uniformInt.js
+ *
+ * Do NOT use SRI with dynamically generated files! More information: https://www.jsdelivr.com/using-sri-with-dynamic-files
+ */
+function i(t,n){const a=n>2?~~(4294967296/n)*n:4294967296;let s=t.next()+2147483648;for(;s>=a;)s=t.next()+2147483648;return s%n}function l(t,n){if(n<0){const a=-n;t.sign=-1,t.data[0]=~~(a/4294967296),t.data[1]=a>>>0}else t.sign=1,t.data[0]=~~(n/4294967296),t.data[1]=n>>>0;return t}function u(t,n,a){const s=n.data[1],e=n.data[0],f=n.sign,c=a.data[1],r=a.data[0],N=a.sign;if(t.sign=1,f===1&&N===-1){const m=s+c,b=e+r+(m>4294967295?1:0);return t.data[0]=b>>>0,t.data[1]=m>>>0,t}let h=s,w=e,A=c,I=r;f===-1&&(h=c,w=r,A=s,I=e);let g=0,d=h-A;return d<0&&(g=1,d=d>>>0),t.data[0]=w-I-g,t.data[1]=d,t}function E(t,n,a){const s=a[0]+1;for(n[0]=i(t,s),n[1]=i(t,4294967296);n[0]>=a[0]&&(n[0]!==a[0]||n[1]>=a[1]);)n[0]=i(t,s),n[1]=i(t,4294967296);return n}const F=Number.MAX_SAFE_INTEGER,M={sign:1,data:[0,0]},p={sign:1,data:[0,0]},x={sign:1,data:[0,0]},o=[0,0];function B(t,n,a,s){const e=s<=F?l(x,s):u(x,l(M,a),l(p,n));return e.data[1]===4294967295?(e.data[0]+=1,e.data[1]=0):e.data[1]+=1,E(t,o,e.data),o[0]*4294967296+o[1]+n}function L(t,n,a){const s=a-n;return s<=4294967295?i(t,s+1)+n:B(t,n,a,s)}export{L as uniformInt};
+//# sourceMappingURL=/sm/1b72fd3903ace332554c453de79e3394597d6b5a8e29c140cb4d03d174164015.map

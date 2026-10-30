@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/interface/named-node-map */
+var m=class extends Array{constructor(e){super(),this.ownerElement=e}getNamedItem(e){return this.ownerElement.getAttributeNode(e)}setNamedItem(e){this.ownerElement.setAttributeNode(e),this.unshift(e)}removeNamedItem(e){let t=this.getNamedItem(e);this.ownerElement.removeAttribute(e),this.splice(this.indexOf(t),1)}item(e){return e<this.length?this[e]:null}getNamedItemNS(e,t){return this.getNamedItem(t)}setNamedItemNS(e,t){return this.setNamedItem(t)}removeNamedItemNS(e,t){return this.removeNamedItem(t)}};export{m as NamedNodeMap};
+//# sourceMappingURL=named-node-map.mjs.map

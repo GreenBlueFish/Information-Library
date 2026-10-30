@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/mixin/non-document-type-child-node */
+import{ELEMENT_NODE as r}from"../shared/constants.mjs";import{nextSibling as t,previousSibling as i}from"../shared/node.mjs";var p=n=>{let e=t(n);for(;e&&e.nodeType!==r;)e=t(e);return e},m=n=>{let e=i(n);for(;e&&e.nodeType!==r;)e=i(e);return e};export{p as nextElementSibling,m as previousElementSibling};
+//# sourceMappingURL=non-document-type-child-node.mjs.map

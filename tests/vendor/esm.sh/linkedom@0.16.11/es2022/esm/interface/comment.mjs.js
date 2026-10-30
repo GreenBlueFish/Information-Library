@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/interface/comment */
+import{COMMENT_NODE as c}from"../shared/constants.mjs";import{VALUE as o}from"../shared/symbols.mjs";import{CharacterData as s}from"./character-data.mjs";var e=class n extends s{constructor(r,t=""){super(r,"#comment",c,t)}cloneNode(){let{ownerDocument:r,[o]:t}=this;return new n(r,t)}toString(){return`<!--${this[o]}-->`}};export{e as Comment};
+//# sourceMappingURL=comment.mjs.map

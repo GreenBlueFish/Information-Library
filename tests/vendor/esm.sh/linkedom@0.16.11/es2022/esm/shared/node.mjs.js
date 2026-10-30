@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/shared/node */
+import{CDATA_SECTION_NODE as r,COMMENT_NODE as s,DOCUMENT_NODE as E,DOCUMENT_FRAGMENT_NODE as o,TEXT_NODE as c,NODE_END as n}from"./constants.mjs";import{START as i,NEXT as T,PREV as u}from"./symbols.mjs";import{getEnd as l}from"./utils.mjs";var _=({ownerDocument:t,parentNode:e})=>{for(;e;){if(e===t)return!0;e=e.parentNode||e.host}return!1},m=({parentNode:t})=>{if(t)switch(t.nodeType){case E:case o:return null}return t},f=({[u]:t})=>{switch(t?t.nodeType:0){case n:return t[i];case c:case s:case r:return t}return null},x=t=>{let e=l(t)[T];return e&&(e.nodeType===n?null:e)};export{_ as isConnected,x as nextSibling,m as parentElement,f as previousSibling};
+//# sourceMappingURL=node.mjs.map
