@@ -1,0 +1,123 @@
+{
+  "title": "Spike Response Model",
+  "intro": "The Spike Response Model (SRM), developed by Wulfram Gerstner and colleagues in the 1990s, writes the membrane potential directly as a sum of stereotyped responses: one kernel for each input spike or input current, and one kernel for each of the neuron's own past spikes. There is no differential equation to integrate and no reset. Refractoriness and adaptation come from the shape of the after-spike kernel.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equation"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "u(t) = u_rest + sum_f eta(t - t_f) + integral_0^inf kappa(s) I(t - s) ds\n                 (own spikes)         (input current)\n\nspike when u(t) crosses the threshold theta (which may itself depend on t - t_last)\n\nwith synaptic input instead of a current:\nu(t) = u_rest + sum_f eta(t - t_f) + sum_j w_j sum_k epsilon(t - t_j^k)"
+    },
+    {
+      "type": "list",
+      "items": [
+        "eta(s) is the after-spike kernel. It usually contains a brief spike shape and then a negative tail, so right after a spike the voltage is pulled down: this is the refractory period and, if the tail is long, spike-frequency adaptation.",
+        "kappa(s) is the membrane's response to a short current pulse, a filter. epsilon(s) is the postsynaptic potential (PSP) that one presynaptic spike causes at synapse j, scaled by its synaptic weight w_j.",
+        "theta is the threshold. A dynamic threshold that jumps after each spike and relaxes back is a common, effective alternative to a long negative eta."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why it is useful"
+    },
+    {
+      "type": "list",
+      "items": [
+        "It is general. With exponential kernels, the SRM reproduces the leaky integrate-and-fire neuron exactly: eta is a reset to v_reset that decays with the membrane time constant, and kappa is an exponential filter. Other kernels approximate richer models. Kistler, Gerstner and van Hemmen (1997) showed that a well-fitted SRM predicts most spike times of a Hodgkin-Huxley neuron.",
+        "It is fittable. Because u(t) is linear in the kernels, they can be estimated from recordings by regression. The generalized linear models (GLMs) used to fit real neurons are SRMs with escape noise, a firing probability that rises with u - theta, instead of a hard threshold.",
+        "It is analytical. The voltage between spikes is a closed-form expression, which makes the SRM the model of choice for theory: population activity equations, information transmission, and the first learning-rule analyses of temporal coding.",
+        "It is event-driven. In a simulation, you only need to evaluate u(t) at candidate threshold crossings, and each input spike just adds a kernel."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "SRM0 in a few lines"
+    },
+    {
+      "type": "prose",
+      "text": "The widget uses the simplest version, SRM0. The kernels depend only on the time since each event, input current is filtered through a 10 ms membrane kernel, and every past spike adds eta(s) = -eta0 exp(-s / tau_eta)."
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// SRM0 with an exponential membrane filter and an exponential after-spike kernel\nfunction srmStep(state, I, t, dt, p) {\n  state.h += (dt / p.tau) * (-state.h + p.R * I);      // kappa * I as a running filter\n  let u = p.uRest + state.h;\n  for (const tf of state.spikes) u -= p.eta0 * Math.exp(-(t - tf) / p.tauEta);\n  if (u >= p.theta) state.spikes.push(t);               // no reset: eta does the work\n  return u;\n}"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "SRM0: refractoriness from a kernel",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current (nA)",
+            "control": "range",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "default": 2.5
+          },
+          {
+            "key": "eta0",
+            "label": "After-spike kernel depth eta0 (mV)",
+            "control": "range",
+            "min": 0,
+            "max": 40,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "tauEta",
+            "label": "Kernel time constant tau_eta (ms)",
+            "control": "range",
+            "min": 2,
+            "max": 100,
+            "step": 1,
+            "default": 15
+          }
+        ],
+        "config": {
+          "sim": "srm",
+          "xLabel": "time (ms)",
+          "yLabel": "u (mV)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Set eta0 to 0. Nothing pulls the voltage down after a spike, so it stays above threshold and fires at the maximum rate the simulation allows. The kernel is the only thing that makes a spike have consequences.",
+        "Increase tau_eta to 60-100 ms. Each spike's kernel overlaps the next, the intervals lengthen over the step and the firing adapts: the same mechanism, at a longer time scale, as the adaptation current in AdEx.",
+        "Lower the current toward 1.5 nA. The filtered input approaches threshold slowly and the neuron fires once or not at all."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Relation to other models"
+    },
+    {
+      "type": "prose",
+      "text": "LIF and SRM are two views of the same thing: one integrates a differential equation and resets, the other sums kernels. The SRM's kernels can be read off any linear(ized) model, and a model with escape noise links it to the stochastic integrate-and-fire family and to GLMs. Its limit is that kernels are fixed: an SRM cannot change its response with the state of the neuron the way a nonlinear model can, for example bursting only when depolarized."
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: the SRM is a natural fit for timing-based designs. James E. Smith's temporal neural networks use exactly this kind of neuron, a sum of response kernels with a threshold where the first spike time carries the information. It is also the model under most STDP theory, so if you analyze why a learning rule in your column converges, you will likely reason in SRM terms even when you simulate LIF neurons."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014), Neuronal Dynamics, Cambridge University Press, chapters 6 and 9. Gerstner, W. (1995), \"Time structure of the activity in neural network models\", Physical Review E 51:738-758. Kistler, W. M., Gerstner, W. & van Hemmen, J. L. (1997), \"Reduction of the Hodgkin-Huxley equations to a single-variable threshold model\", Neural Computation 9:1015-1045. Pillow, J. W. et al. (2008), \"Spatio-temporal correlations and visual signalling in a complete neuronal population\", Nature 454:995-999."
+    }
+  ]
+}

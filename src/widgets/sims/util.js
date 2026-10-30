@@ -40,11 +40,23 @@ export function gauss(rand) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rand());
 }
 
-/** A PlotSeries from parallel arrays, keeping at most `max` points. */
+/**
+ * A PlotSeries from parallel arrays, keeping about `max` points. Long runs are
+ * decimated by keeping each chunk's lowest and highest sample in time order,
+ * so a one-sample spike peak is never dropped.
+ */
 export function series(label, xs, ys, max = 1500) {
-  const stride = Math.max(1, Math.ceil(xs.length / max));
+  const chunk = Math.ceil(xs.length / Math.max(1, Math.floor(max / 2)));
+  if (chunk <= 1) return { label, points: xs.map((x, i) => ({ x, y: ys[i] })) };
   const points = [];
-  for (let i = 0; i < xs.length; i += stride) points.push({ x: xs[i], y: ys[i] });
+  for (let start = 0; start < xs.length; start += chunk) {
+    let lo = start, hi = start;
+    for (let i = start; i < Math.min(start + chunk, xs.length); i++) {
+      if (ys[i] < ys[lo]) lo = i;
+      if (ys[i] > ys[hi]) hi = i;
+    }
+    for (const i of lo <= hi ? [lo, hi] : [hi, lo]) points.push({ x: xs[i], y: ys[i] });
+  }
   return { label, points };
 }
 

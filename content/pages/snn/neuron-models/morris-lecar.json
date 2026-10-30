@@ -1,0 +1,131 @@
+{
+  "title": "Morris-Lecar Model",
+  "intro": "Morris and Lecar built this model in 1981 to describe the barnacle giant muscle fiber, whose spikes are carried by calcium rather than sodium. With two variables and real conductances, it sits between the biophysical detail of Hodgkin-Huxley and the pure geometry of FitzHugh-Nagumo, and it is the standard example of how one model can be excitable in two different ways.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equations"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "C dV/dt = I - gL (V - VL) - gCa m_inf(V) (V - VCa) - gK w (V - VK)\ndw/dt   = phi (w_inf(V) - w) / tau_w(V)\n\nm_inf(V) = 0.5 (1 + tanh((V - V1) / V2))      fast calcium activation (instantaneous)\nw_inf(V) = 0.5 (1 + tanh((V - V3) / V4))      potassium activation, steady state\ntau_w(V) = 1 / cosh((V - V3) / (2 V4))"
+    },
+    {
+      "type": "prose",
+      "text": "V is the membrane potential (mV) and w is the fraction of open potassium channels. Calcium activation is assumed to be so fast that it is set to its steady state m_inf(V), which is what removes a variable compared with Hodgkin-Huxley. There is no inactivation variable. The spike rises because inward calcium current regenerates itself, and it falls because the slower potassium current w catches up."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Parameters and what they do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "gCa, gK, gL: maximal conductances of the calcium, potassium and leak currents (mS/cm²). The ratio of gCa to gK decides whether depolarization can run away into a spike.",
+        "VCa, VK, VL: reversal potentials. A spike heads toward VCa (about +120 mV) and recovery heads toward VK (about -84 mV).",
+        "V1, V2: the half-activation and slope of calcium activation. V3, V4: the same for potassium. Moving V3 changes the class of excitability (below).",
+        "phi: a temperature-like factor that scales how fast w moves. A small phi gives slow recovery and long spikes. A large phi lets w follow V closely, which can stop spiking altogether.",
+        "I: the applied current (µA/cm²)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The widget uses the Rinzel-Ermentrout \"Hopf\" parameter set: C = 20, gL = 2, gCa = 4.4, gK = 8, VL = -60, VCa = 120, VK = -84, V1 = -1.2, V2 = 18, V3 = 2, V4 = 30, phi = 0.04."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two kinds of excitability"
+    },
+    {
+      "type": "prose",
+      "text": "Hodgkin (1948) noticed that some axons start firing at an arbitrarily low rate as current increases (class 1), while others jump straight to a nonzero rate (class 2). Morris-Lecar produces both from the same equations:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "With the parameters above, the resting state loses stability through a Hopf bifurcation. Firing begins at a finite frequency, near I ≈ 90 in this simulation, and just below onset the neuron shows damped subthreshold oscillations. This is class 2 behavior: a resonator.",
+        "With V3 = 12 and V4 = 17.4 (with gCa = 4 and phi = 1/15), rest disappears through a saddle-node on invariant circle (SNIC) bifurcation. The rate starts from zero and the neuron is an integrator: class 1. The phase plane shows why. The w-nullcline crosses the cubic-shaped V-nullcline three times, and the middle crossing is a saddle whose stable manifold acts as a true threshold."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The same distinction appears in the Izhikevich model (a and b set resonator or integrator) and matters for networks. Integrators fire at a rate set by input strength, while resonators prefer inputs that arrive at their own frequency."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Morris-Lecar neuron",
+        "params": [
+          {
+            "key": "current",
+            "label": "Applied current I (µA/cm²)",
+            "control": "range",
+            "min": 0,
+            "max": 300,
+            "step": 5,
+            "default": 100
+          },
+          {
+            "key": "phi",
+            "label": "Recovery rate phi",
+            "control": "range",
+            "min": 0.01,
+            "max": 0.2,
+            "step": 0.01,
+            "default": 0.04
+          },
+          {
+            "key": "view",
+            "label": "View",
+            "control": "select",
+            "options": [
+              "time",
+              "phase plane"
+            ],
+            "default": "time"
+          }
+        ],
+        "config": {
+          "sim": "morris-lecar",
+          "xLabel": "time (ms), or V (mV) in the phase plane",
+          "yLabel": "V (mV); w × 100"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step I from 60 to 100. Around 85-90 the response changes from a single transient spike to sustained oscillation, and the frequency at onset is not near zero: this is the Hopf onset.",
+        "Push I to 250. The neuron stops firing and sits depolarized: depolarization block, the upper Hopf bifurcation.",
+        "Switch to the phase plane. The trajectory is a closed loop (a limit cycle) around the unstable fixed point where the nullclines cross. Raise phi and the loop shrinks until spiking stops."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When to use it"
+    },
+    {
+      "type": "prose",
+      "text": "Use Morris-Lecar when you want real conductances and reversal potentials but still want to see everything in a plane, for example to teach bifurcations, to study how a parameter change turns an integrator into a resonator, or as a small conductance-based unit in a network where Hodgkin-Huxley would be too slow. For large networks, LIF or Izhikevich are far cheaper."
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: most cortical pyramidal cells behave as class 1 integrators and many fast-spiking interneurons as class 2 resonators. If your column's inhibitory population needs to produce gamma-band rhythms, a resonator-like interneuron model helps. Morris-Lecar is a good way to understand that choice before you encode it in a cheaper Izhikevich or AdEx unit."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Morris, C. & Lecar, H. (1981), \"Voltage oscillations in the barnacle giant muscle fiber\", Biophysical Journal 35:193-213. Rinzel, J. & Ermentrout, G. B. (1998), \"Analysis of neural excitability and oscillations\", in Koch & Segev (eds.), Methods in Neuronal Modeling, MIT Press. Izhikevich, E. M. (2007), Dynamical Systems in Neuroscience, MIT Press. Hodgkin, A. L. (1948), J. Physiol. 107:165-181."
+    }
+  ]
+}
