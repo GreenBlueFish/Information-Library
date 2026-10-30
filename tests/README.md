@@ -16,7 +16,9 @@ node tests/run.js
 
 `tests/run.js` discovers every `*.test.js` file under `tests/` (recursively),
 imports each one (which registers its cases via `tests/harness.js`), runs them,
-prints a pass/fail summary, and exits non-zero if anything failed.
+prints a pass/fail summary, and exits non-zero if anything failed. A file that
+cannot be imported (a missing module, an error at top level) counts as one
+failing `imports` case under its name; the other files still run.
 
 > No install, no package manager, no framework. If `node` is not available,
 > any runtime with the standard web globals (e.g. Deno via
