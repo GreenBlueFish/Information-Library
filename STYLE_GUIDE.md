@@ -360,6 +360,12 @@ left border in `--color-callout-border`, `--radius-sm`, padded `--space-4`/`--sp
   Hover: `--color-surface-alt` background. Active route (`aria-current="page"`):
   `--color-accent-subtle` fill, `--color-accent-hover` text, semibold, and a
   `--border-width-thick` accent left edge.
+- Each node sits in a `.nav-tree__row` (flex). A node with subtopics leads with a
+  `button.nav-tree__toggle` (`--space-6` square, no border, accent ▶ that turns
+  to ▼ when `aria-expanded="true"`; hover `--color-surface-alt`). Subtopics start
+  collapsed (`hidden`), so the nav opens on the top-level topics only; the active
+  route's ancestors open on their own, and what the reader opens stays open across
+  route changes. Leaf links indent by the toggle's width so titles line up.
 
 ### Breadcrumbs (`ol.breadcrumb`)
 
