@@ -308,16 +308,6 @@ function buildAxisLabels(area, bounds) {
   return g;
 }
 
-/**
- * Build one series as an SVG `<path>` polyline tagged with its `.plot-series--N`
- * class so the stroke/fill color comes from the matching token. Returns null
- * for an empty series (nothing to stroke).
- * @param {Array<{x:number,y:number}>} points
- * @param {(x:number,y:number)=>{x:number,y:number}} project
- * @param {number} colorIndex 1-based series color index.
- * @param {string} label
- * @returns {SVGPathElement | null}
- */
 /** Optional axis titles (e.g. "time (ms)"), in the same class as tick labels. */
 function buildAxisTitles(area, axes) {
   const { xLabel, yLabel } = axes ?? {};
@@ -339,6 +329,16 @@ function buildAxisTitles(area, axes) {
   return g;
 }
 
+/**
+ * Build one series as an SVG `<path>` polyline tagged with its `.plot-series--N`
+ * class so the stroke/fill color comes from the matching token. Returns null
+ * for an empty series (nothing to stroke).
+ * @param {Array<{x:number,y:number}>} points
+ * @param {(x:number,y:number)=>{x:number,y:number}} project
+ * @param {number} colorIndex 1-based series color index.
+ * @param {string} label
+ * @returns {SVGPathElement | null}
+ */
 function buildSeriesPath(points, project, colorIndex, label) {
   if (points.length === 0) return null;
   const path = document.createElementNS(SVG_NS, "path");
