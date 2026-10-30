@@ -1,0 +1,120 @@
+{
+  "title": "Neural Manifolds",
+  "intro": "Record a few hundred neurons while an animal does something simple and the activity looks high-dimensional: hundreds of rates, each fluctuating. But it is not spread evenly through that space. It lies on or near a low-dimensional surface, a neural manifold, whose shape mirrors the variable being represented. Head direction traces a ring, position in a room a torus or sheet, a reach a few smooth trajectories. The manifold view treats the population, not the single neuron, as the unit of computation.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a manifold is"
+    },
+    {
+      "type": "prose",
+      "text": "Treat each moment's firing as a point in N-dimensional space, one axis per neuron. Over time the points trace out a cloud. If the population encodes a d-dimensional variable with d much smaller than N, the cloud concentrates near a d-dimensional manifold. Its dimension is set by the task or behavior, not by how many neurons you recorded."
+    },
+    {
+      "type": "prose",
+      "text": "Clear examples:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Head-direction cells. In the mouse anterodorsal thalamus, population activity lies on a ring, and the position on the ring tracks the head direction. It stays a ring even during sleep, when there is no sensory input (Chaudhuri et al. 2019).",
+        "Grid cells. The joint activity of a grid-cell module lies on a torus, as predicted by continuous attractor models (Gardner et al. 2022). See #/neuroscience/cortical-columns/reference-frames.",
+        "Motor cortex. Reaching movements are produced by a few latent dynamical modes. Gallego, Perich, Miller and Solla (2017) argued that the manifold, not individual neurons, is what stays stable across days and tasks."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Tools: PCA and factor analysis for linear manifolds; Isomap, UMAP and persistent homology for curved ones; latent dynamical models (GPFA, LFADS) when time matters."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Continuous attractors: where manifolds come from"
+    },
+    {
+      "type": "prose",
+      "text": "A continuous attractor network is a recurrent circuit whose connectivity gives it a continuum of stable states. In a ring attractor, neurons are arranged by preferred angle, nearby neurons excite each other and distant ones inhibit each other. Any localized bump of activity sustains itself and can sit anywhere on the ring. The set of bump positions is the manifold. Input moves the bump, and in the absence of input it stays where it was: working memory for a continuous variable (Amari 1977; Zhang 1996; Samsonovich & McNaughton 1997). The fruit fly's ellipsoid body contains a literal ring of neurons whose bump tracks heading (Seelig & Jayaraman 2015; Kim et al. 2017)."
+    },
+    {
+      "type": "prose",
+      "text": "The widget simulates 64 rate neurons on a ring with connectivity J0 + J1 cos(Δθ). A cue centered at the chosen angle is applied for 100 ms and then removed. The plot shows the activity profile across the ring during the cue and 300 ms after it ends."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Ring attractor: a bump that remembers",
+        "params": [
+          {
+            "key": "excitation",
+            "label": "Local excitation J1",
+            "control": "range",
+            "min": 0,
+            "max": 12,
+            "step": 0.5,
+            "default": 6
+          },
+          {
+            "key": "inhibition",
+            "label": "Uniform inhibition J0",
+            "control": "range",
+            "min": -6,
+            "max": 0,
+            "step": 0.5,
+            "default": -2
+          },
+          {
+            "key": "cue",
+            "label": "Cue position (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 359,
+            "step": 1,
+            "default": 180
+          }
+        ],
+        "config": {
+          "sim": "ring-attractor",
+          "xLabel": "preferred direction of each neuron (degrees)",
+          "yLabel": "firing rate (normalized)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "At J1 = 6, the bump persists after the cue is gone, centered where the cue was. The network is holding a continuous value with no input.",
+        "Lower J1 to 0-3. The bump decays away (or nearly so) once the cue is removed: no attractor, no memory.",
+        "Raise J1 to 10. The persistent bump is taller, nearly as strong as during the cue.",
+        "Move the cue. The bump moves with it, and every position is equally stable. That is the continuum of states, the manifold."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How do circuits get their manifolds? Synchronization and embedding"
+    },
+    {
+      "type": "prose",
+      "text": "One line of recent theory asks how the geometry of the world ends up as the geometry of neural activity. It draws on generalized synchronization from dynamical systems (Rulkov et al. 1995; Abarbanel et al. 1996): when a contracting recurrent circuit, one whose own dynamics forget initial conditions, is driven by a structured input, its state locks onto the driver and becomes a function of recent input history. Under conditions formalized by embedding theorems (in the spirit of Takens' delay embedding), that function is a topological embedding. The low-dimensional manifold of the sensory world is copied, with its shape intact, into the circuit's high-dimensional state space. Reservoir computing exploits the same property."
+    },
+    {
+      "type": "prose",
+      "text": "The proposal continues: while the input drives this transient embedding, Hebbian plasticity strengthens connections between co-active neurons, gradually writing the embedded manifold into the recurrent connectivity. What began as a synchronization-based copy crystallizes into a continuous attractor that persists without input. This would explain why manifolds match the topology of the variables they encode. In this framing, the free energy principle (Friston 2010), which holds that the cortex performs inference by minimizing variational free energy, says that the cortex infers but not why its representations take these particular low-dimensional shapes. The synchronization account aims to fill that gap. Treat the account as a research hypothesis: its pieces (generalized synchronization, Hebbian formation of attractors) are established, but their combination as the origin of cortical manifolds is not."
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: the Thousand Brains Theory needs columns to represent locations in reference frames, which are low-dimensional manifolds (grid-cell tori) inside high-dimensional activity. Two practical lessons follow. To build a location layer, a ring or toroidal attractor driven by movement (path integration) is the standard mechanism; start with the ring above and add velocity input that shifts the bump. And to check whether your spiking column has learned a reference frame, record its population, reduce dimensionality, and look at the shape: a ring or torus means it has."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Chaudhuri, R., Gerçek, B., Pandey, B., Peyrache, A. & Fiete, I. (2019), \"The intrinsic attractor manifold and population dynamics of a canonical cognitive circuit across waking and sleep\", Nature Neuroscience 22:1512-1520. Gallego, J. A., Perich, M. G., Miller, L. E. & Solla, S. A. (2017), \"Neural manifolds for the control of movement\", Neuron 94:978-984. Gardner, R. J. et al. (2022), \"Toroidal topology of population activity in grid cells\", Nature 602:123-128. Zhang, K. (1996), Journal of Neuroscience 16:2112-2126. Samsonovich, A. & McNaughton, B. L. (1997), Journal of Neuroscience 17:5900-5920. Seelig, J. D. & Jayaraman, V. (2015), Nature 521:186-191. Rulkov, N. F., Sushchik, M. M., Tsimring, L. S. & Abarbanel, H. D. I. (1995), \"Generalized synchronization of chaos in directionally coupled chaotic systems\", Physical Review E 51:980-994. Friston, K. (2010), \"The free-energy principle: a unified brain theory?\", Nature Reviews Neuroscience 11:127-138."
+    }
+  ]
+}

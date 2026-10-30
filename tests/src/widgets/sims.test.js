@@ -81,3 +81,12 @@ describe("widgets/sims", () => {
     expect(mse < 0.01).toBe(true);
   });
 });
+
+describe("widgets/sims (mushroom body)", () => {
+  it("mushroom-body: an identical odor gives an identical KC code, and similar odors are separated", () => {
+    const [kc] = SIMS["mushroom-body"]({}, {});
+    expect(kc.points.at(-1).y).toBe(1);
+    const mid = kc.points.find((p) => p.x >= 0.5 && p.x < 0.9);
+    expect(mid.y < mid.x).toBe(true);
+  });
+});

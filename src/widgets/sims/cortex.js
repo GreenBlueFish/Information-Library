@@ -198,8 +198,10 @@ export function mushroomBody(config, state) {
   const rand = rng(num(state, config, "seed", 2));
   const P = 50, K = 2000, activePN = 15;
   const conn = Array.from({ length: K }, () => sample(rand, P, k));
+  // a fixed tiny per-cell offset breaks ties the same way for every odor
+  const jitter = conn.map(() => rand() * 1e-3);
   const kcCode = (pn) => {
-    const drive = conn.map((ins) => ins.reduce((s, i) => s + pn[i], 0) + rand() * 1e-3);
+    const drive = conn.map((ins, c) => ins.reduce((s, i) => s + pn[i], 0) + jitter[c]);
     const sorted = [...drive].sort((a, b) => b - a);
     const cut = sorted[Math.max(0, Math.round(sparsity * K) - 1)];
     return drive.map((d) => (d >= cut ? 1 : 0));

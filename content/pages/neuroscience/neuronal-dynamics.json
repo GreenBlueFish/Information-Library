@@ -1,0 +1,170 @@
+{
+  "title": "Neuronal Dynamics",
+  "intro": "Neuron models are dynamical systems, and the most useful thing you can learn about them is how to read their dynamics: where they rest, how they leave rest, and what happens when many of them act together. This page covers two tools from the theory of neuronal dynamics, phase-plane analysis for single neurons and population activity for groups, which together connect single spikes to decisions and memory.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Phase-plane analysis"
+    },
+    {
+      "type": "prose",
+      "text": "Most spiking models have one fast variable (voltage) and one or more slow ones (recovery, adaptation). Reduce a model to two variables, as FitzHugh-Nagumo, Morris-Lecar, Izhikevich and AdEx already are, and every state is a point in a plane. Then:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Nullclines are the curves where one variable stops changing. For a neuron, the voltage nullcline is usually N-shaped (cubic) and the recovery nullcline is a rising curve.",
+        "Fixed points are where nullclines cross: a resting state, if it is stable.",
+        "Excitability is geometric. A small kick from rest returns quickly. A kick past the middle branch of the N-shaped nullcline sends the trajectory on a long excursion around it: a spike. Firing is all-or-nothing because the excursion's size is set by the geometry, not by the size of the kick.",
+        "Thresholds are separatrices. The threshold is a curve in the plane (the stable manifold of a saddle in class 1 neurons, or a \"quasi-threshold\" in class 2), not a fixed voltage.",
+        "Bifurcations explain onset of firing. As input current rises, the fixed point either collides with a saddle and vanishes (saddle-node, class 1: firing starts at zero frequency) or loses stability in a Hopf bifurcation (class 2: firing starts at a finite frequency, with subthreshold oscillations). See #/snn/neuron-models/morris-lecar."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "FitzHugh-Nagumo phase plane",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current I",
+            "control": "range",
+            "min": 0,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "epsilon",
+            "label": "Time-scale ratio epsilon",
+            "control": "range",
+            "min": 0.01,
+            "max": 0.5,
+            "step": 0.01,
+            "default": 0.08
+          },
+          {
+            "key": "view",
+            "label": "View",
+            "control": "select",
+            "options": [
+              "phase plane",
+              "time"
+            ],
+            "default": "phase plane"
+          }
+        ],
+        "config": {
+          "sim": "fhn",
+          "xLabel": "v (fast, voltage-like)",
+          "yLabel": "w (slow recovery)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "At I = 0.5 the nullclines cross on the middle branch, the fixed point is unstable, and the trajectory settles on a closed loop: repetitive spiking as a limit cycle.",
+        "Lower I to 0.2. The crossing moves to the left branch, the fixed point becomes stable: after one excursion from its starting point, the trajectory spirals into rest, an excitable but quiet neuron.",
+        "Raise I to 1.5. The crossing moves to the right branch and the neuron is stuck depolarized: depolarization block.",
+        "Raise epsilon toward 0.5. With less separation of time scales, the loop loses its sharp relaxation corners and becomes a smoother oscillation."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Population activity"
+    },
+    {
+      "type": "prose",
+      "text": "A cortical column contains tens of thousands of neurons. Tracking every spike is possible in simulation but hard to reason about. Population activity A(t) is the fraction of neurons in a population that fire in a short window, divided by the window length: an instantaneous population rate in Hz."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "A(t) = (1 / N) * (number of spikes in [t, t + dt]) / dt"
+    },
+    {
+      "type": "prose",
+      "text": "Under the right conditions, a population of spiking neurons behaves like a single rate unit:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Wilson-Cowan and other rate models describe A(t) with a first-order equation, tau dA/dt = -A + F(input), which is the basis of most models of decisions, working memory and attractor networks.",
+        "That reduction is exact only in limits. With enough noise and independent neurons (the asynchronous state), A(t) follows input smoothly. Without noise, neurons that receive the same input synchronize and A(t) rings with large oscillations. Integral equations and mean-field theories (Gerstner 2000; Brunel 2000) describe the general case, including how fast a population can respond: with escape noise, faster than its membrane time constant.",
+        "Brunel (2000) mapped the states of sparse networks of excitatory and inhibitory LIF neurons: synchronous regular, asynchronous irregular, and oscillatory regimes, depending on the balance of excitation and inhibition and on the external drive. Cortex in vivo looks asynchronous and irregular."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Population activity of noisy LIF neurons after a step input at 50 ms",
+        "params": [
+          {
+            "key": "neurons",
+            "label": "Neurons N",
+            "control": "range",
+            "min": 20,
+            "max": 500,
+            "step": 10,
+            "default": 200
+          },
+          {
+            "key": "current",
+            "label": "Step current (nA)",
+            "control": "range",
+            "min": 0.5,
+            "max": 4,
+            "step": 0.1,
+            "default": 1.8
+          },
+          {
+            "key": "noise",
+            "label": "Noise sigma (mV per √ms)",
+            "control": "range",
+            "min": 0,
+            "max": 6,
+            "step": 0.25,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "population",
+          "xLabel": "time (ms)",
+          "yLabel": "A(t) (Hz)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Set noise to 0. Every neuron receives the same input and fires in lockstep after the step: A(t) is a row of huge spikes separated by silence, the synchronous regime.",
+        "Raise noise to 2-5. The neurons desynchronize and A(t) settles to a steady rate after a brief transient. This smooth A(t) is what a rate model describes.",
+        "Lower N to 20. A(t) gets noisy: finite-size fluctuations, which real columns with thousands of neurons largely average out.",
+        "With noise, lower the current below rheobase (about 1.5 nA). The population still fires, at a low rate, because fluctuations cross threshold: noise makes the population input-output curve smooth."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: you will usually simulate spikes but reason in population terms. Decide early which regime you want. Most column models aim for the asynchronous-irregular state with balanced excitation and inhibition, because it responds fast and its activity is easy to read out. Use the population activity of each layer as your first diagnostic: if A(t) rings or explodes, fix the E/I balance before touching learning rules."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014), Neuronal Dynamics: From Single Neurons to Networks and Models of Cognition, Cambridge University Press, chapters 4, 12-14. Izhikevich, E. M. (2007), Dynamical Systems in Neuroscience, MIT Press. Wilson, H. R. & Cowan, J. D. (1972), Biophysical Journal 12:1-24. Brunel, N. (2000), \"Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons\", Journal of Computational Neuroscience 8:183-208. Gerstner, W. (2000), \"Population dynamics of spiking neurons: fast transients, asynchronous states, and locking\", Neural Computation 12:43-89."
+    }
+  ]
+}
