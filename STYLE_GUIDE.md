@@ -254,7 +254,8 @@ body
 │     │     └── .home-grid   responsive grid of .home-card topic cards
 │     └── .page             a resolved topic page
 │           ├── .page-title / .page-intro
-│           └── .block …     ordered content blocks
+│           ├── .block …     ordered content blocks
+│           └── nav.page-pager  previous / next topic arrows
 └── footer.site-footer      shared footer
 ```
 
@@ -309,6 +310,15 @@ breadcrumb is placed in the `main` grid area so it reads above the body content.
 - `.page-intro` — optional lead paragraph: muted, `--font-size-h4`, body
   line-height, capped at `--measure`, `--space-6` bottom margin.
 - Body is an ordered column of `.block` elements separated by `--space-5`.
+- `nav.page-pager` — previous/next arrows closing every topic page, linking to
+  the topics either side of it in the sidebar's order (depth-first, a topic
+  before its subtopics). A wrapping flex row, `--space-4` gaps, `--space-7` top
+  margin over a `--color-border` top rule. Each `.page-pager__link`
+  (`--prev` / `--next`) is a bordered `--radius-md` card at least
+  `--control-min-target` tall: an accent `.page-pager__arrow` (← or →,
+  `aria-hidden`), a small muted `.page-pager__label` ("Previous"/"Next") and the
+  semibold `.page-pager__title`. "Next" sits right-aligned with its arrow
+  trailing, even when it is alone. Hover: accent border, `--color-surface-alt`.
 
 ---
 

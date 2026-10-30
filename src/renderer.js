@@ -613,7 +613,85 @@ function renderTopicPage(resolution, pageContent) {
     renderBlock(block, page);
   }
 
+  const pager = buildPager(resolution.tree, resolution.path);
+  if (pager) page.appendChild(pager);
+
   return page;
+}
+
+/**
+ * The topics just before and after `activePath` when the tree is read in the
+ * sidebar's order (depth-first, each node before its subtopics), so stepping
+ * "next" from a topic walks into its first subtopic, then on through the tree.
+ *
+ * @param {TopicNode} tree The root topic tree.
+ * @param {string[]} activePath Slug segments of the current page.
+ * @returns {{prev: {node: TopicNode, path: string[]}|null,
+ *   next: {node: TopicNode, path: string[]}|null}}
+ */
+export function pageNeighbours(tree, activePath) {
+  /** @type {{node: TopicNode, path: string[]}[]} */
+  const order = [];
+  const walk = (nodes, ancestors) => {
+    if (!Array.isArray(nodes)) return;
+    for (const node of nodes) {
+      if (!node || typeof node.slug !== "string") continue;
+      const path = ancestors.concat(node.slug);
+      order.push({ node, path });
+      walk(node.children, path);
+    }
+  };
+  walk(tree && tree.children, []);
+
+  const i = order.findIndex((entry) => isActivePath(entry.path, activePath));
+  if (i === -1) return { prev: null, next: null };
+  return { prev: order[i - 1] ?? null, next: order[i + 1] ?? null };
+}
+
+/**
+ * Build the previous/next arrows at the foot of a topic page
+ * (`nav.page-pager`), or `null` when there is no tree or the page has no
+ * neighbour on either side. The first page gets only "next", the last only
+ * "previous".
+ *
+ * @param {TopicNode|undefined} tree The root topic tree (`resolution.tree`).
+ * @param {string[]} activePath Slug segments of the current page.
+ * @returns {HTMLElement|null}
+ */
+function buildPager(tree, activePath) {
+  if (!tree || !Array.isArray(activePath)) return null;
+  const { prev, next } = pageNeighbours(tree, activePath);
+  if (!prev && !next) return null;
+
+  const pager = el("nav", "page-pager");
+  pager.setAttribute("aria-label", "Previous and next pages");
+  if (prev) pager.appendChild(pagerLink(prev, "prev"));
+  if (next) pager.appendChild(pagerLink(next, "next"));
+  return pager;
+}
+
+/**
+ * One pager link: an arrow, a small "Previous"/"Next" label, and the
+ * neighbouring topic's title.
+ *
+ * @param {{node: TopicNode, path: string[]}} entry The neighbouring topic.
+ * @param {"prev"|"next"} direction Which side of the pager it sits on.
+ * @returns {HTMLElement}
+ */
+function pagerLink(entry, direction) {
+  const link = el("a", `page-pager__link page-pager__link--${direction}`);
+  link.setAttribute("href", hrefForPath(entry.path));
+  link.setAttribute("rel", direction);
+  const arrow = el("span", "page-pager__arrow", direction === "prev" ? "←" : "→");
+  arrow.setAttribute("aria-hidden", "true");
+  const label = el(
+    "span",
+    "page-pager__label",
+    direction === "prev" ? "Previous" : "Next",
+  );
+  const title = el("span", "page-pager__title", entry.node.title ?? entry.node.slug);
+  link.append(arrow, label, title);
+  return link;
 }
 
 // ===========================================================================
