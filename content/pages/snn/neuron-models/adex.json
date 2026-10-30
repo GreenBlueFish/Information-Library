@@ -1,0 +1,153 @@
+{
+  "title": "Adaptive Exponential Integrate-and-Fire",
+  "intro": "The adaptive exponential integrate-and-fire (AdEx) neuron adds one slow adaptation current to the exponential integrate-and-fire neuron. With two variables and about nine parameters it reproduces most firing patterns of cortical neurons and predicts spike times of real cells well.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equations"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "C dV/dt   = -g_L (V - E_L) + g_L Delta_T exp((V - V_T) / Delta_T) - w + I\ntau_w dw/dt = a (V - E_L) - w\n\nif V >= V_peak:   V <- V_r;   w <- w + b"
+    },
+    {
+      "type": "prose",
+      "text": "The first line is the EIF (#/snn/neuron-models/eif) with an extra outward current w. The second line makes w a slow variable with two ways to grow. Subthreshold adaptation, a: w tracks the voltage, like a slow potassium conductance that opens with depolarization. Spike-triggered adaptation, b: every spike adds a fixed jump to w, like calcium-activated potassium currents. Because w subtracts from the input, a neuron that has been firing becomes harder to drive."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Parameters"
+    },
+    {
+      "type": "list",
+      "items": [
+        "C, g_L, E_L, V_T, Delta_T: the EIF membrane (Brette-Gerstner values: 281 pF, 30 nS, -70.6 mV, -50.4 mV, 2 mV).",
+        "a (nS): subthreshold coupling. Positive a gives adaptation and, together with tau_w, can make the neuron resonate; negative a can produce bistability and rebound firing.",
+        "b (pA): spike-triggered jump. Large b gives strong spike-frequency adaptation; b = 0 removes it.",
+        "tau_w (ms): how long adaptation lasts, typically 30-300 ms. It sets how quickly the rate settles after a step.",
+        "V_r: reset. A reset close to threshold, combined with adaptation, produces bursting: the neuron fires a few quick spikes until w builds up, then pauses."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Firing patterns"
+    },
+    {
+      "type": "prose",
+      "text": "Naud, Marcille, Clopath and Gerstner (2008) mapped the AdEx parameter space and found these patterns, matching electrophysiology classifications:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Tonic spiking: little adaptation (small a and b).",
+        "Adapting: large b; the interspike interval lengthens to a steady value. This is typical of regular-spiking pyramidal cells.",
+        "Initial burst: reset high and moderate b; a few rapid spikes, then regular firing.",
+        "Regular bursting: high reset with large b and long tau_w.",
+        "Delayed spiking and transient spiking: negative a or strong subthreshold adaptation.",
+        "Irregular firing: near the boundary between patterns, chaotic spike trains appear even without noise."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "AdEx neuron: adaptation and bursting",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current (pA)",
+            "control": "range",
+            "min": 0,
+            "max": 1500,
+            "step": 25,
+            "default": 800
+          },
+          {
+            "key": "a",
+            "label": "Subthreshold adaptation a (nS)",
+            "control": "range",
+            "min": -10,
+            "max": 40,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "b",
+            "label": "Spike-triggered adaptation b (pA)",
+            "control": "range",
+            "min": 0,
+            "max": 300,
+            "step": 5,
+            "default": 80.5
+          },
+          {
+            "key": "tauW",
+            "label": "Adaptation time constant tau_w (ms)",
+            "control": "range",
+            "min": 10,
+            "max": 500,
+            "step": 10,
+            "default": 144
+          },
+          {
+            "key": "reset",
+            "label": "Reset potential V_r (mV)",
+            "control": "range",
+            "min": -75,
+            "max": -45,
+            "step": 0.5,
+            "default": -70.6
+          }
+        ],
+        "config": {
+          "sim": "adex",
+          "xLabel": "time (ms)",
+          "yLabel": "V (mV) and w/10 (pA)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The defaults are Brette and Gerstner's values; the second series is w divided by 10 so it fits the same axis. Watch the interspike intervals grow as w climbs to a plateau. Set b to 0 and a to 0 to recover the EIF. Raise the reset to about -48 mV with b around 100 pA to get bursts. Raise tau_w to stretch out the adaptation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulating it"
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "function adexStep(n, I, dt, p) {\n  // p = { C: 281, gL: 30, EL: -70.6, VT: -50.4, dT: 2, a: 4, b: 80.5, tauW: 144, Vr: -70.6, Vpeak: 20 }\n  const exp = p.gL * p.dT * Math.exp(Math.min((n.v - p.VT) / p.dT, 30));\n  const dv = (-p.gL * (n.v - p.EL) + exp - n.w + I) / p.C;\n  const dw = (p.a * (n.v - p.EL) - n.w) / p.tauW;\n  n.v += dt * dv;  n.w += dt * dw;\n  if (n.v >= p.Vpeak) { n.v = p.Vr; n.w += p.b; return true; }\n  return false;\n}"
+    },
+    {
+      "type": "prose",
+      "text": "Use a step of 0.05-0.1 ms. The exponent is clipped so the upstroke cannot overflow before the peak check catches it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why it matters"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Predictive: adaptive integrate-and-fire models fitted to cortical neurons predict a large fraction of their spike times under fluctuating current (see the Jolivet et al. benchmark below).",
+        "Hardware: AdEx is implemented in analog circuits on the BrainScaleS neuromorphic system.",
+        "Theory: with a = 0 the subthreshold dynamics stay one-dimensional, so many LIF results carry over."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: AdEx is a strong default for excitatory cells once a LIF prototype works. Adaptation does real computational work in a column. It stops one minicolumn from winning forever, gives a form of short-term memory over the tau_w window, and supports slow, sequence-driven dynamics (#/neuroscience/cortical-columns/temporal-memory). Use adapting parameters for layer 2/3 and layer 4 pyramidal cells, bursting parameters for layer 5, and a = b = 0 for fast-spiking interneurons."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Brette & Gerstner, \"Adaptive exponential integrate-and-fire model as an effective description of neuronal activity\" (Journal of Neurophysiology, 94, 2005); Naud, Marcille, Clopath & Gerstner, \"Firing patterns in the adaptive exponential integrate-and-fire model\" (Biological Cybernetics, 2008); Jolivet et al., \"A benchmark test for a quantitative assessment of simple neuron models\" (Journal of Neuroscience Methods, 2008); Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (Cambridge University Press, 2014), chapter 6."
+    }
+  ]
+}

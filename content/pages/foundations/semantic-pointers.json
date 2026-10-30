@@ -1,0 +1,127 @@
+{
+  "title": "Semantic Pointers",
+  "intro": "A semantic pointer is a high-dimensional vector that stands for a concept. The Semantic Pointer Architecture (SPA) combines such vectors with binding and bundling, so that structured, symbol-like representations such as 'a red square left of a blue circle' can live in, and be manipulated by, populations of spiking neurons.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "Neural networks are good at similarity and bad at structure. 'Dog chases cat' and 'cat chases dog' contain the same words. A bag-of-features code cannot tell them apart, yet any model of language, planning or object recognition must. Vector Symbolic Architectures (VSAs) solve this with a small algebra on high-dimensional vectors: one operation superposes items into a set, another binds items into role-filler pairs. The Semantic Pointer Architecture is Eliasmith's VSA, built so that every operation can be compiled into spiking neurons with the Neural Engineering Framework."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Vectors as symbols"
+    },
+    {
+      "type": "prose",
+      "text": "Give each concept a random unit vector in D dimensions, with D typically between 64 and 512. In high dimensions, random vectors are almost orthogonal: the cosine similarity between two of them has a mean of 0 and a standard deviation of about 1/√D. So many concepts can coexist with little accidental similarity. A semantic pointer is called a pointer because it is compressed. It does not contain all of a concept's sensory and motor detail, but the network that produced it can 'dereference' it, decompressing it back toward that detail, much like a pointer in a programming language."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bundling: superposition"
+    },
+    {
+      "type": "prose",
+      "text": "Bundling is vector addition, usually followed by normalisation: S = A + B + C. The result is similar to each of its parts, so S represents the set {A, B, C}, and a dot product tests membership. Bundling has a finite capacity. As more items are added, each one's share of the sum shrinks while the crosstalk from the others grows, until members can no longer be told from non-members."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Binding: circular convolution"
+    },
+    {
+      "type": "prose",
+      "text": "Binding combines two vectors into a third that is dissimilar to both, while keeping enough information to recover either one given the other. The SPA uses circular convolution, taken from Plate's Holographic Reduced Representations: (A ⊛ B)_j = Σ_k A_k B_(j−k mod D). It is computed efficiently as an element-wise product in the Fourier domain. That is also how it is built in neurons: a fixed linear transform into Fourier coefficients, pairwise products computed by small NEF ensembles, then a transform back. To unbind, convolve with the approximate inverse A' (the involution: keep A_0 and reverse the remaining elements). Then (A ⊛ B) ⊛ A' ≈ B."
+    },
+    {
+      "type": "prose",
+      "text": "A structured sentence is then a bundle of bindings: DOG_CHASES_CAT = AGENT ⊛ DOG + VERB ⊛ CHASE + THEME ⊛ CAT. Asking 'who is the agent?' is the operation DOG_CHASES_CAT ⊛ AGENT', which returns a noisy vector closest to DOG."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Unbinding from a bundle of role ⊛ filler pairs",
+        "params": [
+          {
+            "key": "pairs",
+            "label": "Bound pairs in the bundle",
+            "control": "range",
+            "min": 1,
+            "max": 12,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "range",
+            "min": 1,
+            "max": 20,
+            "step": 1,
+            "default": 4
+          }
+        ],
+        "config": {
+          "sim": "spa-binding",
+          "xLabel": "vector dimension D",
+          "yLabel": "cosine similarity"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The widget builds one memory vector holding several role ⊛ filler pairs, unbinds the first role, and compares the result with the correct filler and with the most similar wrong vocabulary item, at dimensions from 16 to 512. Things to try: with a single pair, the right answer stands out even at low D. Raise the pairs to 8 or 12 and the similarity to the correct filler falls, roughly as 1/√pairs, so the right answer reliably beats the best wrong one only at high dimension. That margin is all a clean-up memory has to work with."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Clean-up memory"
+    },
+    {
+      "type": "prose",
+      "text": "Unbinding never returns the exact filler, only a noisy approximation. A clean-up memory maps that noisy vector to the nearest clean vocabulary item. In neurons it is an associative memory. There is one small population per vocabulary item, each with a high firing threshold, so only items whose dot product with the input is large enough become active, and a readout of those items' clean vectors follows. Without clean-up, noise accumulates over multi-step manipulations. With it, a chain of unbinding steps stays usable."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spatial Semantic Pointers"
+    },
+    {
+      "type": "prose",
+      "text": "Ordinary semantic pointers are discrete symbols. Spatial Semantic Pointers (SSPs) extend them to continuous values. Choose a unitary base vector X, one whose Fourier coefficients all have magnitude 1, and represent a position x by X^x. This fractional binding power is computed in the Fourier domain by raising each coefficient to the power x. Powers add under binding, X^a ⊛ X^b = X^(a+b), so shifting a whole represented scene is a single binding. In 2-D, S(x, y) = X^x ⊛ Y^y, and an object is placed in a map as OBJECT ⊛ S. As a function of position, the similarity between SSPs forms a periodic interference pattern. With base vectors whose frequencies are arranged hexagonally, neurons that represent SSPs show grid-cell-like firing fields."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spaun"
+    },
+    {
+      "type": "prose",
+      "text": "Spaun (Semantic Pointer Architecture Unified Network) is the flagship demonstration: about 2.5 million spiking neurons that see 28×28-pixel images and answer by controlling a simulated arm. With the same structure throughout, it performs eight tasks: digit recognition, copy-drawing, reinforcement learning on a bandit task, serial working memory, counting, question answering about remembered lists, rapid variable creation and Raven's-style fluid induction. Its components map onto brain areas, and a basal ganglia–thalamus loop selects actions by routing semantic pointers between cortical modules."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import nengo_spa as spa\n\nD = 64\nwith spa.Network() as model:\n    vocab = spa.Vocabulary(D)\n    vocab.populate(\"AGENT; VERB; THEME; DOG; CAT; CHASE\")\n    sentence = spa.State(vocab)\n    query = spa.State(vocab)\n    answer = spa.State(vocab)\n\n    (spa.sym.AGENT * spa.sym.DOG\n     + spa.sym.VERB * spa.sym.CHASE\n     + spa.sym.THEME * spa.sym.CAT) >> sentence\n    spa.sym.AGENT >> query\n    sentence * ~query >> answer   # unbind; answer should be closest to DOG"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "For a cortical column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The Thousand Brains Theory describes an object as a set of features at locations. In SPA terms, an object is OBJ = Σ_k LOC_k ⊛ FEAT_k, a bundle of bindings, and with SSPs the locations can be continuous.",
+        "Sensing a feature at a location and asking 'which object has this?' becomes a similarity test against stored object vectors, a clean-up memory over objects. Columns voting resembles summing several columns' noisy evidence before the clean-up.",
+        "Moving the sensor by Δ is binding the location with X^Δ: path integration as algebra rather than as a grid-cell attractor network.",
+        "Capacity is the catch: the widget shows how many pairs a D-dimensional vector holds before clean-up fails, which bounds how many features one object vector can carry."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Plate (1995), 'Holographic reduced representations', IEEE Transactions on Neural Networks 6(3); Plate (2003), Holographic Reduced Representation: Distributed Representation for Cognitive Structures, CSLI Publications; Gayler (2003), 'Vector Symbolic Architectures answer Jackendoff's challenges for cognitive neuroscience', ICCS/ASCS; Eliasmith (2013), How to Build a Brain, Oxford University Press; Eliasmith et al. (2012), 'A large-scale model of the functioning brain', Science 338; Komer, Stewart, Voelker & Eliasmith (2019), 'A neural representation of continuous space using fractional binding', CogSci."
+    }
+  ]
+}

@@ -1,0 +1,154 @@
+{
+  "title": "Hodgkin-Huxley Model",
+  "intro": "Hodgkin and Huxley's 1952 model of the squid giant axon explains the action potential from first principles: voltage-gated sodium and potassium conductances whose opening and closing follow measured kinetics. It is the biophysical benchmark every simpler model is compared against.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The membrane as a circuit"
+    },
+    {
+      "type": "prose",
+      "text": "The membrane is a capacitor C_m in parallel with three conductance branches, each with its own reversal (Nernst) potential: sodium, potassium and a leak. The current through a branch is its conductance times the driving force (V - E_ion). What makes the model special is that the sodium and potassium conductances are not constant: they depend on voltage and time through gating variables."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "C_m dV/dt = I - g_Na m^3 h (V - E_Na) - g_K n^4 (V - E_K) - g_L (V - E_L)\n\ndx/dt = alpha_x(V) (1 - x) - beta_x(V) x        for x in {m, h, n}\n\n(modern convention, rest near -65 mV)\ng_Na = 120, g_K = 36, g_L = 0.3  mS/cm^2\nE_Na = 50, E_K = -77, E_L = -54.4  mV;   C_m = 1 uF/cm^2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The three gates"
+    },
+    {
+      "type": "list",
+      "items": [
+        "m, sodium activation (fast, about 0.1-0.5 ms): opens with depolarization. Three m particles must be open at once, hence m^3.",
+        "h, sodium inactivation (slower, about 1-10 ms): closes with depolarization, shutting the sodium channel shortly after it opens.",
+        "n, potassium activation (slow, about 1-10 ms): opens with depolarization; four particles, hence n^4."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Each gate relaxes toward a voltage-dependent steady state x_inf(V) = alpha / (alpha + beta) with time constant tau_x(V) = 1 / (alpha + beta). Hodgkin and Huxley fitted the rate functions alpha and beta to voltage-clamp recordings."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How a spike happens"
+    },
+    {
+      "type": "list",
+      "items": [
+        "1. Depolarization opens m quickly; sodium rushes in, depolarizing further. This positive feedback is the upstroke.",
+        "2. V approaches E_Na (about +40 mV at the peak).",
+        "3. Slower h closes, inactivating sodium, while slower n opens potassium; potassium flows out, repolarizing the membrane.",
+        "4. n stays open for a while and h stays closed: V undershoots below rest (after-hyperpolarization) and the neuron is refractory until h recovers and n closes."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The threshold is not a parameter. It emerges from the competition between fast sodium activation and the slower restoring currents, so it depends on how fast the input arrives. The refractory period also emerges, from sodium inactivation and lingering potassium activation."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Hodgkin-Huxley neuron",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current (uA/cm^2)",
+            "control": "range",
+            "min": 0,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          },
+          {
+            "key": "gNa",
+            "label": "Max sodium conductance g_Na (mS/cm^2)",
+            "control": "range",
+            "min": 0,
+            "max": 200,
+            "step": 5,
+            "default": 120
+          },
+          {
+            "key": "gK",
+            "label": "Max potassium conductance g_K (mS/cm^2)",
+            "control": "range",
+            "min": 0,
+            "max": 80,
+            "step": 2,
+            "default": 36
+          },
+          {
+            "key": "view",
+            "label": "Show",
+            "control": "select",
+            "options": [
+              "voltage",
+              "gates"
+            ],
+            "default": "voltage"
+          }
+        ],
+        "config": {
+          "sim": "hh",
+          "xLabel": "time (ms)",
+          "yLabel": "V (mV) or gate x 100"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The step runs from 10 ms to 90 ms. At 10 uA/cm^2 the neuron fires repetitively. Lower the current: below about 6-7 uA/cm^2 a sustained step gives only one or two onset spikes, and below about 3 none at all, and repetitive firing begins abruptly at a nonzero rate (type II excitability, via a Hopf bifurcation). Switch to \"gates\" to watch m jump, h fall and n rise during each spike. Reduce g_Na and the spike fails, which is how local anesthetics and tetrodotoxin work."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulating it"
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "const lin = (x, k) => (Math.abs(x) < 1e-7 ? k : x / (1 - Math.exp(-x / k)));\nconst an = v => 0.01 * lin(v + 55, 10), bn = v => 0.125 * Math.exp(-(v + 65) / 80);\nconst am = v => 0.1 * lin(v + 40, 10),  bm = v => 4 * Math.exp(-(v + 65) / 18);\nconst ah = v => 0.07 * Math.exp(-(v + 65) / 20), bh = v => 1 / (1 + Math.exp(-(v + 35) / 10));\n\nfunction hhStep(s, I, dt) {   // s = { v, m, h, n }, dt about 0.01 ms\n  const iNa = 120 * s.m ** 3 * s.h * (s.v - 50);\n  const iK = 36 * s.n ** 4 * (s.v + 77);\n  const iL = 0.3 * (s.v + 54.387);\n  s.v += dt * (I - iNa - iK - iL);\n  s.m += dt * (am(s.v) * (1 - s.m) - bm(s.v) * s.m);\n  s.h += dt * (ah(s.v) * (1 - s.h) - bh(s.v) * s.h);\n  s.n += dt * (an(s.v) * (1 - s.n) - bn(s.v) * s.n);\n}"
+    },
+    {
+      "type": "prose",
+      "text": "The rates have removable singularities (0/0 at V = -55 and -40 mV), handled here by the lin helper. The fast m gate needs a small step (0.01-0.025 ms with Euler), or an exponential integrator."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reductions"
+    },
+    {
+      "type": "prose",
+      "text": "Most of the HH model's behavior survives two observations: m is so fast it can be set to m_inf(V), and h and n move roughly together (h is about 0.89 - 1.1 n). That leaves two variables, a fast voltage and a slow recovery variable. FitzHugh-Nagumo (#/snn/neuron-models/fhn) and Morris-Lecar (#/snn/neuron-models/morris-lecar) are models of this reduced kind, and they can be drawn in a phase plane (#/neuroscience/neuronal-dynamics)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When to use it"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Questions about channels, pharmacology, temperature, spike shape or axonal propagation.",
+        "As a ground truth to validate a simplified model.",
+        "Rarely for large networks: four stiff variables per neuron cost about 10-100 times more than a LIF, and cortical neurons have many more channel types than the squid axon anyway."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: you will probably not build the column from HH neurons, but its lessons matter. Excitability, refractoriness and adaptation are all products of channel dynamics, and the simplified models you do use (LIF, AdEx, Izhikevich) are summaries of this one. Use HH to sanity-check what a simplified neuron is leaving out."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Hodgkin & Huxley, \"A quantitative description of membrane current and its application to conduction and excitation in nerve\" (Journal of Physiology, 117, 1952); Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (Cambridge University Press, 2014), chapter 2; Dayan & Abbott, Theoretical Neuroscience (MIT Press, 2001), chapter 5."
+    }
+  ]
+}

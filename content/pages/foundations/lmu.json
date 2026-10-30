@@ -1,0 +1,113 @@
+{
+  "title": "Legendre Memory Unit",
+  "intro": "The Legendre Memory Unit (LMU) is a recurrent cell built around the Legendre Delay Network (LDN), a small linear system whose state is the best finite-dimensional summary of a sliding window of its input's history. Pair that fixed memory with a learned nonlinear layer and you get a recurrent network that holds information across thousands of time steps.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "Anything that predicts sequences needs a memory of the recent past. In a cortical column this is the job of temporal context. In machine learning it is the job of the LSTM's gated cell state. Both are learned, fragile and hard to analyse. The LMU starts from a different question: what is the optimal way for a d-dimensional continuous-time linear system to remember the last θ seconds of a signal? The answer can be derived in closed form, and it turns out to be a projection of the input's history onto Legendre polynomials."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The ideal delay and its approximation"
+    },
+    {
+      "type": "prose",
+      "text": "A pure delay, y(t) = u(t − θ), would be the perfect memory: from it you could read any moment in the window. Its transfer function e^(−θs) is infinite-dimensional and cannot be built from a finite set of neurons or state variables. The LDN approximates it with the [d−1/d] Padé approximant, the best rational approximation of order d around s = 0. Rewritten in a convenient basis, it is the linear system"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "θ dm/dt = A m(t) + B u(t)\n\nA_ij = (2i + 1) · { −1           if i < j\n                  { (−1)^(i−j+1)  if i ≥ j\nB_i  = (2i + 1) · (−1)^i            for i, j = 0 … d−1"
+    },
+    {
+      "type": "prose",
+      "text": "The state m(t) has a striking meaning. It holds the coefficients of the input's last θ seconds, expanded in shifted Legendre polynomials P̃_i. To read the input as it was θ' seconds ago, for any 0 ≤ θ' ≤ θ, take a weighted sum: u(t − θ') ≈ Σ_i P̃_i(θ'/θ) m_i(t). At θ' = θ every P̃_i equals 1, so the full delay is just the sum of the state. One fixed system therefore gives a whole continuum of delays and, by linear readouts, any linear functional of the window, such as averages, derivatives or filtered versions."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Legendre delay network: reconstructing u(t − θ)",
+        "params": [
+          {
+            "key": "order",
+            "label": "Order d (state dimensions)",
+            "control": "range",
+            "min": 1,
+            "max": 16,
+            "step": 1,
+            "default": 6
+          },
+          {
+            "key": "theta",
+            "label": "Window θ (s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 1.0,
+            "step": 0.1,
+            "default": 0.5
+          }
+        ],
+        "config": {
+          "sim": "ldn",
+          "xLabel": "time (s)",
+          "yLabel": "signal"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The input is a mix of 1 Hz and 2.3 Hz sinusoids. The widget integrates the LDN with fourth-order Runge-Kutta and plots the decoded delay against the true delayed input. Things to try: at order 1 the 'memory' is just a low-pass filter and the reconstruction is badly wrong. By order 4 to 6 it is close. Lengthen θ at a fixed order and accuracy falls, because the same d coefficients now have to cover more of the signal. Order relative to θ times signal bandwidth is what matters: roughly, d must grow with the number of oscillations the window has to hold."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From LDN to LMU"
+    },
+    {
+      "type": "prose",
+      "text": "The LMU cell wraps the LDN in a learned network. At each step a hidden state h and the input x are linearly combined into a scalar (or small vector) u that is written into the memory. The LDN updates m, discretised exactly with zero-order hold so that A and B become fixed matrices Ā and B̄. A nonlinear layer then reads h from x, h and m:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "u_t = e_x·x_t + e_h·h_(t−1) + e_m·m_(t−1)\nm_t = Ā m_(t−1) + B̄ u_t            # fixed, not trained\nh_t = tanh(W_x x_t + W_h h_(t−1) + W_m m_t)"
+    },
+    {
+      "type": "prose",
+      "text": "Only the encoders e and the weights W are learned. Ā and B̄ are fixed by θ and d. Because the memory part is linear and well-conditioned, gradients pass through it without vanishing, and the memory's span is set by θ rather than having to be discovered by training. In the 2019 paper the LMU solved permuted sequential MNIST at 97.2% and handled delay tasks over 100,000 time steps, where LSTMs fail. Because the memory part is linear, the whole recurrence over a sequence can also be computed in parallel as a convolution, which later work used to train LMUs as fast as feed-forward networks."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "In spiking neurons"
+    },
+    {
+      "type": "prose",
+      "text": "The LDN was first derived as a spiking network. Using the dynamics principle of the Neural Engineering Framework, a population representing the d-dimensional m with a recurrent connection τA/θ + I implements the delay, and the 'delay network' paper analyses how spiking noise and synaptic filtering limit accuracy. Implemented this way, a few hundred LIF neurons can hold a fraction of a second of a time-varying signal. The same paper relates the network's heterogeneous temporal responses to 'time cells' recorded in rodent hippocampus and cortex."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import nengo\nimport numpy as np\n\nd, theta = 6, 0.5\ni = np.arange(d)[:, None]; j = np.arange(d)[None, :]\nA = (2 * i + 1) * np.where(i < j, -1, (-1.0) ** (i - j + 1)) / theta\nB = ((2 * np.arange(d) + 1) * (-1.0) ** np.arange(d))[:, None] / theta\n\ntau = 0.1\nwith nengo.Network() as model:\n    u = nengo.Node(lambda t: np.sin(2 * np.pi * t))\n    mem = nengo.Ensemble(n_neurons=600, dimensions=d)\n    nengo.Connection(u, mem, transform=tau * B, synapse=tau)\n    nengo.Connection(mem, mem, transform=tau * A + np.eye(d), synapse=tau)\n    delayed = nengo.Node(size_in=1)\n    nengo.Connection(mem, delayed, transform=np.ones((1, d)))  # u(t - theta)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why it matters for a cortical column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A column that predicts the next sensation from a movement needs the recent sequence of sensations and movements. An LDN is a principled, compact store for it, with a known capacity (d) and window (θ).",
+        "HTM's temporal memory represents context through which cell in a minicolumn fires. The LDN represents it as continuous coefficients. Comparing the two on the same sequence task is a cheap, informative experiment.",
+        "The Legendre coefficients behave like a bank of time cells. Feeding them to a layer that learns associations, for example by NEF transformations learned with PES, gives a column a ready-made 'what happened just before' input."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Voelker, Kajić & Eliasmith (2019), 'Legendre Memory Units: continuous-time representation in recurrent neural networks', NeurIPS 32; Voelker & Eliasmith (2018), 'Improving spiking dynamical networks: accurate delays, higher-order synapses, and time cells', Neural Computation 30(3); Chilkuri & Eliasmith (2021), 'Parallelizing Legendre Memory Unit training', ICML; Eliasmith & Anderson (2003), Neural Engineering, MIT Press."
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "title": "Anti-STDP",
+  "intro": "Flip the STDP window and causal pairings weaken the synapse. That sounds self-defeating, but it is how a circuit learns to cancel the parts of its input it can already predict.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The rule"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Δw = −A₊ · exp(−Δt / τ₊)     if Δt > 0   (pre before post: depression)\nΔw = +A₋ · exp( Δt / τ₋)     if Δt < 0   (post before pre: potentiation)\nΔt = t_post − t_pre"
+    },
+    {
+      "type": "prose",
+      "text": "Anti-STDP, also called anti-Hebbian STDP, is the mirror image of the classical window. It was first characterised by Bell, Han, Sugawara and Grant at synapses from parallel fibres onto Purkinje-like cells in the electrosensory lobe of the mormyrid electric fish: a parallel-fibre input that arrives shortly before the postsynaptic broad spike is depressed. Anti-Hebbian timing rules have since been reported at other synapses, including corticostriatal synapses."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Anti-STDP window",
+        "params": [
+          {
+            "key": "aPlus",
+            "label": "A₊ (amplitude for pre→post)",
+            "control": "range",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "aMinus",
+            "label": "A₋ (amplitude for post→pre)",
+            "control": "range",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "default": 1.05
+          },
+          {
+            "key": "tauPlus",
+            "label": "τ₊ (ms)",
+            "control": "range",
+            "min": 5,
+            "max": 60,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "tauMinus",
+            "label": "τ₋ (ms)",
+            "control": "range",
+            "min": 5,
+            "max": 60,
+            "step": 1,
+            "default": 20
+          }
+        ],
+        "config": {
+          "sim": "stdp-window",
+          "xLabel": "Δt = t_post − t_pre (ms)",
+          "yLabel": "Δw (a.u.)",
+          "variant": "anti"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The anti-STDP curve is drawn with the classical window for reference: same shape, opposite sign."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What it computes: subtracting a prediction"
+    },
+    {
+      "type": "prose",
+      "text": "The electric fish emits an electric discharge and senses the field around it. Its own discharge produces a large, predictable signal at the receptors, which would swamp the small signals from prey. A corollary discharge (a copy of the motor command) reaches the electrosensory lobe through parallel fibres at fixed delays. Anti-Hebbian plasticity weakens whichever delayed inputs coincide with the cell being driven and strengthens those that precede silence. Over minutes the cell learns a negative image of the expected self-generated signal and adds it to the input, so only the unexpected part remains."
+    },
+    {
+      "type": "list",
+      "items": [
+        "A Hebbian rule amplifies whatever correlates with the output: positive feedback.",
+        "An anti-Hebbian rule cancels whatever correlates with the output: negative feedback that drives the output toward zero for predictable input.",
+        "The fixed point is reached when the learned input exactly cancels the predictable part, leaving prediction errors."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stability and pitfalls"
+    },
+    {
+      "type": "list",
+      "items": [
+        "With excitatory weights and hard bounds at zero, anti-STDP alone drives many weights to zero. Pair it with inhibitory synapses, or let weights take both signs.",
+        "Anti-STDP on recurrent excitation is stabilising, and is sometimes used to decorrelate a population.",
+        "It needs a separate teaching or driving input (the broad spike in the fish) that makes the neuron fire. Without one, the neuron learns to stay silent."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Implementation"
+    },
+    {
+      "type": "prose",
+      "text": "Use the same two-trace implementation as classical STDP with the signs swapped: on a postsynaptic spike subtract A₊·x_pre, on a presynaptic spike add A₋·y_post. Inhibitory plasticity that balances excitation (Vogels et al. 2011) is a related idea: inhibitory synapses grow when pre and post are coincident, which also cancels predictable excitation."
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "if (postSpiked) w -= aPlus  * xPre;   // causal pairing weakens\nif (preSpiked)  w += aMinus * yPost;  // anti-causal pairing strengthens"
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: predictive-coding views of cortex say that the signal worth sending onward is the part that was not predicted. Anti-Hebbian or inhibitory plasticity is one way to build that subtraction. In HTM-style column models the same job is done structurally instead: a correctly predicted minicolumn fires only its predicted cells rather than bursting, so the column's output becomes sparser and quieter when its input is expected."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Bell, Han, Sugawara & Grant (1997) Synaptic plasticity in a cerebellum-like structure depends on temporal order, Nature 387:278; Roberts & Bell (2000) Computational consequences of temporally asymmetric learning rules: II. Sensory image cancellation, J Comput Neurosci 9; Fino, Glowinski & Venance (2005) Bidirectional activity-dependent plasticity at corticostriatal synapses, J Neurosci 25:11279; Vogels, Sprekeler, Zenke, Clopath & Gerstner (2011) Inhibitory plasticity balances excitation and inhibition in sensory pathways and memory networks, Science 334:1569."
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+{
+  "title": "Classical Additive STDP",
+  "intro": "The foundational timing rule. A presynaptic spike shortly before a postsynaptic spike strengthens the synapse, the reverse order weakens it, and the effect fades exponentially with the gap.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The rule"
+    },
+    {
+      "type": "prose",
+      "text": "Let Δt = t_post − t_pre. In additive STDP the weight change for one pair depends only on Δt, not on the current weight:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Δw = A₊ · exp(−Δt / τ₊)     if Δt > 0   (pre before post: LTP)\nΔw = −A₋ · exp( Δt / τ₋)     if Δt < 0   (post before pre: LTD)\nw  ← clip(w + Δw, 0, w_max)\n\ntypical: τ₊ ≈ τ₋ ≈ 20 ms,  A₋·τ₋ slightly larger than A₊·τ₊"
+    },
+    {
+      "type": "prose",
+      "text": "Bi and Poo measured the window in cultured hippocampal neurons, and Markram and colleagues in neocortical slices. Song, Miller and Abbott then showed what the rule does in a network: synapses compete. Inputs that reliably precede the postsynaptic spike win, the rest are driven to zero, and the neuron's firing rate is regulated without any explicit normalisation."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "STDP window",
+        "params": [
+          {
+            "key": "aPlus",
+            "label": "A₊ (LTP amplitude)",
+            "control": "range",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "aMinus",
+            "label": "A₋ (LTD amplitude)",
+            "control": "range",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "default": 1.05
+          },
+          {
+            "key": "tauPlus",
+            "label": "τ₊ (ms)",
+            "control": "range",
+            "min": 5,
+            "max": 60,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "tauMinus",
+            "label": "τ₋ (ms)",
+            "control": "range",
+            "min": 5,
+            "max": 60,
+            "step": 1,
+            "default": 20
+          }
+        ],
+        "config": {
+          "sim": "stdp-window",
+          "xLabel": "Δt = t_post − t_pre (ms)",
+          "yLabel": "Δw (a.u.)",
+          "variant": "classical"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The curve is the change caused by a single pre-post pair. The area of the right lobe (A₊τ₊) against the left lobe (A₋τ₋) decides what uncorrelated input does: if LTD dominates, random pairings weaken synapses on average, which keeps the total input bounded."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why LTD must slightly dominate"
+    },
+    {
+      "type": "prose",
+      "text": "For Poisson inputs uncorrelated with the output, the expected drift is proportional to A₊τ₊ − A₋τ₋. If it is positive, every synapse grows until it hits w_max and the neuron saturates. A small negative bias makes uncorrelated synapses decay, while correlated ones, which get extra causal pairings, still grow. Song et al. used A₋/A₊ ≈ 1.05 with equal time constants."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pairing schemes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "All-to-all: every pre spike pairs with every post spike. This is the trace implementation where traces add.",
+        "Nearest-neighbour: each spike pairs only with the most recent spike of the other neuron (traces reset to 1 instead of adding). This changes the behaviour at high rates.",
+        "Above about 10 Hz, the choice of pairing scheme matters as much as the window shape."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A minimal implementation"
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "function makeSynapse({aPlus = 0.01, aMinus = 0.0105, tauPlus = 20, tauMinus = 20, wMax = 1} = {}) {\n  let w = 0.5, x = 0, y = 0, last = 0;\n  return {\n    get w() { return w; },\n    spike(t, isPre) {\n      x *= Math.exp(-(t - last) / tauPlus);\n      y *= Math.exp(-(t - last) / tauMinus);\n      last = t;\n      if (isPre) { w = Math.max(0, w - aMinus * wMax * y); x += 1; }\n      else       { w = Math.min(wMax, w + aPlus * wMax * x); y += 1; }\n    },\n  };\n}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Behaviour and limits"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Bimodal weights: with hard bounds, weights pile up at 0 and at w_max. That gives sharp selectivity but loses graded information.",
+        "Learns latency: neurons become sensitive to the earliest reliable inputs, so repeated spatiotemporal patterns are detected faster with practice (Masquelier & Thorpe 2007).",
+        "No frequency effects: at high pairing rates real synapses potentiate even for post-before-pre order. Capturing that needs triplet or voltage rules.",
+        "Unstable alone: without inhibition or homeostasis, a whole layer tends to learn the same feature."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: classical STDP plus winner-take-all lateral inhibition is the standard recipe for unsupervised feature learning in a spiking layer (Diehl & Cook 2015 learned MNIST digits this way). In a column model it is a good first rule for the feedforward synapses into layer 4, with an adaptive threshold per neuron so that different neurons claim different features."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Bi & Poo (1998) J Neurosci 18:10464; Markram, Lübke, Frotscher & Sakmann (1997) Science 275:213; Song, Miller & Abbott (2000) Nat Neurosci 3:919; Masquelier & Thorpe (2007) Unsupervised learning of visual features through spike timing dependent plasticity, PLoS Comput Biol 3; Diehl & Cook (2015) Unsupervised learning of digit recognition using spike-timing-dependent plasticity, Front Comput Neurosci 9; Gerstner et al., Neuronal Dynamics (2014), ch. 19."
+    }
+  ]
+}

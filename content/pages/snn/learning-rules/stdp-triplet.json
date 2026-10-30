@@ -1,0 +1,118 @@
+{
+  "title": "Triplet STDP",
+  "intro": "Pair-based STDP cannot explain why real synapses potentiate at high firing rates whatever the spike order. The triplet rule adds a slow postsynaptic trace, so that a postsynaptic spike causes more LTP when it follows other recent postsynaptic spikes.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The problem with pairs"
+    },
+    {
+      "type": "prose",
+      "text": "Sjöström, Turrigiano and Nelson paired pre- and postsynaptic spikes in layer 5 of visual cortex at different repetition frequencies. At 0.1 to 10 Hz the classic window held: pre-before-post gave LTP, post-before-pre gave LTD. At 20 to 50 Hz both orders gave LTP. A pair rule cannot do this, because at high frequency every spike sits between two spikes of the other neuron, and the LTP and LTD contributions cancel. Froemke and Dan likewise found that spike triplets do not sum linearly from their pairs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The rule (Pfister & Gerstner 2006)"
+    },
+    {
+      "type": "prose",
+      "text": "Each presynaptic spike leaves a fast trace r₁ (and, in the full model, a slow trace r₂). Each postsynaptic spike leaves a fast trace o₁ and a slow trace o₂. Depression happens at presynaptic spikes and is pair-like. Potentiation happens at postsynaptic spikes, and its size grows with the slow postsynaptic trace o₂, which counts recent postsynaptic spikes."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "at each presynaptic spike:   w ← w − o₁ · (A₂₋ + A₃₋ · r₂)      then r₁ += 1, r₂ += 1\nat each postsynaptic spike:  w ← w + r₁ · (A₂₊ + A₃₊ · o₂)      then o₁ += 1, o₂ += 1\n(o₂ and r₂ are read just before their own update)\n\ntraces decay:  τ₊ = 16.8 ms (r₁),  τ₋ = 33.7 ms (o₁),  τ_x ≈ 100 ms (r₂),  τ_y ≈ 125 ms (o₂)\nminimal visual-cortex fit:  A₂₊ ≈ 0,  A₃₊ ≈ 6.2e-3,  A₂₋ ≈ 7e-3,  A₃₋ = 0"
+    },
+    {
+      "type": "prose",
+      "text": "In the minimal fit almost all LTP comes from the triplet term A₃₊. LTP then needs a postsynaptic spike preceded both by a presynaptic spike (r₁) and by earlier postsynaptic spikes (o₂): a post-pre-post triplet. At low rates o₂ has decayed between pairings and LTD wins; at high rates o₂ stays high and LTP wins, whichever order the pair is in."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Frequency dependence",
+        "params": [
+          {
+            "key": "a3Plus",
+            "label": "A₃₊ (triplet LTP)",
+            "control": "range",
+            "min": 0,
+            "max": 0.015,
+            "step": 0.0005,
+            "default": 0.0062
+          },
+          {
+            "key": "a2Minus",
+            "label": "A₂₋ (pair LTD)",
+            "control": "range",
+            "min": 0,
+            "max": 0.015,
+            "step": 0.0005,
+            "default": 0.007
+          },
+          {
+            "key": "tauY",
+            "label": "τ_y slow post trace (ms)",
+            "control": "range",
+            "min": 20,
+            "max": 300,
+            "step": 5,
+            "default": 125
+          }
+        ],
+        "config": {
+          "sim": "stdp-triplet",
+          "xLabel": "pairing frequency (Hz)",
+          "yLabel": "total Δw after 60 pairs (%)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The simulator applies 60 pairings at each frequency with Δt = +10 ms and −10 ms, all-to-all, and plots the summed weight change as a percent of a unit weight. Post-before-pre turns from LTD into LTP as frequency rises, the Sjöström result. Set A₃₊ to zero and the rule falls back to pair STDP: the frequency dependence disappears and both curves become flat or negative."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Connection to BCM"
+    },
+    {
+      "type": "prose",
+      "text": "For Poisson pre- and postsynaptic firing at rates ρ_x and ρ_y, the expected drift of the minimal triplet rule is approximately dw/dt ∝ ρ_x ρ_y (ρ_y − θ), where θ depends on A₂₋/A₃₊ and the time constants. That is the BCM form: LTD below a threshold rate, LTP above it. Making A₂₋ depend on the long-term average postsynaptic rate turns θ into BCM's sliding threshold. Triplet STDP is the bridge between timing-based and rate-based plasticity."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Implementation"
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// minimal all-to-all triplet STDP for one synapse, event-driven\nfunction tripletSynapse({A3p = 6.2e-3, A2m = 7e-3, tauP = 16.8, tauM = 33.7, tauY = 125} = {}) {\n  let w = 0.5, r1 = 0, o1 = 0, o2 = 0, last = 0;\n  const decay = (t) => {\n    const g = t - last; last = t;\n    r1 *= Math.exp(-g / tauP); o1 *= Math.exp(-g / tauM); o2 *= Math.exp(-g / tauY);\n  };\n  return {\n    pre(t)  { decay(t); w -= A2m * o1; r1 += 1; },\n    post(t) { decay(t); w += A3p * r1 * o2; o1 += 1; o2 += 1; }, // o2 read before update\n    get w() { return w; },\n  };\n}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When to use it"
+    },
+    {
+      "type": "list",
+      "items": [
+        "You want plasticity that depends on rates and bursts, not only on spike order.",
+        "You need a built-in homeostatic flavour: with an activity-dependent A₂₋ it behaves like BCM.",
+        "Cost: one extra trace per neuron (o₂), cheap enough for large simulations and for neuromorphic chips with programmable traces."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: bursts matter in cortex. Layer 5 pyramidal cells fire bursts when distal (apical) and proximal input coincide, which is close to the Thousand Brains idea of a cell that is both predicted and driven. A triplet rule rewards exactly those bursting events with LTP, so it is a natural candidate for synapses that should learn only when prediction and input agree."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Pfister & Gerstner (2006) Triplets of spikes in a model of spike timing-dependent plasticity, J Neurosci 26:9673; Sjöström, Turrigiano & Nelson (2001) Rate, timing, and cooperativity jointly determine cortical synaptic plasticity, Neuron 32:1149; Froemke & Dan (2002) Spike-timing-dependent synaptic modification induced by natural spike trains, Nature 416:433; Gjorgjieva, Clopath, Audet & Pfister (2011) A triplet spike-timing-dependent plasticity model generalizes the Bienenstock-Cooper-Munro rule to higher-order spatiotemporal correlations, PNAS 108; Gerstner et al., Neuronal Dynamics (2014), ch. 19."
+    }
+  ]
+}

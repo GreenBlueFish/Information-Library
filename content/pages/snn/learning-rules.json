@@ -1,0 +1,103 @@
+{
+  "title": "Learning Rules",
+  "intro": "Synapses are where a spiking network stores what it has learned. This page maps the rules for changing them, from the timing-based family of STDP through three-factor and rate rules to gradient training, and says when to reach for each.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "LTP and LTD: the biology"
+    },
+    {
+      "type": "prose",
+      "text": "Long-term potentiation (LTP) is a lasting increase in synaptic strength after correlated activity; long-term depression (LTD) is a lasting decrease. Both were first shown with tetanic or low-frequency stimulation in the hippocampus, and at most excitatory synapses both depend on calcium entering through NMDA receptors: a large, fast calcium rise tends to cause LTP and a moderate, prolonged rise tends to cause LTD. Every rule below is a model of when LTP and when LTD should occur."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Hebb, and why timing matters"
+    },
+    {
+      "type": "prose",
+      "text": "Hebb's postulate (1949) says a synapse should strengthen when the presynaptic cell repeatedly takes part in firing the postsynaptic cell. Spike-timing-dependent plasticity (STDP) makes 'takes part in firing' precise: in hippocampal cultures Bi and Poo found that a presynaptic spike up to about 20 ms before a postsynaptic spike causes LTP, and the reverse order causes LTD. Timing captures causality, which a plain correlation rule cannot."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The rules at a glance"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Classical additive STDP: the weight change depends only on Δt = t_post − t_pre, through an exponential window. Simple and competitive, but needs hard bounds and gives bimodal weights.",
+        "Triplet STDP: adds a slow postsynaptic trace so bursts and high firing rates favour LTP. Matches frequency-dependence data and reduces to a BCM-like rule for rates.",
+        "Anti-STDP: the flipped window, so causal pairings weaken. Used to cancel predictable input, as in the electrosensory lobe of electric fish.",
+        "Symmetric STDP: closeness in time potentiates regardless of order. Detects synchrony and builds attractors, as in hippocampal CA3.",
+        "Multiplicative (weight-dependent) STDP: updates shrink near the bounds. Gives stable, unimodal weight distributions, with weaker competition.",
+        "Voltage-dependent STDP: plasticity depends on the postsynaptic voltage when the presynaptic spike arrives (Clopath et al. 2010). Explains pairing-frequency and dendritic effects.",
+        "Reward-modulated STDP: STDP writes to an eligibility trace, and a global reward or dopamine signal turns the trace into a weight change. Solves the distal reward problem.",
+        "BCM rule: a rate rule with a sliding threshold set by recent average activity. Stabilises Hebbian learning and explains ocular dominance plasticity.",
+        "Surrogate gradient: not a local rule but a training method that backpropagates through spikes using a smooth stand-in derivative."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Local, three-factor, and global rules"
+    },
+    {
+      "type": "prose",
+      "text": "The rules fall into three groups by the information they need. Two-factor local rules (all the STDP variants and BCM) use only pre- and postsynaptic activity at the synapse, so they are cheap and run on neuromorphic chips that support on-chip learning. Three-factor rules add a neuromodulatory signal (reward, surprise, attention) that gates the local change. Global rules such as backpropagation with surrogate gradients need an error signal for every neuron: powerful, but not biologically local."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "two-factor:    Δw = f(pre, post)\nthree-factor:  de/dt = −e/τ_e + f(pre, post);   Δw = η · M(t) · e\ngradient:      Δw = −η ∂L/∂w    (via a surrogate dS/du for the spike)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Eligibility traces"
+    },
+    {
+      "type": "prose",
+      "text": "An eligibility trace is a decaying memory, at each synapse, of recent pre-post coincidences. It bridges the millisecond timing of spikes and the seconds-long delay before a reward or teaching signal arrives. In reward-modulated STDP the trace e follows the STDP window and decays with τ_e of about a second, and dopamine converts whatever eligibility remains into a real change. The same idea appears in e-prop, which approximates backpropagation through time in recurrent spiking networks with forward-running eligibility traces."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Implementing STDP with traces"
+    },
+    {
+      "type": "prose",
+      "text": "Every pair-based STDP variant can run online with two traces: a presynaptic trace x that jumps on each presynaptic spike and a postsynaptic trace y that jumps on each postsynaptic spike, both decaying exponentially. On a postsynaptic spike, potentiate by A₊·x; on a presynaptic spike, depress by A₋·y."
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// online all-to-all pair STDP\nconst dx = Math.exp(-dt / tauPlus), dy = Math.exp(-dt / tauMinus);\nfunction stdpStep(preSpiked, postSpiked) {\n  x *= dx; y *= dy;\n  if (preSpiked)  { w -= aMinus * y; x += 1; }\n  if (postSpiked) { w += aPlus  * x; y += 1; }\n  w = Math.min(wMax, Math.max(0, w));\n}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing a rule"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Unsupervised feature learning in a single layer: additive or multiplicative STDP, plus lateral inhibition and homeostasis.",
+        "Learning that should depend on rates and bursts: triplet or voltage-dependent STDP.",
+        "Tasks with delayed reward: reward-modulated STDP with eligibility traces.",
+        "Best accuracy on a benchmark, trained offline: surrogate-gradient training.",
+        "Stability over long runs: add a homeostatic mechanism (BCM threshold, synaptic scaling, adaptive thresholds) to any Hebbian rule."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: the Thousand Brains and HTM models learn with a Hebbian rule on dendritic segments. Synapses onto cells that were correctly predicted are strengthened, and synapses whose prediction failed are weakened. In spiking terms that is close to STDP on distal synapses, gated by whether the cell then fires (a voltage- or plateau-dependent rule), plus a homeostatic term so that every cell takes part. Start with additive STDP plus inhibition for the layer 4 features, and a voltage-dependent rule for the distal, predictive connections."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Bi & Poo (1998) Synaptic modifications in cultured hippocampal neurons, J Neurosci 18; Markram, Lübke, Frotscher & Sakmann (1997) Science 275; Song, Miller & Abbott (2000) Competitive Hebbian learning through spike-timing-dependent synaptic plasticity, Nat Neurosci 3; Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (2014), ch. 19; Frémaux & Gerstner (2016) Neuromodulated spike-timing-dependent plasticity, and theory of three-factor learning rules, Front Neural Circuits 9; Bellec et al. (2020) A solution to the learning dilemma for recurrent networks of spiking neurons, Nat Commun 11; Hawkins & Ahmad (2016) Why neurons have thousands of synapses, Front Neural Circuits 10."
+    }
+  ]
+}

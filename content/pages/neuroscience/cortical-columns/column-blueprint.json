@@ -1,0 +1,161 @@
+{
+  "title": "Building a Column from Spiking Neurons",
+  "intro": "A practical, staged plan for building a computational cortical column out of spiking neurons, in JavaScript or Python. It says which neuron model to use where, which learning rule drives each pathway, how inhibition keeps codes sparse, and which experiments to run in which order, and it is honest about what is established and what is a design guess.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Start from a clear target"
+    },
+    {
+      "type": "prose",
+      "text": "'Make a cortical column' is too vague to finish. A useful first target, taken from the Thousand Brains Theory (#/neuroscience/cortical-columns/thousand-brains), is: a column that, given a stream of (movement, sensed feature) pairs from touching objects, learns a set of objects without labels and recognises a learned object within a few touches, and that several such columns, voting, recognise it faster. Everything below serves that target. It is concrete, it can be measured (touches to recognition, accuracy, number of objects learned), and each stage works and can be tested on its own."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The architecture"
+    },
+    {
+      "type": "prose",
+      "text": "The plan uses four functional layers. The mapping to anatomical layers follows Hawkins and colleagues and is a hypothesis about the cortex, but as an engineering design it works whether or not the brain does exactly this."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Input (L4-like): minicolumns of excitatory neurons. Feedforward (proximal) input is the sensed feature; context (distal) input is the current location from the location layer. Cells predicted by the location fire first and win. Output: sparse code for 'this feature at this location'.",
+        "Location (L6-like): grid-cell-like modules, each a ring (or later a 2-D sheet) of neurons holding a bump of activity. Movement shifts every bump; L4 feedback re-anchors them on a new object.",
+        "Object (L2/3-like): a pool of excitatory cells in which a stable sparse set represents the object being sensed. Fed by L4 and by long-range lateral connections from other columns' object layers, so columns vote.",
+        "Inhibition: in every layer, a pool of fast inhibitory neurons that turns dense excitation into a k-winners-take-all code with a fixed sparsity (about 2 to 5 percent active)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Which neuron model where"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Excitatory cells in L4 and L2/3: LIF (#/snn/neuron-models/lif) with an added dendritic compartment, or a two-compartment model (#/snn/neuron-models/multicompartment). The extra compartment is what implements 'predicted': distal input depolarises the dendrite so the cell reaches threshold sooner when feedforward input arrives. A cheap alternative is a LIF neuron whose threshold drops briefly when a distal segment is active.",
+        "Inhibitory interneurons: plain LIF with short membrane time constant (about 5 to 10 ms) and fast synapses, or Izhikevich fast spiking (#/snn/neuron-models/izhikevich).",
+        "Where firing patterns matter: AdEx (#/snn/neuron-models/adex) or Izhikevich if you want adaptation and bursting, for instance to make bursting minicolumns literally burst. Not needed in the first version.",
+        "Avoid Hodgkin-Huxley for the column itself: it costs a hundred times more and adds nothing the design needs. Use it to understand spikes, not to build columns."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Which learning rule where"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Feedforward into L4 (feature tuning, the spatial pooler role): competitive STDP with winner-take-all, as in Diehl and Cook (2015) and Smith's temporal neural networks. Use weight-dependent (multiplicative) STDP (#/snn/learning-rules/stdp-multiplicative) so weights stay bounded, plus homeostatic threshold adaptation so all cells get used.",
+        "Distal segments in L4 (location as context): a causal, STDP-like rule that grows or strengthens synapses from cells active a moment before onto the winning cell (#/snn/learning-rules/stdp-classical). In discrete form this is HTM temporal memory learning (#/neuroscience/cortical-columns/temporal-memory).",
+        "L4 to L2/3 and L2/3 lateral (object identity and voting): Hebbian association between the stable object code and the changing L4 codes that occur while one object is sensed. A slow trace (the object code stays on across several touches) is what lets one object cell learn many feature-location codes. Triplet STDP (#/snn/learning-rules/stdp-triplet) or a BCM-like rule (#/snn/learning-rules/stdp-bcm) suits these rate-like associations.",
+        "Anything driven by reward or a goal later on: reward-modulated STDP with eligibility traces (#/snn/learning-rules/stdp-reward).",
+        "Not needed: backpropagation or surrogate gradients (#/snn/learning-rules/stdp-surrogate). They are useful baselines, but the point of a column is local, online, unsupervised learning."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Inhibition: the most important detail"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Sparsity from lateral inhibition",
+        "params": [
+          {
+            "key": "inhibition",
+            "label": "Lateral inhibition strength",
+            "control": "range",
+            "min": 0,
+            "max": 6,
+            "step": 0.5,
+            "default": 3
+          },
+          {
+            "key": "drive",
+            "label": "Input drive (nA)",
+            "control": "range",
+            "min": 1.6,
+            "max": 4,
+            "step": 0.1,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "winner-take-all",
+          "xLabel": "time (ms)",
+          "yLabel": "neuron (raster)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Six LIF neurons with slightly different input strengths share an inhibitory pool. Without inhibition all six fire; with enough inhibition only the best-matched one or two do. Every stage of the column depends on this: it gives the fixed sparsity that makes codes separable, it turns 'predicted cells fire first' into 'only predicted cells fire', and it forces competing neurons to learn different features under STDP. Practical rules of thumb: make inhibition fast (time constant shorter than excitation), make it scale with total excitation rather than being a fixed amount, and measure the sparsity of every layer on every run. If learning goes wrong, check sparsity first."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Encoding the input"
+    },
+    {
+      "type": "prose",
+      "text": "Encode features with population codes or latency codes (#/snn/encoding) rather than raw rates: latency coding gives one spike per input per sensation, which suits the first-spike-wins logic of the input layer. For a first version, present one sensation per 'step' of 20 to 50 ms, reset fast variables between steps, and let slow ones (object layer, location bumps) persist. Synaptic filters (#/snn/neuron-filters) set how long a step's spikes keep acting."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Milestones, in order"
+    },
+    {
+      "type": "list",
+      "items": [
+        "1. One neuron. Simulate LIF and a two-compartment neuron; confirm that dendritic depolarisation makes the cell fire earlier for the same input. A few hours.",
+        "2. One competitive layer. N LIF neurons with WTA inhibition and STDP on feedforward weights; train on a few fixed binary patterns (or MNIST, as in Diehl and Cook) and check that each neuron becomes selective for one pattern. Measure sparsity and selectivity.",
+        "3. Sequence memory. Add minicolumns and distal segments; train on sequences such as ABCD and XBCY and reproduce the temporal-memory result: bursting falls to near zero, and D versus Y is predicted correctly (compare the sim on #/neuroscience/cortical-columns/temporal-memory).",
+        "4. Location layer. Build two or three ring modules with bump shifting from a movement input (ring attractor on #/neuroscience/neural-manifolds); verify that combined phases code position uniquely over the range you need (grid-cell sim on #/neuroscience/cortical-columns/reference-frames).",
+        "5. Features at locations. Replace sequence context with location context in L4. Generate synthetic objects as sets of feature-at-location pairs and train by random touches with known movements.",
+        "6. Object layer and recognition. Add the L2/3 pool with a slow trace; measure touches to recognition for a growing number of objects.",
+        "7. Many columns voting. Copy the column, give each a different sensor patch, connect object layers laterally, and reproduce the voting curve (the sim on #/neuroscience/cortical-columns/thousand-brains).",
+        "8. Only then: realistic sensors, learned path integration, top-down feedback through apical dendrites, hierarchy."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Speed tip, since speed is the bottleneck: build and debug stages 2 to 7 first with binary, discrete-time HTM-style cells (minutes per experiment), then swap each layer for spiking neurons one at a time and check the measurement does not get worse. Spiking neurons add timing and energy realism, not a new algorithm, so keep the algorithm testable without them."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A minimal core loop"
+    },
+    {
+      "type": "code",
+      "lang": "javascript",
+      "source": "// One simulation step of a spiking layer with k-WTA inhibition (sketch).\nfor (const n of layer) {\n  const ff = dot(n.wFF, input);            // proximal, feedforward\n  const distal = n.segments.some(s => overlap(s, context) >= s.theta);\n  n.vDend += dt / tauD * (-(n.vDend - EL) + (distal ? dendKick : 0));\n  n.v += dt / tauM * (-(n.v - EL) + R * ff + gc * (n.vDend - n.v) - inhibition);\n}\nconst fired = layer.filter(n => n.v >= vTh).sort((a, b) => b.v - a.v).slice(0, k);\nfor (const n of fired) { n.v = vReset; stdpUpdate(n, input); }\ninhibition += wInh * fired.length - dt / tauI * inhibition;"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Known versus speculative"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Established: the six-layer structure and its main pathways; dendritic NMDA spikes that depolarise pyramidal cells; fast inhibition sparsifying cortical activity; STDP in many cortical synapses; grid cells and path integration in entorhinal cortex.",
+        "Well-supported models: competitive STDP layers learn features unsupervised; HTM temporal memory learns high-order sequences; continuous attractors path-integrate.",
+        "Speculative: that every column has grid-like location cells in L6; that L4 learns features at locations; that L2/3 lateral connections implement voting; that this is enough for general intelligence. Your column will be a test of these ideas, which is a good reason to build it."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Hawkins, Ahmad & Cui, Front Neural Circuits (2017); Lewis et al., Front Neural Circuits (2019); Hawkins & Ahmad, Front Neural Circuits (2016); Potjans & Diesmann, Cereb Cortex (2014); Diehl & Cook, 'Unsupervised learning of digit recognition using spike-timing-dependent plasticity', Front Comput Neurosci (2015); Smith, 'Space-Time Algebra: A Model for Neocortical Computation', ISCA (2018); Burak & Fiete, PLoS Comput Biol (2009); Gerstner et al., Neuronal Dynamics (2014)."
+    }
+  ]
+}
