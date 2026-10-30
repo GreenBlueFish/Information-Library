@@ -1,0 +1,111 @@
+{
+  "title": "Izhikevich Model",
+  "intro": "The Izhikevich model adds a slow recovery variable to a quadratic integrate-and-fire neuron. Four parameters (a, b, c, d) switch it between regular spiking, bursting, chattering, fast-spiking and low-threshold-spiking behaviour at a cost close to LIF, which makes it a popular choice for heterogeneous cortical columns.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intuition: LIF plus a slow brake"
+    },
+    {
+      "type": "prose",
+      "text": "A leaky integrate-and-fire neuron has a single state variable, so it can only do one thing: fire regularly at a rate set by its input. Real cortical neurons have a repertoire. Regular-spiking pyramidal cells fire a few fast spikes and then slow down (adaptation); intrinsically bursting cells start with a burst; chattering cells fire repetitive high-frequency bursts at gamma-range rates; fast-spiking interneurons fire at hundreds of hertz with almost no adaptation. Most of this variety comes from slow currents that build up during firing and push the membrane back down."
+    },
+    {
+      "type": "prose",
+      "text": "Eugene Izhikevich (2003) captured this with two variables. The fast variable v is the membrane potential, and its quadratic term makes the upswing of the spike self-accelerating (unlike LIF, there is a genuine spike-initiation dynamic). The slow variable u is a recovery variable that lumps together potassium activation and sodium inactivation: it is pulled towards b·v at rate a, and kicked up by d after every spike. Four numbers (a, b, c, d) select the firing type. The result is roughly as cheap as LIF but reproduces most cortical firing patterns."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equations"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "dv/dt = 0.04·v² + 5·v + 140 − u + I\ndu/dt = a · (b·v − u)\n\nif v ≥ 30 mV:   v ← c,   u ← u + d\n\nv in mV, t in ms; I is a dimensionless input (in effect mV/ms, membrane capacitance and resistance absorbed)\na  time scale of u (small a = slow recovery)        typical 0.02\nb  sensitivity of u to sub-threshold v              typical 0.2\nc  after-spike reset of v (mV)                      typical −65\nd  after-spike increment of u                       typical 2–8"
+    },
+    {
+      "type": "prose",
+      "text": "Note what the 30 mV value is: it is the spike peak at which the model is cut off and reset, not a threshold. The effective threshold is emergent: with the regular-spiking parameters and no input, the model has a stable resting point at −70 mV and an unstable threshold point at about −50 mV, and both shift as u changes (with b = 0.25 the rest is nearer −64 mV). Because the constant input I has no explicit units, the canonical numbers only make sense together with the 1 ms network time step and the input scaling of the original code; for the regular-spiking parameters the two fixed points merge, and tonic firing starts, at a constant I of about 4."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Parameter table (Izhikevich 2003)"
+    },
+    {
+      "type": "prose",
+      "text": "These are the (a, b, c, d) values from Figure 2 of the 2003 paper. The cortical excitatory classes differ mainly in the reset c and the adaptation step d; the inhibitory classes mainly in a and b."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "class                      a      b      c (mV)   d     typical role in a column\nRS   regular spiking      0.02   0.20   −65      8     most excitatory pyramidal / spiny stellate cells\nIB   intrinsically burst. 0.02   0.20   −55      4     a subset of large layer-5 pyramidal cells\nCH   chattering           0.02   0.20   −50      2     some layer 2/3 pyramidal cells (fast rhythmic bursts)\nFS   fast spiking         0.10   0.20   −65      2     parvalbumin-type basket cells\nLTS  low-threshold spike  0.02   0.25   −65      2     somatostatin-type interneurons (e.g. Martinotti)\nalso from the same figure:\nTC   thalamo-cortical     0.02   0.25   −65      0.05  thalamic relay cells (rebound bursts)\nRZ   resonator            0.10   0.26   −65      2"
+    },
+    {
+      "type": "prose",
+      "text": "Reading the table: a larger d means a bigger after-spike kick to u, hence stronger spike-frequency adaptation (RS). A higher reset c leaves v close to the spike-initiation region, so the next spike follows quickly and the cell bursts (IB, CH). A larger a makes u recover quickly, so FS cells can fire at high, nearly constant rates. A larger b couples u more strongly to sub-threshold v, which gives LTS cells their low threshold and rebound behaviour. The mapping of firing types to cell classes in the right-hand column is the conventional one, but it is a simplification: real classes are defined by morphology, molecular markers and connectivity as well as firing (see \"Cell Types\" in section 1)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Python implementation"
+    },
+    {
+      "type": "prose",
+      "text": "The original MATLAB network in the 2003 paper uses a 1 ms time step but updates v in two half-steps of 0.5 ms each, 'for numerical stability', and updates u once. Because the quadratic term makes v blow up quickly near the peak, a plain 1 ms Euler step on v can overshoot badly; the two half-steps are a cheap fix. The snippet below follows that scheme, including the random heterogeneity trick from the paper: excitatory cells interpolate between RS (r = 0) and CH (r = 1) via r², inhibitory cells between FS and LTS."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(0)\n\nNe, Ni = 800, 200\nre, ri = rng.random(Ne), rng.random(Ni)\na = np.r_[0.02 * np.ones(Ne), 0.02 + 0.08 * ri]\nb = np.r_[0.20 * np.ones(Ne), 0.25 - 0.05 * ri]\nc = np.r_[-65 + 15 * re**2,   -65 * np.ones(Ni)]\nd = np.r_[8 - 6 * re**2,      2 * np.ones(Ni)]\nS = np.c_[0.5 * rng.random((Ne + Ni, Ne)), -rng.random((Ne + Ni, Ni))]  # S[post, pre]\n\nv = -65.0 * np.ones(Ne + Ni)\nu = b * v\nfirings = []\nfor t in range(1000):                                   # 1000 steps of 1 ms\n    I = np.r_[5 * rng.standard_normal(Ne), 2 * rng.standard_normal(Ni)]  # noisy thalamic input\n    fired = np.flatnonzero(v >= 30)\n    firings += [(t, i) for i in fired]\n    v[fired] = c[fired]\n    u[fired] += d[fired]\n    I += S[:, fired].sum(axis=1)                        # instantaneous synapses, no delay\n    v += 0.5 * (0.04 * v**2 + 5 * v + 140 - u + I)      # two 0.5 ms half-steps for v\n    v += 0.5 * (0.04 * v**2 + 5 * v + 140 - u + I)\n    u += a * (b * v - u)"
+    },
+    {
+      "type": "prose",
+      "text": "Run it and plot the firings as a raster: you should see irregular firing punctuated by population rhythms in the alpha and gamma ranges, which was the point of the original demonstration. For serious work, use a smaller step (0.1–0.25 ms) or an established simulator. Brian2 accepts the equations directly as a model string with threshold 'v >= 30*mV' and reset 'v = c; u += d' (you will need to attach units to the coefficients); NEST provides an izhikevich model; and many neuromorphic toolchains support it as well."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Cost and the 2004 comparison"
+    },
+    {
+      "type": "prose",
+      "text": "In a companion paper, Izhikevich (2004) compared spiking models by the number of biologically observed firing features they can reproduce and by their cost per 1 ms of simulation. His estimates were roughly 5 floating-point operations for LIF, 13 for his model, and about 1200 for Hodgkin–Huxley. Treat these as order-of-magnitude figures (they depend on the integration scheme), but the conclusion stands: the Izhikevich model gives you most of the firing-pattern variety of a conductance model at a cost close to LIF. In practice, for a column of a few thousand to a hundred thousand neurons the neuron update is rarely the bottleneck; synaptic event processing is."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When to use it in a column model"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use Izhikevich neurons when the dynamics you study depend on firing type: bursting layer-5 output cells, adapting regular-spiking excitatory cells versus non-adapting FS interneurons, rebound in thalamic cells, or oscillations that depend on these differences.",
+        "Use LIF (possibly with adaptation) when the question is about connectivity, learning rules or representations (SDRs, k-WTA, STDP) rather than single-cell dynamics. LIF has interpretable parameters (τm, θ, R) and an analytic f–I curve; the Izhikevich parameters are phenomenological.",
+        "A reasonable default for a layered column: RS for excitatory cells in layers 2/3, 4 and 6, a mix of RS and IB for layer 5, FS for parvalbumin-like interneurons, LTS for somatostatin-like interneurons. Document this as a modelling choice, not a biological fact.",
+        "If you later want to fit real recordings, the AdEx model (Brette & Gerstner 2005) or Izhikevich's later form C·dv/dt = k(v − v_r)(v − v_t) − u + I (Izhikevich 2007) have parameters in physical units, which makes fitting easier."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Integration error: the quadratic term is stiff near spike onset. A 1 ms Euler step on v without the half-step trick produces wrong spike times and can produce NaNs. If you change dt, re-check the f–I curve.",
+        "Units: I is not in nA. Do not plug synaptic currents calibrated for a LIF neuron with R = 10 MΩ into the Izhikevich equation unchanged; rescale until single-cell f–I curves look right.",
+        "The spike peak is clipped: v reaching 30 mV is a cutoff, not a physiological peak. If you record v and compute averages (e.g. LFP proxies), the clipped spike shapes will bias them.",
+        "Grid-locked spikes: with a 1 ms step, spikes land on a 1 ms grid. STDP windows of 10–20 ms tolerate that, but sub-millisecond coincidence detection does not.",
+        "The original network uses instantaneous synapses (input added in the same step) and dense random connectivity; that is a dynamics demo, not a cortical column. Add delays, sparse connectivity and synaptic kinetics before drawing conclusions (see \"Synapse Models\")."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Izhikevich, E. M. (2003). Simple model of spiking neurons. IEEE Transactions on Neural Networks; Izhikevich, E. M. (2004). Which model to use for cortical spiking neurons? IEEE Transactions on Neural Networks; Izhikevich, E. M. (2007). Dynamical Systems in Neuroscience: The Geometry of Excitability and Bursting. MIT Press; Brette, R. & Gerstner, W. (2005). Adaptive exponential integrate-and-fire model as an effective description of neuronal activity. Journal of Neurophysiology; Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014). Neuronal Dynamics: From Single Neurons to Networks and Models of Cognition. Cambridge University Press; Markram, H., Toledo-Rodriguez, M., Wang, Y., Gupta, A., Silberberg, G. & Wu, C. (2004). Interneurons of the neocortical inhibitory system. Nature Reviews Neuroscience; Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife"
+    }
+  ]
+}

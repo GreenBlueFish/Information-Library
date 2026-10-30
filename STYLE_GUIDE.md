@@ -210,6 +210,14 @@ Non color/type/spacing constants that are still centralized.
 | `--border-width` | `1px` | Default hairlines and borders |
 | `--border-width-thick` | `3px` | Callout / active accent edges |
 
+**SVG strokes** (unitless SVG user units, so they scale with the plot)
+
+| Token | Value | Used for |
+| --- | --- | --- |
+| `--stroke-width-plot` | `2` | Simulation traces and spikes |
+| `--stroke-width-plot-thick` | `3` | Emphasized cell outlines (predicted, highlight) |
+| `--stroke-dash-plot` | `6 4` | Dashed reference lines such as a threshold |
+
 **Elevation (shadows)**
 
 | Token | Value | Used for |
@@ -455,6 +463,33 @@ When a control value falls outside its declared range (R10.6), the renderer adds
 `.widget__control--invalid` to the control wrapper, turning the control border
 `--color-error`, and shows a `.widget__control-error` message (error-colored,
 small). The widget retains the last valid value and visualization.
+
+### Simulation widgets (`alexandria.css` §10b)
+
+The step/play simulation widgets (built on `src/widgets/sim-kit.js`) reuse the
+widget card, controls, and `.widget__plot` host, and add:
+
+- `.widget__actions` — wrapping row of buttons, `--space-3` gaps.
+- `.widget__button` — `--control-min-target` tall, accent fill
+  (`--color-accent`, hover `--color-accent-hover`) with `--color-text-inverse`
+  text, `--radius-sm`. `.widget__button--secondary` is the outlined variant
+  (`--color-control-bg`, `--color-control-border`). A toggle such as Play/Pause
+  sets `aria-pressed="true"`, drawn with the `--color-accent-subtle` fill.
+- `.widget__readout` — a polite live status line (small, muted, mono) for
+  numbers and step narration.
+- SVG parts inside `.widget__plot`: `.sim-label` (axis-colored small text),
+  `.sim-trace` (unfilled `--stroke-width-plot` line; color from
+  `.plot-series--N`), `.sim-spike`, `.sim-threshold` (`--stroke-dash-plot`
+  dashed `--color-error` line).
+- Cell states for grids of neurons/bits: `.sim-cell` (resting,
+  `--color-surface-alt`), `--active` (series 1), `--predicted` (`--stroke-width-plot-thick` series-5
+  outline on `--color-accent-subtle`), `--correct` (series 3), `--burst`
+  (series 2), `--inhibitory` (series-2 outline), `--overlap` (series 4),
+  `--highlight` (`--stroke-width-plot-thick` heading-colored outline).
+- Bars: `.sim-bar` (series 1) and `.sim-bar--winner` (series 3).
+
+Each state is also named in a legend or the readout, so color is never the
+only signal.
 
 ### Accessible contrast
 

@@ -1,0 +1,128 @@
+{
+  "title": "Homeostatic Plasticity",
+  "intro": "Homeostatic plasticity keeps each neuron's activity within a useful range while Hebbian and STDP learning reshape its inputs. This page covers the main mechanisms used in column models: synaptic scaling and weight normalisation, adaptive thresholds (as in Diehl and Cook 2015), intrinsic plasticity, and HTM boosting. It ends with timescale separation, which is the main thing to get right when combining them.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The intuition"
+    },
+    {
+      "type": "prose",
+      "text": "Hebbian learning is positive feedback: a synapse that helps a neuron fire gets stronger, which makes the neuron fire more, which strengthens its synapses further. Homeostatic plasticity is the negative feedback that keeps this loop from running away. Think of a thermostat on each neuron: it has a target firing rate (a set point), measures its own recent activity on a slow timescale, and adjusts its excitability or the overall gain of its synapses to move back toward the target. Hebbian plasticity decides which inputs a neuron prefers; homeostasis decides how much the neuron fires overall."
+    },
+    {
+      "type": "prose",
+      "text": "For a column builder, homeostasis solves two everyday failures. First, runaway: a few neurons win every competition, their weights saturate and they respond to everything. Second, death: some neurons never fire, never learn, and waste capacity. In a winner-take-all layer both happen at once, because one neuron's success is another's silence. In practice, nearly every published unsupervised STDP layer includes at least one homeostatic mechanism."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Synaptic scaling"
+    },
+    {
+      "type": "prose",
+      "text": "Turrigiano, Leslie, Desai, Rutherford and Nelson (1998) blocked activity in cultured cortical neurons with TTX for about two days and found that the amplitudes of miniature excitatory synaptic currents increased; raising activity by blocking inhibition (bicuculline) decreased them. Crucially, all synapses of a neuron appeared to scale by the same factor, which preserves the relative differences that Hebbian learning created while changing the total drive. Turrigiano (2008) reviews the mechanisms (AMPA receptor trafficking, sensing of activity via calcium). Biological scaling is slow: hours to days."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Multiplicative synaptic scaling (rate-based sketch)\n\nτ_scale · dw_i/dt = w_i · (r_target − r̄)        for all inputs i of the neuron\nτ_avg   · dr̄/dt   = −r̄ + r(t)                     (running estimate of the firing rate)\n\nr_target: set point, e.g. 1–5 Hz for a cortical excitatory model\nτ_avg ≪ τ_scale; both ≫ the duration of one input pattern"
+    },
+    {
+      "type": "prose",
+      "text": "A close engineering relative is explicit weight normalisation: after every example (or every few), rescale each neuron's incoming weights so that Σ_i w_i equals a constant. Diehl and Cook (2015) do this; Lazar, Pipa and Triesch (2009) use it in the SORN model. It is instantaneous rather than slow and is not a rate controller, but it gives each neuron a fixed synaptic budget, which turns Hebbian growth into competition among a neuron's inputs. It is cheap on a CPU or GPU; on neuromorphic hardware a per-neuron sum and division may be costly or unavailable, so check before relying on it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Adaptive threshold"
+    },
+    {
+      "type": "prose",
+      "text": "Instead of rescaling synapses, raise the firing threshold of neurons that fire a lot. In Diehl and Cook (2015) each excitatory neuron's effective threshold is v_thresh + θ, where θ jumps by a small amount at every spike and decays very slowly:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Adaptive threshold (Diehl & Cook 2015 style)\n\nspike condition:  v > v_thresh + θ\nat each spike:    θ ← θ + Δθ            (Δθ = 0.05 mV in the paper)\nbetween spikes:   τ_θ · dθ/dt = −θ      (τ_θ = 10⁷ ms, about 2.8 hours of simulated time)\n\nθ ends up roughly proportional to the neuron's long-run spike count"
+    },
+    {
+      "type": "prose",
+      "text": "Over training, neurons that win often accumulate a large θ and lose subsequent competitions, so others get a chance to fire and to learn different patterns. In a k-WTA or lateral-inhibition layer this produces roughly equal usage of all neurons. Diehl and Cook freeze θ during testing, so the response to a test digit does not depend on the previous test digits. Do not confuse this with spike-frequency adaptation (an adaptation current or threshold with a time constant of tens to hundreds of milliseconds, as in AdEx models): that shapes the response within a single stimulus, while the homeostatic θ acts across thousands of stimuli. Both can be present in the same model."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intrinsic plasticity"
+    },
+    {
+      "type": "prose",
+      "text": "Neurons also adjust their own excitability, not just synapses. Desai, Rutherford and Turrigiano (1999) showed that activity deprivation increases the intrinsic excitability of cortical pyramidal neurons (changes in sodium and potassium currents). Computational intrinsic-plasticity rules adapt a neuron's gain and threshold so that its output distribution matches a target; Triesch (2007) derived a gradient rule that drives the output rate distribution toward an exponential distribution with a chosen mean, which encourages sparse, high-information responses. In SORN networks (Lazar, Pipa and Triesch 2009), STDP, synaptic normalisation and intrinsic plasticity together let a recurrent network learn sequence structure that none of them learns alone."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Boosting in HTM"
+    },
+    {
+      "type": "prose",
+      "text": "The HTM spatial pooler (Cui, Ahmad and Hawkins 2017; see \"Spatial Pooler\" in section 4) selects the top k minicolumns by input overlap. Without help, a few columns with good initial connections would win almost all inputs. Boosting multiplies each column's overlap by a factor that depends on how often it has recently been active:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "HTM boosting (Cui, Ahmad & Hawkins 2017)\n\nā_i(t) = (T − 1)/T · ā_i(t − 1) + 1/T · a_i(t)     (moving-average activity, \"active duty cycle\")\nb_i     = exp(−β · (ā_i − s))                       (s: target activity, i.e. the target sparsity such as 0.02,\n                                                     or the mean duty cycle of the neighbourhood with local inhibition;\n                                                     β: boost strength)\nboosted overlap_i = b_i · overlap_i  →  then pick the top-k columns\n\nColumns active less than the target get b_i > 1; over-active columns get b_i < 1."
+    },
+    {
+      "type": "prose",
+      "text": "Boosting is the k-WTA counterpart of the adaptive threshold: it handicaps winners and helps losers, so all columns participate and the representation uses its capacity (Cui et al. report that boosting increases the entropy, i.e. the evenness, of column usage). Earlier NuPIC implementations additionally raised all permanences of columns whose overlap rarely exceeded a minimum, to rescue columns that are never even candidates. A practical caution: boosting keeps changing which columns respond to a fixed input, so the downstream layer sees a moving target; many implementations reduce β or switch boosting off once usage has equalised."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Timescale separation"
+    },
+    {
+      "type": "prose",
+      "text": "Homeostasis only works if the timescales are ordered. Roughly: membrane and synaptic dynamics (1–20 ms) ≪ presentation of one pattern (tens to hundreds of ms) ≪ Hebbian or STDP weight change (seconds to minutes of activity) ≪ homeostatic control (minutes to hours in models; hours to days in biology). If homeostasis is too fast, it fights against learning: it erases the response differences that encode the input, and a neuron's rate is forced to the target for every stimulus, destroying selectivity. If it is too slow, Hebbian runaway happens before the controller can react. Zenke, Hennequin and Gerstner (2013) showed in recurrent spiking networks with triplet STDP that stability required a homeostatic rate detector acting on a timescale of seconds to minutes, much faster than biological synaptic scaling. Zenke and Gerstner (2017) call this mismatch a puzzle and argue for rapid compensatory processes (for example heterosynaptic plasticity or inhibitory plasticity) in addition to slow scaling. This remains an open question."
+    },
+    {
+      "type": "prose",
+      "text": "Inhibitory plasticity is another homeostatic route: Vogels, Sprekeler, Zenke, Clopath and Gerstner (2011) proposed an STDP-like rule on inhibitory synapses that potentiates inhibition onto a neuron firing above a target rate and depresses it otherwise. The rule automatically balances excitation and inhibition (see \"Inhibition and k-Winners-Take-All\") and is a good choice when you want a recurrent column to self-tune rather than hand-tuning inhibitory weights."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "If you are building one"
+    },
+    {
+      "type": "list",
+      "items": [
+        "For a WTA/k-WTA layer trained with STDP: use an adaptive threshold (Δθ ≈ 0.05 mV for a ~13 mV gap between rest and threshold, τ_θ comparable to or longer than the whole training run) plus per-neuron weight normalisation. That is the Diehl and Cook recipe and a robust baseline.",
+        "For an HTM-style spatial pooler: use exponential boosting with a target density equal to k/N (for example 2%), a duty-cycle window of about 1000 steps, and a moderate boost strength; monitor the histogram of column usage.",
+        "For a recurrent E/I column: combine synaptic scaling or normalisation on E→E synapses with inhibitory plasticity, and keep the homeostatic time constant at least 10–100 times longer than the pattern presentation time.",
+        "Log per-neuron firing rates (or win counts) over training. A healthy layer has a narrow distribution around the target; a long tail of silent neurons or a few dominant ones is the signature of missing or mis-tuned homeostasis.",
+        "Decide what happens at test time. Freezing θ, boosts and normalisation for evaluation is standard; leaving them on makes results depend on test order."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Oscillations: a controller with gain too high or delay too long overshoots, producing slow oscillations in rate and threshold. Reduce the gain or lengthen τ.",
+        "Homeostasis can hide bugs: a broken learning rule may look healthy in rate plots because homeostasis holds the rates at target. Always also inspect the learned weights or receptive fields.",
+        "Additive vs multiplicative matters here too: multiplicative scaling preserves learned ratios; additive offsets do not.",
+        "Biological set points are not fixed numbers: cortical excitatory neurons span a wide, roughly lognormal range of rates. Forcing every model neuron to the same target is a convenience, not a fact about cortex."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Turrigiano, G. G., Leslie, K. R., Desai, N. S., Rutherford, L. C. & Nelson, S. B. (1998). Activity-dependent scaling of quantal amplitude in neocortical neurons. Nature; Desai, N. S., Rutherford, L. C. & Turrigiano, G. G. (1999). Plasticity in the intrinsic excitability of cortical pyramidal neurons. Nature Neuroscience; Turrigiano, G. G. & Nelson, S. B. (2004). Homeostatic plasticity in the developing nervous system. Nature Reviews Neuroscience; Triesch, J. (2007). Synergies between intrinsic and synaptic plasticity mechanisms. Neural Computation; Turrigiano, G. G. (2008). The self-tuning neuron: synaptic scaling of excitatory synapses. Cell; Lazar, A., Pipa, G. & Triesch, J. (2009). SORN: a self-organizing recurrent neural network. Frontiers in Computational Neuroscience; Vogels, T. P., Sprekeler, H., Zenke, F., Clopath, C. & Gerstner, W. (2011). Inhibitory plasticity balances excitation and inhibition in sensory pathways and memory networks. Science; Zenke, F., Hennequin, G. & Gerstner, W. (2013). Synaptic plasticity in neural networks needs homeostasis with a fast rate detector. PLoS Computational Biology; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Zenke, F. & Gerstner, W. (2017). Hebbian plasticity requires compensatory processes on multiple timescales. Philosophical Transactions of the Royal Society B; Cui, Y., Ahmad, S. & Hawkins, J. (2017). The HTM spatial pooler — a neocortical algorithm for online sparse distributed coding. Frontiers in Computational Neuroscience."
+    }
+  ]
+}

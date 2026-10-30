@@ -1,0 +1,199 @@
+{
+  "title": "Inhibition and k-Winners-Take-All",
+  "intro": "Inhibitory interneurons make excitatory neurons compete. That competition makes neurons specialise during learning and keeps the code sparse. This page covers the biology (PV, SST and VIP interneurons; feedforward and feedback inhibition), excitation–inhibition balance and the Brunel (2000) regimes, k-winners-take-all as an abstraction, and practical ways to implement k-WTA in a spiking network, with an interactive raster of a minicolumn layer.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The intuition"
+    },
+    {
+      "type": "prose",
+      "text": "Excitation proposes, inhibition decides. Picture a minicolumn layer where many excitatory cells receive some evidence for the current input. Without inhibition, every cell above threshold fires, the most strongly driven ones fire a lot, and the representation is dense and redundant. Add a pool of fast inhibitory interneurons that is driven by the excitatory cells and inhibits them all in return: the first cells to reach threshold trigger inhibition that silences the slower ones. Only the best-matching few fire. That is winner-take-all, and with a pool sized to stop after about k spikes, it is k-winners-take-all (k-WTA)."
+    },
+    {
+      "type": "prose",
+      "text": "For learning, this competition is not optional. Hebbian and STDP rules make each neuron move toward the inputs that activate it; without competition, all neurons move toward the same dominant pattern (see \"Hebbian Learning\"). With competition, only winners learn, so neurons specialise on different patterns. Inhibition also sets the sparsity of the code, which determines its capacity and noise robustness (see \"Sparse Distributed Representations\")."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Biology: who does the inhibiting"
+    },
+    {
+      "type": "prose",
+      "text": "Roughly 20% of cortical neurons in rodents are GABAergic interneurons (estimates vary by species, area and method, and are often quoted as 20–30%). Three largely non-overlapping groups, defined by parvalbumin (PV), somatostatin (SST) and the serotonin receptor 5HT3a (which includes VIP cells), account for nearly all of them (Rudy, Fishell, Lee and Hjerling-Leffler 2011; Tremblay, Lee and Rudy 2016). For a column model the key players are:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "PV fast-spiking basket cells: fire at high rates with little adaptation, target the soma and proximal dendrites of pyramidal cells, and are connected densely and rather unselectively to their local pyramidal neighbours (Fino and Yuste 2011; Packer and Yuste 2011). They provide fast feedforward inhibition (thalamic or cortical input excites both pyramidal cells and PV cells, and the PV inhibition arrives a few milliseconds later, narrowing the window in which excitation can be summed; Pouille and Scanziani 2001 in hippocampus) and fast feedback inhibition (pyramidal cells excite PV cells, which inhibit the population). PV-mediated feedback inhibition is strongly implicated in gamma oscillations (Cardin et al. 2009; Sohal et al. 2009). This is the closest biological match to a k-WTA circuit.",
+        "SST (e.g. Martinotti) cells: target distal dendrites, including the apical tuft in layer 1, and are recruited more slowly and by facilitating synapses. They gate dendritic integration rather than enforcing fast competition.",
+        "VIP cells: preferentially inhibit SST cells and so disinhibit pyramidal dendrites (Pfeffer, Xue, He, Huang and Scanziani 2013). In models this is a natural route for top-down or contextual gating.",
+        "See \"Cell Types\" in section 1 for more detail. Isaacson and Scanziani (2011) review how these circuits shape cortical activity."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "E/I balance"
+    },
+    {
+      "type": "prose",
+      "text": "Cortical neurons receive thousands of excitatory inputs. If those inputs were not opposed, each neuron would be driven far above threshold and fire regularly at high rates, yet cortical firing is low-rate and highly irregular. van Vreeswijk and Sompolinsky (1996) explained this with the balanced state: in a network where each neuron receives K excitatory and inhibitory inputs with synaptic strengths of order 1/√K, the mean excitatory and inhibitory inputs are each of order √K (large) but cancel dynamically, leaving a net input of order 1 that sits near threshold. Fluctuations, not the mean, trigger spikes, which produces irregular, asynchronous, chaotic firing and a population that tracks changes in its input quickly and approximately linearly. No fine-tuning is needed: the balance emerges from the dynamics. Intracellular recordings support a tight balance in cortex, with inhibitory conductances tracking excitatory ones with a delay of a few milliseconds (Haider et al. 2006; Okun and Lampl 2008)."
+    },
+    {
+      "type": "prose",
+      "text": "Brunel (2000) mapped the regimes of a sparsely connected network of LIF neurons (model A: 10,000 excitatory and 2,500 inhibitory neurons, connection probability 0.1, τm = 20 ms, threshold 20 mV above rest, reset 10 mV, refractory 2 ms, delay 1.5 ms, J = 0.1 mV). Two parameters organise the phase diagram: g, the strength of inhibitory relative to excitatory synapses, and ν_ext/ν_thr, the external drive relative to the rate needed to reach threshold. Since there are four times more excitatory neurons, g = 4 is the point where recurrent inhibition exactly cancels recurrent excitation on average."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Synchronous regular (SR): g below about 4, excitation dominates; neurons fire regularly at high rates, close to saturation, in synchrony.",
+        "Asynchronous irregular (AI): g above about 4 with moderate external drive; low rates, irregular spiking, little population synchrony. This is the regime usually considered most cortex-like.",
+        "Synchronous irregular, fast oscillations: inhibition-dominated with strong external drive; individual neurons fire irregularly but the population rate oscillates at high frequency.",
+        "Synchronous irregular, slow oscillations: inhibition-dominated with external drive near threshold; slow population oscillations."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "k-WTA as an abstraction"
+    },
+    {
+      "type": "prose",
+      "text": "k-WTA replaces the inhibitory dynamics with a rule: in each time window, the k excitatory units with the largest input (or the earliest spikes) become active and the rest are silenced. Maass (2000) showed that WTA is computationally powerful: circuits whose only nonlinearity is a single soft WTA gate, applied to weighted sums of the inputs, can approximate any continuous function. k-WTA is the core of the HTM spatial pooler, which picks the top 2% of minicolumns by boosted overlap (Cui, Ahmad and Hawkins 2017; see \"Spatial Pooler\" in section 4), and of k-sparse autoencoders (Makhzani and Frey 2014). Ahmad and Scheinkman (2019) reported that k-WTA activations combined with sparse weights improved robustness to noise in deep networks."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "k-WTA in one window (vector form)\n\nu = W x                       # input drive (or boosted overlap) for N units\nactive = argsort(u)[-k:]      # indices of the k largest values (break ties randomly)\na = zeros(N); a[active] = 1   # sparsity k/N, e.g. 40/2048 ≈ 2%\n\nLearning (competitive / HTM style): update only the rows W[active]"
+    },
+    {
+      "type": "prose",
+      "text": "The abstraction is useful because it makes sparsity a parameter you choose rather than an emergent property you must tune. It is a good approximation of fast feedback inhibition when inhibition acts within one integration window, for example within a gamma cycle of roughly 10–25 ms: the first k cells to cross threshold fire before inhibition arrives. It is a poor approximation when you care about graded rates, oscillations or inhibition-stabilised dynamics."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Implementing k-WTA in a spiking network"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Hard k-WTA outside the dynamics: run the excitatory layer for a window (e.g. 10–50 ms), rank cells by membrane potential or first-spike time, and keep the top k. Easy and exact on GPUs and in vectorised simulators, but not local; on neuromorphic hardware a global sort is usually unavailable.",
+        "Strong recurrent inhibition through a shared pool: excitatory cells drive a small population of fast inhibitory cells (short τm, short delays), which inhibit all excitatory cells. The number of winners per cycle is set by how many excitatory spikes can occur before inhibition lands, i.e. by inhibitory delay, E→I gain, I→E strength and how spread out the excitatory latencies are. Shorter delays and stronger inhibition give fewer winners.",
+        "One-to-one lateral inhibition (Diehl and Cook 2015): each excitatory cell has a partner inhibitory cell that inhibits all other excitatory cells. Effectively WTA with k ≈ 1 per cycle, softened by noise.",
+        "Soft WTA: with stochastic neurons and inhibition that normalises total activity, the network samples winners with probabilities proportional to the exponential of their input, i.e. a softmax. Nessler, Pfeiffer, Buesing and Maass (2013) showed that STDP in such a circuit approximates expectation-maximisation for a mixture model. Oster, Douglas and Liu (2009) analyse the conditions under which spiking WTA networks select the right winner.",
+        "Rank-order readout: with latency coding, the first k spikes after stimulus onset carry most of the information (Thorpe, Delorme and Van Rullen 2001), so a pool that shuts down the layer after k spikes is natural."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "from brian2 import *\n# Spiking k-WTA-like layer: N_E excitatory LIF cells share one fast inhibitory pool.\nN_E, N_I = 80, 20\ntau_e, tau_i = 20*ms, 10*ms\neqs = \"\"\"dv/dt = (-(v - El) + ge - gi) / tau : volt (unless refractory)\n         dge/dt = -ge / (5*ms) : volt\n         dgi/dt = -gi / (5*ms) : volt\n         tau : second\"\"\"\nEl = -65*mV\nE = NeuronGroup(N_E, eqs, threshold='v > -50*mV', reset='v = -65*mV', refractory=5*ms, method='euler')\nI = NeuronGroup(N_I, eqs, threshold='v > -50*mV', reset='v = -65*mV', refractory=1*ms, method='euler')\nE.tau, I.tau = tau_e, tau_i\nE.v, I.v = El, El\n\nEI = Synapses(E, I, on_pre='ge_post += 6*mV', delay=0.5*ms); EI.connect(p=0.5)   # E drives the pool\nIE = Synapses(I, E, on_pre='gi_post += 8*mV', delay=0.5*ms); IE.connect(p=0.8)   # pool inhibits all E\n# Feedforward input (e.g. a PoissonGroup with plastic synapses onto E) is omitted here.\n# Stronger IE weights or shorter delays -> fewer winners per cycle; weaker -> more.\n"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "spike-raster",
+        "title": "Minicolumn layer with inhibition",
+        "params": [
+          {
+            "key": "inhibition",
+            "label": "Inhibition",
+            "control": "select",
+            "options": [
+              "none",
+              "E/I feedback",
+              "k-WTA"
+            ],
+            "default": "k-WTA"
+          },
+          {
+            "key": "k",
+            "label": "k (winners per step, k-WTA)",
+            "control": "range",
+            "min": 1,
+            "max": 30,
+            "step": 1,
+            "default": 5
+          },
+          {
+            "key": "inhibitoryGain",
+            "label": "Inhibitory gain (E/I feedback)",
+            "control": "range",
+            "min": 0,
+            "max": 3,
+            "step": 0.1,
+            "default": 1.2
+          },
+          {
+            "key": "inputRate",
+            "label": "Input rate (Hz)",
+            "control": "range",
+            "min": 5,
+            "max": 100,
+            "step": 1,
+            "default": 40
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 9999,
+            "step": 1,
+            "default": 7
+          }
+        ],
+        "config": {
+          "excitatory": 80,
+          "inhibitory": 20,
+          "inputs": 100,
+          "patterns": 4,
+          "patternMs": 75,
+          "dt": 1
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Things to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Start with Inhibition = none. Many excitatory cells fire for every input pattern, the active fraction is high, and the overlap between different patterns' active sets is large: patterns are hard to tell apart and every cell would learn from every input. Raise the input rate and activity rises with it.",
+        "Switch to E/I feedback. The inhibitory rows (I cells) now fire in response to excitatory activity and the excitatory raster thins out. Sweep the inhibitory gain from 0 to 3: low gain looks like no inhibition; high gain suppresses most cells, and at strong gain activity may come in bursts or near silence. Change the input rate: with feedback inhibition the active fraction still drifts with input strength, because inhibition is proportional to activity rather than fixed.",
+        "Switch to k-WTA. Exactly k excitatory cells are active per step, so the active fraction is k/80 regardless of the input rate. Compare the overlap between patterns' winner sets with the other two modes: it should be much lower, which is the point of competition.",
+        "Vary k in k-WTA mode. With k = 1 or 2 the code is very sparse but fragile (a small change in input can switch the winner). With k around 20–30 overlap between patterns grows again. The default k = 5 gives 5/80 ≈ 6%; k = 2 gives 2.5%, close to the 2% sparsity used in HTM.",
+        "Change the seed to get a different random connectivity and see which conclusions hold across networks, not just one."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Inhibitory delays and time constants matter more than weights. If inhibition is slower than excitation (τ_I ≥ τ_E or delays of several ms), many excitatory cells fire before it arrives and you get synchronous bursts followed by silence instead of sparse winners.",
+        "Too much inhibition is as bad as too little: the network can fall silent, or fall into oscillations. Check the population rate trace, not just the raster.",
+        "Winners must also learn. Make sure plasticity is gated by winning (or post spikes) so that suppressed neurons do not update; otherwise competition does not produce specialisation.",
+        "Pair competition with homeostasis. Without adaptive thresholds or boosting, the same few cells win everything (see \"Homeostatic Plasticity\").",
+        "Measure sparsity in two ways: population sparseness (fraction of cells active for one input) and lifetime sparseness (fraction of inputs that activate one cell). k-WTA fixes the first, homeostasis evens out the second."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Open questions: how precisely cortical inhibition implements anything like k-WTA is uncertain. PV inhibition is fast and dense, but cortical activity is graded, and balanced networks can show inhibition-stabilised dynamics that a hard top-k rule ignores. k-WTA should be read as a useful functional abstraction, not a claim about circuit mechanism."
+    },
+    {
+      "type": "callout",
+      "text": "Sources: van Vreeswijk, C. & Sompolinsky, H. (1996). Chaos in neuronal networks with balanced excitatory and inhibitory activity. Science; Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience; Maass, W. (2000). On the computational power of winner-take-all. Neural Computation; Pouille, F. & Scanziani, M. (2001). Enforcement of temporal fidelity in pyramidal cells by somatic feed-forward inhibition. Science; Thorpe, S., Delorme, A. & Van Rullen, R. (2001). Spike-based strategies for rapid processing. Neural Networks; Haider, B., Duque, A., Hasenstaub, A. R. & McCormick, D. A. (2006). Neocortical network activity in vivo is generated through a dynamic balance of excitation and inhibition. Journal of Neuroscience; Okun, M. & Lampl, I. (2008). Instantaneous correlation of excitation and inhibition during ongoing and sensory-evoked activities. Nature Neuroscience; Cardin, J. A. et al. (2009). Driving fast-spiking cells induces gamma rhythm and controls sensory responses. Nature; Sohal, V. S., Zhang, F., Yizhar, O. & Deisseroth, K. (2009). Parvalbumin neurons and gamma rhythms enhance cortical circuit performance. Nature; Oster, M., Douglas, R. & Liu, S.-C. (2009). Computation with spikes in a winner-take-all network. Neural Computation; Rudy, B., Fishell, G., Lee, S. & Hjerling-Leffler, J. (2011). Three groups of interneurons account for nearly 100% of neocortical GABAergic neurons. Developmental Neurobiology; Fino, E. & Yuste, R. (2011). Dense inhibitory connectivity in neocortex. Neuron; Packer, A. M. & Yuste, R. (2011). Dense, unspecific connectivity of neocortical parvalbumin-positive interneurons: a canonical microcircuit for inhibition? Journal of Neuroscience; Isaacson, J. S. & Scanziani, M. (2011). How inhibition shapes cortical activity. Neuron; Pfeffer, C. K., Xue, M., He, M., Huang, Z. J. & Scanziani, M. (2013). Inhibition of inhibition in visual cortex: the logic of connections between molecularly distinct interneurons. Nature Neuroscience; Nessler, B., Pfeiffer, M., Buesing, L. & Maass, W. (2013). Bayesian computation emerges in generic cortical microcircuits through spike-timing-dependent plasticity. PLoS Computational Biology; Makhzani, A. & Frey, B. (2014). k-Sparse autoencoders. ICLR; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Tremblay, R., Lee, S. & Rudy, B. (2016). GABAergic interneurons in the neocortex: from cellular properties to circuits. Neuron; Cui, Y., Ahmad, S. & Hawkins, J. (2017). The HTM spatial pooler — a neocortical algorithm for online sparse distributed coding. Frontiers in Computational Neuroscience; Ahmad, S. & Scheinkman, L. (2019). How can we be so dense? The benefits of using highly sparse representations. arXiv."
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "title": "Grid and Displacement Cells",
+  "intro": "Grid cells give the brain a compact, path-integrated code for position. The Thousand Brains Theory proposes that every cortical column contains grid-cell-like modules that do the same for locations on objects, plus hypothetical displacement cells that encode relations between locations. This page separates what has been measured from what has been proposed, and shows how to build a grid module in spiking neurons.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The intuition: several odometers with different wheel sizes"
+    },
+    {
+      "type": "prose",
+      "text": "Imagine tracking your position along a long corridor using only a handful of cheap dials. Each dial turns as you walk, but each wraps around at a different distance — one every 30 cm, one every 42 cm, one every 60 cm, and so on. No single dial tells you where you are, because each repeats. But the combination of readings is unique over a range far larger than any one dial's period, like the combination of hour, day-of-week and month. And you never need to know your absolute position to update them: every step simply turns every dial by the same distance. That is essentially how grid cells are thought to encode position, and it is the mechanism the Thousand Brains Theory proposes each cortical column reuses to know where its sensor is on an object."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What is experimentally established"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Place cells. O'Keefe & Dostrovsky (1971) found hippocampal neurons in rats that fire when the animal is in one particular place in its environment.",
+        "Grid cells. Hafting, Fyhn, Molden, Moser & Moser (2005) found cells in the medial entorhinal cortex (MEC) that fire at many locations forming a regular triangular (hexagonal) lattice tiling the environment. Firing fields persisted after the lights were turned off, pointing to path integration from self-motion signals.",
+        "Modules. Grid cells are organised in a small number of discrete modules; cells within a module share lattice spacing and orientation but differ in spatial phase (offset). Spacing increases from dorsal to ventral MEC, from roughly 30–40 cm to several metres in rats, with successive modules differing by a ratio of about 1.4 on average (Stensola et al. 2012).",
+        "Supporting cells. Head-direction cells (Taube, Muller & Ranck 1990) and speed cells (Kropff et al. 2015) provide the direction and speed signals a path integrator needs. Object-vector cells in MEC fire at a particular distance and direction from objects (Høydal et al. 2019).",
+        "Humans and other spaces. Grid-like single-unit activity has been recorded in humans (Jacobs et al. 2013), and a hexadirectional fMRI signal has been reported during virtual navigation (Doeller, Barry & Burgess 2010) and during navigation through an abstract two-dimensional feature space (Constantinescu, O'Reilly & Behrens 2016)."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Established vs proposed: everything in the list above concerns the hippocampal–entorhinal system (plus indirect fMRI signals). That neocortical columns in sensory areas contain grid-cell-like modules encoding locations on objects is a proposal of the Thousand Brains Theory (Lewis et al. 2019; Hawkins, Lewis et al. 2019). Displacement cells are a purely theoretical prediction — no such cells have been reported."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The math: phases, modules and unique codes"
+    },
+    {
+      "type": "prose",
+      "text": "Each module m can be summarised by a phase φₘ — where the animal is within one period of that module's lattice. In one dimension with period λₘ the phase is the position modulo the period; in two dimensions it is a point on a torus (a rhombus with opposite edges glued). Path integration just adds the scaled, rotated displacement to every module's phase."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "1D:  φₘ = (x / λₘ) mod 1                         one phase per module m = 1..M\n2D:  φₘ = (Aₘ Rₘ x) mod 1   ∈ [0,1)²               Rₘ = module orientation, Aₘ = 1/λₘ (with hex basis)\nPath integration (every module, every step):\n     φₘ ← (φₘ + Aₘ Rₘ Δx) mod 1\nPopulation code: each module has n cells tiling its torus; cells whose preferred phase is\nnear φₘ fire (a bump of ~1–4 cells per module). The location SDR is the union over modules.\nCapacity (Fiete, Burak & Brookings 2008): with integer periods λₘ the code is unique up to\n     L ≈ lcm(λ₁ … λ_M)  (≈ ∏ λₘ for co-prime periods), i.e. exponential in M,\nwhile the number of cells grows only linearly in M."
+    },
+    {
+      "type": "prose",
+      "text": "This exponential range is why grid codes are attractive as location codes: a handful of small modules can label an enormous space. Lewis et al. (2019) exploit it differently from the brain's navigation use: when a column learns a new object, each module is anchored at a random phase, so the object occupies its own random patch of the huge combined code space. A location SDR therefore identifies both a point and, implicitly, the object it belongs to, and the codes for different objects rarely collide."
+    },
+    {
+      "type": "prose",
+      "text": "In Lewis et al. (2019) the proposed L6 location layer consists of several modules per column. On the first sensation the location layer is empty, so the sensed feature activates, via learned connections from the L4 sensory layer, every location (on every object) where that feature was previously learned — a union. A motor command then shifts every active bump in every module by the same displacement. The next sensed feature is compared with predictions from the shifted union; only consistent locations survive. Because each module path-integrates independently, the network keeps many hypotheses alive in parallel with no explicit list of candidates."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Displacement cells (a prediction, not a finding)"
+    },
+    {
+      "type": "prose",
+      "text": "Hawkins, Lewis et al. (2019) add a second proposal. If grid cells encode locations, then a population could encode the displacement between two locations — 'the handle is this far and in this direction from the rim' — independently of where the pair sits. Module-wise, a displacement is simply a phase difference, so it is the same for every pair of locations separated by the same vector:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Dₘ(A→B) = (φₘ(B) − φₘ(A)) mod 1      for each module m\nUses proposed in the 2019 framework:\n  composition: object X = sub-object Y at displacement D from sub-object Z (e.g. a logo on a mug)\n  behaviour:   a displacement to a target location is the movement to make\nProposed home: layer 5 (output to subcortical motor centres) — hypothetical."
+    },
+    {
+      "type": "prose",
+      "text": "Be clear about the status. Displacement cells are a theoretical construct with a testable prediction: cells (proposed in L5) whose activity depends on the relative offset between two sensed features or locations and is invariant to their absolute position. Object-vector cells in MEC (Høydal et al. 2019) show that vector-like codes exist in the brain, but they encode the animal's position relative to an object, not displacements between object parts, and they are not in neocortical L5."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building one in spiking neurons"
+    },
+    {
+      "type": "prose",
+      "text": "You have three practical choices for a grid module, which you can mix per experiment; start with the cheapest that answers your question. For the encoder side of grid-cell codes (turning a coordinate into an SDR without a dynamic network) see 'Encoding Schemes' in section 7, and for where this fits in the build order see 'Step-by-Step Roadmap' in section 7."
+    },
+    {
+      "type": "prose",
+      "text": "Option 1, algorithmic phase plus bump readout. Keep φₘ as a float pair per module, update it in software from the motor command, and emit spikes from the n cells whose preferred phases are closest. In a vector-based simulator this costs almost nothing and gives you correct unions: represent a union as a binary vector per module and implement the shift as a roll (a permutation) of that vector."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nside = 10                                   # 10 x 10 cells per module (toy square torus, not hexagonal)\nM    = 8                                    # modules\nscales = 1.4 ** np.arange(M)                # module periods, ratio ~1.4\nthetas = np.random.uniform(0, np.pi/3, M)   # module orientations\n\ndef shift(active, dx):                      # active: (M, side, side) bool union\n    out = np.empty_like(active)\n    for m in range(M):\n        c, s = np.cos(thetas[m]), np.sin(thetas[m])\n        d = np.array([[c, -s], [s, c]]) @ dx / scales[m]       # phase shift in periods\n        k = np.rint(d * side).astype(int)                       # in cells\n        out[m] = np.roll(active[m], shift=tuple(k), axis=(0, 1))  # torus wrap\n    return out\n# location SDR = active.reshape(-1): ~M bumps -> a few % of M*side*side cells"
+    },
+    {
+      "type": "prose",
+      "text": "Option 2, a continuous attractor network (CAN). The standard mechanistic model (Fuhs & Touretzky 2006; McNaughton et al. 2006; Burak & Fiete 2009) is a 2D sheet of neurons with centre-surround recurrent connectivity that supports a stable activity bump (or a lattice of bumps). Each neuron has a preferred direction; its outgoing weights are shifted slightly in that direction, and its feedforward drive is modulated by velocity along that direction, so movement pushes the bump across the sheet."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Burak & Fiete (2009) rate form (spiking versions behave similarly):\n  τ dsᵢ/dt + sᵢ = f( Σⱼ Wᵢⱼ sⱼ + Bᵢ ),      τ ≈ 10 ms, f = rectification\n  Wᵢⱼ = W₀(xᵢ − xⱼ − l·ê_θⱼ)                 W₀(x) = a·exp(−γ|x|²) − exp(−β|x|²)\n  Bᵢ  = A (1 + α ê_θᵢ · v)                    v = velocity, α sets grid scale\nPreferred directions θ in {N, E, S, W}; periodic boundaries give a clean torus."
+    },
+    {
+      "type": "prose",
+      "text": "Typical sizes in the literature run from a few hundred to tens of thousands of neurons per module (Burak & Fiete used sheets of about 128 × 128). For a column model, 20 × 20 to 32 × 32 per module with periodic boundaries is a reasonable start. Expect to spend time tuning: the bump must neither die nor spread, and the velocity gain must be linear across the speed range you use."
+    },
+    {
+      "type": "prose",
+      "text": "Option 3, phase (oscillatory interference) codes. Oscillatory interference models (Burgess, Barry & O'Keefe 2007) encode displacement along a direction as the phase difference between a velocity-controlled oscillator and a baseline rhythm. On hardware that supports resonate-and-fire or oscillatory neurons this is compact, and phase arithmetic gives displacements for free. It is, however, notoriously sensitive to frequency noise, which accumulates as phase drift."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Drift. CANs drift with noise and with imperfect weight symmetry; Burak & Fiete showed accurate integration needs large networks or error correction. In a TBT column, sensory feedback from L4 to the location layer is your error-correction loop — build it in early.",
+        "Unions in a CAN. A single attractor sheet wants one bump; representing a union of many candidate locations in the same sheet breaks the attractor. Lewis et al. (2019) used the algorithmic module abstraction precisely to allow unions. If you use CANs, consider several sheets per module or accept fewer simultaneous hypotheses.",
+        "Rotation. Path integration in an object's frame requires the movement to be rotated into that frame. Every module needs the same rotation; an unknown object orientation multiplies your hypothesis count.",
+        "Dimensionality. Biological grid cells are 2D. Objects are 3D. Whether 3D locations need 3D grid codes or several 2D projections is open; Monty sidesteps it with explicit 3D coordinates (see 'Monty and the Thousand Brains Project').",
+        "Choice of scales. Pick module periods comparable to object size: if every period is far larger than the object, all locations collapse to similar phases; if all are far smaller, you lose robustness to path-integration error."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: O'Keefe, J. & Dostrovsky, J. (1971). The hippocampus as a spatial map: preliminary evidence from unit activity in the freely-moving rat. Brain Research; Hafting, T., Fyhn, M., Molden, S., Moser, M.-B. & Moser, E. I. (2005). Microstructure of a spatial map in the entorhinal cortex. Nature; Moser, E. I., Kropff, E. & Moser, M.-B. (2008). Place cells, grid cells, and the brain's spatial representation system. Annual Review of Neuroscience; Stensola, H., Stensola, T., Solstad, T., Frøland, K., Moser, M.-B. & Moser, E. I. (2012). The entorhinal grid map is discretized. Nature; Taube, J. S., Muller, R. U. & Ranck, J. B. (1990). Head-direction cells recorded from the postsubiculum in freely moving rats. Journal of Neuroscience; Kropff, E., Carmichael, J. E., Moser, M.-B. & Moser, E. I. (2015). Speed cells in the medial entorhinal cortex. Nature; Høydal, Ø. A., Skytøen, E. R., Andersson, S. O., Moser, M.-B. & Moser, E. I. (2019). Object-vector coding in the medial entorhinal cortex. Nature; Jacobs, J. et al. (2013). Direct recordings of grid-like neuronal activity in human spatial navigation. Nature Neuroscience; Doeller, C. F., Barry, C. & Burgess, N. (2010). Evidence for grid cells in a human memory network. Nature; Constantinescu, A. O., O'Reilly, J. X. & Behrens, T. E. J. (2016). Organizing conceptual knowledge in humans with a gridlike code. Science; Fiete, I. R., Burak, Y. & Brookings, T. (2008). What grid cells convey about rat location. Journal of Neuroscience; Fuhs, M. C. & Touretzky, D. S. (2006). A spin glass model of path integration in rat medial entorhinal cortex. Journal of Neuroscience; McNaughton, B. L., Battaglia, F. P., Jensen, O., Moser, E. I. & Moser, M.-B. (2006). Path integration and the neural basis of the 'cognitive map'. Nature Reviews Neuroscience; Burak, Y. & Fiete, I. R. (2009). Accurate path integration in continuous attractor network models of grid cells. PLoS Computational Biology; Burgess, N., Barry, C. & O'Keefe, J. (2007). An oscillatory interference model of grid cell firing. Hippocampus; Lewis, M., Purdy, S., Ahmad, S. & Hawkins, J. (2019). Locations in the neocortex: a theory of sensorimotor object recognition using cortical grid cells. Frontiers in Neural Circuits; Hawkins, J., Lewis, M., Klukas, M., Purdy, S. & Ahmad, S. (2019). A framework for intelligence and cortical function based on grid cells in the neocortex. Frontiers in Neural Circuits."
+    }
+  ]
+}

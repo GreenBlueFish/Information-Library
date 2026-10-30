@@ -1,0 +1,144 @@
+{
+  "title": "Step-by-Step Roadmap",
+  "intro": "Nine stages from an empty project to several spiking columns that learn objects and vote. Each stage has a goal, what to build, a check that must pass before you move on, and what to read.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "The fastest way to a working column is to never debug more than one new thing at a time. Each stage below adds one mechanism on top of a model that already passes its checks, and each check is something you can compute, look up or see in a plot. Expect early stages to take hours and later ones weeks. If a check fails, stay on that stage: problems from one stage get harder to find with every stage built on top of it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage 0 — Tooling and conventions"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Goal: a project you can trust. Pick a simulator for dynamics (Brian2 or NEST) and, if you want fast iteration on learning, a vectorised or GPU path (NumPy, PyTorch with snnTorch or Norse). See \"Simulators and Frameworks\".",
+        "Build: a config file holding every parameter with its unit; seeded random number generation; a spike recorder and plotting helpers for rasters, rate histograms and membrane traces.",
+        "Check: running the same config twice gives identical spikes; changing the seed changes them.",
+        "Pitfall: mixing units (mV and V, nA and pA, ms and s) silently. Keep units explicit — Brian2 enforces them."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage 1 — One LIF neuron, validated"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Goal: a neuron model whose behaviour you can predict.",
+        "Build: a LIF neuron (section 2, \"Leaky Integrate-and-Fire\") driven by constant current, then by Poisson synaptic input.",
+        "Check: no spikes below rheobase (θ − V_rest)/R; the simulated f–I curve matches f = 1/(t_ref + τm ln(RI / (RI − (θ − V_rest)))) to within a few percent; halving dt changes nothing visible.",
+        "Read: \"Leaky Integrate-and-Fire\" and \"Synapse Models\" in section 2."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage 2 — A balanced E/I population"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Goal: a population in the asynchronous irregular state, the background regime of cortex.",
+        "Build: about 800 excitatory and 200 inhibitory LIF neurons with sparse random connectivity (connection probability around 0.1), inhibition stronger than excitation per synapse, and external Poisson drive — Brunel (2000) gives parameter regimes.",
+        "Check: low mean rates (a few Hz) with a broad distribution; CV of ISI near 1; weak pairwise correlations; no population bursts. Vary the inhibition strength and confirm you can move between synchronous and asynchronous regimes as predicted.",
+        "Read: \"Inhibition and k-Winners-Take-All\" (section 3) and \"Evaluating a Column\"."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage 3 — A competitive STDP layer with homeostasis"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Goal: unsupervised feature learning — replicate Diehl & Cook (2015) at small scale.",
+        "Build: Poisson-encoded input, excitatory neurons with STDP on input synapses, lateral inhibition implementing soft winner-take-all, adaptive thresholds, weight normalisation.",
+        "Check: receptive fields become distinct prototypes; every neuron wins for some inputs (no dead or greedy units); a linear or vote-based readout reaches roughly 80–90% on MNIST with 100–400 neurons. Ablate the adaptive threshold and confirm a few units take over.",
+        "Read: \"Spike-Timing-Dependent Plasticity\", \"Homeostatic Plasticity\" and \"Hebbian Learning\" in section 3."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage 4 — An SDR layer of minicolumns (spatial pooling)"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Goal: turn encoded input into stable sparse distributed representations, organised as minicolumns.",
+        "Build: an HTM-style scalar or category encoder; a layer of minicolumns that share feedforward input, with k-WTA inhibition across minicolumns (about 2% active) and boosting or adaptive thresholds for homeostasis. In a spiking version, the first minicolumns to fire inhibit the rest within a few ms.",
+        "Check: fixed sparsity; similar inputs give overlapping SDRs and different inputs near-chance overlap; all minicolumns used; SDRs stable over continued training; robustness to input noise close to the SDR theory.",
+        "Read: \"Spatial Pooler\" (section 4), \"Sparse Distributed Representations\" (section 3), \"Encoding Schemes\"."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage 5 — Dendritic segments and temporal memory"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Goal: sequence learning and prediction in context.",
+        "Build: several cells per minicolumn; distal segments on each cell, each a thresholded sum over a small set of synapses from other cells (an NMDA-spike-like subunit) that depolarises the cell; cells depolarised by a segment fire slightly earlier and, through fast inhibition within the minicolumn, prevent the others from firing. If no cell is predicted, all fire (bursting). Grow and reinforce segments on correctly predicting cells.",
+        "Check: on A B C D / X B C Y, after training, the representation of C differs depending on the context, D is predicted only after A B C and Y only after X B C; the anomaly score falls towards zero for learned sequences; with one cell per minicolumn the context is lost (both predicted).",
+        "Read: \"Dendrites and Active Dendrites\" (section 2), \"The HTM Neuron\", \"Temporal Memory\" and \"Sequence Prediction and Anomaly Detection\" (section 4)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage 6 — A location signal and feature-at-location learning"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Goal: a single sensorimotor column that learns objects as features at locations.",
+        "Build: a location layer of several grid-cell-like modules (each a small continuous attractor or a phase code) updated by movement commands (path integration); a feature layer whose distal segments receive the location code, so a cell predicts the feature expected at the current location; learning that associates each sensed feature with the current location for the current object.",
+        "Check: path integration returns to the same location code after a closed loop of movements (measure drift); after learning a small object set, the column narrows its candidate set with each sensation and recognises each object within a few sensations; recognition is independent of the order of movements.",
+        "Read: \"Reference Frames\", \"Grid and Displacement Cells\" and \"Sensorimotor Object Recognition\" in section 5."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage 7 — Several columns that vote"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Goal: many columns reaching a consensus faster than any one column.",
+        "Build: several copies of the Stage 6 column, each with its own sensor patch; an object layer in each column whose cells represent the column's current candidate objects; lateral excitatory connections between object layers of different columns, learned between cells that represent the same object, plus inhibition so only consistent candidates survive.",
+        "Check: the number of sensations needed to recognise an object falls as columns are added, reaching single-sensation recognition with enough columns (compare the voting demo in section 5); disabling the lateral connections removes the benefit.",
+        "Read: \"Voting Between Columns\" and \"Monty and the Thousand Brains Project\" in section 5."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage 8 — Hierarchy, motor output and hardware"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Goal: from a demonstrator towards a mini brain.",
+        "Build: connect columns hierarchically (the output of one region's object layer as input to another); add a motor policy that chooses the next movement to reduce ambiguity among candidates; port stable parts to neuromorphic hardware, respecting fan-in, weight precision and supported learning rules.",
+        "Check: hierarchy and policy both reduce the number of sensations needed; the hardware version matches the simulator's spike statistics and task results within the expected quantisation loss; report energy per inference and real-time factor.",
+        "Read: \"Neuromorphic Hardware\", \"Evaluating a Column\", and the Monty documentation."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Rule of thumb for scale: keep everything small until the stage checks pass — tens of minicolumns for Stage 5 experiments, a handful of objects for Stages 6–7. Scale up only to measure capacity, never to fix a bug."
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits; Cui, Y., Ahmad, S. & Hawkins, J. (2017). The HTM spatial pooler — a neocortical algorithm for online sparse distributed coding. Frontiers in Computational Neuroscience; Hawkins, J., Ahmad, S. & Cui, Y. (2017). A theory of how columns in the neocortex enable learning the structure of the world. Frontiers in Neural Circuits; Lewis, M., Purdy, S., Ahmad, S. & Hawkins, J. (2019). Locations in the neocortex: a theory of sensorimotor object recognition using cortical grid cells. Frontiers in Neural Circuits; Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife."
+    }
+  ]
+}

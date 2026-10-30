@@ -1,0 +1,129 @@
+{
+  "title": "Hebbian Learning",
+  "intro": "Hebbian learning strengthens a synapse when its input helps drive the neuron it connects to. It is local and needs no labels, so it suits unsupervised column models. On its own, though, it is unstable: weights grow without limit and every neuron ends up learning the same thing. This page covers Hebb's postulate, the linear analysis that shows the instability, and the standard fixes: Oja's rule, covariance rules, BCM and competition.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The intuition"
+    },
+    {
+      "type": "prose",
+      "text": "Donald Hebb's 1949 postulate is the seed of almost every unsupervised learning rule used in cortical-column models: \"When an axon of cell A is near enough to excite a cell B and repeatedly or persistently takes part in firing it, some growth process or metabolic change takes place in one or both cells such that A's efficiency, as one of the cells firing B, is increased.\" The later slogan \"cells that fire together wire together\" (popularised by Carla Shatz) captures the gist, though Hebb's wording is explicitly causal: A must take part in firing B. That causal flavour is exactly what spike-timing-dependent plasticity later made precise (see \"Spike-Timing-Dependent Plasticity\")."
+    },
+    {
+      "type": "prose",
+      "text": "Picture a neuron receiving 784 input lines from an image. Every time it fires, the inputs that were active at that moment get a little stronger. After many images, the neuron's weight vector looks like an average of the inputs that made it fire: it has become a detector for a recurring pattern. No labels, no error signal, only local information available at the synapse (presynaptic activity, postsynaptic activity, the current weight). Locality is the property that makes Hebbian rules attractive for neuromorphic hardware, where each synapse can only see its own two neurons."
+    },
+    {
+      "type": "prose",
+      "text": "Experimentally, the closest physiological correlate is long-term potentiation (LTP), first described in the hippocampus by Bliss and Lømo (1973), and its counterpart long-term depression (LTD). Many forms of LTP are NMDA-receptor dependent: the NMDA receptor opens only when glutamate is bound (presynaptic activity) and the membrane is depolarised (postsynaptic activity), making it a molecular coincidence detector. Treat this as a motivating sketch rather than a complete account; real plasticity involves many pathways and depends on cell type, synapse location and neuromodulation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The math: plain Hebb and why it explodes"
+    },
+    {
+      "type": "prose",
+      "text": "Use a rate neuron with output y = wᵀx (x is the input rate vector, w the weights). The plain Hebbian rule is"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Δw = η · y · x            (η: learning rate)\n\nAveraged over inputs with correlation matrix Q = ⟨x xᵀ⟩:\nτ_w · dw/dt = Q w\n\nSolution: w(t) = Σ_i c_i · exp(λ_i t / τ_w) · e_i\n(λ_i, e_i = eigenvalues / eigenvectors of Q)"
+    },
+    {
+      "type": "prose",
+      "text": "Because Q is positive semi-definite, every component with λ_i > 0 grows exponentially, and the fastest-growing one is the principal eigenvector e_1. So plain Hebb does find something meaningful (the direction of largest input correlation) but the weight norm diverges. With purely positive rates, every weight also tends to grow together, so the neuron eventually responds to everything. This is a positive-feedback loop: stronger weights cause more firing, which causes stronger weights. Dayan and Abbott (2001, chapter 8) give the full analysis; Miller and MacKay (1994) showed that how you constrain the growth (multiplicatively or subtractively) changes what is learned, not just how fast."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Oja's rule: built-in normalisation"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Oja (1982) adds a decay term proportional to y²:\n\nΔw = η · y · (x − y · w)\n\nFixed point: w → ±e_1 with ‖w‖ = 1\n(the neuron extracts the first principal component of its input)"
+    },
+    {
+      "type": "prose",
+      "text": "The term −η y² w is a local, multiplicative weight decay that kicks in only when the neuron is active. It is a first-order approximation of \"apply Hebb, then renormalise ‖w‖ to 1\". Sanger's (1989) generalised Hebbian algorithm extends this to several neurons extracting successive principal components. For a column builder the lesson is that normalisation is not an afterthought: it decides what the neuron converges to."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Covariance rule and thresholds"
+    },
+    {
+      "type": "prose",
+      "text": "Subtracting averages, Δw = η (y − ⟨y⟩)(x − ⟨x⟩), makes the rule sensitive to co-variation rather than raw co-activity and allows depression when one side is below its mean (Sejnowski 1977 introduced covariance-style learning). Without further constraints it is still unstable, but it explains why a learning rule needs both potentiation and depression."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "BCM: a sliding threshold"
+    },
+    {
+      "type": "prose",
+      "text": "Bienenstock, Cooper and Munro (1982) proposed that potentiation or depression depends on whether the postsynaptic rate is above or below a modification threshold θ_M, and that θ_M itself slides with the recent average of y²:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Δw = η · x · y · (y − θ_M)\nτ_θ · dθ_M/dt = −θ_M + ⟨y²⟩    (θ_M tracks a running average, faster than τ_w)\n\nHigh recent activity → θ_M rises → more inputs fall into the LTD region"
+    },
+    {
+      "type": "prose",
+      "text": "The sliding threshold is a homeostatic mechanism inside the learning rule: a neuron that fires too much makes itself harder to potentiate. BCM neurons become selective, responding strongly to a few input patterns and weakly to the rest, which is why BCM was used to explain the development of orientation selectivity and ocular dominance. The stability requires the threshold to move faster than the weights; if it is too slow the network oscillates or runs away (see \"Homeostatic Plasticity\" for the timescale problem in general)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Competitive learning: Hebb plus competition"
+    },
+    {
+      "type": "prose",
+      "text": "Rumelhart and Zipser (1985) showed that if only the winner of a group of neurons learns, and its weights move toward the current input (Δw = η (x − w) for the winner only), the group partitions the input space into clusters. This is the rate-based ancestor of the Diehl and Cook (2015) spiking network and of the HTM spatial pooler: Hebbian learning provides the \"move toward what activated me\" step, and lateral inhibition provides the competition so that different neurons learn different patterns. Földiák (1990) added anti-Hebbian lateral connections that decorrelate outputs and produce sparse codes without a hard winner selection."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How this is used when building a column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Never run raw Hebb alone. Pair it with one of: weight-norm constraint (Oja, explicit renormalisation of Σw per neuron), weight-dependent depression, a sliding threshold (BCM), or competition (winner-take-all). Most working SNN columns use two or three of these at once.",
+        "Competition is what makes neurons specialise. Without lateral inhibition every neuron in a layer converges to the same dominant pattern (the leading eigenvector). See \"Inhibition and k-Winners-Take-All\".",
+        "Rate rules map onto spike rules. Pair-based STDP with Poisson inputs reduces, on average, to a Hebbian rate rule with an extra term set by the net area of the STDP window; the triplet rule of Pfister and Gerstner (2006) reduces to a BCM-like rule. So the instability analysis above transfers directly to your spiking model.",
+        "HTM-style permanence learning is Hebbian too: active synapses on a winning column or a correctly predicting segment are incremented, inactive ones are decremented (see \"Spatial Pooler\" and \"Temporal Memory\" in section 4). The decrement plays the role of the depression term.",
+        "Typical learning rates are small: per-event weight changes of 0.1–1% of the maximum weight (e.g. η ≈ 10⁻³ to 10⁻²) so that each weight integrates evidence over hundreds of presentations."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Runaway excitation in recurrent networks. Hebbian growth on recurrent E→E synapses can create seizure-like states within a few seconds of simulated time. Clip weights, normalise, and keep inhibition plastic or strong.",
+        "Silent or dead units. The flip side: with depression-dominated rules or high thresholds, some neurons never fire and therefore never learn. Homeostatic mechanisms (adaptive thresholds, boosting) are the standard remedy.",
+        "Normalisation choice changes the outcome. Subtractive normalisation (subtract the same amount from all weights) drives weights to the bounds and produces sharply selective, often binary-looking receptive fields; multiplicative normalisation keeps graded weights closer to the principal component (Miller and MacKay 1994).",
+        "Hebb learns correlations, not causes or task relevance. It will happily learn background statistics, for example the brightest pixels in MNIST. Input encoding and pre-processing therefore matter a great deal (see \"Encoding Schemes\" in section 7).",
+        "Biological correspondence is partial. LTP/LTD protocols in slices show that real plasticity depends on rate, timing, dendritic location and cooperativity at once (e.g. Sjöström, Turrigiano and Nelson 2001). Any single rule is a simplification; choose it for the computation you need."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Open question worth tracking: which combination of Hebbian and homeostatic terms is both biologically plausible and stable in large recurrent networks remains debated. Zenke and Gerstner (2017) argue that Hebbian plasticity needs rapid compensatory processes, faster than classic synaptic scaling, to stay stable."
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Hebb, D. O. (1949). The Organization of Behavior. Wiley; Bliss, T. V. P. & Lømo, T. (1973). Long-lasting potentiation of synaptic transmission in the dentate area of the anaesthetized rabbit following stimulation of the perforant path. Journal of Physiology; Sejnowski, T. J. (1977). Storing covariance with nonlinearly interacting neurons. Journal of Mathematical Biology; Oja, E. (1982). Simplified neuron model as a principal component analyzer. Journal of Mathematical Biology; Bienenstock, E. L., Cooper, L. N. & Munro, P. W. (1982). Theory for the development of neuron selectivity: orientation specificity and binocular interaction in visual cortex. Journal of Neuroscience; Rumelhart, D. E. & Zipser, D. (1985). Feature discovery by competitive learning. Cognitive Science; Sanger, T. D. (1989). Optimal unsupervised learning in a single-layer linear feedforward neural network. Neural Networks; Földiák, P. (1990). Forming sparse representations by local anti-Hebbian learning. Biological Cybernetics; Miller, K. D. & MacKay, D. J. C. (1994). The role of constraints in Hebbian learning. Neural Computation; Dayan, P. & Abbott, L. F. (2001). Theoretical Neuroscience. MIT Press; Sjöström, P. J., Turrigiano, G. G. & Nelson, S. B. (2001). Rate, timing, and cooperativity jointly determine cortical synaptic plasticity. Neuron; Pfister, J.-P. & Gerstner, W. (2006). Triplets of spikes in a model of spike timing-dependent plasticity. Journal of Neuroscience; Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014). Neuronal Dynamics. Cambridge University Press; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Zenke, F. & Gerstner, W. (2017). Hebbian plasticity requires compensatory processes on multiple timescales. Philosophical Transactions of the Royal Society B."
+    }
+  ]
+}

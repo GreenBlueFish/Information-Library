@@ -1,0 +1,89 @@
+{
+  "title": "Common Pitfalls",
+  "intro": "The mistakes that cost the most time when building spiking columns, each as symptom → cause → fix, so you can recognise them from a raster plot.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "Most failures of spiking column models are not exotic. They come from a small set of causes — the balance between excitation and inhibition, missing homeostasis, numerical integration, units and bookkeeping — and they show up as recognisable patterns in a raster plot or a rate histogram. Learn the patterns, and look at a raster before any accuracy number every time you change the model."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "spike-raster",
+        "title": "What a layer looks like without inhibition",
+        "params": [
+          {"key": "inhibition", "label": "Inhibition", "control": "select", "options": ["none", "E/I feedback", "k-WTA"], "default": "none"},
+          {"key": "k", "label": "k (winners per step, k-WTA)", "control": "range", "min": 1, "max": 30, "step": 1, "default": 5},
+          {"key": "inhibitoryGain", "label": "Inhibitory gain (E/I feedback)", "control": "range", "min": 0, "max": 3, "step": 0.1, "default": 1.2},
+          {"key": "inputRate", "label": "Input rate (Hz)", "control": "range", "min": 5, "max": 100, "step": 1, "default": 40},
+          {"key": "seed", "label": "Random seed", "control": "number", "min": 1, "max": 9999, "step": 1, "default": 7}
+        ],
+        "config": {"excitatory": 80, "inhibitory": 20, "inputs": 100, "patterns": 4, "patternMs": 75, "dt": 1}
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Things to try: with inhibition set to none, most excitatory cells fire for every input pattern, so the pattern SDRs overlap heavily and carry little information about which pattern is present — the dense, unspecific activity behind several pitfalls below. Switch to E/I feedback and then k-WTA and watch the active fraction and the overlap between patterns fall. Then, with E/I feedback, set the inhibitory gain to 0 and raise it step by step to see how much inhibition is needed before activity becomes sparse."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Network dynamics"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Runaway excitation. Symptom: rates climb to hundreds of Hz, limited only by the refractory period; the raster turns solid. Cause: recurrent excitation too strong relative to inhibition, often after STDP potentiated recurrent synapses. Fix: strengthen or speed up inhibition, bound weights, add weight normalisation or a net-depressive STDP window, and keep recurrent excitatory synapses plastic only once the rest is stable.",
+        "Silent network. Symptom: no or almost no spikes after the first few hundred ms. Cause: external drive below rheobase, thresholds that keep rising (adaptive threshold without decay), or a unit mistake that makes weights 1,000× too small. Fix: check a single neuron's input current against its rheobase; give adaptive thresholds a decay; print weights with units.",
+        "Synchronous bursts or oscillations. Symptom: vertical stripes in the raster; the population rate swings between zero and a high peak. Cause: inhibition too slow or too weak, delays all identical, or input that is too synchronous. Fix: faster inhibitory synapses (a few ms), heterogeneous delays and parameters, Poisson rather than regular input.",
+        "Inhibition too slow to compete. Symptom: k-WTA does not produce k winners — many cells fire before the inhibition arrives. Cause: inhibitory delay or time constant comparable to the time excitatory cells take to reach threshold. Fix: make inhibition faster than excitation, or let predicted/strongly driven cells reach threshold earlier, which is exactly how timing-based competition works in HTM-style spiking columns."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Learning"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Dead and greedy units. Symptom: a few neurons win almost every input; many never fire. Cause: no homeostasis; early winners get stronger weights and win more. Fix: adaptive thresholds (Diehl & Cook 2015), boosting or intrinsic plasticity, weight normalisation; check the usage histogram after every training run.",
+        "All neurons learn the same feature. Symptom: identical receptive fields. Cause: missing or too-weak lateral inhibition, so all neurons learn from every input. Fix: stronger competition (k-WTA or soft WTA) during learning.",
+        "Weights saturate at the bounds. Symptom: a bimodal weight histogram piled at 0 and w_max, receptive fields lose detail. Cause: additive STDP is known to produce bimodal weights (Song, Miller & Abbott 2000). Fix: multiplicative or soft-bounded STDP (van Rossum et al. 2000), lower learning rates, normalisation.",
+        "Learning forgets old patterns. Symptom: earlier sequences or objects are no longer predicted after new training. Cause: learning rates too high, decrements applied to segments that should be left alone, or capacity exhausted. Fix: smaller decrements, learn only on segments that were active or matching, add cells or segments, and test retention explicitly.",
+        "Wrong input code for the rule. Symptom: STDP layer learns nothing useful; temporal memory never predicts. Cause: dense or non-overlapping encodings, or rate codes fed to a rule that expects precise timing (or the reverse). Fix: see \"Encoding Schemes\" and check the input overlap structure first."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Numerics and bookkeeping"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Time step too large. Symptom: rates or learning change when you halve dt; spikes cluster on step boundaries. Cause: forward Euler with dt comparable to the fastest time constant, or Poisson probabilities r·dt that approach 1. Fix: dt of 0.1 ms for dynamics checks (1 ms is often acceptable for LIF networks once validated), exact integration for linear subthreshold dynamics where the simulator supports it, and always run a dt-halving check.",
+        "Order-of-update artefacts. Symptom: results depend on whether you update neurons or synapses first. Cause: a spike influences other neurons in the same step it is emitted, effectively a zero delay. Fix: use a minimum synaptic delay of one time step and a fixed update order.",
+        "Unit mistakes. Symptom: everything is off by factors of 1,000. Cause: mV vs V, nA vs pA, ms vs s, Hz vs per-ms rates. Fix: a simulator that checks units (Brian2), or a units column in your config file and asserts on derived quantities such as rheobase.",
+        "Unreproducible results. Symptom: a result cannot be recovered a week later. Cause: unseeded randomness, unrecorded parameters or library versions. Fix: seed everything, save the config and versions with every result, and report over several seeds."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Evaluation and scope"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Evaluating only on MNIST. Symptom: good accuracy, but the model cannot do anything column-specific. Fix: add sequence prediction, anomaly detection and sensorimotor recognition tests (see \"Evaluating a Column\").",
+        "Too much biological detail too early. Symptom: hundreds of parameters, nothing works, nothing can be debugged. Fix: start with LIF neurons and abstract segments; add detail only when a specific question needs it.",
+        "Hardware surprises. Symptom: the model works in the simulator and fails on the chip. Cause: weight and state quantisation, fan-in limits, missing support for the learning rule or for dendritic nonlinearities, different noise. Fix: simulate the hardware's constraints (fixed-point weights, limited fan-in) in software before porting, and compare spike statistics, not only task accuracy."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience; Song, S., Miller, K. D. & Abbott, L. F. (2000). Competitive Hebbian learning through spike-timing-dependent synaptic plasticity. Nature Neuroscience; van Rossum, M. C. W., Bi, G. Q. & Turrigiano, G. G. (2000). Stable Hebbian learning from spike timing-dependent plasticity. Journal of Neuroscience; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014). Neuronal Dynamics. Cambridge University Press; Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife."
+    }
+  ]
+}

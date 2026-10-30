@@ -1,0 +1,82 @@
+{
+  "title": "2. Spiking Neuron Models",
+  "intro": "The single-neuron building blocks of a spiking cortical column: integrate-and-fire and Izhikevich point neurons, the Hodgkin–Huxley conductance model, synapse models, and active dendrites. This section tells you what each model captures, what it costs, and which one to pick for which question.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why this section matters for building a column"
+    },
+    {
+      "type": "prose",
+      "text": "Every cortical-column model, from HTM-inspired SNNs to the Potjans & Diesmann microcircuit, is built from the same three ingredients: a model of the neuron's soma (when does it spike?), a model of the synapse (what does a spike do to the next cell?), and, increasingly, a model of the dendrites (how are inputs grouped before they reach the soma?). The choice of each fixes the cost of your simulation, which hardware can run it, which learning rules make sense, and which column-level phenomena you can reproduce at all. A prediction mechanism like HTM's, for example, needs some form of dendritic segment; a model of layer-5 bursting needs a neuron that can burst."
+    },
+    {
+      "type": "prose",
+      "text": "The guiding principle is to use the simplest model that still contains the mechanism your question depends on. Simpler models are faster, have fewer parameters to mis-tune, map onto neuromorphic hardware, and are easier to understand when something goes wrong."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pages in this section, in learning order"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Leaky Integrate-and-Fire: the workhorse point neuron. Intuition, equation, rheobase and f–I curve, an interactive simulation, NumPy and Brian2 code. Start here.",
+        "Izhikevich Model: two variables and four parameters that reproduce regular spiking, bursting, chattering, fast-spiking and low-threshold-spiking cells at near-LIF cost.",
+        "Hodgkin–Huxley Overview: the biophysical conductance model behind the action potential, what it buys you, what it costs, and why column models rarely use it.",
+        "Synapse Models: current- versus conductance-based coupling, exponential/alpha/difference-of-exponentials kernels, AMPA/NMDA/GABA time constants, the NMDA magnesium block, delays and short-term plasticity.",
+        "Dendrites and Active Dendrites: passive cables, NMDA spikes and plateaus, BAC firing, the two-layer neuron, and how to implement HTM-style dendritic segments in an SNN."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Model choice at a glance"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "model                 state vars   relative cost*   firing variety           typical use in column models\nLIF                   1            ≈ 1              regular only             default point neuron; hardware\nLIF + adaptation      2            ≈ 1–2            adapting                 more realistic excitatory cells\nAdEx                  2            ≈ 2–3            adapting, bursting       fitted cell types; BrainScaleS\nIzhikevich            2            ≈ 2–3            most cortical patterns   heterogeneous E and I classes\nHodgkin–Huxley-type   4 and up     ≈ 100 or more    emergent, biophysical    detailed models (Blue Brain)\n+ dendritic segments  per segment  scales with      plateau / predictive     HTM-style prediction, context\n                                   synapses         states\n\n* per neuron update, order of magnitude only (cf. Izhikevich 2004); in practice synaptic events dominate cost"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Recommended starting point"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Soma: current-based LIF, τm = 10–20 ms, rest/reset −65 mV, threshold −50 mV, refractory 2 ms; add an adaptive threshold or adaptation current for excitatory cells if they must not fire at fixed rates (as in Diehl & Cook 2015).",
+        "Inhibitory cells: faster membrane (τm ≈ 5–10 ms) or Izhikevich FS parameters; give them fast synapses and short delays so inhibition can act within a few milliseconds.",
+        "Synapses: exponential kernels, τ ≈ 2–5 ms excitatory and 5–10 ms inhibitory, delays of 1–2 ms locally; move to conductance-based synapses when E/I balance and shunting matter.",
+        "Dendrites: if you want prediction or context, give each excitatory cell a set of distal segments with a coincidence threshold that triggers a 50–200 ms depolarising plateau.",
+        "Validate single cells before networks: plot the f–I curve, a PSP for one spike, and one segment-triggered plateau, and check them against the numbers on these pages."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key takeaways"
+    },
+    {
+      "type": "list",
+      "items": [
+        "What matters downstream is mostly when a neuron spikes, so point-neuron models such as LIF capture most of what a column model needs from the soma, at a tiny fraction of the cost of biophysical models.",
+        "Firing type (adaptation, bursting, fast spiking) is a real and functionally relevant difference between cortical cell classes; the Izhikevich and AdEx models add it cheaply.",
+        "Synaptic time constants, delays and the choice between current and conductance coupling shape network dynamics as much as the neuron model does.",
+        "Thin dendrites are nonlinear subunits: about 8–20 coincident synapses on a short stretch can trigger an NMDA plateau. This is the biological basis of HTM's dendritic segments and of predictive (depolarised) states.",
+        "Every model here is an abstraction; state your choices explicitly and check that your conclusions do not hinge on details the model was never meant to capture."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Where this leads: section 3 (\"Plasticity and Learning\") puts learning rules such as STDP and homeostasis on top of these neurons and synapses, and section 4 (\"Hierarchical Temporal Memory\") builds predictive minicolumns from neurons with dendritic segments."
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Lapicque, L. (1907). Recherches quantitatives sur l'excitation électrique des nerfs traitée comme une polarisation. Journal de Physiologie et de Pathologie Générale; Hodgkin, A. L. & Huxley, A. F. (1952). A quantitative description of membrane current and its application to conduction and excitation in nerve. Journal of Physiology; Izhikevich, E. M. (2003). Simple model of spiking neurons. IEEE Transactions on Neural Networks; Izhikevich, E. M. (2004). Which model to use for cortical spiking neurons? IEEE Transactions on Neural Networks; Brette, R. & Gerstner, W. (2005). Adaptive exponential integrate-and-fire model as an effective description of neuronal activity. Journal of Neurophysiology; Dayan, P. & Abbott, L. F. (2001). Theoretical Neuroscience. MIT Press; Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014). Neuronal Dynamics: From Single Neurons to Networks and Models of Cognition. Cambridge University Press; Major, G., Larkum, M. E. & Schiller, J. (2013). Active properties of neocortical pyramidal neuron dendrites. Annual Review of Neuroscience; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits; Potjans, T. C. & Diesmann, M. (2014). The cell-type specific cortical microcircuit: relating structure and activity in a full-scale spiking network model. Cerebral Cortex; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience"
+    }
+  ]
+}

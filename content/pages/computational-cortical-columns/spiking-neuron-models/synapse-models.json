@@ -1,0 +1,130 @@
+{
+  "title": "Synapse Models",
+  "intro": "A synapse model decides how a presynaptic spike becomes a postsynaptic current: with what delay, with what time course, and whether it depends on the postsynaptic voltage. This page covers current- versus conductance-based synapses, the standard kernels, AMPA, NMDA, GABA_A and GABA_B time constants, the NMDA magnesium block, delays, and short-term plasticity.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intuition: a spike is an event, the synapse turns it into a pulse"
+    },
+    {
+      "type": "prose",
+      "text": "A presynaptic spike is an instantaneous event; what the postsynaptic neuron feels is a brief pulse of current that rises within about a millisecond and decays over a few to a few hundred milliseconds, depending on the receptor. A synapse model therefore has three parts: a delay (when the pulse arrives), a kernel (what shape the pulse has), and a coupling rule (how the pulse enters the membrane equation, as a fixed current or as a conductance that depends on the membrane potential). A fourth, optional part is short-term plasticity: the pulse amplitude depends on the recent history of the synapse. Long-term learning (STDP and friends) changes the weight w and is covered in section 3."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Current-based versus conductance-based coupling"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "current-based (CUBA):      I_syn(t) = w · s(t)\nconductance-based (COBA):  I_syn(t) = g_max · w · s(t) · (E_syn − V(t))\n\ns(t) = synaptic kernel (sum over presynaptic spikes), V = postsynaptic membrane potential\nE_syn = reversal potential: ≈ 0 mV for AMPA/NMDA, ≈ −70 to −80 mV for GABA_A, ≈ −90 to −95 mV for GABA_B"
+    },
+    {
+      "type": "prose",
+      "text": "In a current-based synapse every spike injects the same charge regardless of the postsynaptic state. It is linear, analytically tractable, and what most neuromorphic hardware (Loihi's CUBA neuron, many FPGA designs) and many network models (Brunel 2000; Potjans & Diesmann 2014) use. In a conductance-based synapse the driving force (E_syn − V) shrinks as V approaches the reversal potential: excitatory input becomes weaker as the cell depolarises, and inhibition with E_syn near rest acts mainly as shunting, dividing rather than subtracting input. High total conductance also shortens the effective membrane time constant (τ_eff = C / g_total), which is a large effect in vivo (Destexhe, Rudolph & Paré 2003). Diehl & Cook (2015) used conductance-based synapses, so their network depends on this. Rule of thumb: use CUBA when you need speed, analytic insight or hardware compatibility, and calibrate weights so that one spike produces a realistic postsynaptic potential (about 0.1–1 mV for cortical excitatory connections; Potjans & Diesmann use a mean PSP of 0.15 mV). Use COBA when the balance between excitation and inhibition, shunting inhibition, or voltage-dependent NMDA effects matter."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Kernels: exponential, alpha, difference of exponentials"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "exponential (instant rise):        s(t) = exp(−t/τ_d)                             τ_d: decay\nalpha function (rise = decay):     s(t) = (t/τ) · exp(1 − t/τ)                     peak 1 at t = τ\ndifference of exponentials:        s(t) = N · (exp(−t/τ_d) − exp(−t/τ_r)),  τ_r < τ_d\n                                    N normalises the peak to 1\n\nevent-driven update for the exponential kernel (one state variable per neuron, not per synapse):\n    on each presynaptic spike:  g ← g + w\n    every step:                 g ← g · exp(−dt/τ_d)"
+    },
+    {
+      "type": "prose",
+      "text": "The exponential kernel is the cheapest and is the usual choice for large networks and hardware: all synapses of the same type onto one neuron share a single decaying variable, so the cost per time step is independent of the number of synapses, and incoming spikes only add to it. The alpha function and the difference of exponentials have a finite rise time; they need two state variables per neuron and receptor type and are preferred when the rise time matters (precise timing, NMDA). Destexhe, Mainen & Sejnowski (1994) showed how kinetic receptor models reduce to such forms."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Receptor types, time constants and the NMDA magnesium block"
+    },
+    {
+      "type": "prose",
+      "text": "The values below are typical for cortex near physiological temperature; reported values vary with preparation, temperature, subunit composition and dendritic location, so treat them as starting points, not constants."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "receptor   ion / sign             rise        decay           E_rev         notes\nAMPA       Na⁺/K⁺, excitatory     0.2–0.5 ms  2–5 ms          ≈ 0 mV        fast excitation, carries most EPSC\nNMDA       Na⁺/K⁺/Ca²⁺, excit.    2–10 ms     50–150 ms       ≈ 0 mV        Mg²⁺ block; needs depolarisation; Ca²⁺ for plasticity\nGABA_A     Cl⁻, inhibitory        0.5–1 ms    5–10 ms         −70 to −80    fast inhibition (e.g. from PV basket cells)\nGABA_B     K⁺ via G-protein       tens of ms  100–300 ms      −90 to −95    slow, metabotropic inhibition"
+    },
+    {
+      "type": "prose",
+      "text": "At resting potential, NMDA channels are plugged by extracellular magnesium ions; depolarisation expels the Mg²⁺ and lets current flow. The NMDA receptor is therefore a coincidence detector: it conducts only when presynaptic glutamate (input) and postsynaptic depolarisation occur together. This is the molecular basis of many Hebbian and STDP-like plasticity rules, and of the dendritic NMDA spikes on the next page. Jahr & Stevens (1990) gave the widely used fit:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "I_NMDA = g_NMDA · s(t) · B(V) · (V − E_NMDA)      (sign convention: positive = outward)\nB(V)   = 1 / (1 + ([Mg²⁺]_o / 3.57 mM) · exp(−0.062 · V))      V in mV, [Mg²⁺]_o ≈ 1 mM\n\nB(−70 mV) ≈ 0.04     B(−40 mV) ≈ 0.23     B(0 mV) ≈ 0.78"
+    },
+    {
+      "type": "prose",
+      "text": "The resulting I–V curve has a region of negative slope between roughly −70 and −20 mV: more depolarisation produces more inward current, a positive feedback that can sustain a regenerative plateau if enough NMDA conductance is active on a thin dendrite. Many network models include NMDA as a slow excitatory channel without the Mg²⁺ block; that keeps the slow time constant but throws away the coincidence-detection property, which is often exactly the property an HTM-inspired column needs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Delays and short-term plasticity"
+    },
+    {
+      "type": "prose",
+      "text": "Synaptic transmission plus axonal conduction gives delays of about 0.5–2 ms within a local column and several to tens of milliseconds for long-range and inter-areal connections. In simulators the delay is part of the connection; the smallest delay in the network sets how often parallel processes must exchange spikes (in NEST it cannot be smaller than dt), so absurdly small delays slow down distributed simulations. Potjans & Diesmann used mean delays of 1.5 ms for excitatory and 0.75 ms for inhibitory connections, with jitter. Delays matter for learning: STDP sees the spike arrival time at the synapse, not the presynaptic emission time, and delay heterogeneity is one way networks can learn temporal patterns (polychronous groups; Izhikevich 2006)."
+    },
+    {
+      "type": "prose",
+      "text": "Synaptic efficacy changes on a time scale of tens to hundreds of milliseconds with the presynaptic firing history. Between neocortical pyramidal cells, synapses mostly depress: a high-frequency train produces successively smaller EPSPs because vesicle resources are used up (Markram & Tsodyks 1996; Tsodyks & Markram 1997). Other connections, for example from pyramidal cells onto somatostatin-type interneurons, facilitate. The Tsodyks–Markram model captures both with a resource variable x and a utilisation variable u:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "dx/dt = (1 − x)/τ_rec − u⁺ · x⁻ · δ(t − t_spike)          resources (depression)\ndu/dt = (U − u)/τ_facil + U · (1 − u⁻) · δ(t − t_spike)    utilisation (facilitation)\nPSC amplitude for a spike ∝ w · u⁺ · x⁻\n\ndepressing (typical E→E):     U ≈ 0.5,  τ_rec ≈ several hundred ms, little or no facilitation\nfacilitating (e.g. E→SST):    small U,  long τ_facil"
+    },
+    {
+      "type": "prose",
+      "text": "A depressing synapse transmits changes in presynaptic rate better than sustained rates; Tsodyks & Markram (1997) argued that at high rates such a synapse effectively signals the rate of change rather than the rate itself. Brian2, NEST (tsodyks_synapse, tsodyks2_synapse) and Loihi-class toolchains support some form of this model. Include it if your column must respond to transients or novelty; leave it out in early prototypes to reduce the number of interacting time scales."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choices when building a column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Start with current-based exponential synapses (τ ≈ 2–5 ms excitatory, 5–10 ms inhibitory) and per-connection delays of about 1–2 ms. This matches hardware and lets you compare against Potjans & Diesmann-style models.",
+        "Switch to conductance-based synapses when you study E/I balance, shunting or when copying Diehl & Cook-style learning networks, which were tuned with conductances.",
+        "Add an NMDA-like, voltage-gated slow channel on dendritic segments when you implement predictive (depolarised) states; this is the biological mechanism behind HTM's distal segments.",
+        "Keep track of which time constant does what: synaptic τ sets temporal precision, membrane τm sets integration window, NMDA/plateau durations (50–200 ms) set how long a prediction is held, STP time constants set sensitivity to transients.",
+        "A minimal Brian2 starting point with conductance-based AMPA-like and GABA_A-like synapses (exponential kernels, 1.5 ms delay, Poisson drive) follows."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "from brian2 import *\nC = 200*pF; gL = 10*nS; EL = -65*mV; Ee = 0*mV; Ei = -80*mV\ntau_e = 5*ms; tau_i = 10*ms\n\neqs = '''\ndv/dt  = (gL*(EL - v) + ge*(Ee - v) + gi*(Ei - v)) / C : volt (unless refractory)\ndge/dt = -ge / tau_e : siemens\ndgi/dt = -gi / tau_i : siemens\n'''\nG = NeuronGroup(100, eqs, threshold='v > -50*mV', reset='v = -65*mV',\n                refractory=2*ms, method='euler')\nG.v = EL\nP_exc = PoissonGroup(400, rates=5*Hz)\nS_exc = Synapses(P_exc, G, model='w : siemens', on_pre='ge += w', delay=1.5*ms)\nS_exc.connect(p=0.1)\nS_exc.w = 1*nS"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Weight units differ between CUBA (pA or nA) and COBA (nS); converting a network between them requires re-scaling by a typical driving force (about 60 mV for excitation from rest), and the result will still behave differently.",
+        "Instantaneous (delta) synapses with zero delay create artificial synchrony and order effects within a time step; always use at least one step of delay.",
+        "Kernel normalisation: an alpha kernel normalised to peak 1 carries e·τ times more charge than one normalised to unit area. State which normalisation you use when reporting weights.",
+        "On fixed-point hardware, slow decays (NMDA, GABA_B, STP recovery) need enough bits; a decay factor exp(−dt/τ) close to 1 rounds badly at low precision."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Dayan, P. & Abbott, L. F. (2001). Theoretical Neuroscience. MIT Press; Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014). Neuronal Dynamics: From Single Neurons to Networks and Models of Cognition. Cambridge University Press; Destexhe, A., Mainen, Z. F. & Sejnowski, T. J. (1994). Synthesis of models for excitable membranes, synaptic transmission and neuromodulation using a common kinetic formalism. Journal of Computational Neuroscience; Jahr, C. E. & Stevens, C. F. (1990). Voltage dependence of NMDA-activated macroscopic conductances predicted by single-channel kinetics. Journal of Neuroscience; Markram, H. & Tsodyks, M. (1996). Redistribution of synaptic efficacy between neocortical pyramidal neurons. Nature; Tsodyks, M. V. & Markram, H. (1997). The neural code between neocortical pyramidal neurons depends on neurotransmitter release probability. Proceedings of the National Academy of Sciences USA; Destexhe, A., Rudolph, M. & Paré, D. (2003). The high-conductance state of neocortical neurons in vivo. Nature Reviews Neuroscience; Izhikevich, E. M. (2006). Polychronization: computation with spikes. Neural Computation; Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience; Potjans, T. C. & Diesmann, M. (2014). The cell-type specific cortical microcircuit: relating structure and activity in a full-scale spiking network model. Cerebral Cortex; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife"
+    }
+  ]
+}

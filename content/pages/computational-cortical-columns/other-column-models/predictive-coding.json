@@ -1,0 +1,139 @@
+{
+  "title": "Predictive Coding",
+  "intro": "Predictive coding proposes that each cortical area continuously predicts its input and passes forward only what it failed to predict. It is the main rival — and partial cousin — of HTM's view of the column as a prediction machine, and it comes with a concrete, if debated, proposal for which layers carry predictions and which carry errors.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Most of what you see in the next moment is predictable from what you saw a moment ago and from what you know about the world. Predictive coding takes this seriously: each level of a cortical hierarchy tries to predict the activity of the level below, sends that prediction down, and only the part of the input it failed to predict — the prediction error — is sent up. Expected input is 'explained away' and costs little; surprising input produces a strong signal that drives learning and updates the higher-level guess. A useful analogy is a video codec: instead of transmitting every frame, it transmits a prediction plus the residual. Predictive coding proposes that cortex communicates in residuals, with feedback carrying the model and feedforward carrying the correction. The idea has older roots (Mumford 1992 proposed a similar role for cortico-cortical feedback), but the standard reference model is Rao and Ballard (1999)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Rao and Ballard 1999"
+    },
+    {
+      "type": "prose",
+      "text": "Rao and Ballard built a hierarchical network trained on natural images. At each level, representation units r try to generate the activity of the level below through generative weights U; error units compute the difference between the actual input and this top-down prediction; the representation is then updated to reduce both this error and the mismatch with the prediction coming from the level above. Learning adjusts U to make the errors small on average. Two results made the paper influential. The lowest-level weights became oriented, localised filters resembling V1 simple-cell receptive fields (as in sparse coding — see \"Sparse Distributed Representations\" in section 3). And the error units showed 'extra-classical' effects such as end-stopping: a line that extends beyond the receptive field is well predicted by the higher level, so the error response is reduced. Suppression by predictable context falls out of the model rather than being built in."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The math"
+    },
+    {
+      "type": "prose",
+      "text": "In its simplest form predictive coding is gradient descent on a prediction-error energy. For one level with input x, representation r, generative weights U and a prior (or top-down prediction) r_td:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "prediction of the input:    x̂ = f(U r)\nbottom-up error:            ε₀ = x − x̂\ntop-down error:             ε₁ = r − r_td\n\nenergy:\nE = (1/σ₀²)·|ε₀|² + (1/σ₁²)·|ε₁|² + g(r)\n\ninference (fast, per stimulus):\nτ dr/dt = (1/σ₀²)·Uᵀ ε₀ − (1/σ₁²)·ε₁ − g'(r)      (f linear)\n\nlearning (slow, Hebbian-like):\nΔU ∝ ε₀ rᵀ        (error × presynaptic representation)"
+    },
+    {
+      "type": "prose",
+      "text": "The weights 1/σ² are precisions: the inverse variance the system assigns to each error stream. Precision weighting decides how much a given error is trusted. A reliable sense gets a high precision and its errors move the representation strongly; a noisy channel gets a low precision and is mostly overruled by the prior. Many theories identify precision with attention or neuromodulatory gain."
+    },
+    {
+      "type": "prose",
+      "text": "Note the locality: the inference update for r uses only the error from below (passed through Uᵀ) and the error at its own level, and the learning rule for U is the product of a presynaptic representation and a postsynaptic error. That locality is why predictive coding is attractive for spiking and neuromorphic implementations, and why it has been shown to approximate backpropagation under some conditions (Whittington & Bogacz 2017)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Friston: the free-energy view, briefly"
+    },
+    {
+      "type": "prose",
+      "text": "Friston (2005, 2010) generalised predictive coding into a probabilistic framework: the brain maintains a hierarchical generative model and minimises variational free energy, an upper bound on surprise, by updating beliefs (perception), precisions (attention) and, in the active-inference extension, actions. Under Gaussian assumptions, minimising free energy reduces to minimising precision-weighted prediction errors as above. The framework is broad and mathematically elegant, but how directly it constrains circuit models is debated; for a column builder the useful part is the Gaussian predictive-coding special case."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A laminar mapping: Bastos et al. 2012"
+    },
+    {
+      "type": "prose",
+      "text": "Bastos, Usrey, Adams, Mangun, Fries and Friston (2012) asked how predictive coding could be implemented by the canonical microcircuit (see \"Canonical Microcircuit\" in this section). Their proposal, which should be read as a hypothesis:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Superficial pyramidal cells (L2/3) compute prediction errors and send them forward to the next area. Feedforward signalling is associated with gamma-band activity (roughly 30–90 Hz).",
+        "Deep pyramidal cells (L5/6) hold the current expectations (predictions) and send them back to lower areas. Feedback signalling is associated with alpha/beta-band activity (roughly 8–30 Hz).",
+        "Layer 4 receives the forward error signal from the area below; superficial and deep layers are linked within the column so that predictions can be compared with input.",
+        "The asymmetry in frequency bands follows from the computation: errors change quickly, predictions change slowly."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The frequency asymmetry has empirical support from laminar and inter-areal recordings in macaque (for example van Kerkoerle et al. 2014; Bastos et al. 2015), but the specific claim that superficial cells are error units and deep cells are prediction units remains contested, and alternative laminar assignments have been proposed."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mismatch responses: Keller and Mrsic-Flogel 2018"
+    },
+    {
+      "type": "prose",
+      "text": "The clearest experimental support comes from sensorimotor mismatch. Keller, Bonhoeffer and Hübener (2012) let mice run in a virtual corridor in which visual flow normally matched running speed, then briefly halted the visual flow. Many layer 2/3 neurons in mouse V1 responded strongly to this mismatch — the absence of expected flow — rather than to the visual input itself. Keller and Mrsic-Flogel (2018) synthesised this and related work into the proposal that predictive processing is a canonical cortical computation: L2/3 contains neurons signalling positive and negative prediction errors by comparing bottom-up input with top-down or motor-related predictions, while deeper layers (especially L5) hold an internal representation that is updated by these errors. Open questions remain: whether 'error neurons' form distinct cell types, how negative errors are represented by neurons that cannot fire negative rates (the usual answer is separate positive- and negative-error populations), and how much of V1 activity is better described by other models (see Walsh et al. 2020 for a critical review)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Predictive coding versus HTM"
+    },
+    {
+      "type": "prose",
+      "text": "Both HTM and predictive coding say the column is constantly predicting its input. They differ in what happens to the prediction:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "In predictive coding, the prediction is subtracted. Feedback carries the prediction, error neurons compute input minus prediction, and well-predicted input yields little activity. Errors are explicit signals.",
+        "In HTM, the prediction is a gate. A predicted cell is depolarised by dendritic segments but does not spike; when the input arrives, predicted cells fire first and inhibit their neighbours, so a predicted input activates a sparse, context-specific set of cells (see \"Temporal Memory\" in section 4).",
+        "HTM's closest equivalent to an error signal is minicolumn bursting: an unpredicted input activates every cell in the minicolumn, increasing activity. In both theories surprise produces more spikes, which is consistent with mismatch responses — but the mechanism and the representation differ.",
+        "Predictive coding is usually formulated with continuous rates and gradient dynamics; HTM is binary and discrete-time. Predictive coding has explicit precision weighting; HTM has none, but its sparse representations make predictions inherently set-valued (several predictions at once).",
+        "In the Thousand Brains Theory the prediction is about features at locations in an object's reference frame (see section 5), which is a different content from Rao–Ballard image patches, but the two are not incompatible."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building a spiking predictive-coding column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use separate positive-error and negative-error populations (E⁺ = [x − x̂]₊, E⁻ = [x̂ − x]₊), each a group of excitatory neurons inhibited by the prediction and excited by the input (or vice versa). This maps naturally onto E cells plus prediction-driven inhibitory interneurons.",
+        "Put errors in your L2/3 populations and representations in L5 if you want to follow the Bastos / Keller–Mrsic-Flogel mapping; feed errors forward and representations back between columns or areas.",
+        "Implement precision as a multiplicative gain on error populations (for example a neuromodulatory input or shunting inhibition) rather than as a separate weight.",
+        "Learning: the update ΔU ∝ ε·rᵀ is a three-factor or error-modulated Hebbian rule; in spikes it can be approximated by STDP gated by the error population's activity.",
+        "Spiking balanced networks offer a principled route: Boerlin, Machens and Denève (2013) showed that networks in which each spike reduces a prediction error yield efficient, irregular, balanced spiking.",
+        "Test with a mismatch protocol: train on coupled input streams (for example motion and a motor signal), then break the coupling and check that error populations respond to the mismatch, not to the input alone."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Inference requires several iterations per input. With spiking neurons this is a settling time: budget tens of milliseconds per stimulus and check convergence.",
+        "Error and prediction pathways must be balanced in scale; if the prediction pathway is too strong the error neurons go silent and learning stops.",
+        "Laminar mappings are hypotheses. Building them into a model is a valid design choice, but do not cite your model's behaviour as evidence that cortex works that way.",
+        "Predictive coding is not one theory but a family. Specify which version (Rao–Ballard, Friston's hierarchical Gaussian, Keller-style sensorimotor) you implement."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Mumford, D. (1992). On the computational architecture of the neocortex II: the role of cortico-cortical loops. Biological Cybernetics.; Rao, R. P. N. & Ballard, D. H. (1999). Predictive coding in the visual cortex: a functional interpretation of some extra-classical receptive-field effects. Nature Neuroscience.; Friston, K. (2005). A theory of cortical responses. Philosophical Transactions of the Royal Society B.; Friston, K. (2010). The free-energy principle: a unified brain theory? Nature Reviews Neuroscience.; Bastos, A. M., Usrey, W. M., Adams, R. A., Mangun, G. R., Fries, P. & Friston, K. J. (2012). Canonical microcircuits for predictive coding. Neuron.; van Kerkoerle, T., Self, M. W., Dagnino, B., Gariel-Mathis, M.-A., Poort, J., van der Togt, C. & Roelfsema, P. R. (2014). Alpha and gamma oscillations characterize feedback and feedforward processing in monkey visual cortex. PNAS.; Bastos, A. M. et al. (2015). Visual areas exert feedforward and feedback influences through distinct frequency channels. Neuron.; Keller, G. B., Bonhoeffer, T. & Hübener, M. (2012). Sensorimotor mismatch signals in primary visual cortex of the behaving mouse. Neuron.; Keller, G. B. & Mrsic-Flogel, T. D. (2018). Predictive processing: a canonical cortical computation. Neuron.; Boerlin, M., Machens, C. K. & Denève, S. (2013). Predictive coding of dynamical variables in balanced spiking networks. PLoS Computational Biology.; Whittington, J. C. R. & Bogacz, R. (2017). An approximation of the error backpropagation algorithm in a predictive coding network with local Hebbian synaptic plasticity. Neural Computation.; Walsh, K. S., McGovern, D. P., Clark, A. & O'Connell, R. G. (2020). Evaluating the neurophysiological evidence for predictive processing as a model of perception. Annals of the New York Academy of Sciences.; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits."
+    }
+  ]
+}

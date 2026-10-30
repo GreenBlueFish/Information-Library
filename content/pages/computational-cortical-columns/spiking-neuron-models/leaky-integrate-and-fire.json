@@ -1,0 +1,211 @@
+{
+  "title": "Leaky Integrate-and-Fire",
+  "intro": "The leaky integrate-and-fire (LIF) neuron is the workhorse of spiking cortical-column models: one linear equation, a threshold and a reset. This page builds the intuition, derives the rheobase and f–I curve, lets you play with a live simulation, and gives NumPy and Brian2 code you can start from.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intuition: a leaky bucket with a trip-wire"
+    },
+    {
+      "type": "prose",
+      "text": "Picture the cell membrane as a bucket with a small hole in the bottom. Input current pours water in; the hole lets it drain back towards a resting level. If water comes in faster than it leaks out, the level rises until it hits a trip-wire (the threshold). At that moment the neuron emits a spike, the bucket is emptied to a reset level, and for a short refractory period nothing can be poured in. That is the whole model: integrate, leak, fire, reset. Louis Lapicque wrote down the integrate-and-fire idea in 1907, long before the ionic mechanism of the action potential was known. What LIF deliberately throws away is the shape of the action potential itself. Hodgkin and Huxley showed that the spike is produced by voltage-gated sodium and potassium channels (see \"Hodgkin–Huxley Overview\" in this section), but for a cortical column what matters downstream is mostly when a neuron spikes, not the millisecond-scale waveform. Replacing the spike with an instantaneous event plus reset makes the model one linear differential equation per neuron, which is why it is the default in NEST, Brian2, snnTorch, Norse, Lava/Loihi, SpiNNaker and most FPGA designs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equation"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "τm · dV/dt = −(V − V_rest) + R · I(t)\n\nif V ≥ θ:  emit spike,  V ← V_reset,  hold V for t_ref\n\nτm = R · C        membrane time constant (ms)\nR  in MΩ, I in nA  →  R·I in mV"
+    },
+    {
+      "type": "prose",
+      "text": "Below threshold the membrane relaxes exponentially, with time constant τm, towards the steady-state value V∞ = V_rest + R·I. A spike can only happen if V∞ exceeds the threshold θ, which gives the rheobase, the smallest constant current that ever makes the neuron fire: I_rh = (θ − V_rest)/R. Above rheobase, the time to climb from V_reset to θ can be solved exactly, giving the firing rate as a function of input current, the f–I curve:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "I_rh = (θ − V_rest) / R\n\nf(I) = 1 / ( t_ref + τm · ln( (R·I − (V_reset − V_rest)) / (R·I − (θ − V_rest)) ) )    for I > I_rh\n     (with V_reset = V_rest this is  1 / ( t_ref + τm · ln( R·I / (R·I − (θ − V_rest)) ) ))\n\nDefaults of the widget below: V_rest = V_reset = −65 mV, θ = −50 mV, R = 10 MΩ, τm = 20 ms, t_ref = 2 ms\n  I_rh = 15 mV / 10 MΩ = 1.5 nA\n  I = 2 nA:  f = 1 / (2 + 20·ln(20/5))  ms⁻¹ ≈ 1 / 29.7 ms ≈ 34 Hz\n  I = 4 nA:  f = 1 / (2 + 20·ln(40/25)) ms⁻¹ ≈ 1 / 11.4 ms ≈ 88 Hz"
+    },
+    {
+      "type": "prose",
+      "text": "Two features of this curve are worth internalising. First, the onset at rheobase is continuous but infinitely steep (the logarithm diverges), so a noiseless LIF neuron jumps from silent to firing at an arbitrarily low rate; biological type-I cortical neurons behave similarly. Second, at high currents the rate saturates at 1/t_ref, so the refractory period sets the ceiling."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "lif-neuron",
+        "title": "Leaky integrate-and-fire neuron",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current I (nA)",
+            "control": "range",
+            "min": 0,
+            "max": 4,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "tau",
+            "label": "Membrane time constant τm (ms)",
+            "control": "range",
+            "min": 2,
+            "max": 50,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "threshold",
+            "label": "Threshold (mV)",
+            "control": "range",
+            "min": -60,
+            "max": -40,
+            "step": 0.5,
+            "default": -50
+          },
+          {
+            "key": "refractory",
+            "label": "Refractory period (ms)",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 0.5,
+            "default": 2
+          },
+          {
+            "key": "noise",
+            "label": "Input noise σ (mV)",
+            "control": "range",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "input",
+            "label": "Input shape",
+            "control": "select",
+            "options": [
+              "constant",
+              "step",
+              "ramp",
+              "sine"
+            ],
+            "default": "step"
+          }
+        ],
+        "config": {
+          "duration": 200,
+          "dt": 0.1,
+          "vRest": -65,
+          "vReset": -65,
+          "resistance": 10,
+          "showFI": true
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The widget integrates the equation above with Euler steps of 0.1 ms over 200 ms and draws the membrane trace, the spikes, and the analytic f–I curve. Things to try:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Find the rheobase. With the defaults, lower the current from 2 nA: with input shape \"constant\" the neuron stops firing just above 1.5 nA, exactly (−50 − (−65)) mV / 10 MΩ. Below that, V settles at V_rest + R·I and stays there forever.",
+        "Move the threshold and watch the rheobase move with it: at θ = −55 mV the rheobase drops to 1.0 nA; at θ = −45 mV it rises to 2.0 nA.",
+        "Change τm and compare the f–I curves. Rheobase does not depend on τm at all (it is a steady-state property), but the rate above rheobase scales roughly as 1/τm: at 2 nA, τm = 10 ms gives about 63 Hz versus about 34 Hz at 20 ms. A small τm makes the neuron a fast, forgetful coincidence detector; a large τm makes it a slow integrator.",
+        "Raise the refractory period to 10 ms and push the current to 4 nA: the rate approaches the ceiling 1/t_ref = 100 Hz and the f–I curve flattens.",
+        "Set the current to about 1.3 nA (sub-threshold) and add noise of 2–3 mV. The deterministic neuron would never fire, but fluctuations now carry V across θ occasionally. Noise smooths the sharp rheobase corner into a soft, sigmoidal f–I curve. This fluctuation-driven regime is how most cortical neurons in vivo actually fire, and it is the regime of balanced networks (van Vreeswijk & Sompolinsky 1996; Brunel 2000).",
+        "Use the \"ramp\" input to see the first spike appear once the current crosses rheobase (a little later than that, because V lags behind the input by about τm), and \"sine\" to see that a slow neuron (large τm) low-pass filters a 20 Hz drive while a fast one follows it."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Minimal NumPy implementation (forward Euler)"
+    },
+    {
+      "type": "prose",
+      "text": "This is the textbook loop, vectorised over a population. It is the pattern you will reuse on GPUs, in snnTorch-style frameworks and in FPGA pipelines: one multiply-add for the leak, one comparison, one conditional reset."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\ndef simulate_lif(I_nA, T=200.0, dt=0.1, tau=20.0, R=10.0,\n                 v_rest=-65.0, v_reset=-65.0, theta=-50.0, t_ref=2.0):\n    \"\"\"I_nA: array of shape (N,) constant currents. Returns spike times per neuron.\"\"\"\n    I_nA = np.asarray(I_nA, dtype=float)\n    n = I_nA.size\n    v = np.full(n, v_rest)\n    refr = np.zeros(n)                    # remaining refractory time (ms)\n    spikes = [[] for _ in range(n)]\n    for k in range(int(T / dt)):\n        active = refr <= 0\n        dv = (-(v - v_rest) + R * I_nA) / tau\n        v = np.where(active, v + dt * dv, v)\n        refr -= dt\n        fired = v >= theta\n        for i in np.flatnonzero(fired):\n            spikes[i].append(k * dt)\n        v[fired] = v_reset\n        refr[fired] = t_ref\n    return spikes\n\ncurrents = np.linspace(0, 4, 41)\nrates = [len(s) / 0.2 for s in simulate_lif(currents)]   # spikes per second (T = 200 ms)"
+    },
+    {
+      "type": "prose",
+      "text": "Forward Euler is only accurate when dt is much smaller than τm (dt ≤ 0.1 ms for τm = 10–20 ms is safe). Because the sub-threshold equation is linear, you can instead use the exact update V ← V∞ + (V − V∞)·exp(−dt/τm), which is exact for piecewise-constant input and is what NEST does for its iaf_psc_* models (Rotter & Diesmann 1999 popularised this exact integration scheme). The only remaining error is that spikes snap to the time grid; for STDP-sensitive work keep dt ≤ 0.1 ms or use a simulator with off-grid spike times."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The same neuron in Brian2"
+    },
+    {
+      "type": "prose",
+      "text": "In Brian2 the same model is a few lines. The (unless refractory) flag clamps v during the refractory period; method='exact' asks Brian2 to solve the linear equation analytically (use 'euler' once you add nonlinear terms). Units are checked, so R*I must come out in volts. For a column you would replace the constant I with synaptic currents or conductances driven by Synapses objects (see \"Synapse Models\")."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "from brian2 import *\nimport numpy as np\n\ntau = 20*ms; R = 10*Mohm\nv_rest = -65*mV; v_reset = -65*mV; v_th = -50*mV\n\neqs = '''\ndv/dt = (-(v - v_rest) + R*I) / tau : volt (unless refractory)\nI : amp\n'''\nG = NeuronGroup(41, eqs, threshold='v >= v_th', reset='v = v_reset',\n                refractory=2*ms, method='exact')\nG.v = v_rest\nG.I = np.linspace(0, 4, 41)*nA\n\nspk = SpikeMonitor(G)\nrun(1*second)\nrates = spk.count / (1*second)      # f–I curve: compare with the analytic formula"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Typical parameter values you will meet"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Membrane time constant τm: 10–30 ms for cortical pyramidal cells in slices; effectively shorter (a few ms) in the high-conductance state in vivo when synaptic bombardment adds conductance (Destexhe, Rudolph & Paré 2003). Fast-spiking interneurons have shorter τm than pyramidal cells.",
+        "Resting potential around −70 to −65 mV; threshold around −55 to −50 mV, i.e. 10–20 mV above rest; reset at or a few mV below rest.",
+        "Absolute refractory period 1–2 ms for excitatory neurons in most network models (Potjans & Diesmann 2014 use 2 ms, τm = 10 ms, C = 250 pF, rest and reset at −65 mV, θ = −50 mV).",
+        "Diehl & Cook (2015) used unusually slow excitatory neurons (τm = 100 ms) combined with an adaptive threshold that rises by a small amount after every spike and decays slowly; the adaptive threshold is what spreads the learned digits across neurons. If you copy their network, copy that homeostatic mechanism too (see \"Homeostasis\" in section 3).",
+        "Neuromorphic chips usually implement a current-based LIF with exponentially decaying synaptic current (Loihi's CUBA neuron is the canonical example, Davies et al. 2018), often in fixed-point arithmetic with the leak expressed as a decay factor per time step rather than as τm."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Plain LIF neurons fire perfectly regularly and do not adapt, which real pyramidal cells do. The cheapest fixes add one more state variable: an adaptive threshold (θ jumps up after each spike and relaxes back, as in Diehl & Cook), a spike-triggered adaptation current, or the exponential spike-initiation term of the adaptive exponential integrate-and-fire (AdEx) model (Brette & Gerstner 2005). If you need bursting or rebound behaviour, use the Izhikevich model (next page). Gerstner, Kistler, Naud & Paninski (2014) show that such generalised integrate-and-fire models predict spike times of real cortical neurons surprisingly well."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How LIF is used when building a column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use LIF (or LIF with adaptation) for every point neuron unless you have a specific reason not to. Thousands to millions of neurons are affordable; the cost of a column simulation is dominated by synapses, not by neuron updates.",
+        "Choose τm deliberately: it sets the integration window for coincident input. With τm = 20 ms, inputs spread over roughly 20 ms are summed; with τm = 5 ms, only nearly synchronous inputs can bring the neuron to threshold.",
+        "For HTM-style predictive cells you need more than a point neuron: give each cell dendritic segments whose activity depolarises the soma (see \"Dendrites and Active Dendrites\").",
+        "Calibrate before you wire: plot the f–I curve of your neuron with your synapse model and your dt, and check the rheobase against the formula above. Many \"my network is silent\" or \"my network explodes\" bugs are unit or scaling mistakes visible at this single-neuron stage."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Units. R·I must be in mV. Mixing pA with MΩ (off by 1000) or using a capacitance-based form (C·dV/dt = −g_L(V − E_L) + I) with a resistance-based parameter set is the most common source of silent networks.",
+        "Time step versus τm and refractory period: dt must divide t_ref sensibly, and Euler with dt close to τm is wrong or unstable.",
+        "Reset rules differ: some frameworks (e.g. snnTorch's default subtract reset) subtract θ instead of setting V to V_reset. Subtractive reset keeps the overshoot and gives a different f–I curve, especially at high rates.",
+        "No noise means artificial synchrony: identical LIF neurons driven by the same input fire in lockstep. Add heterogeneity (random initial V, jittered thresholds or background Poisson input).",
+        "LIF cannot burst, adapt or show rebound spikes on its own; if a result depends on those properties, it is not testing what you think with plain LIF."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Lapicque, L. (1907). Recherches quantitatives sur l'excitation électrique des nerfs traitée comme une polarisation. Journal de Physiologie et de Pathologie Générale; Hodgkin, A. L. & Huxley, A. F. (1952). A quantitative description of membrane current and its application to conduction and excitation in nerve. Journal of Physiology; Dayan, P. & Abbott, L. F. (2001). Theoretical Neuroscience. MIT Press; Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014). Neuronal Dynamics: From Single Neurons to Networks and Models of Cognition. Cambridge University Press; Rotter, S. & Diesmann, M. (1999). Exact digital simulation of time-invariant linear systems with applications to neuronal modeling. Biological Cybernetics; Brette, R. & Gerstner, W. (2005). Adaptive exponential integrate-and-fire model as an effective description of neuronal activity. Journal of Neurophysiology; van Vreeswijk, C. & Sompolinsky, H. (1996). Chaos in neuronal networks with balanced excitatory and inhibitory activity. Science; Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience; Destexhe, A., Rudolph, M. & Paré, D. (2003). The high-conductance state of neocortical neurons in vivo. Nature Reviews Neuroscience; Potjans, T. C. & Diesmann, M. (2014). The cell-type specific cortical microcircuit: relating structure and activity in a full-scale spiking network model. Cerebral Cortex; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Davies, M. et al. (2018). Loihi: A neuromorphic manycore processor with on-chip learning. IEEE Micro; Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife"
+    }
+  ]
+}

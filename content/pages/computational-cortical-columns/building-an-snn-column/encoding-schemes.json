@@ -1,0 +1,94 @@
+{
+  "title": "Encoding Schemes",
+  "intro": "An encoder turns a number, an image or a sensor stream into spikes or into a sparse set of active bits. It decides what similarities your column can see, so choose it as carefully as the learning rule.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "A column only ever sees its input code, never the world. If two temperatures of 20.1 °C and 20.2 °C produce completely different input patterns, no learning rule downstream can discover that they are similar. If every input activates half of the input lines, a sparse-coding layer has nothing sparse to build on. So the first question for an encoder is not \"how do I make spikes\" but \"which inputs should look similar to the column, and how sparse should the code be\". There are two families. Spike-timing encoders (rate, latency, rank-order, delta) turn analogue values into spike trains for a spiking network. Sparse distributed encoders (HTM scalar, RDSE, grid-cell) turn values into sets of active bits whose overlap mirrors semantic similarity; in a spiking network each active bit then becomes an input line that fires, often with a rate or latency code on top."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spike-timing encoders"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Rate (Poisson) coding"
+    },
+    {
+      "type": "prose",
+      "text": "Each input value x in [0, 1] sets the firing rate of one input neuron, r = x · r_max, and spikes are drawn as a Poisson process: in each time step dt a spike occurs with probability r · dt (valid while r · dt is well below 1). Diehl & Cook (2015) presented each MNIST image for 350 ms with pixel intensity mapped to rates of up to 63.75 Hz. Rate codes are robust and simple, and they suit STDP layers that learn from correlations in rates. Their cost is time: estimating a rate of 20 Hz to within 10% from a Poisson train takes on the order of seconds of spikes from one neuron, or many neurons in parallel. Biology clearly does not rely on rate codes alone for fast perception (Thorpe, Fize & Marlot 1996 showed visual categorisation within about 150 ms)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\ndef poisson_encode(x, duration_ms=350, dt_ms=1.0, r_max_hz=63.75, rng=None):\n    \"\"\"x: array of intensities in [0, 1]. Returns a (steps, len(x)) boolean spike array.\"\"\"\n    rng = rng or np.random.default_rng(0)\n    steps = int(duration_ms / dt_ms)\n    p = np.clip(x, 0, 1) * r_max_hz * dt_ms / 1000.0   # spike probability per step\n    return rng.random((steps, x.size)) < p"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Latency (time-to-first-spike) and rank-order coding"
+    },
+    {
+      "type": "prose",
+      "text": "In latency coding each input fires once, earlier for stronger inputs, for example t = t_max · (1 − x) or t = τ · ln(x / (x − θ)) for the time an LIF neuron takes to reach threshold under constant drive. Rank-order coding (Thorpe, Delorme & Van Rullen 2001) keeps only the order in which inputs fire, which is invariant to overall contrast. Both are fast and very sparse in spikes — one spike per input — and they pair naturally with STDP, which strengthens synapses from early-firing inputs (Masquelier & Thorpe 2007). The catch is that they need precise timing and a reset between stimuli, which is awkward for continuous streams."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Population and delta coding"
+    },
+    {
+      "type": "prose",
+      "text": "Population coding represents a value with many neurons that each have a bell-shaped tuning curve centred at a different preferred value; the value can be read out from the pattern, and nearby values activate overlapping groups — the spiking cousin of the scalar SDR encoder below. Delta (or send-on-delta) coding emits a spike only when the signal has changed by more than a threshold since the last spike, with separate ON and OFF channels for increases and decreases. Event cameras (dynamic vision sensors) do exactly this per pixel, so they are a natural input for neuromorphic hardware; the code is extremely sparse for static scenes and dense during motion."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sparse distributed (HTM-style) encoders"
+    },
+    {
+      "type": "prose",
+      "text": "HTM encoders produce binary vectors with a fixed number of active bits, designed so that semantically similar inputs share active bits (Purdy 2016). The rules of thumb are: the same input always gives the same output; similar inputs overlap and dissimilar ones do not; the output has a fixed dimensionality and a fixed number of active bits; and there are enough active bits (typically at least about 20) to be robust to noise and sub-sampling. A spatial pooler (section 4) then turns the encoder output into a sparser, learned SDR."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Scalar encoder: n bits, a contiguous block of w active bits whose position moves with the value across [min, max]. Values closer than the block width overlap; the resolution is roughly (max − min) / (n − w).",
+        "Random distributed scalar encoder (RDSE): each bucket of width 'resolution' gets w active bits chosen at random, with consecutive buckets sharing w − 1 bits. No fixed range is needed and capacity is larger than the contiguous encoder's.",
+        "Category encoder: each category gets its own non-overlapping block of w bits, so categories are equally dissimilar.",
+        "Date/time encoders: several sub-encoders (time of day, day of week, weekend) concatenated, so the column can learn daily and weekly rhythms.",
+        "Grid-cell (coordinate) encoders: a location is encoded by several modules, each a periodic grid at a different scale and orientation, each contributing one or a few active cells. The combination is unique over a large range, while nearby locations share active cells in most modules — the same principle the Thousand Brains Theory proposes for locations on objects (see \"Grid and Displacement Cells\" in section 5)."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\ndef scalar_encode(value, vmin=0.0, vmax=100.0, n=400, w=21):\n    \"\"\"Contiguous HTM-style scalar encoder: returns the indices of the w active bits.\"\"\"\n    v = min(max(value, vmin), vmax)\n    start = int(round((v - vmin) / (vmax - vmin) * (n - w)))\n    return np.arange(start, start + w)\n\na, b = scalar_encode(20.0), scalar_encode(22.0)\nprint(len(np.intersect1d(a, b)))   # nearby values share most of their bits\n\ndef sdr_to_rates(active, n, on_hz=40.0, off_hz=1.0):\n    \"\"\"Drive a spiking layer: active bits fire at on_hz, the rest at a low background.\"\"\"\n    r = np.full(n, off_hz)\n    r[active] = on_hz\n    return r"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing an encoder for your column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Match the learning rule. STDP layers in the Diehl & Cook style expect rate-coded input over a presentation window; HTM spatial poolers and temporal memories expect SDRs with semantic overlap; time-to-first-spike networks expect one spike per input per stimulus.",
+        "Check overlap directly: encode pairs of inputs you consider similar and dissimilar and print the overlap of their active sets. This takes five minutes and catches most encoder bugs.",
+        "Keep input sparsity in a sensible band: a few percent to perhaps 20% active. Denser inputs push every neuron above threshold at once; sparser ones need very large layers.",
+        "For sensorimotor (Thousand Brains) columns you need two inputs: the sensed feature (an SDR from a feature encoder) and the location (a grid-cell-like code updated by movement).",
+        "On neuromorphic hardware, prefer encoders that produce few spikes (latency, delta, sparse SDR lines at modest rates): energy and bandwidth scale with spike count."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "What to watch out for: Poisson rates above about 1/(10·dt) violate the one-spike-per-step approximation; a fixed random seed for the encoder hides variability you will meet in deployment; and an encoder whose resolution is coarser than the differences you care about makes the task impossible no matter how good the column is."
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Thorpe, S., Fize, D. & Marlot, C. (1996). Speed of processing in the human visual system. Nature; Thorpe, S., Delorme, A. & Van Rullen, R. (2001). Spike-based strategies for rapid processing. Neural Networks; Masquelier, T. & Thorpe, S. J. (2007). Unsupervised learning of visual features through spike timing dependent plasticity. PLoS Computational Biology; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Purdy, S. (2016). Encoding data for HTM systems. arXiv; Dayan, P. & Abbott, L. F. (2001). Theoretical Neuroscience. MIT Press; Gallego, G. et al. (2022). Event-based vision: a survey. IEEE Transactions on Pattern Analysis and Machine Intelligence."
+    }
+  ]
+}

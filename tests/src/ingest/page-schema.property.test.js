@@ -72,6 +72,23 @@ function ensureParameterPlotRegistered() {
   registerWidget("parameter-plot", () => ({ update() {}, destroy() {} }));
 }
 
+// Pages may also embed the other widget types under src/widgets/types/ (the
+// computational-cortical-columns simulations). The oracle stays honest — a type
+// counts as registered only if a real type module registers it — by re-importing
+// every type module with a cache-busting query, which re-runs its
+// `registerWidget` side effect into the shared registry after any earlier
+// `clearWidgetRegistry()`.
+const typesDir = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "src", "widgets", "types");
+
+/** Re-register every widget type module found under src/widgets/types/. */
+async function ensureAllWidgetTypesRegistered() {
+  ensureParameterPlotRegistered();
+  for (const name of readdirSync(typesDir)) {
+    if (!name.endsWith(".js") || name === "parameter-plot.js") continue;
+    await import(`../../../src/widgets/types/${name}?fresh=${Math.random()}`);
+  }
+}
+
 // fast-check's ESM build exposes its API on the module namespace; some bundles
 // also nest it under `default`. Normalize to a single `fc` handle either way.
 const fc = fcNS && typeof fcNS.property === "function" ? fcNS : fcNS.default;
@@ -439,8 +456,8 @@ describe("snn-material-ingestion \u2014 PageContent schema (Property 4) \u2014 V
     );
   });
 
-  it("every authored page already on disk under content/pages/ conforms (no-op when none exist)", () => {
-    ensureParameterPlotRegistered();
+  it("every authored page already on disk under content/pages/ conforms (no-op when none exist)", async () => {
+    await ensureAllWidgetTypesRegistered();
     const files = collectPageFiles(pagesRoot);
     for (const file of files) {
       let page;
