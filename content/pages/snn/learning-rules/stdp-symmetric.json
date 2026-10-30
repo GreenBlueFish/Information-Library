@@ -1,0 +1,125 @@
+{
+  "title": "Symmetric STDP",
+  "intro": "In the classical STDP window, the order of spikes decides the sign: pre-before-post strengthens and post-before-pre weakens. In a symmetric window, only the closeness in time matters. Spikes that land near each other in either order strengthen the synapse, so the rule detects synchrony and correlation rather than causation.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The window"
+    },
+    {
+      "type": "prose",
+      "text": "A convenient form is a narrow positive peak around zero with an optional wider negative surround, a \"Mexican hat\" in time:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Delta w(Delta t) = A_plus exp(-|Delta t| / tau_plus) - A_minus' exp(-|Delta t| / tau_minus')\nDelta t = t_post - t_pre;  tau_minus' > tau_plus, so near coincidences potentiate and loose ones depress"
+    },
+    {
+      "type": "prose",
+      "text": "With no surround (A_minus' = 0), the rule potentiates every pairing and needs a separate mechanism, such as normalization or a decay term, to keep weights bounded. With a surround, uncorrelated spiking produces net depression, because random pairs at large |Delta t| fall in the negative wings more often than near the peak. Only inputs that are genuinely synchronized with the neuron grow."
+    },
+    {
+      "type": "prose",
+      "text": "The widget plots this window (in this library's simulator the surround has half the depression amplitude and three times the depression time constant) against the classical window for reference."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Symmetric vs classical STDP window",
+        "params": [
+          {
+            "key": "aPlus",
+            "label": "A+ (peak height)",
+            "control": "range",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "aMinus",
+            "label": "A- (surround depth)",
+            "control": "range",
+            "min": 0,
+            "max": 2,
+            "step": 0.05,
+            "default": 1.05
+          },
+          {
+            "key": "tauPlus",
+            "label": "tau+ (ms)",
+            "control": "range",
+            "min": 2,
+            "max": 60,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "tauMinus",
+            "label": "tau- (ms)",
+            "control": "range",
+            "min": 2,
+            "max": 60,
+            "step": 1,
+            "default": 20
+          }
+        ],
+        "config": {
+          "sim": "stdp-window",
+          "variant": "symmetric",
+          "xLabel": "Δt = t_post − t_pre (ms)",
+          "yLabel": "Δw (relative)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Set A- to 0. The window is all positive: every pairing potentiates, and you can see why a pure symmetric rule is unstable on its own.",
+        "Raise A- until the surround dips well below zero. The area under the curve becomes negative, so random, uncorrelated firing now weakens synapses, while coincident firing still strengthens them.",
+        "Narrow tau+ to 5 ms. The rule now only rewards near-exact synchrony."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where it is found"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Hippocampus. Mishra, Kim, Guzman and Jonas (2016) found a symmetric window at CA3-CA3 recurrent synapses in slices, where both orders potentiate over a broad window. That suits CA3's proposed role as an autoassociative memory: cells active together become wired together regardless of order, so a partial cue can recall the whole pattern.",
+        "Dopamine and neuromodulation. Brzosko, Schultz and Paulsen (2015) reported that in CA1, dopamine can convert post-before-pre depression into potentiation, giving an effectively symmetric window. The shape of STDP is not fixed but depends on neuromodulators, dendritic location and firing rate.",
+        "Theory. A symmetric Hebbian window is closely related to classical rate-based Hebb (dw ∝ x y): averaged over spike trains, it picks up the zero-lag correlation between pre- and postsynaptic activity, while an antisymmetric window picks up its temporal derivative, that is, sequence order."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Symmetric or asymmetric?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use symmetric STDP to learn which inputs belong together: assemblies, associative memories, the cells that represent the same object or feature.",
+        "Use classical (asymmetric) STDP to learn what predicts what: sequences, causal chains, latency reduction."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: both kinds of association appear in the Thousand Brains Theory. The output layer that represents an object (layer 2/3 in the 2017 columns paper) learns associations among cells that are active together while the same object is sensed. That is symmetric, order-free learning. The sequence and location layers need order, which is asymmetric. A practical design uses a symmetric rule with a negative surround for lateral connections within the object layer, and an asymmetric rule for connections that should learn to predict."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Mishra, R. K., Kim, S., Guzman, S. J. & Jonas, P. (2016), \"Symmetric spike timing-dependent plasticity at CA3-CA3 synapses optimizes storage and recall in autoassociative networks\", Nature Communications 7:11552. Brzosko, Z., Schultz, W. & Paulsen, O. (2015), \"Retroactive modulation of spike timing-dependent plasticity by dopamine\", eLife 4:e09685. Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014), Neuronal Dynamics, Cambridge University Press, chapter 19. Hawkins, J., Ahmad, S. & Cui, Y. (2017), Frontiers in Neural Circuits 11:81."
+    }
+  ]
+}

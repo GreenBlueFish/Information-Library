@@ -1,0 +1,105 @@
+{
+  "title": "Multiplicative STDP",
+  "intro": "In additive STDP every pairing changes a weight by the same amount, whatever the weight already is. That makes learning competitive but unstable: weights race to the bounds and pile up at zero or at the maximum. Multiplicative, or weight-dependent, STDP scales each update by how far the weight is from its bounds. Strong synapses potentiate less and depress more, so the weights settle into a stable, single-peaked distribution like the ones measured in cortex.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The rule"
+    },
+    {
+      "type": "prose",
+      "text": "Gütig, Aharonov, Rotter and Sompolinsky (2003) wrote a family that runs from additive to multiplicative with one exponent mu (weights normalized to [0, 1]):"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Delta t = t_post - t_pre > 0:   Delta w = +lambda (1 - w)^mu         exp(-Delta t / tau)\nDelta t < 0:                    Delta w = -lambda alpha w^mu exp( Delta t / tau)\n\nmu = 0: additive (Song, Miller & Abbott 2000), weights hard-clipped to [0, 1]\nmu = 1: fully multiplicative (van Rossum, Bi & Turrigiano 2000 use additive LTP with multiplicative LTD)\nalpha > 1: depression slightly stronger than potentiation, which keeps total drive in check"
+    },
+    {
+      "type": "prose",
+      "text": "The key quantity is the net drift for uncorrelated firing, the sum of the expected LTP and LTD terms. With mu = 1 the drift is (1 - w) - alpha w, which is zero at w* = 1 / (1 + alpha). Every weight is pulled toward that fixed point, and correlations only nudge it. With mu = 0 the drift is the same negative constant for every weight, so there is no interior fixed point and weights are driven to the bounds."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Weight dependence of STDP updates",
+        "params": [
+          {
+            "key": "mu",
+            "label": "Weight-dependence exponent mu",
+            "control": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "alpha",
+            "label": "Depression/potentiation ratio alpha",
+            "control": "range",
+            "min": 0.5,
+            "max": 2,
+            "step": 0.05,
+            "default": 1.1
+          }
+        ],
+        "config": {
+          "sim": "stdp-multiplicative",
+          "xLabel": "current weight w",
+          "yLabel": "Δw for one ±10 ms pairing"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "With mu = 1, the net drift crosses zero near w = 0.48 (= 1 / (1 + 1.1)). That crossing is the stable weight.",
+        "Slide mu to 0. LTP and LTD become flat lines and the net drift is a constant below zero. No weight is stable: uncorrelated inputs sink to zero and strongly correlated ones jump to the maximum. This is the bimodal outcome of additive STDP.",
+        "Try mu around 0.02-0.1. Gütig et al. found that small mu keeps much of additive STDP's competition (inputs with stronger correlations still win) while avoiding the runaway. It is a tunable trade-off between selectivity and stability.",
+        "Change alpha to move the fixed point: alpha < 1 favors stronger weights, alpha > 1 weaker ones."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why weight dependence is realistic"
+    },
+    {
+      "type": "prose",
+      "text": "Bi and Poo (1998) observed that the relative amount of potentiation in cultured hippocampal neurons was smaller for synapses that were already strong, while relative depression did not depend on initial strength. That is the observation van Rossum et al. built their model on. Measured cortical weight distributions are unimodal and skewed (roughly lognormal), which multiplicative rules reproduce and additive ones do not."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Trade-offs"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Additive STDP: strong competition, can pick out a few correlated inputs, unstable without hard bounds, and the outcome depends on the bounds.",
+        "Multiplicative STDP: stable and realistic, but weak competition. With mu = 1 and uncorrelated inputs everything converges to w*, so additional mechanisms such as synaptic scaling or inhibition are needed to make neurons selective.",
+        "In practice: a soft bound with small mu, plus homeostasis of the postsynaptic rate, is a robust default."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// soft-bounded STDP update with exponent mu (weights in [0, 1])\nfunction stdpUpdate(w, dt, p) {\n  const k = Math.exp(-Math.abs(dt) / p.tau);\n  return dt > 0\n    ? w + p.lambda * Math.pow(1 - w, p.mu) * k\n    : w - p.lambda * p.alpha * Math.pow(w, p.mu) * k;\n}"
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: if your column learns features with STDP plus winner-take-all inhibition, as most unsupervised SNN feature learners do, the weight dependence decides whether learned receptive fields stay crisp (closer to additive) or blur toward the mean (multiplicative). Start with mu around 0.05 or an explicit soft bound, and watch the weight histogram as a health check."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Gütig, R., Aharonov, R., Rotter, S. & Sompolinsky, H. (2003), \"Learning input correlations through nonlinear temporally asymmetric Hebbian plasticity\", Journal of Neuroscience 23:3697-3714. van Rossum, M. C. W., Bi, G. Q. & Turrigiano, G. G. (2000), \"Stable Hebbian learning from spike timing-dependent plasticity\", Journal of Neuroscience 20:8812-8821. Song, S., Miller, K. D. & Abbott, L. F. (2000), Nature Neuroscience 3:919-926. Bi, G. Q. & Poo, M. M. (1998), Journal of Neuroscience 18:10464-10472."
+    }
+  ]
+}

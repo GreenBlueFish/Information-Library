@@ -1,0 +1,85 @@
+{
+  "title": "FPGA Neuromorphic Systems",
+  "intro": "A field-programmable gate array (FPGA) is a chip whose digital logic can be rewired after manufacture. Researchers use FPGAs to build custom spiking-network hardware without fabricating a chip: you get the parallelism and event-driven efficiency of dedicated circuits, and you can change the neuron model, the precision or the learning rule by recompiling. FPGAs are the usual way to prototype a neuromorphic architecture, and often the practical way to run a spiking network at the edge.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What is inside an FPGA"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Logic blocks built from look-up tables (LUTs) and flip-flops, which implement any small Boolean function and register its result.",
+        "A programmable interconnect that wires blocks together.",
+        "Hard blocks: DSP slices (fast multiply-accumulate units), block RAM (BRAM, small on-chip memories distributed across the die), and high-speed transceivers. Some devices add ARM processors (SoC FPGAs) or high-bandwidth memory."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Spiking networks fit well. Neuron state and weights sit in BRAM next to the logic that updates them, which gives colocated memory and compute. Spikes are single bits that route cheaply, and fixed-point arithmetic for LIF or Izhikevich neurons maps onto DSP slices."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Design patterns"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Fully parallel: one hardware unit per neuron. It is fastest but uses resources quickly, so it suits a few hundred to a few thousand neurons.",
+        "Time-multiplexed: a pipelined update engine that cycles through thousands of neurons stored in memory each time step. At hundreds of MHz, one engine can update well over 100,000 simple neurons per millisecond. Most large FPGA simulators use this.",
+        "Event-driven synapse processing: spikes are queued as address events, and for each one the engine streams that neuron's outgoing synapses from memory and accumulates into targets. Memory bandwidth to the weights, not arithmetic, is usually the bottleneck.",
+        "Fixed-point and low precision: 16-bit states and 4-8 bit weights are typical. Choosing exponential decays that are powers of two turns multiplications into shifts.",
+        "On-chip learning: STDP needs pre- and postsynaptic traces per neuron and a read-modify-write of the weight on each spike. It is feasible but doubles memory traffic."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Notable systems include Bluehive (Moore et al. 2012), Minitaur (Neil & Liu 2014), NeuroFlow (Cheung, Schultz & Luk 2016) and a large FPGA cortex simulator from Western Sydney University (Wang et al. 2018)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "High-level synthesis"
+    },
+    {
+      "type": "prose",
+      "text": "Writing hardware in Verilog or VHDL is slow and specialized. High-level synthesis (HLS) compiles behavior written in C or C++ into hardware, with pragmas telling the tool how to pipeline loops, partition arrays across BRAMs and unroll for parallelism. Tools include AMD/Xilinx Vitis HLS and Intel's HLS compiler. A time-multiplexed LIF update engine in HLS-style C:"
+    },
+    {
+      "type": "code",
+      "lang": "c",
+      "source": "// One time step for N neurons; fixed-point Q8.8, leak by shift (decay = 1 - 1/16)\nvoid lif_step(short v[N], const short i_syn[N], bool spike[N]) {\n#pragma HLS PIPELINE II=1\n  for (int n = 0; n < N; n++) {\n    short vn = v[n] - (v[n] >> 4) + i_syn[n];   // leak + input\n    bool s = vn >= V_TH;\n    spike[n] = s;\n    v[n] = s ? V_RESET : vn;\n  }\n}"
+    },
+    {
+      "type": "prose",
+      "text": "The PIPELINE pragma asks for one neuron per clock cycle. At 200 MHz that is 200,000 neuron updates per millisecond from a few hundred LUTs. HLS makes it possible for software engineers to iterate on neuromorphic designs, at some cost in efficiency compared with hand-written RTL."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When to choose an FPGA"
+    },
+    {
+      "type": "list",
+      "items": [
+        "You need a custom neuron model, precision or learning rule that fixed chips do not support.",
+        "You want deterministic, low-latency, real-time processing at the edge, for example with an event camera feeding AER directly into the fabric.",
+        "You are prototyping an architecture that might later become an ASIC."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "They are less suitable for very large networks, where SpiNNaker, Loihi systems or GPUs scale more easily, or when development time matters more than watts."
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: an FPGA is a realistic home for your column once its design stabilizes. A column of a few thousand LIF neurons with segment-based dendrites and local STDP fits on a mid-range device, and time-multiplexing lets you run many columns on one chip with lateral voting between them. Keep the JavaScript or Python model as the golden reference and check the FPGA's spike trains against it."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Cassidy, A. S., Georgiou, J. & Andreou, A. G. (2013), \"Design of silicon brains in the nano-CMOS era: spiking neurons, learning synapses and neural architecture optimization\", Neural Networks 45:4-26. Moore, S. W., Fox, P. J., Marsh, S. J. T., Markettos, A. T. & Mujumdar, A. (2012), \"Bluehive: a field-programable custom computing machine for extreme-scale real-time neural network simulation\", IEEE FCCM 2012. Neil, D. & Liu, S.-C. (2014), \"Minitaur, an event-driven FPGA-based spiking network accelerator\", IEEE Transactions on VLSI Systems 22:2621-2628. Cheung, K., Schultz, S. R. & Luk, W. (2016), \"NeuroFlow: a general purpose spiking neural network simulation platform using customizable processors\", Frontiers in Neuroscience 9:516. Wang, R. M., Thakur, C. S. & van Schaik, A. (2018), \"An FPGA-based massively parallel neuromorphic cortex simulator\", Frontiers in Neuroscience 12:213."
+    }
+  ]
+}

@@ -45,7 +45,8 @@
  * The handle returned by {@link makePlot}.
  *
  * @typedef {Object} PlotHandle
- * @property {(series: PlotSeries[]) => void} draw  Render (or re-render) the
+ * @property {(series: PlotSeries[], axes?: {xLabel?: string, yLabel?: string}) => void} draw
+ *   Render (or re-render) the
  *   given series. Calling `draw` again fully replaces the previous drawing, so
  *   it is safe to call on every parameter change.
  * @property {() => void} dispose  Remove all DOM this plot created from the
@@ -65,7 +66,7 @@ const VIEW = { width: 640, height: 360 };
 /**
  * Inner drawing area margins (design units) leaving room for axis labels.
  */
-const MARGIN = { top: 16, right: 16, bottom: 36, left: 44 };
+const MARGIN = { top: 16, right: 16, bottom: 40, left: 60 };
 
 /** Number of gridlines/ticks along each axis (including the axis itself). */
 const TICKS = { x: 5, y: 5 };
@@ -106,14 +107,14 @@ export function makePlot(container) {
    * Render the given series, replacing any previous drawing.
    * @param {PlotSeries[]} series
    */
-  function draw(series) {
+  function draw(series, axes = {}) {
     if (disposed) return;
     const list = normalizeSeries(series);
 
     // Tear down the prior drawing so draw() is idempotent and leak-free.
     removeOwnedNodes();
 
-    svg = buildSvg(list);
+    svg = buildSvg(list, axes);
     container.appendChild(svg);
 
     legend = buildLegend(list);
@@ -175,7 +176,7 @@ function seriesColorIndex(seriesIndex) {
  * @param {Array<{points: Array<{x:number,y:number}>, label: string}>} list
  * @returns {SVGSVGElement}
  */
-function buildSvg(list) {
+function buildSvg(list, axes = {}) {
   const svg = /** @type {SVGSVGElement} */ (document.createElementNS(SVG_NS, "svg"));
   svg.setAttribute("viewBox", `0 0 ${VIEW.width} ${VIEW.height}`);
   svg.setAttribute("role", "img");
@@ -202,6 +203,8 @@ function buildSvg(list) {
   svg.appendChild(buildGrid(area, bounds, project));
   svg.appendChild(buildAxes(area));
   svg.appendChild(buildAxisLabels(area, bounds));
+  const titles = buildAxisTitles(area, axes);
+  if (titles) svg.appendChild(titles);
 
   for (let i = 0; i < list.length; i++) {
     const node = buildSeriesPath(list[i].points, project, seriesColorIndex(i), list[i].label);
@@ -315,6 +318,27 @@ function buildAxisLabels(area, bounds) {
  * @param {string} label
  * @returns {SVGPathElement | null}
  */
+/** Optional axis titles (e.g. "time (ms)"), in the same class as tick labels. */
+function buildAxisTitles(area, axes) {
+  const { xLabel, yLabel } = axes ?? {};
+  if (typeof xLabel !== "string" && typeof yLabel !== "string") return null;
+  const g = document.createElementNS(SVG_NS, "g");
+  g.setAttribute("class", "plot-axis-label");
+  if (typeof xLabel === "string" && xLabel) {
+    const t = text(xLabel, (area.left + area.right) / 2, area.bottom + 34);
+    t.setAttribute("text-anchor", "middle");
+    g.appendChild(t);
+  }
+  if (typeof yLabel === "string" && yLabel) {
+    const cy = (area.top + area.bottom) / 2;
+    const t = text(yLabel, 10, cy);
+    t.setAttribute("text-anchor", "middle");
+    t.setAttribute("transform", `rotate(-90 10 ${round(cy)})`);
+    g.appendChild(t);
+  }
+  return g;
+}
+
 function buildSeriesPath(points, project, colorIndex, label) {
   if (points.length === 0) return null;
   const path = document.createElementNS(SVG_NS, "path");

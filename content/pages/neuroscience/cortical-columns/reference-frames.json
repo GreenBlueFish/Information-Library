@@ -1,0 +1,116 @@
+{
+  "title": "Grid Cells and Reference Frames",
+  "intro": "To learn an object as features at locations, a column needs a way to represent location. The brain already has one: grid cells, which tile space with a periodic firing pattern and update by path integration. The Thousand Brains Theory proposes that every cortical column has a version of them.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Grid cells in the entorhinal cortex"
+    },
+    {
+      "type": "prose",
+      "text": "In 2005 Hafting, Fyhn, Molden, Moser and Moser recorded from the medial entorhinal cortex of rats running around an open arena and found cells that fired at many locations, arranged at the vertices of a regular triangular (hexagonal) lattice covering the whole floor. Each grid cell has a spacing (distance between firing fields), an orientation and a phase (offset). Neighbouring cells share spacing and orientation but differ in phase, so together they tile the arena. The discovery earned the Mosers the 2014 Nobel Prize, shared with John O'Keefe for place cells in the hippocampus."
+    },
+    {
+      "type": "prose",
+      "text": "Grid cells come in modules. Cells in one module share spacing; spacing grows in discrete steps from the dorsal to the ventral end of the entorhinal cortex, by a ratio of roughly 1.4 between successive modules (Stensola et al., 2012). Grid patterns persist in darkness: when the animal moves, the pattern shifts according to its own velocity, so grid cells perform path integration, keeping track of position from self-motion alone, with landmarks correcting drift."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why several modules give a powerful code"
+    },
+    {
+      "type": "prose",
+      "text": "One module is ambiguous: its firing repeats every spacing, so it only tells you position modulo that spacing, a phase. But a set of modules with different spacings works like a set of clock hands or a residue number system. The combination of phases repeats only after a distance far larger than any single spacing, so a few modules can uniquely code a very large space. The code is also easy to update: movement shifts each module's phase by an amount proportional to velocity divided by spacing, a purely local operation."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Grid-cell modules along a track",
+        "params": [
+          {
+            "key": "spacing",
+            "label": "Smallest spacing (cm)",
+            "control": "range",
+            "min": 10,
+            "max": 80,
+            "step": 5,
+            "default": 30
+          },
+          {
+            "key": "ratio",
+            "label": "Spacing ratio between modules",
+            "control": "range",
+            "min": 1.1,
+            "max": 2,
+            "step": 0.02,
+            "default": 1.42
+          },
+          {
+            "key": "modules",
+            "label": "Modules",
+            "control": "range",
+            "min": 1,
+            "max": 5,
+            "step": 1,
+            "default": 3
+          }
+        ],
+        "config": {
+          "sim": "grid-cells",
+          "xLabel": "position on track (cm)",
+          "yLabel": "firing (one row per module)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Each row is one cell from one module along a 3 m track (a 1-D slice of the 2-D grid). One row alone fires at many places, so it cannot tell you where you are. Read the rows together at any position: the combination of where each module is in its cycle is different almost everywhere. Try a ratio near 1, where modules are nearly identical and the combination repeats quickly, and then a ratio near 1.4, close to what is measured, where the combined code stays unique over the whole track. Adding modules extends the unique range again."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Path integration in networks"
+    },
+    {
+      "type": "prose",
+      "text": "The standard model of how grid cells path-integrate is a continuous attractor network (see #/neuroscience/neural-manifolds): recurrently connected cells whose connectivity supports a bump (or a lattice of bumps) of activity that can sit anywhere on a sheet or torus. Velocity-modulated inputs push the bump around so its position tracks the animal's. Burak and Fiete (2009) showed such networks can path-integrate accurately over long distances. Gardner et al. (2022) recorded hundreds of grid cells simultaneously and found that a module's population activity lies on a torus, as attractor models predict."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From maps of rooms to maps of objects"
+    },
+    {
+      "type": "prose",
+      "text": "Hawkins and colleagues propose that the neocortex reuses this mechanism. Each cortical column would contain grid-cell-like modules, proposed to be in L6, that represent the location of the column's sensor patch relative to the object being sensed, an object-centred reference frame. When a finger moves across a cup, the motor command and proprioception update the location just as running updates a rat's grid cells. Each object gets its own location space: when the column switches to a new object, the modules re-anchor, much as grid cells realign in a new room. Lewis et al. (2019) built a network model on this idea: L6 holds a location as a set of grid-module phases, L4 learns sensed features at those locations, and the two together recognise objects with movement."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Unique locations: a combination of module phases picks out a location in a specific object's reference frame, so the same feature at the same coordinates on two objects is still coded differently.",
+        "Union of hypotheses: before recognition each module can represent several candidate phases at once (the location if this is a cup, or if it is a bowl); each movement shifts all of them together and sensations prune them.",
+        "Generality: because the code is about relative position, the same machinery could in principle represent positions in abstract spaces, which is the theory's account of conceptual knowledge."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Evidence check: grid cells in entorhinal cortex, their modules and their path integration are well established. Grid-like signals have been reported in human cortex with fMRI, including while people navigate abstract conceptual spaces (Doeller et al. 2010; Constantinescu et al. 2016). That grid-cell modules sit inside every neocortical column, in L6, is a hypothesis not yet tested directly."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building one"
+    },
+    {
+      "type": "prose",
+      "text": "For a spiking column, a practical first location layer does not need a learned attractor. Represent each module as a ring of neurons with a bump of activity (the ring-attractor sim on #/neuroscience/neural-manifolds shows this), shift the bump by the movement input divided by the module's spacing, and read out the combination of bump positions as location. Later versions can learn the recurrent weights and use a 2-D sheet instead of a ring. See #/neuroscience/cortical-columns/column-blueprint."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Hafting, Fyhn, Molden, Moser & Moser, 'Microstructure of a spatial map in the entorhinal cortex', Nature (2005); Stensola et al., 'The entorhinal grid map is discretized', Nature (2012); Fiete, Burak & Brookings, 'What grid cells convey about rat location', J Neurosci (2008); Burak & Fiete, 'Accurate path integration in continuous attractor network models of grid cells', PLoS Comput Biol (2009); Gardner et al., 'Toroidal topology of population activity in grid cells', Nature (2022); Doeller, Barry & Burgess, 'Evidence for grid cells in a human memory network', Nature (2010); Lewis, Purdy, Ahmad & Hawkins, Front Neural Circuits (2019)."
+    }
+  ]
+}

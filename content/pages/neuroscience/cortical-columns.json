@@ -1,0 +1,138 @@
+{
+  "title": "Cortical Columns",
+  "intro": "The neocortex is a thin sheet whose local circuit looks remarkably similar everywhere. The cortical column, that repeating circuit, is a leading candidate for the brain's generic unit of computation, and the target of anyone trying to build a mini brain from spiking neurons.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The neocortex"
+    },
+    {
+      "type": "prose",
+      "text": "The neocortex is the folded outer sheet of the mammalian brain, about 2 to 4 mm thick and, in humans, roughly the area of a large dinner napkin when unfolded. It holds most of the brain's neurons outside the cerebellum and handles vision, touch, hearing, language, planning and movement. The striking fact, emphasised by Vernon Mountcastle, is that the tissue looks much the same wherever you look: the same six layers, the same cell types and a similar pattern of connections, whether the region processes sight or sound. Regions differ in thickness, cell density and inputs, but the motif repeats. That uniformity suggests the cortex runs one general algorithm on whatever input a region is wired to."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Columns and minicolumns"
+    },
+    {
+      "type": "prose",
+      "text": "Mountcastle (1957) found that neurons recorded along a track perpendicular to the cortical surface in somatosensory cortex shared the same receptive field and modality, while neighbouring tracks could differ. He proposed the column as the unit of cortical organisation. Two scales are now distinguished:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Minicolumn: a vertical chain of roughly 80 to 120 neurons, about 30 to 50 micrometres wide, formed during development as cells migrate along the same radial glial fibre. Cells in a minicolumn tend to share feedforward tuning.",
+        "Cortical column (macrocolumn): a cylinder roughly 0.3 to 0.6 mm across containing on the order of a hundred minicolumns bound together by short-range connections, for example a barrel in rodent somatosensory cortex, which represents one whisker, or an orientation hypercolumn in visual cortex."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "How sharply columns are bounded varies by area and species, and some neuroscientists argue the column is better seen as a functional tendency than a discrete module. For modelling, the useful idea is a repeated local circuit with a shared input patch."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The six layers"
+    },
+    {
+      "type": "prose",
+      "text": "Each layer has characteristic cells and connections. The summary below is simplified but captures what models usually rely on."
+    },
+    {
+      "type": "list",
+      "items": [
+        "L1: almost no cell bodies; a mat of axons and the tufted tips of apical dendrites from deeper pyramidal cells. Top-down feedback from higher regions and from the thalamus arrives here, so it can modulate cells whose bodies lie far below.",
+        "L2/3: small and medium pyramidal cells with dense horizontal connections to other L2/3 cells in the same and distant columns. Sends output to other cortical regions (feedforward up the hierarchy). Often modelled as where columns exchange information and form stable object-level representations.",
+        "L4: the main input layer in sensory cortex. Spiny stellate and pyramidal cells receive thalamic input and relay it up to L2/3. In theories such as Thousand Brains, L4 combines sensed features with location.",
+        "L5: large thick-tufted pyramidal cells whose axons leave the cortex for subcortical targets, including motor structures such as the spinal cord, superior colliculus and higher-order thalamus. Every region, even sensory ones, has motor-like output here.",
+        "L6: corticothalamic cells that project back to the thalamus and modulate its input, plus cells projecting within cortex. Proposed in Thousand Brains work to hold grid-cell-like location signals.",
+        "Inhibitory interneurons in every layer (about 20 percent of neurons): fast-spiking parvalbumin cells that provide quick feedback inhibition and sparsify activity, somatostatin cells that target dendrites, and VIP cells that inhibit other interneurons and so gate them."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The canonical microcircuit"
+    },
+    {
+      "type": "prose",
+      "text": "Douglas and Martin, working from cat visual cortex, described a canonical microcircuit: thalamic input lands mainly on L4, L4 drives L2/3, L2/3 drives L5, L5 and L6 project out of the column, and L6 feeds back to L4 and the thalamus. Much of the excitation a cell receives comes not from the thalamus but from recurrent excitation within the cortex, held in check by inhibition. Thalamic input is a small fraction of the synapses on L4 cells yet reliably drives them, so the local recurrent circuit amplifies and interprets a modest input. Thomson and Lamy reviewed the layer-to-layer wiring in detail, and Potjans and Diesmann built a full-scale spiking model of a 1 square millimetre patch (about 77,000 LIF neurons in eight populations, excitatory and inhibitory in L2/3, L4, L5 and L6) using measured connection probabilities. That model reproduces layer-specific firing rates and is a ready-made starting point for a spiking column."
+    },
+    {
+      "type": "callout",
+      "text": "Practical tip: the Potjans-Diesmann connectivity table is the most-used quantitative template for a spiking column. You can start from it at reduced scale and add learning to it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Theories of what a column computes"
+    },
+    {
+      "type": "prose",
+      "text": "Agreement on anatomy has not produced agreement on function. Three lines of thought matter most for this library:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Hierarchical feature extraction: columns detect increasingly complex features as signals rise through a hierarchy of regions. This is the classic view, inspired by Hubel and Wiesel, and the ancestor of convolutional networks.",
+        "Predictive processing: columns predict their input and pass on prediction errors, often in a Bayesian or free-energy framework (see #/neuroscience/neural-manifolds).",
+        "Sensorimotor modelling (Thousand Brains): every column learns complete models of objects by combining sensory features with the location of its sensor in an object-centred reference frame. Many columns vote to reach a consensus. See #/neuroscience/cortical-columns/thousand-brains."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Temporal neural networks and space-time algebra"
+    },
+    {
+      "type": "prose",
+      "text": "A different engineering route comes from computer architect James E. Smith. His temporal neural networks (TNNs) are spiking networks built to mimic the neocortex: information is carried by spike times, not rates, and learning is local and unsupervised, a form of STDP. A typical TNN column is a layer of excitatory neurons with simple response functions (ramp or step SRM-style kernels) followed by winner-take-all lateral inhibition, so that the first neuron to fire wins. Trained online with STDP, such a column clusters its inputs: each neuron comes to fire earliest for one recurring pattern. Columns can be stacked into layers."
+    },
+    {
+      "type": "prose",
+      "text": "To reason about such networks Smith proposed space-time algebra, an alternative to Boolean algebra in which the value on a wire is the time a spike arrives (or infinity for no spike). Its primitive operations include min (the earliest arrival, which acts like OR), max (the latest arrival, which acts like AND), adding a constant delay, and an inhibit operation that passes a spike only if it arrives before an inhibiting one. These can be built from ordinary digital gates, the idea known as race logic, so temporal computations map directly onto conventional hardware. The appeal for column builders is that first-spike timing plus winner-take-all already gives fast, sparse, learnable feature detection."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "A column's first layer: winner-take-all inhibition",
+        "params": [
+          {
+            "key": "inhibition",
+            "label": "Lateral inhibition strength",
+            "control": "range",
+            "min": 0,
+            "max": 6,
+            "step": 0.5,
+            "default": 3
+          },
+          {
+            "key": "drive",
+            "label": "Input drive (nA)",
+            "control": "range",
+            "min": 1.6,
+            "max": 4,
+            "step": 0.1,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "winner-take-all",
+          "xLabel": "time (ms)",
+          "yLabel": "neuron (raster)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The plot shows six LIF neurons in one layer, each driven a little less strongly than the one before (input gain 1.00 down to 0.85), all inhibited by a shared interneuron pool. With inhibition at zero every neuron fires, just at slightly different rates. Turn inhibition up and only the most strongly driven one or two keep firing: the layer has turned a dense, graded input into a sparse code. That sparsification is the basic job of fast-spiking interneurons in a column, and it is the winner-take-all step in Smith's TNN columns and in HTM's spatial pooler."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Mountcastle, 'Modality and topographic properties of single neurons of cat's somatic sensory cortex', J Neurophysiol (1957) and 'The columnar organization of the neocortex', Brain (1997); Douglas & Martin, 'Neuronal circuits of the neocortex', Annu Rev Neurosci (2004); Thomson & Lamy, 'Functional maps of neocortical local circuitry', Front Neurosci (2007); Potjans & Diesmann, 'The cell-type specific cortical microcircuit', Cereb Cortex (2014); Smith, 'Space-Time Algebra: A Model for Neocortical Computation', ISCA (2018); Smith, 'A Neuromorphic Paradigm for Online Unsupervised Clustering' (2020); Hawkins, Ahmad & Cui, Front Neural Circuits (2017)."
+    }
+  ]
+}

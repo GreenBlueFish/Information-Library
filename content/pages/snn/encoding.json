@@ -1,0 +1,147 @@
+{
+  "title": "Spike Encoding",
+  "intro": "A spiking network can only compute on spikes, so every real-valued input (a pixel, a pressure, a position) has to be turned into spike trains first. The choice of code decides how fast, how robust and how energy-hungry the network is.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why encoding matters"
+    },
+    {
+      "type": "prose",
+      "text": "A conventional neural network passes numbers between layers. A spiking neural network passes spikes: all-or-nothing events at particular times. Information therefore has to live in which neurons fire, how often they fire, or exactly when they fire. Encoding is the step that maps a value onto one of these. Decoding is the reverse, and the two have to agree: a downstream population that reads rates will ignore a carefully timed code, and one that reads first-spike latency will be confused by a noisy Poisson train."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Rate coding"
+    },
+    {
+      "type": "prose",
+      "text": "In rate coding the value is the firing rate: the number of spikes in a window divided by its length. The simplest generator is a Poisson process, which fires in each small time step dt with probability r·dt, where r is proportional to the input. Rate codes are robust to jitter and to losing single spikes, and they map directly onto the activations of a conventional network, which is why ANN-to-SNN conversion uses them. Their cost is time and energy: estimating a rate to within 10% from Poisson spikes needs on the order of 100 spikes, so precision is bought with latency."
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// Poisson rate encoder: one boolean per time step\nfunction poissonTrain(x, maxRateHz, T_ms, dt_ms, rand = Math.random) {\n  const p = x * maxRateHz * dt_ms / 1000; // spike probability per step\n  const spikes = [];\n  for (let t = 0; t < T_ms; t += dt_ms) if (rand() < p) spikes.push(t);\n  return spikes;\n}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Temporal coding"
+    },
+    {
+      "type": "prose",
+      "text": "In temporal coding the value is carried by spike timing. The commonest form is latency (time-to-first-spike) coding: a stronger input makes the neuron reach threshold sooner, so the first spike arrives earlier. For a leaky integrate-and-fire neuron with constant input x and threshold θ, the time to first spike is τ·ln(x / (x − θ)), shorter for larger x and infinite when x ≤ θ. Thorpe and colleagues argued that rapid visual categorisation, completed in roughly 150 ms across many synaptic stages, leaves time for only about one spike per neuron per stage, so the order in which neurons fire (rank-order coding) must carry the information. Temporal codes are fast and sparse (one spike per neuron), but fragile to timing noise."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Latency code: one spike per neuron, earlier means stronger.",
+        "Rank-order code: only the order of first spikes matters, invariant to overall contrast.",
+        "Phase code: spike time relative to an ongoing oscillation (e.g. hippocampal theta phase precession).",
+        "Synchrony code: which neurons fire together within a few milliseconds."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Population coding"
+    },
+    {
+      "type": "prose",
+      "text": "A population code spreads one value over many neurons, each with a tuning curve centred on a preferred value. A Gaussian receptive-field bank is the standard engineering choice: neuron i fires at rate r_max · exp(−(x − c_i)² / 2σ²). The value can be read out by a weighted average of preferred values (population vector) or by a learned linear decoder, as in the Neural Engineering Framework. Population codes are robust because no single neuron is critical, and they work with either rates or timing."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Encoding explorer",
+        "params": [
+          {
+            "key": "scheme",
+            "label": "Code",
+            "control": "select",
+            "options": [
+              "rate",
+              "latency",
+              "population"
+            ],
+            "default": "rate"
+          },
+          {
+            "key": "maxRate",
+            "label": "Max rate (Hz)",
+            "control": "range",
+            "min": 10,
+            "max": 300,
+            "step": 10,
+            "default": 100
+          },
+          {
+            "key": "value",
+            "label": "Value (population code)",
+            "control": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "range",
+            "min": 1,
+            "max": 20,
+            "step": 1,
+            "default": 7
+          }
+        ],
+        "config": {
+          "sim": "encoding",
+          "xLabel": "time (ms)",
+          "yLabel": "neuron (row)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "How to read the plot: each row is one neuron over 100 ms and each tick is a spike. In rate mode, row i receives intensity (i+1)/6 and fires Poisson spikes at that fraction of the max rate. In latency mode the same intensities each produce a single spike, earlier for stronger inputs. In population mode all six neurons see one value through Gaussian tuning curves with preferred values 0 to 1; move the value slider and watch the activity bump move."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing a code"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Need compatibility with trained ANNs or noisy sensors: rate code.",
+        "Need speed and few spikes (neuromorphic, energy budget): latency or rank-order code.",
+        "Event cameras and silicon cochleas already emit temporal, change-driven spikes; use them as they are.",
+        "Representing a continuous variable such as position or angle: population code."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pitfalls"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Too low a max rate gives zero spikes in short windows; check the expected count r·T.",
+        "Latency codes need a reset or a clear stimulus onset; without one there is no reference time.",
+        "Mixing codes between layers silently: a rate-trained readout cannot read timing."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: cortical models in the Thousand Brains family use sparse distributed codes, where a small fraction of minicolumns are active per time step (about 2%). A practical encoder for such a column is a population or bucketed code that maps a value to a fixed set of active input neurons, with nearby values sharing many active bits. Latency coding is a natural fit if you want a whole sensation to be processed in one wave of spikes."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (Cambridge University Press, 2014), ch. 7; Thorpe, Fize & Marlot (1996) Speed of processing in the human visual system, Nature 381; Thorpe, Delorme & Van Rullen (2001) Spike-based strategies for rapid processing, Neural Networks 14; Dayan & Abbott, Theoretical Neuroscience (MIT Press, 2001), ch. 1 and 3."
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  "title": "Multi-Compartment Model",
+  "intro": "A point neuron treats the whole cell as one patch of membrane. Real neurons are trees: a pyramidal cell's dendrites can stretch over a millimeter and receive thousands of synapses at different distances from the soma. Multi-compartment models divide the cell into electrically coupled pieces so that where an input arrives matters, and dendrites can do computation of their own.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From cable to compartments"
+    },
+    {
+      "type": "prose",
+      "text": "Wilfrid Rall's cable theory describes a passive dendrite as a leaky cable. Voltage spreads along it, attenuating with distance (length constant lambda) and smearing out in time. To simulate it, chop the tree into compartments that are each small enough to be nearly isopotential, and couple neighbors through axial conductances:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "C_i dV_i/dt = -g_L (V_i - E_L) - I_ion,i(V_i, ...) + sum_{j neighbor} g_ij (V_j - V_i) + I_syn,i + I_inj,i"
+    },
+    {
+      "type": "prose",
+      "text": "Each compartment can carry its own ion channels. Simulators such as NEURON build these equations from a reconstructed morphology with hundreds or thousands of compartments. But even two compartments, a soma and a dendrite, capture a lot."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The two-compartment neuron"
+    },
+    {
+      "type": "prose",
+      "text": "The widget couples a passive dendrite to an integrate-and-fire soma. Current is injected into the dendrite only, so the soma sees just what the coupling conductance passes on:"
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// soma: LIF; dendrite: passive; g = relative coupling conductance\nvs += dt / tauS * (-(vs - EL) + g * (vd - vs));\nvd += dt / tauD * (-(vd - EL) + g * (vs - vd) + R * Idend);\nif (vs >= vth) vs = vreset;      // the dendrite is not reset"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Dendrite to soma coupling",
+        "params": [
+          {
+            "key": "current",
+            "label": "Dendritic current (nA)",
+            "control": "range",
+            "min": 0,
+            "max": 15,
+            "step": 0.5,
+            "default": 8
+          },
+          {
+            "key": "coupling",
+            "label": "Coupling conductance (relative)",
+            "control": "range",
+            "min": 0.05,
+            "max": 3,
+            "step": 0.05,
+            "default": 0.5
+          }
+        ],
+        "config": {
+          "sim": "two-compartment",
+          "xLabel": "time (ms)",
+          "yLabel": "V (mV)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Lower the coupling to 0.1-0.3. The dendrite depolarizes strongly, but the soma barely moves and never fires: the input is electrically far away. This is dendritic attenuation, and it is why distal synapses on a pyramidal cell are weak at the soma.",
+        "Raise the coupling to 2. The two compartments behave nearly as one point neuron and the soma fires fast.",
+        "Watch the dendrite as the soma fires. Each somatic reset pulls the dendrite down a little: the coupling runs both ways, a crude version of a back-propagating action potential."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What active dendrites add"
+    },
+    {
+      "type": "prose",
+      "text": "With voltage-gated channels in the dendrites, compartments stop being passive filters:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Dendritic spikes. NMDA receptors are blocked by magnesium at rest and unblock when depolarized. When roughly 10-20 synapses on one thin branch are active together, the branch can produce a local NMDA spike (plateau) lasting tens of milliseconds. Sodium and calcium spikes occur in other dendritic zones.",
+        "Coincidence detection across layers. In layer 5 pyramidal cells, a back-propagating action potential that coincides with distal (apical tuft) input triggers a calcium spike near the apical trunk, which turns a single spike into a burst. Larkum (2013) proposed this as a cellular mechanism that associates feedforward input at the basal dendrites with feedback input at the apical tuft.",
+        "Two-layer networks in one cell. Poirazi, Brannon and Mel (2003) showed that a detailed CA1 pyramidal cell model is well approximated by a two-layer neural network: each branch applies its own sigmoid to its inputs, and the soma sums the branches."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Cost and shortcuts"
+    },
+    {
+      "type": "prose",
+      "text": "Detailed morphologies are expensive. A useful middle ground is a few functional compartments, such as basal, apical and soma, or a point neuron with dendritic segments that act as independent thresholded detectors. The second option is what HTM's temporal memory does."
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: this is the most important neuron-model idea for the Thousand Brains Theory. In Hawkins and Ahmad (2016), a pyramidal neuron's distal dendritic segments detect patterns of lateral context, and a segment's NMDA spike does not make the cell fire but depolarizes it, putting it in a predictive state so that it fires slightly earlier than its neighbors when its feedforward input arrives. To build that in a spiking column, give each excitatory cell a soma plus several dendritic compartments (or thresholded segments) with NMDA-like plateaus, and let lateral inhibition reward the cells that fire first. See the temporal memory page (#/neuroscience/cortical-columns/temporal-memory)."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Rall, W. (1967), \"Distinguishing theoretical synaptic potentials computed for different soma-dendritic distributions of synaptic input\", Journal of Neurophysiology 30:1138-1168. Koch, C. (1999), Biophysics of Computation, Oxford University Press. Poirazi, P., Brannon, T. & Mel, B. W. (2003), Neuron 37:989-999. Larkum, M. (2013), \"A cellular mechanism for cortical associations\", Trends in Neurosciences 36:141-151. Major, G., Larkum, M. E. & Schiller, J. (2013), \"Active properties of neocortical pyramidal neuron dendrites\", Annual Review of Neuroscience 36:1-24. Hawkins, J. & Ahmad, S. (2016), \"Why neurons have thousands of synapses, a theory of sequence memory in neocortex\", Frontiers in Neural Circuits 10:23."
+    }
+  ]
+}

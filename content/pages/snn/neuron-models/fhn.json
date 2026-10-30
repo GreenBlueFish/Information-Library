@@ -1,0 +1,127 @@
+{
+  "title": "FitzHugh-Nagumo Model",
+  "intro": "The FitzHugh-Nagumo (FHN) model strips Hodgkin-Huxley down to two variables: a fast voltage-like variable with a cubic nonlinearity and a slow linear recovery variable. It is not a quantitative model of any neuron. It is the clearest picture of what excitability is.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equations"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "dv/dt = v - v^3 / 3 - w + I\ndw/dt = epsilon (v + a - b w)\n\n(classic values: a = 0.7, b = 0.8, epsilon = 0.08)"
+    },
+    {
+      "type": "prose",
+      "text": "v plays the role of membrane potential combined with the fast sodium activation. w is the slow recovery variable, standing for potassium activation and sodium inactivation. The variables are dimensionless. The small epsilon makes w much slower than v, and this separation of time scales is the whole story: v moves quickly until it reaches a place where it can be in balance, then w drifts slowly and drags v with it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The phase plane"
+    },
+    {
+      "type": "prose",
+      "text": "Because there are only two variables, every state is a point (v, w) in a plane, and the dynamics are arrows. Two curves organize everything:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The v-nullcline, w = v - v^3/3 + I, where dv/dt = 0. It is an N-shaped cubic with a left branch (rest), a middle branch (the threshold) and a right branch (the excited state).",
+        "The w-nullcline, w = (v + a) / b, where dw/dt = 0. It is a straight line.",
+        "Where they cross is a fixed point. With I = 0 the crossing sits on the left branch: a stable resting state."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Excitability now has a geometric meaning. A small kick in v that stays left of the middle branch decays straight back to rest. A kick past the middle branch sends v racing to the right branch: a spike. Then w slowly rises, v slides up the right branch, falls off its knee, races back to the left branch, and w recovers. The middle branch acts as the threshold, and the slow return of w is the refractory period."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "FitzHugh-Nagumo: time course and phase plane",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current I",
+            "control": "range",
+            "min": 0,
+            "max": 1.6,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "epsilon",
+            "label": "Time-scale ratio epsilon",
+            "control": "range",
+            "min": 0.01,
+            "max": 0.3,
+            "step": 0.01,
+            "default": 0.08
+          },
+          {
+            "key": "view",
+            "label": "Show",
+            "control": "select",
+            "options": [
+              "time",
+              "phase plane"
+            ],
+            "default": "time"
+          }
+        ],
+        "config": {
+          "sim": "fhn",
+          "xLabel": "time (dimensionless) or v",
+          "yLabel": "v and w, or w"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "At I = 0.5 the fixed point lies on the middle branch and is unstable, so the system runs around a limit cycle: periodic spiking. Lower I below about 0.33 and the fixed point moves onto the left branch: after an initial transient the neuron sits at rest. Raise I above about 1.4 and the fixed point moves onto the right branch: the neuron is stuck depolarized (depolarization block). Switch the view to \"phase plane\" to see the trajectory loop around the two nullclines. A smaller epsilon makes the loop sharper (relaxation oscillations); a larger epsilon makes it rounder."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bifurcations"
+    },
+    {
+      "type": "prose",
+      "text": "The transition from rest to repetitive spiking at about I = 0.33 happens when the fixed point loses stability: a Hopf bifurcation. Oscillations appear with a nonzero frequency, which makes FHN a type II neuron like Hodgkin-Huxley. Contrast this with the saddle-node onset of the EIF and LIF (type I), where firing can start at an arbitrarily low rate. Which bifurcation a neuron has decides whether it acts as an integrator or a resonator. See #/neuroscience/neuronal-dynamics."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulating it"
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "function fhnStep(s, I, dt, p = { a: 0.7, b: 0.8, eps: 0.08 }) {\n  const dv = s.v - s.v ** 3 / 3 - s.w + I;\n  const dw = p.eps * (s.v + p.a - p.b * s.w);\n  s.v += dt * dv;\n  s.w += dt * dw;\n}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "History and uses"
+    },
+    {
+      "type": "list",
+      "items": [
+        "FitzHugh (1961) derived it as a simplification of the Hodgkin-Huxley equations, building on the van der Pol oscillator; Nagumo, Arimoto and Yoshizawa (1962) built it as an electronic circuit with a tunnel diode.",
+        "It models excitable media beyond neurons: cardiac tissue, traveling waves and spiral waves when diffusion is added.",
+        "It is the standard teaching model for phase-plane analysis, excitability, refractoriness and the Hopf bifurcation."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: FHN will not be the neuron in your column, since it has no meaningful units or spike timing fit. Its value is conceptual. When an Izhikevich or AdEx cell surprises you (it will not fire, fires in bursts, or locks into depolarization block), sketch its nullclines the FHN way, and the reason is usually visible at a glance."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: FitzHugh, \"Impulses and physiological states in theoretical models of nerve membrane\" (Biophysical Journal, 1, 1961); Nagumo, Arimoto & Yoshizawa, \"An active pulse transmission line simulating nerve axon\" (Proceedings of the IRE, 50, 1962); Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (Cambridge University Press, 2014), chapter 4; Izhikevich, Dynamical Systems in Neuroscience (MIT Press, 2007)."
+    }
+  ]
+}

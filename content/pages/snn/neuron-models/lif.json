@@ -1,0 +1,191 @@
+{
+  "title": "Leaky Integrate-and-Fire",
+  "intro": "The leaky integrate-and-fire (LIF) neuron models the membrane as a leaky capacitor: it integrates input current, leaks back toward rest, and fires a spike and resets when it crosses a threshold.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equation"
+    },
+    {
+      "type": "prose",
+      "text": "Electrically, a patch of membrane is a capacitor C (the lipid bilayer) in parallel with a resistor R (the leak channels). Current that enters either charges the capacitor or leaks out. Multiplying through by R gives the LIF equation, with membrane time constant tau_m = R C:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "tau_m * dV/dt = -(V - E_L) + R * I(t)\n\nif V >= V_th:   emit spike;  V <- V_reset;  hold for t_ref"
+    },
+    {
+      "type": "prose",
+      "text": "E_L is the resting (leak reversal) potential. Without input, V decays exponentially to E_L with time constant tau_m. With constant input I, V relaxes toward V_inf = E_L + R I. If V_inf stays below threshold the neuron never fires. If it lies above, V climbs, crosses V_th, is reset, and climbs again: regular, periodic firing."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Parameters and what they do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "tau_m (about 10-20 ms): memory of the membrane. Large tau_m integrates many inputs over a long window; small tau_m makes the neuron a coincidence detector.",
+        "R (input resistance): converts current to voltage; together with the threshold gap it sets the rheobase I_rh = (V_th - E_L) / R.",
+        "V_th and V_reset: the spike criterion and where the voltage restarts. A reset below rest gives a brief after-hyperpolarization.",
+        "t_ref (1-5 ms): absolute refractory period; caps the firing rate at 1 / t_ref."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The f-I curve in closed form"
+    },
+    {
+      "type": "prose",
+      "text": "For constant input above rheobase, solving the linear equation between reset and threshold gives the interspike interval directly:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "T_isi = t_ref + tau_m * ln( (V_inf - V_reset) / (V_inf - V_th) ),   V_inf = E_L + R I\nrate  = 1 / T_isi"
+    },
+    {
+      "type": "prose",
+      "text": "The rate rises steeply just above rheobase (a logarithmic singularity: type I-like onset at arbitrarily low rate) and saturates at 1 / t_ref for strong input. This closed form is one reason the LIF dominates theory: rates, population activity and NEF tuning curves can all be written down analytically. See #/foundations/nef, where exactly this formula forms the tuning curves."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulate it"
+    },
+    {
+      "type": "prose",
+      "text": "Forward Euler with a 0.05-0.1 ms step is accurate enough for most purposes. Spikes are drawn as a vertical line to +20 mV for visibility; the model itself only records the spike time."
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "function lifStep(v, I, dt, p) {\n  // p = { tau: 10, EL: -65, R: 10, vth: -50, vreset: -70 }\n  v += (dt / p.tau) * (-(v - p.EL) + p.R * I);\n  if (v >= p.vth) return { v: p.vreset, spike: true };\n  return { v, spike: false };\n}"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "LIF membrane potential under a current step",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current (nA)",
+            "control": "range",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "default": 2
+          },
+          {
+            "key": "tau",
+            "label": "Membrane time constant (ms)",
+            "control": "range",
+            "min": 2,
+            "max": 40,
+            "step": 1,
+            "default": 10
+          },
+          {
+            "key": "threshold",
+            "label": "Threshold (mV)",
+            "control": "range",
+            "min": -60,
+            "max": -40,
+            "step": 1,
+            "default": -50
+          },
+          {
+            "key": "refractory",
+            "label": "Refractory period (ms)",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 0.5,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "lif",
+          "xLabel": "time (ms)",
+          "yLabel": "membrane potential (mV)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Things to try: set the current to 1.4 nA and the neuron charges toward -51 mV and never fires; at 1.6 nA it fires slowly. Raise the refractory period and watch the maximum rate fall. Shorten tau_m and the voltage tracks the input almost instantly."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "LIF f-I curve",
+        "params": [
+          {
+            "key": "tau",
+            "label": "Membrane time constant (ms)",
+            "control": "range",
+            "min": 2,
+            "max": 40,
+            "step": 1,
+            "default": 10
+          },
+          {
+            "key": "refractory",
+            "label": "Refractory period (ms)",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 0.5,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "fi-curve",
+          "xLabel": "input current (nA)",
+          "yLabel": "firing rate (Hz)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What the LIF leaves out"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Spike shape and initiation: the threshold is a hard line; real neurons have a soft, voltage-dependent initiation (EIF fixes this).",
+        "Adaptation: real pyramidal cells slow down during sustained input (AdEx and Izhikevich add a recovery variable).",
+        "Subthreshold resonance, bursting and rebound spikes: these need a second variable.",
+        "Dendrites: all input lands on one point (multi-compartment models fix this)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Variants you will meet"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Current-based vs conductance-based synapses: inputs either add current, or open conductances that pull V toward a reversal potential (more realistic; shunting inhibition).",
+        "Discrete-time LIF (as in snnTorch or Loihi): V[t+1] = beta V[t] + W x[t] - S[t] V_th, with beta = exp(-dt / tau_m) and a subtractive or zero reset.",
+        "Adaptive-threshold LIF: the threshold jumps after each spike and decays back, a cheap form of adaptation used in the ALIF/LSNN models."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: LIF is the right first neuron for a column prototype. It is cheap enough for thousands of cells, it is what most neuromorphic chips implement, and its behavior is predictable, so when the column misbehaves you can blame the wiring or the learning rule rather than the neuron. Switch the excitatory cells to adaptive models once the circuit works."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Lapicque (1907), as reviewed in Abbott, \"Lapicque's introduction of the integrate-and-fire model neuron\" (Brain Research Bulletin, 1999); Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (Cambridge University Press, 2014), chapter 1; Dayan & Abbott, Theoretical Neuroscience (MIT Press, 2001), chapter 5."
+    }
+  ]
+}

@@ -1,0 +1,128 @@
+{
+  "title": "Neuron Models",
+  "intro": "A neuron model is the rule that turns incoming current into membrane potential and spikes. Models trade biological detail against speed and analytical clarity.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The modeling ladder"
+    },
+    {
+      "type": "prose",
+      "text": "Every spiking neuron model answers the same question: given an input current I(t), how does the membrane potential V(t) evolve, and when does the neuron spike? Models differ in how much of the biology they keep. At one end, the leaky integrate-and-fire neuron has a single variable and an explicit threshold. At the other, the Hodgkin-Huxley model derives the spike from the kinetics of sodium and potassium channels. Between them sit models that add one ingredient at a time."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Leaky Integrate-and-Fire (LIF): one variable, a leak, a threshold and a reset. Fast, analyzable, the default for large networks. (#/snn/neuron-models/lif)",
+        "Exponential Integrate-and-Fire (EIF): replaces the hard threshold with an exponential spike-initiation current, fitted to real neurons. (#/snn/neuron-models/eif)",
+        "Adaptive Exponential IF (AdEx): EIF plus a slow adaptation current; reproduces adaptation, bursting and delayed firing. (#/snn/neuron-models/adex)",
+        "Izhikevich: two variables with a quadratic nonlinearity; about twenty cortical firing patterns from four parameters. (#/snn/neuron-models/izhikevich)",
+        "Spike Response Model (SRM): voltage written directly as a sum of kernels; generalizes LIF and fits data well. (#/snn/neuron-models/srm)",
+        "Stochastic integrate-and-fire: adds noise, giving trial-to-trial variability and escape-rate descriptions. (#/snn/neuron-models/stochastic)",
+        "FitzHugh-Nagumo and Morris-Lecar: two-variable models for phase-plane reasoning about excitability. (#/snn/neuron-models/fhn, #/snn/neuron-models/morris-lecar)",
+        "Hodgkin-Huxley: four variables, channel gating, the biophysical benchmark. (#/snn/neuron-models/hh)",
+        "Multi-compartment: neurons as trees of coupled compartments, so dendrites can compute. (#/snn/neuron-models/multicompartment)"
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Shared vocabulary"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Membrane potential V: the voltage across the membrane, typically resting near -65 to -70 mV.",
+        "Membrane time constant tau_m = R C: how fast V forgets its input, usually 10-30 ms in cortex.",
+        "Rheobase: the smallest constant current that eventually makes the neuron fire.",
+        "Threshold and reset: in integrate-and-fire models, explicit numbers; in conductance models, emergent properties.",
+        "Refractory period: a short time after a spike during which the neuron cannot (absolute) or can hardly (relative) fire again.",
+        "f-I curve: firing rate as a function of constant input current, the neuron's input-output function."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: integrate, leak, fire"
+    },
+    {
+      "type": "prose",
+      "text": "The simulation below is a leaky integrate-and-fire neuron receiving a current step from 20 ms until 20 ms before the end. Below about 1.5 nA the membrane settles below threshold and the neuron never fires. Above it the neuron fires regularly, and more current means shorter interspike intervals. A longer membrane time constant integrates more slowly but reaches the same steady state. Each model page has its own simulation."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Leaky integrate-and-fire neuron",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current (nA)",
+            "control": "range",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "default": 2
+          },
+          {
+            "key": "tau",
+            "label": "Membrane time constant (ms)",
+            "control": "range",
+            "min": 2,
+            "max": 40,
+            "step": 1,
+            "default": 10
+          },
+          {
+            "key": "threshold",
+            "label": "Threshold (mV)",
+            "control": "range",
+            "min": -60,
+            "max": -40,
+            "step": 1,
+            "default": -50
+          },
+          {
+            "key": "refractory",
+            "label": "Refractory period (ms)",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 0.5,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "lif",
+          "xLabel": "time (ms)",
+          "yLabel": "membrane potential (mV)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing a model"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Large networks, learning experiments, neuromorphic deployment: LIF (or current-based LIF with exponential synapses).",
+        "You need realistic firing patterns (regular spiking pyramidal cells, fast-spiking interneurons, bursting cells) cheaply: Izhikevich or AdEx.",
+        "You want to fit recordings or predict spike times: AdEx, EIF or SRM with escape noise.",
+        "You want to understand why a neuron is excitable, oscillates or has a threshold: FitzHugh-Nagumo or Morris-Lecar in the phase plane.",
+        "You care about ion channels, drugs, temperature or the spike shape itself: Hodgkin-Huxley.",
+        "You need dendritic integration, such as coincidence detection or HTM-style prediction on distal segments: multi-compartment."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: a practical spiking column mixes cell types. Excitatory pyramidal cells can be AdEx or Izhikevich \"regular spiking\" with adaptation; fast-spiking inhibitory interneurons (parvalbumin-positive) can be Izhikevich \"fast spiking\"; and the predictive, dendrite-driven behavior of Thousand Brains layer 4 and layer 2/3 cells needs at least a two-compartment neuron or an explicit dendritic segment abstraction. See #/neuroscience/cortical-columns/column-blueprint."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (Cambridge University Press, 2014), chapters 1-6; Izhikevich, \"Which model to use for cortical spiking neurons?\" (IEEE Transactions on Neural Networks, 2004); Izhikevich, Dynamical Systems in Neuroscience (MIT Press, 2007)."
+    }
+  ]
+}

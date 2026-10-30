@@ -1,0 +1,123 @@
+{
+  "title": "The Thousand Brains Theory",
+  "intro": "Jeff Hawkins and colleagues at Numenta propose that every cortical column learns complete models of objects, not just fragments of them, by pairing what it senses with where its sensor is in the object's own reference frame. Thousands of columns model the same object in parallel and vote to agree on what it is.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The core claim"
+    },
+    {
+      "type": "prose",
+      "text": "The classic view of the cortex is a hierarchy: low regions detect edges, higher regions combine them, and only at the top does a whole object get recognised. The Thousand Brains Theory keeps the hierarchy but changes what each level does. It claims every column, even in primary sensory cortex, is a complete sensorimotor modelling system. A column receiving input from a patch of fingertip learns the shape of a coffee cup by moving that fingertip around the cup and noting which feature it feels at which location on the cup. Many columns, attached to different patches of skin or retina, learn models of the same cup. Recognition is then a consensus among a thousand small brains rather than the output of one top-level detector."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Four ingredients"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Reference frames: each column keeps a representation of location relative to the object being sensed, not relative to the body. A location on the cup's handle is the same location wherever the cup sits on the table.",
+        "Movement updates location: when the sensor moves, the column updates its location estimate by path integration, the way grid cells in the entorhinal cortex update an animal's position as it walks. The theory proposes that cortical columns contain grid-cell-like cells, probably in L6 (see #/neuroscience/cortical-columns/reference-frames).",
+        "Features at locations: a layer, proposed to be L4, combines the sensed feature with the current location, so the column learns objects as sets of feature-at-location pairs. This layer uses the same dendritic sequence machinery as temporal memory, with location in place of the previous input as context (see #/neuroscience/cortical-columns/temporal-memory).",
+        "Voting: an object layer, proposed to be L2/3, holds a stable representation of the object being sensed. Long-range lateral connections between object layers of different columns let each column narrow its candidates using the others' evidence."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How recognition works, step by step"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose your fingertip touches something smooth and curved. Many objects have a smooth curved region somewhere, so the column's object layer activates a union of candidate objects (a cup, a bowl, a ball), each paired with the locations on it where such a feature could be. You move the finger 2 cm up. The column shifts every candidate location by that movement and predicts what it should feel next under each hypothesis. The next touch is a rim, which only the cup and bowl predict there, so the ball drops out. After a few touches a single object remains. One column needs several movements to get there. Several fingers touching at once can share evidence through voting and often recognise the object in one grasp, which is what the simulation below shows."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Columns voting on an object",
+        "params": [
+          {
+            "key": "columns",
+            "label": "Columns voting",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 3
+          },
+          {
+            "key": "objects",
+            "label": "Objects learned",
+            "control": "range",
+            "min": 10,
+            "max": 200,
+            "step": 10,
+            "default": 50
+          },
+          {
+            "key": "features",
+            "label": "Distinct features",
+            "control": "range",
+            "min": 2,
+            "max": 20,
+            "step": 1,
+            "default": 5
+          }
+        ],
+        "config": {
+          "sim": "thousand-brains",
+          "xLabel": "sensations per column",
+          "yLabel": "candidate objects left",
+          "seed": 11
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Each object is ten locations, each holding one of a small set of features. On every step each column touches a random location on the true object and keeps only the objects consistent with everything it has felt so far. The first curve is one column on its own. The second is several columns whose candidate sets are intersected after every step, the role of lateral voting. Try it: with three columns the candidates collapse after one or two sensations, while one column needs many. Raise the number of objects, or lower the number of distinct features, and recognition gets harder for both, since more objects share features at the same locations. The simplified sim assumes each column already knows its location on the object; in the real theory that location must itself be inferred, which is one of the harder parts of the model."
+    },
+    {
+      "type": "callout",
+      "text": "This plot reproduces, in miniature, the main result in Hawkins, Ahmad and Cui (2017): with lateral voting, the number of sensations needed to recognise an object drops sharply as the number of columns grows."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Displacement cells and object composition"
+    },
+    {
+      "type": "prose",
+      "text": "Real objects are made of other objects: a cup with a logo, a car with wheels. The 2019 framework paper proposes displacement cells, which represent the relative position of two locations in two reference frames, such as where the logo's reference frame sits within the cup's. Displacement cells would let a column learn compositional structure and also represent movement itself: the displacement between the current and the next location is exactly the motor command needed to get there. This part of the theory is the most speculative and has the least direct evidence."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What fits the evidence, and what is open"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Supported: cortex is broadly uniform; every region has L5 motor-related output; columns in primary sensory areas respond to some object-level and context-level properties; grid cells exist in entorhinal cortex, and grid-like coding has been reported in human cortex during navigation and conceptual tasks with fMRI.",
+        "Plausible but not shown: that L6 holds grid-cell modules for each column, and that L4 learns features at locations.",
+        "Open: how reference frames are anchored and re-anchored, how displacement cells would work, how the theory scales to abstract concepts and language, and how well it competes with deep learning on real tasks. Numenta's Monty project is an open-source implementation testing these ideas."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why it matters for building a mini brain"
+    },
+    {
+      "type": "prose",
+      "text": "For a builder the theory is attractive because it implies the same column, copied many times, can learn anything given the right sensors and movement signals. It also gives a concrete wiring diagram: an input layer combining sensation with location, a location layer doing path integration, and an object layer with lateral connections for voting. Building a Column from Spiking Neurons (#/neuroscience/cortical-columns/column-blueprint) turns that diagram into a staged plan."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Hawkins, Ahmad & Cui, 'A theory of how columns in the neocortex enable learning the structure of the world', Front Neural Circuits (2017); Lewis, Purdy, Ahmad & Hawkins, 'Locations in the neocortex: a theory of sensorimotor object recognition using cortical grid cells', Front Neural Circuits (2019); Hawkins, Lewis, Klukas, Purdy & Ahmad, 'A framework for intelligence and cortical function based on grid cells in the neocortex', Front Neural Circuits (2019); Hawkins, A Thousand Brains (2021); Constantinescu, O'Reilly & Behrens, 'Organizing conceptual knowledge in humans with a gridlike code', Science (2016)."
+    }
+  ]
+}

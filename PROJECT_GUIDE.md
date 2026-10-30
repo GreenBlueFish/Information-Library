@@ -73,6 +73,8 @@ Where content, code, CSS, and governance material live:
 │   └── widgets/
 │       ├── registry.js          # registerWidget(type, mountFn) + mountWidget(spec, container).
 │       ├── plot.js              # Shared plotting primitive (makePlot) used by widget types.
+│       ├── sims/                # Simulators parameter-plot runs via `config.sim` (§7.1):
+│       │                        #   neurons, plasticity, coding, cortex, foundations; index.js names them.
 │       ├── sim-kit.js           # Shared kit for simulation widgets: frame, controls, buttons,
 │       │                        #   readout, SVG stage, seeded RNG, play/pause ticker (§7.3).
 │       └── types/               # One module per widget type; each self-registers on import.
@@ -87,13 +89,12 @@ Where content, code, CSS, and governance material live:
 │   ├── topics.json              # The topic/subtopic tree (single manifest of topics).
 │   ├── terms.json               # The lookup table (array of term entries).
 │   └── pages/                   # One JSON file per page, foldered to mirror the tree.
-│       ├── snn/                 # First fully authored topic.
-│       │   ├── index.json
-│       │   ├── neuron-models.json
-│       │   ├── lif.json
-│       │   ├── izhikevich.json
-│       │   ├── neuron-filters.json
-│       │   └── encoding.json
+│       ├── snn/                 # Spiking neural networks (index, encoding, neuron-filters,
+│       │   ├── neuron-models/   #   neuron-models.json, learning-rules.json); children of
+│       │   └── learning-rules/  #   neuron-models / learning-rules live in these folders.
+│       ├── neuroscience/        # Cortical columns (+ cortical-columns/), dynamics, mushroom bodies, manifolds.
+│       ├── foundations/         # NEF, semantic pointers, LMU.
+│       ├── neuromorphic-hardware/  # Overview, Loihi, TrueNorth, SpiNNaker, FPGA.
 │       ├── computational-cortical-columns/  # Learning path: biology → neuron models →
 │       │                        #   plasticity → HTM → Thousand Brains → other models →
 │       │                        #   building an SNN column → reading list (one folder per section).
@@ -168,7 +169,7 @@ Example (abridged from the real manifest):
             {
               "slug": "lif",
               "title": "Leaky Integrate-and-Fire",
-              "page": "content/pages/snn/lif.json"
+              "page": "content/pages/snn/neuron-models/lif.json"
             }
           ]
         }
@@ -398,6 +399,17 @@ registered (e.g. `"parameter-plot"`). Declare its `params` and `config` in the
 page JSON and reload — the renderer delegates the block to the registry, which
 mounts it. No code changes. See the widget block in
 `content/pages/snn/neuron-models.json` for a complete example.
+
+A `parameter-plot` runs a real simulation when its `config.sim` names one of
+the simulators listed in `src/widgets/sims/index.js` (e.g. `"lif"`,
+`"izhikevich"`, `"stdp-window"`, `"temporal-memory"`, `"thousand-brains"`).
+Each control's `key` is the simulator parameter it drives; read the simulator's
+source for its keys and defaults, and any key you leave out keeps its default
+(a `config` field of the same name overrides that default). `config.xLabel` and
+`config.yLabel` title the axes. Without `config.sim` the widget draws its
+generic example curves. Adding a simulator is one pure function
+`(config, state) => PlotSeries[]` plus a line in `sims/index.js`, with a case
+in `tests/src/widgets/sims.test.js`.
 
 ### 7.2 Register a new widget type
 

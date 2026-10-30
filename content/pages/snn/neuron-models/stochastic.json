@@ -1,0 +1,136 @@
+{
+  "title": "Stochastic Integrate-and-Fire",
+  "intro": "Real neurons do not fire the same spike train twice. Give a cortical neuron the same input on repeated trials and the spike times jitter, and in the living brain the intervals between spikes are almost as irregular as a Poisson process. Stochastic integrate-and-fire models add noise to the LIF neuron to capture this, and the noise turns out to be a feature: it makes firing smooth and fast to respond, and it lets spikes be read as samples from a probability distribution.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two ways to add noise"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Diffusive (input) noise"
+    },
+    {
+      "type": "prose",
+      "text": "Add a fluctuating current to the membrane equation. Many small, independent synaptic inputs sum to something close to Gaussian white noise:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "tau dV/dt = -(V - E_L) + R I(t) + sigma sqrt(tau) xi(t)       xi: white noise\nspike and reset when V >= theta\n\nEuler-Maruyama step:\nV += dt/tau * (-(V - E_L) + R I) + sigma * sqrt(dt) * N(0, 1)"
+    },
+    {
+      "type": "prose",
+      "text": "The voltage now performs a random walk with drift, and the time to threshold becomes a first-passage-time problem. Two regimes appear. When the mean input alone would cross threshold (suprathreshold), noise jitters an otherwise regular spike train. When the mean sits below threshold (subthreshold), the neuron fires only when fluctuations push it over, giving irregular, Poisson-like spike trains. That fluctuation-driven regime is what cortex looks like in vivo, where excitation and inhibition are roughly balanced."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Escape (output) noise"
+    },
+    {
+      "type": "prose",
+      "text": "Keep the voltage deterministic but make the spike itself probabilistic. The neuron fires with an instantaneous rate, the hazard, that rises steeply with the distance to threshold:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "rho(t) = rho_0 exp((u(t) - theta) / delta_u)\nP(spike in [t, t + dt]) = 1 - exp(-rho(t) dt)"
+    },
+    {
+      "type": "prose",
+      "text": "As delta_u goes to 0 this becomes the hard threshold again. Escape noise is easier to analyze and to fit to data (it is the noise model of the generalized linear models used for real recordings), and it is the bridge to sampling-based views of computation."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Three trials, same input, different noise",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current (nA)",
+            "control": "range",
+            "min": 0,
+            "max": 3,
+            "step": 0.1,
+            "default": 1.6
+          },
+          {
+            "key": "noise",
+            "label": "Noise sigma (mV per √ms)",
+            "control": "range",
+            "min": 0,
+            "max": 6,
+            "step": 0.25,
+            "default": 3
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 1000,
+            "step": 1,
+            "default": 1
+          }
+        ],
+        "config": {
+          "sim": "stochastic-lif",
+          "xLabel": "time (ms)",
+          "yLabel": "V (mV)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Set noise to 0. All three trials are identical and fire regularly, because 1.6 nA puts the steady state at -49 mV, just above the -50 mV threshold.",
+        "Turn noise back to 3. The trials diverge after the first spike, and the neuron fires more often than without noise. Fluctuations reach threshold sooner than the slow approach of the mean.",
+        "Drop the current to 1.0 nA. Without noise the neuron never fires (it settles at -55 mV). With noise it fires irregularly anyway. This is the fluctuation-driven regime, and its smooth input-output relation is why noise linearizes a population's response.",
+        "Change the seed to see another set of trials drawn from the same statistics."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What noise buys"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Smooth rate functions. A deterministic LIF has a sharp onset in its f-I curve. With noise the curve is smooth and nonzero below threshold, so small input changes always change the output rate. A population of noisy neurons can then follow fast input changes almost instantly, which is the basis of population-activity theory.",
+        "Stochastic resonance. A weak periodic signal that never reaches threshold alone can be detected when the right amount of noise is added.",
+        "Probabilistic inference. If spikes are samples, a network of stochastic neurons can represent a probability distribution by how often each pattern appears. Buesing, Bill, Nessler and Maass (2011) showed that networks of stochastic spiking neurons can sample from Boltzmann distributions, and Nessler et al. (2013) showed that STDP in a winner-take-all circuit of such neurons performs a form of expectation-maximization."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practical notes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Scale the noise with sqrt(dt), not dt, in an Euler scheme. Otherwise the noise strength changes with your time step.",
+        "Seed your random generator. Reproducible noise makes debugging a stochastic network possible.",
+        "Measure irregularity with the coefficient of variation of the interspike intervals (CV = std / mean). A Poisson process has CV = 1, a clock has CV = 0, and cortical neurons are typically around 0.7-1."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: noise is not something to engineer away. A column built from noisy LIF units in the fluctuation-driven regime responds faster and more smoothly, and a winner-take-all layer of stochastic neurons gives you a principled, sampling-based way to break ties between competing minicolumns."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014), Neuronal Dynamics, Cambridge University Press, chapters 8-9. Softky, W. R. & Koch, C. (1993), \"The highly irregular firing of cortical cells is inconsistent with temporal integration of random EPSPs\", Journal of Neuroscience 13:334-350. Shadlen, M. N. & Newsome, W. T. (1998), Journal of Neuroscience 18:3870-3896. Buesing, L., Bill, J., Nessler, B. & Maass, W. (2011), \"Neural dynamics as sampling\", PLoS Computational Biology 7:e1002211. Nessler, B., Pfeiffer, M., Buesing, L. & Maass, W. (2013), PLoS Computational Biology 9:e1003037."
+    }
+  ]
+}

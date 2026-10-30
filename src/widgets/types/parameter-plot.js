@@ -44,6 +44,7 @@
 
 import { registerWidget } from "../registry.js";
 import { makePlot } from "../plot.js";
+import { SIMS } from "../sims/index.js";
 
 /**
  * @typedef {import("../registry.js").WidgetContext} WidgetContext
@@ -135,7 +136,7 @@ function mountParameterPlot(ctx) {
 
   /** Draw the plot from the CURRENT parameter state. */
   function redraw() {
-    plot.draw(simulate(config, state, params));
+    plot.draw(simulate(config, state, params), { xLabel: config.xLabel, yLabel: config.yLabel });
   }
 
   // First paint: draw synchronously so the declared defaults are reflected
@@ -407,7 +408,8 @@ function toNumber(v) {
  *   - `offset` shifts the curve vertically (default 0),
  *   - any other numeric params nudge the phase so every control visibly moves
  *     the plot.
- * When `config.series` lists labels (or `config.models` as in the SNN example
+ * When `config.sim` names a simulator in src/widgets/sims/, that simulator
+ * produces the series instead. When `config.series` lists labels (or `config.models` as in the SNN example
  * page), one curve is drawn per label, each phase-shifted so the series are
  * distinguishable.
  *
@@ -417,6 +419,10 @@ function toNumber(v) {
  * @returns {PlotSeries[]}
  */
 function simulate(config, state, params) {
+  // A page can name a real simulator (src/widgets/sims/) to run instead.
+  const sim = typeof config.sim === "string" ? SIMS[config.sim] : undefined;
+  if (sim) return sim(config, state);
+
   const amplitude = numericState(state, "amplitude", 1);
   const frequency = numericState(state, "frequency", 1);
   const offset = numericState(state, "offset", 0);

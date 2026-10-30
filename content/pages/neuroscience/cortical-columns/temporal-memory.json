@@ -1,0 +1,139 @@
+{
+  "title": "Temporal Memory and Minicolumns",
+  "intro": "Hierarchical Temporal Memory (HTM) models how a layer of pyramidal neurons, arranged in minicolumns, learns sequences and predicts what comes next. Its central idea is that most of a neuron's synapses are not for firing it but for predicting when it will fire.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A neuron with thousands of synapses"
+    },
+    {
+      "type": "prose",
+      "text": "A typical cortical pyramidal neuron has several thousand excitatory synapses, yet classic point-neuron models, including the LIF neuron (#/snn/neuron-models/lif), sum them all into one number. Hawkins and Ahmad (2016) argue that a pyramidal cell has three functionally distinct input zones:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Proximal dendrites, near the cell body: a few hundred synapses whose summed input can make the cell fire. These carry the feedforward input and define what the cell responds to, its classic receptive field.",
+        "Distal (basal) dendrites: most of the synapses, grouped into many independent segments. When roughly 10 to 20 nearby synapses on one segment are active together they trigger an NMDA spike, a local dendritic event that does not make the cell fire but depolarises it. HTM calls this the predictive state: the cell is primed to fire first if its feedforward input arrives.",
+        "Apical dendrites, reaching up to L1: receive top-down feedback and can also depolarise the cell, letting expectations from higher regions bias which cells win."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Because each distal segment recognises its own small pattern, one neuron can recognise dozens of different contexts in which it should expect to fire. That is a big step up in capacity from a point neuron."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Minicolumns, bursting and context"
+    },
+    {
+      "type": "prose",
+      "text": "In HTM a layer is a sheet of minicolumns. All cells in a minicolumn share the same feedforward input, so they all respond to the same feature. What distinguishes them is context. When input arrives:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "If one or more cells in an activated minicolumn were in the predictive state, those cells fire first and fast inhibition silences their neighbours. Activity is very sparse and says not just 'B' but 'B in the context of A'.",
+        "If no cell was predicted, the input is a surprise and every cell in the minicolumn fires. This is called bursting. Bursting means 'B, in no context I recognise', and it turns on predictions for every way B has continued before.",
+        "Learning: in a bursting minicolumn one cell, the winner, is chosen (the one with the best partially matching segment, or the least used) and grows a new distal segment with synapses onto cells that were active a moment ago. Next time the same context occurs that cell will be predicted."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So the same input B is represented by different cells after A than after X. That is what lets a temporal memory learn high-order sequences: after A B C it can predict D, while after X B C it predicts Y, even though both share B C. A first-order model, which only looks at the current input, could never tell these apart."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Learning sequences in minicolumns",
+        "params": [
+          {
+            "key": "sequence",
+            "label": "Training sequence",
+            "control": "select",
+            "options": [
+              "ABCD",
+              "ABCD + XBCY"
+            ],
+            "default": "ABCD + XBCY"
+          },
+          {
+            "key": "threshold",
+            "label": "Segment threshold (synapses)",
+            "control": "range",
+            "min": 2,
+            "max": 8,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "cells",
+            "label": "Cells per minicolumn",
+            "control": "range",
+            "min": 2,
+            "max": 16,
+            "step": 1,
+            "default": 8
+          },
+          {
+            "key": "steps",
+            "label": "Time steps",
+            "control": "range",
+            "min": 20,
+            "max": 160,
+            "step": 10,
+            "default": 80
+          }
+        ],
+        "config": {
+          "sim": "temporal-memory",
+          "xLabel": "time step",
+          "yLabel": "share of active minicolumns",
+          "seed": 5
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The plot runs a simplified temporal memory: 64 minicolumns, each input symbol activating a fixed set of 6 of them. The first curve is the share of active minicolumns that burst (unpredicted), the second the share that were correctly predicted. On the first pass through the sequence everything bursts, because nothing has been learned. From the second pass on the network predicts almost every step, and bursting drops to zero even for the two sequences that share the middle B C, because the cells for B after A differ from the cells for B after X. Try two cells per minicolumn and a high threshold: capacity for distinct contexts shrinks. Real HTM adds permanence values, gradual reinforcement and forgetting, which this sim leaves out."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sparse distributed representations"
+    },
+    {
+      "type": "prose",
+      "text": "HTM codes everything as sparse distributed representations (SDRs): large binary vectors, typically about 2 percent active. With, say, 2048 cells and 40 active, random SDRs almost never overlap by chance, so a segment that matches 15 of the 40 can detect a pattern reliably even with noise or missing bits. A cell can also match a union of several SDRs at once without much confusion, which is how a bursting minicolumn can hold several predictions. These properties are why HTM uses sparse binary codes, and they map naturally onto spiking networks, where at any moment most neurons are silent."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The spatial pooler"
+    },
+    {
+      "type": "prose",
+      "text": "Before temporal memory, HTM's spatial pooler turns arbitrary input into SDRs with a fixed sparsity. Each minicolumn connects to a random subset of input bits, the most strongly driven minicolumns win via local inhibition (a k-winners-take-all), and the winners' connections are strengthened by a Hebbian rule. Boosting raises the excitability of rarely used minicolumns so all of them get used, a form of homeostasis (compare the BCM rule at #/snn/learning-rules/stdp-bcm)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From HTM to spiking neurons"
+    },
+    {
+      "type": "prose",
+      "text": "HTM is written with binary cells and discrete time steps, not spikes, but each piece has a spiking counterpart. The predictive state corresponds to a depolarised membrane, as in the dendrite of a two-compartment model (#/snn/neuron-models/multicompartment). 'Predicted cells fire first and inhibit the rest' is a timing race that first-spike coding and fast inhibition implement naturally (#/snn/encoding, and the winner-take-all sim on #/neuroscience/cortical-columns). Growing synapses onto previously active cells is a causal, STDP-like rule (#/snn/learning-rules/stdp-classical), with eligibility traces when the delay between steps is long. Whether real cortex implements temporal memory in exactly this way is not established; the dendritic NMDA spikes and their predictive depolarisation are."
+    },
+    {
+      "type": "callout",
+      "text": "Where this sits in the Thousand Brains Theory: the same machinery, with a location signal in place of the previous input as context, is proposed for L4 learning features at locations on an object (#/neuroscience/cortical-columns/thousand-brains)."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Hawkins & Ahmad, 'Why neurons have thousands of synapses, a theory of sequence memory in neocortex', Front Neural Circuits (2016); Cui, Ahmad & Hawkins, 'Continuous online sequence learning with an unsupervised neural network model', Neural Computation (2016); Ahmad & Hawkins, 'Properties of sparse distributed representations and their application to hierarchical temporal memory' (arXiv, 2015); Cui, Ahmad & Hawkins, 'The HTM spatial pooler', Front Comput Neurosci (2017); Major, Larkum & Schiller, 'Active properties of neocortical pyramidal neuron dendrites', Annu Rev Neurosci (2013)."
+    }
+  ]
+}
