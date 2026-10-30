@@ -1,0 +1,123 @@
+{
+  "title": "Voltage-Dependent STDP",
+  "intro": "Pair-based STDP treats spikes as the only events that matter. Experiments say otherwise: whether a synapse potentiates or depresses depends strongly on how depolarized the postsynaptic dendrite is when its input arrives, and dendritic depolarization without a somatic spike can be enough. Voltage-based rules, best known from Clopath, Büsing, Vasilaki and Gerstner (2010), make the postsynaptic membrane voltage, not the postsynaptic spike, the second factor of plasticity.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Biology: NMDA receptors as coincidence detectors"
+    },
+    {
+      "type": "prose",
+      "text": "NMDA receptors pass calcium only when glutamate is bound (the presynaptic side fired) and the membrane is depolarized enough to expel the magnesium block (the postsynaptic side is active). Calcium level then sets the outcome: moderate calcium leads to depression (LTD) and high calcium to potentiation (LTP). Artola, Bröcher and Singer (1990) showed that a modest depolarization during input induces LTD and a stronger one induces LTP, with two thresholds. Voltage-based rules turn that two-threshold picture into an equation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Clopath rule"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "LTD (at each presynaptic spike):   dw-/dt = -A_LTD  X(t)          [u_bar_minus(t) - theta_minus]+\nLTP (continuous):                  dw+/dt = +A_LTP  x_bar(t)  [u(t) - theta_plus]+  [u_bar_plus(t) - theta_minus]+\n\nu            instantaneous postsynaptic voltage\nu_bar_minus  low-pass filtered voltage (tau about 10 ms)\nu_bar_plus   low-pass filtered voltage (tau about 7 ms)\nx_bar        low-pass filtered presynaptic spike train (tau about 15 ms)\nX(t)         presynaptic spike train\n[.]+         rectification: max(0, .)\ntheta_minus  about -70.6 mV (close to rest), theta_plus about -45.3 mV (above spike threshold)"
+    },
+    {
+      "type": "prose",
+      "text": "Depression needs a presynaptic spike while the recently filtered voltage is above theta_minus. Potentiation needs recent presynaptic activity, a voltage above theta_plus right now (in practice a spike or a strong dendritic depolarization) and a filtered voltage that has been depolarized. In the original model A_LTD is also scaled by a homeostatic factor that tracks the neuron's average voltage, so a neuron that is too active depresses more."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The steady-state picture"
+    },
+    {
+      "type": "prose",
+      "text": "Hold the postsynaptic voltage at a constant u while the presynaptic neuron fires. Then all filtered voltages equal u and the rule reduces to a function of u alone. That is what the widget plots: no change below theta_minus, depression between the thresholds, and potentiation once the LTP product overtakes the LTD term. The curve is the Artola-Bröcher-Singer two-threshold relation and closely resembles the BCM rule's phi function, with voltage in place of rate."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Weight change against held postsynaptic voltage",
+        "params": [
+          {
+            "key": "thetaMinus",
+            "label": "θ− (mV)",
+            "control": "range",
+            "min": -80,
+            "max": -55,
+            "step": 0.5,
+            "default": -70.6
+          },
+          {
+            "key": "thetaPlus",
+            "label": "θ+ (mV)",
+            "control": "range",
+            "min": -55,
+            "max": -30,
+            "step": 0.5,
+            "default": -45.3
+          },
+          {
+            "key": "aLTD",
+            "label": "A_LTD",
+            "control": "range",
+            "min": 0,
+            "max": 3,
+            "step": 0.1,
+            "default": 1.4
+          },
+          {
+            "key": "aLTP",
+            "label": "A_LTP",
+            "control": "range",
+            "min": 0,
+            "max": 3,
+            "step": 0.1,
+            "default": 0.8
+          }
+        ],
+        "config": {
+          "sim": "stdp-voltage",
+          "xLabel": "held postsynaptic voltage u (mV)",
+          "yLabel": "rate of Δw (a.u.)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Raise A_LTP. The crossover from depression to potentiation moves left: less depolarization is needed for LTP.",
+        "Set A_LTD to 0. Only potentiation remains, and any depolarization above θ+ strengthens the synapse. This is unstable without the homeostatic LTD term.",
+        "Move θ+ down toward θ−. The depression window shrinks."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What it explains that pair STDP cannot"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Frequency dependence. At high pairing rates the voltage stays depolarized between spikes, so LTP dominates even for post-before-pre pairs, as in Sjöström, Turrigiano and Nelson (2001). Triplet STDP explains the same data with spike traces.",
+        "Location dependence. Distal synapses see smaller back-propagating spikes and so different plasticity, which a voltage rule captures automatically if each compartment uses its own voltage.",
+        "Plasticity without spikes. Strong dendritic depolarization, such as an NMDA plateau, can potentiate synapses with no somatic spike.",
+        "Network structure. Clopath et al. showed that the rule forms bidirectional connections between neurons that fire at high rates together (rate code) and unidirectional ones for neurons firing in a fixed temporal order."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: a voltage-gated rule is the natural fit for dendritic-segment learning in HTM-style temporal memory. A segment that crosses its NMDA threshold depolarizes the cell (u above θ−), and the synapses that caused it should strengthen if the cell then fires (u above θ+), or weaken if the prediction was wrong (depolarized but no spike). If you model each segment as its own compartment, this rule gives you prediction-driven learning in spiking form. See #/snn/neuron-models/multicompartment and #/neuroscience/cortical-columns/temporal-memory."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Clopath, C., Büsing, L., Vasilaki, E. & Gerstner, W. (2010), \"Connectivity reflects coding: a model of voltage-based STDP with homeostasis\", Nature Neuroscience 13:344-352. Artola, A., Bröcher, S. & Singer, W. (1990), \"Different voltage-dependent thresholds for inducing long-term depression and long-term potentiation in slices of rat visual cortex\", Nature 347:69-72. Sjöström, P. J., Turrigiano, G. G. & Nelson, S. B. (2001), Neuron 32:1149-1164. Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014), Neuronal Dynamics, Cambridge University Press, chapter 19."
+    }
+  ]
+}

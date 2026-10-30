@@ -1,0 +1,108 @@
+{
+  "title": "Reward-Modulated STDP",
+  "intro": "STDP is unsupervised: it strengthens whatever fires together, useful or not. Animals learn from consequences that arrive later, such as a reward a second after the action that earned it. Reward-modulated STDP (R-STDP) is a three-factor rule. Pre- and postsynaptic timing (factors one and two) only tag a synapse as eligible, and a global neuromodulatory signal such as dopamine (factor three) decides whether, and in which direction, the tag becomes a real weight change.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The rule"
+    },
+    {
+      "type": "prose",
+      "text": "Izhikevich (2007) gave the standard formulation:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "dc/dt = -c / tau_c + STDP(Delta t) delta(t - t_pre/post)    eligibility trace, per synapse\ndw/dt = c(t) * d(t)                                          weight follows trace times dopamine\ndd/dt = -d / tau_d + DA(t)                                   dopamine: global, phasic bursts at reward\n\ntau_c is about 1 s, tau_d about 0.2 s"
+    },
+    {
+      "type": "prose",
+      "text": "Each pre/post pairing adds the usual STDP amount to the synapse's eligibility trace c instead of to its weight. The trace decays over about a second. When dopamine arrives, every synapse with a nonzero trace changes in proportion to c times d. Synapses that were active just before the reward are credited. Synapses active long before, or never, are not. A negative modulator, a dip below baseline dopamine, can likewise turn eligible potentiation into depression."
+    },
+    {
+      "type": "prose",
+      "text": "This is how R-STDP tackles the distal reward or temporal credit assignment problem: the trace bridges the gap between a millisecond-scale spike coincidence and a reward that comes seconds later. In Izhikevich's simulations, a network of 1000 neurons learned to strengthen the one synapse whose pre-post pairing was followed by a delayed reward, out of 100,000 synapses firing at random."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Eligibility trace meets a delayed reward",
+        "params": [
+          {
+            "key": "delay",
+            "label": "Reward delay after the pairing (ms)",
+            "control": "range",
+            "min": 0,
+            "max": 3000,
+            "step": 50,
+            "default": 1000
+          },
+          {
+            "key": "tauC",
+            "label": "Eligibility time constant tau_c (ms)",
+            "control": "range",
+            "min": 100,
+            "max": 3000,
+            "step": 50,
+            "default": 1000
+          }
+        ],
+        "config": {
+          "sim": "stdp-reward",
+          "xLabel": "time (s)",
+          "yLabel": "trace, dopamine, weight change (a.u.)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The pairing happens at 0.1 s. Move the reward delay from 0 to 3000 ms. The weight change falls off roughly exponentially with delay (about 1.7 to 0.6 to 0.08 here): the trace has to still be there when dopamine arrives.",
+        "Shorten tau_c to 200 ms with a 1 s delay. The trace is gone before the reward and nothing is learned. The trace's time constant sets how far back in time credit can reach.",
+        "Lengthen tau_c to 3 s. Learning tolerates longer delays, but in a busy network more irrelevant synapses also stay eligible, so credit becomes less precise. That is the core trade-off of eligibility traces."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Variants"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Reward prediction error. Use d = reward - expected reward instead of raw reward, the temporal-difference error carried by dopamine neurons (Schultz, Dayan & Montague 1997). Frémaux, Sprekeler and Gerstner (2010) showed this is necessary: with raw reward, R-STDP drifts unless the reward is centered.",
+        "Policy-gradient rules. Florian (2007) and Pfister et al. (2006) derived reward-modulated rules that perform gradient ascent on expected reward for stochastic spiking neurons. R-STDP is a biologically motivated approximation.",
+        "Other third factors. Acetylcholine, noradrenaline and serotonin, and also top-down attention or surprise signals, act as gates in the same mathematical framework (Frémaux & Gerstner 2016; Gerstner et al. 2018).",
+        "Learning in hardware. Three-factor rules suit neuromorphic chips because the third factor is a single broadcast value. Intel's Loihi supports programmable rules with traces and reward-like modulatory inputs."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pitfalls"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Unbalanced STDP plus constant positive reward is just Hebbian learning with extra steps. Center the reward.",
+        "Eligibility traces need memory per synapse: one extra state variable each.",
+        "Exploration matters. If the network never produces the rewarded pattern, there is nothing to reinforce, so stochastic neurons or injected noise help."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: the Thousand Brains Theory learns mostly without reward, since columns model the world through prediction. But a column that drives behavior, such as choosing where to move a sensor next, needs a reinforcement signal. A practical design is local unsupervised rules (STDP, dendritic prediction learning) inside the column, plus an R-STDP pathway from the column's output to a small action-selection population, with the reward or prediction error as a broadcast third factor."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Izhikevich, E. M. (2007), \"Solving the distal reward problem through linkage of STDP and dopamine signaling\", Cerebral Cortex 17:2443-2452. Frémaux, N., Sprekeler, H. & Gerstner, W. (2010), \"Functional requirements for reward-modulated spike-timing-dependent plasticity\", Journal of Neuroscience 30:13326-13337. Frémaux, N. & Gerstner, W. (2016), \"Neuromodulated spike-timing-dependent plasticity, and theory of three-factor learning rules\", Frontiers in Neural Circuits 9:85. Florian, R. V. (2007), Neural Computation 19:1468-1502. Schultz, W., Dayan, P. & Montague, P. R. (1997), Science 275:1593-1599. Gerstner, W., Lehmann, M., Liakoni, V., Corneil, D. & Brea, J. (2018), Frontiers in Neural Circuits 12:53."
+    }
+  ]
+}
