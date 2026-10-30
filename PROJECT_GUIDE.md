@@ -145,6 +145,9 @@ Additional rules:
 - A node has `page`, `children`, or both. A leaf lacking a `page` is invalid and
   the router refuses to resolve it (and surfaces an error naming the node).
 - The root node uses `slug: "root"` and carries only `summary` + `children`.
+- The order of `children` is the reading order: the previous/next arrows at the
+  foot of each page step through the tree in it, depth-first (a topic, then its
+  subtopics, then its next sibling), the same order the sidebar lists them.
 
 Example (abridged from the real manifest):
 
