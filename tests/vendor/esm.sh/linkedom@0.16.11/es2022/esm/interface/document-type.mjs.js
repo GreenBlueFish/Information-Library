@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/interface/document-type */
+import{DOCUMENT_TYPE_NODE as c}from"../shared/constants.mjs";import{documentTypeAsJSON as m}from"../shared/jsdon.mjs";import{Node as u}from"./node.mjs";var r=class i extends u{constructor(t,s,o="",e=""){super(t,"#document-type",c),this.name=s,this.publicId=o,this.systemId=e}cloneNode(){let{ownerDocument:t,name:s,publicId:o,systemId:e}=this;return new i(t,s,o,e)}toString(){let{name:t,publicId:s,systemId:o}=this,e=0<s.length,n=[t];return e&&n.push("PUBLIC",`"${s}"`),o.length&&(e||n.push("SYSTEM"),n.push(`"${o}"`)),`<!DOCTYPE ${n.join(" ")}>`}toJSON(){let t=[];return m(this,t),t}};export{r as DocumentType};
+//# sourceMappingURL=document-type.mjs.map

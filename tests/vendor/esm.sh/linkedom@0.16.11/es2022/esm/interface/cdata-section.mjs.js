@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/interface/cdata-section */
+import{CDATA_SECTION_NODE as a}from"../shared/constants.mjs";import{VALUE as o}from"../shared/symbols.mjs";import{CharacterData as s}from"./character-data.mjs";var e=class n extends s{constructor(t,r=""){super(t,"#cdatasection",a,r)}cloneNode(){let{ownerDocument:t,[o]:r}=this;return new n(t,r)}toString(){return`<![CDATA[${this[o]}]]>`}};export{e as CDATASection};
+//# sourceMappingURL=cdata-section.mjs.map

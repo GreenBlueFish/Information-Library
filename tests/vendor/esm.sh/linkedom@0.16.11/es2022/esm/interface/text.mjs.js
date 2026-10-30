@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/interface/text */
+import{TEXT_NODE as o}from"../shared/constants.mjs";import{VALUE as i}from"../shared/symbols.mjs";import{escape as p}from"../shared/text-escaper.mjs";import{CharacterData as l}from"./character-data.mjs";var n=class s extends l{constructor(t,e=""){super(t,"#text",o,e)}get wholeText(){let t=[],{previousSibling:e,nextSibling:r}=this;for(;e&&e.nodeType===o;){t.unshift(e[i]);e=e.previousSibling}for(t.push(this[i]);r&&r.nodeType===o;){t.push(r[i]);r=r.nextSibling}return t.join("")}cloneNode(){let{ownerDocument:t,[i]:e}=this;return new s(t,e)}toString(){return p(this[i])}};export{n as Text};
+//# sourceMappingURL=text.mjs.map

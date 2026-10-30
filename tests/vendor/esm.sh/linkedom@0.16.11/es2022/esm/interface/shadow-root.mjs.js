@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/interface/shadow-root */
+import{DOCUMENT_FRAGMENT_NODE as r}from"../shared/constants.mjs";import{getInnerHtml as n,setInnerHtml as o}from"../mixin/inner-html.mjs";import{NonElementParentNode as s}from"../mixin/non-element-parent-node.mjs";var e=class extends s{constructor(t){super(t.ownerDocument,"#shadow-root",r),this.host=t}get innerHTML(){return n(this)}set innerHTML(t){o(this,t)}};export{e as ShadowRoot};
+//# sourceMappingURL=shadow-root.mjs.map

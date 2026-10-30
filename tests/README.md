@@ -73,7 +73,7 @@ quietly diverges from real DOM semantics and lets a test pass on wrong behavior,
 so these tests reuse the suite's shared `tests/dom.js` helper, which installs a
 **real** DOM — `linkedom`, loaded as an ES module from the jsDelivr ESM CDN
 exactly like `fast-check` above (no build step, no install; see the fast-check
-note below for how Node resolves the HTTPS specifier and the offline option).
+note below for how the HTTPS specifier is loaded from `tests/vendor/`).
 
 A test awaits `ensureDom()` once at module scope and then uses `dom.freshMount()`
 for a detached container per case:
@@ -109,8 +109,14 @@ as an ES module directly from the jsDelivr ESM CDN:
 import * as fc from "https://cdn.jsdelivr.net/npm/fast-check/+esm";
 ```
 
-Node 18+ resolves HTTPS import specifiers over its global `fetch`, so
-`node tests/run.js` picks these up with no install and no package manager. This
-needs network access on the first run. To run fully offline, vendor fast-check's
-ESM build locally (e.g. under `tests/vendor/`) and swap the import specifier for
-that path — the test bodies stay unchanged.
+Node does not load `https://` specifiers on its own, so `scripts/hive-test.sh`
+runs the suite with `--import ./tests/net/register.js`, whose hooks
+(`tests/net/hooks.js`) load each such module from its committed copy in
+`tests/vendor/` — fast-check, linkedom and everything they import. The suite
+therefore runs offline, with no install, on the same library versions every
+time. A module with no copy there is fetched over the network as a fallback.
+
+To upgrade the copies (or after adding a new `https://` import), run
+`node tests/net/vendor.js`: it finds every `https://` import in `tests/`,
+downloads it and its imports, and replaces `tests/vendor/`. The test files keep
+their CDN URLs unchanged.

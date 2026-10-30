@@ -1,0 +1,3 @@
+/* esm.sh - linkedom@0.16.11/esm/shared/utils */
+import{ELEMENT_NODE as g}from"./constants.mjs";import{END as E,MIME as e,NEXT as r,PREV as i}from"./symbols.mjs";var C=String;var p=o=>o.nodeType===g?o[E]:o,S=({ownerDocument:o})=>o[e].ignoreCase,n=(o,t)=>{o[r]=t,t[i]=o},f=(o,t,s)=>{n(o,t),n(p(t),s)},k=(o,t,s,c)=>{n(o,t),n(p(s),c)},m=(o,t,s)=>{n(o,t),n(t,s)},w=({localName:o,ownerDocument:t})=>t[e].ignoreCase?o.toUpperCase():o,d=(o,t)=>{o&&(o[r]=t),t&&(t[i]=o)};export{C as String,p as getEnd,S as ignoreCase,n as knownAdjacent,f as knownBoundaries,k as knownSegment,m as knownSiblings,w as localCase,d as setAdjacent};
+//# sourceMappingURL=utils.mjs.map
