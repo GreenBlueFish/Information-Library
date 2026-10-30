@@ -210,6 +210,14 @@ Non color/type/spacing constants that are still centralized.
 | `--border-width` | `1px` | Default hairlines and borders |
 | `--border-width-thick` | `3px` | Callout / active accent edges |
 
+**SVG strokes** (unitless SVG user units, so they scale with the plot)
+
+| Token | Value | Used for |
+| --- | --- | --- |
+| `--stroke-width-plot` | `2` | Simulation traces and spikes |
+| `--stroke-width-plot-thick` | `3` | Emphasized cell outlines (predicted, highlight) |
+| `--stroke-dash-plot` | `6 4` | Dashed reference lines such as a threshold |
+
 **Elevation (shadows)**
 
 | Token | Value | Used for |
@@ -470,13 +478,14 @@ widget card, controls, and `.widget__plot` host, and add:
 - `.widget__readout` — a polite live status line (small, muted, mono) for
   numbers and step narration.
 - SVG parts inside `.widget__plot`: `.sim-label` (axis-colored small text),
-  `.sim-trace` (unfilled 2-unit line; color from `.plot-series--N`),
-  `.sim-spike`, `.sim-threshold` (dashed `--color-error` line).
+  `.sim-trace` (unfilled `--stroke-width-plot` line; color from
+  `.plot-series--N`), `.sim-spike`, `.sim-threshold` (`--stroke-dash-plot`
+  dashed `--color-error` line).
 - Cell states for grids of neurons/bits: `.sim-cell` (resting,
-  `--color-surface-alt`), `--active` (series 1), `--predicted` (thick series-5
+  `--color-surface-alt`), `--active` (series 1), `--predicted` (`--stroke-width-plot-thick` series-5
   outline on `--color-accent-subtle`), `--correct` (series 3), `--burst`
   (series 2), `--inhibitory` (series-2 outline), `--overlap` (series 4),
-  `--highlight` (thick heading-colored outline).
+  `--highlight` (`--stroke-width-plot-thick` heading-colored outline).
 - Bars: `.sim-bar` (series 1) and `.sim-bar--winner` (series 3).
 
 Each state is also named in a legend or the readout, so color is never the
