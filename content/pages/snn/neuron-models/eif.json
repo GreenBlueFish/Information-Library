@@ -1,0 +1,142 @@
+{
+  "title": "Exponential Integrate-and-Fire",
+  "intro": "The exponential integrate-and-fire (EIF) neuron keeps the LIF's leak but replaces its hard threshold with an exponential current that models how sodium channels start a spike.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equation"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "C dV/dt = -g_L (V - E_L) + g_L * Delta_T * exp( (V - V_T) / Delta_T ) + I(t)\n\nif V >= V_peak:   V <- V_r"
+    },
+    {
+      "type": "prose",
+      "text": "Far below V_T the exponential term is negligible and the neuron behaves like a LIF. Near V_T it grows rapidly and overwhelms the leak: the membrane potential takes off on its own, the spike upstroke. V_T is the rheobase threshold, the voltage of the unstable fixed point for zero input, and V_peak (here 20 mV) is just a numerical cutoff. Because the trajectory diverges to infinity in finite time, the exact cutoff barely matters."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why exponential?"
+    },
+    {
+      "type": "prose",
+      "text": "Fourcaud-Trocmé and colleagues (2003) showed that the sodium current's activation near threshold is well described by an exponential. Badel and colleagues (2008) then measured the \"dynamic I-V curve\" of cortical pyramidal neurons directly, and an exponential fitted it well, with a slope factor Delta_T of about 1-3 mV. So the EIF is a fit to data, not only a convenience."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Parameters"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Delta_T (slope factor, mV): how sharp spike initiation is. As Delta_T goes to 0 the EIF becomes the LIF with threshold V_T. Larger Delta_T gives a soft threshold that responds faster to rapidly changing input.",
+        "V_T (mV): the soft threshold. A constant input must push V above roughly V_T to cause a spike.",
+        "g_L, C, E_L: as in the LIF (tau_m = C / g_L).",
+        "V_r: reset potential after a spike."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The I-V curve: where the threshold lives"
+    },
+    {
+      "type": "prose",
+      "text": "Plot the drive dV/dt (times C) against V for zero input. Fixed points are where the curve crosses zero. The LIF line crosses once, at rest. The EIF curve bends upward and crosses a second time at V_T: the unstable fixed point. Input current shifts the whole curve up. At rheobase the two fixed points merge and disappear (a saddle-node bifurcation), and the neuron fires repetitively. That is exactly the type I excitability seen in many cortical cells."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "EIF current-voltage curve",
+        "params": [
+          {
+            "key": "deltaT",
+            "label": "Slope factor Delta_T (mV)",
+            "control": "range",
+            "min": 0.5,
+            "max": 6,
+            "step": 0.5,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "eif-iv",
+          "xLabel": "membrane potential V (mV)",
+          "yLabel": "net membrane current (nA)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spiking under a current step"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "EIF membrane potential",
+        "params": [
+          {
+            "key": "current",
+            "label": "Input current (pA)",
+            "control": "range",
+            "min": 0,
+            "max": 1500,
+            "step": 25,
+            "default": 800
+          },
+          {
+            "key": "deltaT",
+            "label": "Slope factor Delta_T (mV)",
+            "control": "range",
+            "min": 0.5,
+            "max": 6,
+            "step": 0.5,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "eif",
+          "xLabel": "time (ms)",
+          "yLabel": "membrane potential (mV)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Compare with the LIF: the voltage now curves smoothly into each spike instead of hitting a line. Increase Delta_T and the upswing starts earlier and more gradually. These are the Brette-Gerstner constants: C = 281 pF, g_L = 30 nS, E_L = -70.6 mV, V_T = -50.4 mV."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When to use it"
+    },
+    {
+      "type": "list",
+      "items": [
+        "When spike timing in response to fast-fluctuating input matters: the EIF's soft threshold gives realistic high-frequency response, which the LIF gets wrong.",
+        "As the base of AdEx, which adds adaptation (#/snn/neuron-models/adex).",
+        "In theory: the EIF's f-I curve and response to noise can be computed with Fokker-Planck methods (#/neuroscience/neuronal-dynamics)."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "function eifStep(v, I, dt, p) {\n  // p = { C: 281, gL: 30, EL: -70.6, VT: -50.4, dT: 2, Vr: -70.6, Vpeak: 20 } (pF, nS, mV, ms)\n  const exp = p.gL * p.dT * Math.exp(Math.min((v - p.VT) / p.dT, 30));\n  v += dt * (-p.gL * (v - p.EL) + exp + I) / p.C;\n  if (v >= p.Vpeak) return { v: p.Vr, spike: true };\n  return { v, spike: false };\n}"
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: the EIF on its own lacks adaptation, so it is rarely the final choice for pyramidal cells. But it is the most accurate one-variable neuron, and if you use AdEx you are already using it: set a = b = 0 in AdEx and you have the EIF."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Fourcaud-Trocmé, Hansel, van Vreeswijk & Brunel, \"How spike generation mechanisms determine the neuronal response to fluctuating inputs\" (Journal of Neuroscience, 2003); Badel et al., \"Dynamic I-V curves are reliable predictors of naturalistic pyramidal-neuron voltage traces\" (Journal of Neurophysiology, 2008); Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (Cambridge University Press, 2014), chapter 5."
+    }
+  ]
+}

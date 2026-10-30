@@ -1,0 +1,128 @@
+{
+  "title": "Izhikevich Model",
+  "intro": "Izhikevich's 2003 model pairs a quadratic membrane equation with a linear recovery variable. With four parameters it reproduces about twenty firing patterns of cortical and thalamic neurons at roughly the cost of an LIF.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equations"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "dv/dt = 0.04 v^2 + 5 v + 140 - u + I\ndu/dt = a (b v - u)\n\nif v >= 30 mV:   v <- c;   u <- u + d"
+    },
+    {
+      "type": "prose",
+      "text": "v is the membrane potential in mV and t is in ms. u is a recovery variable that lumps together potassium activation and sodium inactivation; it feeds negatively back onto v. The quadratic term makes the upstroke of the spike regenerative: once v passes the unstable fixed point it runs away to the 30 mV peak, where it is cut and reset. The polynomial 0.04v^2 + 5v + 140 was fitted so that v is in mV and t in ms for cortical neurons."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The four parameters"
+    },
+    {
+      "type": "list",
+      "items": [
+        "a: time scale of u. Small a (0.02) means slow recovery; large a (0.1) means fast recovery, as in fast-spiking interneurons.",
+        "b: sensitivity of u to subthreshold v. b = 0.25 couples them more strongly, giving resonance and low-threshold spiking.",
+        "c: after-spike reset of v. A high reset (-50 mV) puts the neuron straight back near threshold, which produces bursts (chattering).",
+        "d: after-spike jump of u. Large d (8) gives strong spike-frequency adaptation; small d (2 or less) gives little."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The classic presets"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Regular spiking (RS): a=0.02, b=0.2, c=-65, d=8. Excitatory pyramidal cells, with adaptation.",
+        "Intrinsically bursting (IB): c=-55, d=4. An initial burst, then single spikes.",
+        "Chattering (CH): c=-50, d=2. Repetitive high-frequency bursts (layer 2/3 cells).",
+        "Fast spiking (FS): a=0.1, b=0.2, c=-65, d=2. Inhibitory basket cells, no adaptation.",
+        "Low-threshold spiking (LTS): b=0.25. Inhibitory interneurons with rebound and adaptation.",
+        "Thalamo-cortical (TC): b=0.25, d=0.05. Tonic firing, or rebound bursts from hyperpolarization.",
+        "Resonator (RZ): a=0.1, b=0.26. Subthreshold oscillation; prefers inputs at its resonant frequency."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Izhikevich neuron: firing-pattern presets",
+        "params": [
+          {
+            "key": "preset",
+            "label": "Firing pattern",
+            "control": "select",
+            "options": [
+              "Regular spiking",
+              "Intrinsically bursting",
+              "Chattering",
+              "Fast spiking",
+              "Low-threshold spiking",
+              "Thalamo-cortical",
+              "Resonator"
+            ],
+            "default": "Regular spiking"
+          },
+          {
+            "key": "current",
+            "label": "Input current I",
+            "control": "range",
+            "min": 0,
+            "max": 20,
+            "step": 0.5,
+            "default": 10
+          }
+        ],
+        "config": {
+          "sim": "izhikevich",
+          "xLabel": "time (ms)",
+          "yLabel": "v (mV) and u"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The step starts at 20 ms. In regular spiking mode the first interspike interval is short and later ones lengthen as u accumulates (adaptation). In fast spiking mode the rate is high and constant. Chattering produces tight bursts. Watch u (the second series): each spike kicks it up by d, and the spike train is shaped by how fast it decays."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulating it"
+    },
+    {
+      "type": "prose",
+      "text": "Izhikevich's original code uses a 1 ms step with two 0.5 ms half-steps for v. For accuracy use 0.1-0.25 ms. Because the reset is triggered at 30 mV rather than at a true peak, the spike shape is not meaningful; only spike times are."
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "function izhStep(n, I, dt) {\n  // n = { v, u, a, b, c, d }\n  n.v += dt * (0.04 * n.v * n.v + 5 * n.v + 140 - n.u + I);\n  n.u += dt * n.a * (n.b * n.v - n.u);\n  if (n.v >= 30) { n.v = n.c; n.u += n.d; return true; }\n  return false;\n}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Strengths and limits"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Pros: cheap (a few flops per step), rich behavior, famous large-scale demonstrations (Izhikevich and Edelman's 2008 thalamocortical model).",
+        "Cons: parameters are phenomenological, not biophysical; the quadratic blow-up makes accuracy step-size sensitive; and the fitted constants assume mV and ms units.",
+        "Relationship to other models: it is a quadratic integrate-and-fire neuron with adaptation, a close cousin of AdEx (#/snn/neuron-models/adex), which uses an exponential instead of a quadratic."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: use the RS preset for excitatory cells in layers 4 and 2/3, IB for layer 5 output cells, and FS for the inhibitory interneurons that implement the winner-take-all competition between minicolumns. One equation covers the whole column, which keeps a first prototype simple."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Izhikevich, \"Simple model of spiking neurons\" (IEEE Transactions on Neural Networks, 14(6), 2003); Izhikevich, \"Which model to use for cortical spiking neurons?\" (IEEE Transactions on Neural Networks, 15(5), 2004); Izhikevich & Edelman, \"Large-scale model of mammalian thalamocortical systems\" (PNAS, 2008)."
+    }
+  ]
+}

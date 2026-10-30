@@ -1,0 +1,116 @@
+{
+  "title": "Neuron Filters",
+  "intro": "A spike is instantaneous, but its effect on the next neuron is not: synapses and membranes smear each spike out in time. These filters decide how a neuron integrates its inputs and what timescales the network can remember.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spikes in, currents out"
+    },
+    {
+      "type": "prose",
+      "text": "Mathematically a spike train is a sum of Dirac deltas, S(t) = Σ δ(t − t_f). No neuron sees that directly. Neurotransmitter release, receptor kinetics and the membrane's own capacitance turn each spike into a smooth postsynaptic current or potential with a characteristic shape. A neuron filter is that shape, a kernel h(t), and the input a neuron actually integrates is the convolution I(t) = w · Σ h(t − t_f), scaled by the synaptic weight w."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Common kernels"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "exponential:          h(s) = (1/τ) exp(−s/τ)                 s ≥ 0\nalpha:                h(s) = (s/τ²) exp(−s/τ)\ndouble exponential:   h(s) = (exp(−s/τ_d) − exp(−s/τ_r)) / (τ_d − τ_r)\n\nfiltered input:       I(t) = w Σ_f h(t − t_f)"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Exponential: instant rise, decay with time constant τ. Equivalent to the first-order ODE τ dI/dt = −I + Σ δ(t − t_f), so it costs one state variable per synapse type.",
+        "Alpha: rises then decays, peaking at s = τ. A better match to measured postsynaptic currents; costs two state variables.",
+        "Double exponential (difference of exponentials): separate rise τ_r and decay τ_d, the standard choice for AMPA (τ_d about 2 to 5 ms), NMDA (τ_d about 50 to 150 ms) and GABA_A (τ_d about 5 to 10 ms) synapses."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Filtering a spike train",
+        "params": [
+          {
+            "key": "kernel",
+            "label": "Kernel",
+            "control": "select",
+            "options": [
+              "exponential",
+              "alpha",
+              "double exponential"
+            ],
+            "default": "exponential"
+          },
+          {
+            "key": "tau",
+            "label": "Time constant τ (ms)",
+            "control": "range",
+            "min": 1,
+            "max": 40,
+            "step": 1,
+            "default": 5
+          }
+        ],
+        "config": {
+          "sim": "synaptic-filter",
+          "xLabel": "time (ms)",
+          "yLabel": "filtered input (1/ms)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The same ten input spikes (ticks below zero) are passed through the chosen kernel. With a short τ every spike stays distinct. With a long τ the burst near 80 to 90 ms summates into one large bump: the filter has turned spike timing into a rate. That trade-off, temporal precision against integration, is set entirely by the filter time constant."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The membrane is a filter too"
+    },
+    {
+      "type": "prose",
+      "text": "A leaky integrate-and-fire membrane obeys τ_m dV/dt = −(V − E_L) + R I(t), a low-pass filter with time constant τ_m (typically 10 to 20 ms in cortex). The voltage is therefore the input current filtered twice, by the synapse and then by the membrane. The Spike Response Model makes this explicit: it writes the voltage as a sum of kernels, an input kernel κ for each presynaptic spike and an after-spike kernel η for the neuron's own spikes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Implementation"
+    },
+    {
+      "type": "prose",
+      "text": "Never convolve explicitly in a simulation. Each exponential kernel is one state variable that decays every step and jumps on each spike, so the cost is per synapse type, not per spike."
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// exponential synaptic trace, one per postsynaptic neuron and receptor type\nlet I = 0;\nconst decay = Math.exp(-dt / tau);\nfunction stepSynapse(incomingWeightedSpikes) {\n  I = I * decay + incomingWeightedSpikes / tau; // jump by w/τ per spike\n  return I;\n}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Filters as memory and computation"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Long filters (NMDA) let a neuron sum inputs over tens to hundreds of ms, the basis of the dendritic plateau potentials used in temporal-memory models.",
+        "In the Neural Engineering Framework the synaptic filter is the dynamics: a recurrent connection through a filter with time constant τ implements an integrator or any linear system, by solving for weights that account for h(t).",
+        "Filter time constants set what a learning rule can see: STDP windows of about 20 ms correspond to traces with that time constant.",
+        "In surrogate-gradient training, synaptic and membrane filters are what lets the network carry information across time steps, and they are often learned."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: give feedforward (layer 4) inputs a fast AMPA-like filter so they respond within a few milliseconds, and give the distal, contextual inputs that drive predictions a slow NMDA-like filter. That split mirrors the proximal versus distal dendrite distinction in the Thousand Brains neuron model, where distal input depolarises a cell for long enough to bias which cell fires on the next feedforward input."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (2014), ch. 3 and 6; Dayan & Abbott, Theoretical Neuroscience (2001), ch. 5; Eliasmith & Anderson, Neural Engineering (MIT Press, 2003), ch. 8 on synaptic dynamics; Destexhe, Mainen & Sejnowski (1994) An efficient method for computing synaptic conductances based on a kinetic model of receptor binding, Neural Computation 6."
+    }
+  ]
+}

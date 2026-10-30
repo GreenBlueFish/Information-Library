@@ -1,0 +1,168 @@
+{
+  "title": "Neural Engineering Framework",
+  "intro": "The Neural Engineering Framework (NEF) is a recipe for compiling a mathematical description (a vector, a function of it, or a differential equation) into the connection weights of a spiking network. It rests on three principles: representation, transformation and dynamics.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "Most ways of getting a neural network to do something are to pick an architecture, pick a loss, and train. The NEF works the other way round. You say what the network should compute, for example 'population B should hold the square of the value held by population A' or 'this population should integrate its input over time', and the framework solves for the weights directly, usually with a single least-squares problem per connection. The neurons can be spiking LIF neurons with realistic, heterogeneous tuning, and the result still computes what you asked for, to an accuracy that improves with the number of neurons."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Principle 1: Representation"
+    },
+    {
+      "type": "prose",
+      "text": "A population of neurons represents a vector x. Representation has two halves. Encoding is nonlinear: each neuron i has an encoder e_i (a unit vector, its preferred direction), a gain α_i and a bias b_i, and it receives the input current J_i = α_i (e_i · x) + b_i. Its firing rate is a_i(x) = G(J_i), where G is the neuron's rate response, for an LIF neuron G(J) = 1 / (τ_ref + τ_RC ln(1 + 1/(J − 1))) above threshold and 0 below. Plotted against x, a_i(x) is the neuron's tuning curve. Decoding is linear: an estimate x̂ = Σ_i a_i(x) d_i, where the decoders d_i are chosen to minimise the error between x̂ and x over the represented range."
+    },
+    {
+      "type": "prose",
+      "text": "Because gains, biases and encoders are drawn at random, every neuron has a different tuning curve: different thresholds (intercepts), different maximum rates, and for a 1-D value, either 'on' (e = +1) or 'off' (e = −1) slopes. This heterogeneity is not noise to be tolerated. It is the basis set that makes accurate decoding possible, and it matches what is recorded in real cortex."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Tuning curves of a 1-D ensemble",
+        "params": [
+          {
+            "key": "neurons",
+            "label": "Neurons",
+            "control": "range",
+            "min": 2,
+            "max": 8,
+            "step": 1,
+            "default": 8
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "range",
+            "min": 1,
+            "max": 20,
+            "step": 1,
+            "default": 1
+          }
+        ],
+        "config": {
+          "sim": "nef-tuning",
+          "xLabel": "represented value x",
+          "yLabel": "firing rate (Hz)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Each curve is one LIF neuron's firing rate as a function of the represented value. Neurons marked + have encoder +1 and fire more for larger x; neurons marked − fire more for smaller x. Change the seed to draw a new ensemble: the intercepts (where each neuron starts firing) and maximum rates are random, between about 200 and 400 Hz."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Principle 2: Transformation"
+    },
+    {
+      "type": "prose",
+      "text": "The decoders for x itself are not the only decoders you can solve for. Solve the same least-squares problem with a different target, f(x) instead of x, and you get decoders d^f that read f(x) out of the same activities. The decoders are found by regularised least squares: d^f = (Γ + σ²I)⁻¹ Υ, with Γ_ij = Σ_x a_i(x) a_j(x) and Υ_i = Σ_x a_i(x) f(x). The regulariser σ² stands in for spike noise and keeps the decoders from relying on fine cancellations between neurons."
+    },
+    {
+      "type": "prose",
+      "text": "To compute f(x) in a connection from population A to population B, combine A's decoders with B's encoders and gains: the weight from neuron i to neuron j is w_ji = α_j e_j · d^f_i. The weight matrix is low-rank (decoders times encoders), which is why NEF models are cheap to simulate in the factored form and why they map well onto neuromorphic hardware."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Decoding a function from spiking-neuron tuning curves",
+        "params": [
+          {
+            "key": "neurons",
+            "label": "Neurons",
+            "control": "range",
+            "min": 2,
+            "max": 60,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "function",
+            "label": "Function to decode",
+            "control": "select",
+            "options": [
+              "x",
+              "x²",
+              "sin(πx)"
+            ],
+            "default": "x"
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "range",
+            "min": 1,
+            "max": 20,
+            "step": 1,
+            "default": 1
+          }
+        ],
+        "config": {
+          "sim": "nef-decode",
+          "xLabel": "represented value x",
+          "yLabel": "value"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The widget solves for decoders and plots the decoded estimate against the target. Things to try: drop to 3 or 4 neurons and watch the estimate turn into a few straight segments; raise it to 60 and the error mostly disappears. Switch to x² and notice that it needs more neurons than x, because a population of monotonic tuning curves has to bend its sum into a parabola. sin(πx) is harder still. As a rule of thumb, the error from noise falls roughly as 1/√N with the number of neurons N."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Principle 3: Dynamics"
+    },
+    {
+      "type": "prose",
+      "text": "A recurrent connection lets a population implement a dynamical system dx/dt = A x + B u. The trick is that the synapse itself is a low-pass filter, h(t) = e^(−t/τ)/τ. To get the desired dynamics, connect the population back to itself through the transformation A′ = τA + I and drive it with B′ = τB. The classic example is an integrator, A = 0: a recurrent connection with transform 1 and an input scaled by τ gives a population that holds its value with no input and accumulates input over time. Path integration, working memory, oscillators and attractor networks are all built this way."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "In Nengo"
+    },
+    {
+      "type": "prose",
+      "text": "Nengo is the simulator that implements these principles directly. A model that squares a value, and another that integrates one, look like this:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import nengo\nimport numpy as np\n\nwith nengo.Network() as model:\n    stim = nengo.Node(lambda t: np.sin(2 * np.pi * t))\n    a = nengo.Ensemble(n_neurons=100, dimensions=1)   # random encoders, gains, biases\n    b = nengo.Ensemble(n_neurons=100, dimensions=1)\n    nengo.Connection(stim, a)\n    nengo.Connection(a, b, function=lambda x: x ** 2)  # decoders solved for x**2\n\n    # an integrator: recurrent transform 1, input scaled by the synaptic tau\n    tau = 0.1\n    integ = nengo.Ensemble(n_neurons=200, dimensions=1)\n    nengo.Connection(stim, integ, transform=tau, synapse=tau)\n    nengo.Connection(integ, integ, synapse=tau)\n\n    probe = nengo.Probe(b, synapse=0.01)\n\nwith nengo.Simulator(model) as sim:\n    sim.run(2.0)"
+    },
+    {
+      "type": "prose",
+      "text": "Nengo also runs the same model on other back ends (nengo-loihi for Intel's Loihi, nengo-dl on TensorFlow, nengo-spinnaker), and offers online learning: the PES rule adjusts decoders from an error signal, and BCM and Oja rules adjust weights without one."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Using the NEF for a cortical column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Location in an object's reference frame: a 2-D (or grid-cell phase) vector held in an integrator population, updated by a movement-velocity input. This is the NEF version of path integration.",
+        "Feature at a location: a feature vector combined with the location. In SPA terms this is binding, location ⊛ feature, which the Semantic Pointers page covers.",
+        "Prediction: a transformation from (location + movement) to the expected next feature, learned online with PES while the column explores.",
+        "Limits: the NEF assumes you know what each population should represent. The Thousand Brains Theory asks columns to discover objects with no supervision, so the NEF gives you plumbing, not the learning algorithm itself."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "The widgets compute steady-state LIF rates, not spike trains, and add a fixed regularisation for noise. That is exactly how Nengo solves for decoders. The spiking network then uses these decoders with filtered spikes."
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Eliasmith & Anderson (2003), Neural Engineering: Computation, Representation, and Dynamics in Neurobiological Systems, MIT Press; Eliasmith (2013), How to Build a Brain, Oxford University Press; Bekolay et al. (2014), 'Nengo: a Python tool for building large-scale functional brain models', Frontiers in Neuroinformatics 7:48; Stewart (2012), 'A technical overview of the Neural Engineering Framework', University of Waterloo technical report."
+    }
+  ]
+}
