@@ -210,11 +210,37 @@ function crumbItem(label, href, isCurrent) {
 }
 
 /**
+ * Slug paths (joined with "/") of the nav-tree nodes the reader has expanded.
+ * The nav is rebuilt on every route change, so the open/closed state lives here
+ * at module level rather than in the DOM, and survives those re-renders.
+ *
+ * @type {Set<string>}
+ */
+const expandedNavNodes = new Set();
+
+/**
+ * Collapse every nav-tree node the reader has opened, back to the default
+ * (top-level topics only, plus the active route's ancestors). For tests.
+ *
+ * @returns {void}
+ */
+export function resetNavExpansion() {
+  expandedNavNodes.clear();
+}
+
+/**
  * Recursively build the topic tree list (`ul.nav-tree`) for a set of sibling
  * nodes. Each node renders a link (`.nav-tree__link`) whose href is the hash
  * route to that node; nodes with children recurse into a nested `<ul>`, which
  * the CSS indents one step per level. The link for the active route is marked
  * `aria-current="page"` so the CSS can highlight it.
+ *
+ * Subtopics start collapsed, so the nav opens showing only the top-level
+ * topics. A node with children gets a disclosure button
+ * (`button.nav-tree__toggle`, `aria-expanded` + `aria-controls`) that shows or
+ * hides its nested list. A list is open when the reader expanded it (kept in
+ * {@link expandedNavNodes}) or when it holds the active route, so the current
+ * page is always visible in the tree.
  *
  * @param {TopicNode[]} nodes The sibling nodes to render at this level.
  * @param {string[]} ancestorSlugs Slug path from the root down to (not
@@ -230,22 +256,68 @@ function buildTree(nodes, ancestorSlugs, activePath) {
 
     const slugPath = ancestorSlugs.concat(node.slug);
     const item = el("li", "nav-tree__item");
+    const row = el("div", "nav-tree__row");
+    item.appendChild(row);
 
     const link = el("a", "nav-tree__link", node.title ?? node.slug);
     link.setAttribute("href", hrefForPath(slugPath));
     if (isActivePath(slugPath, activePath)) {
       link.setAttribute("aria-current", "page");
     }
-    item.appendChild(link);
 
     if (Array.isArray(node.children) && node.children.length > 0) {
-      item.appendChild(buildTree(node.children, slugPath, activePath));
+      const key = slugPath.join("/");
+      const expanded =
+        expandedNavNodes.has(key) || isAncestorPath(slugPath, activePath);
+      const title = node.title ?? node.slug;
+      const childrenId = `nav-tree-children-${slugPath.join("-")}`;
+
+      const toggle = el("button", "nav-tree__toggle");
+      toggle.setAttribute("type", "button");
+      toggle.setAttribute("aria-controls", childrenId);
+      toggle.setAttribute("aria-label", `Subtopics of ${title}`);
+      row.appendChild(toggle);
+      row.appendChild(link);
+
+      const children = buildTree(node.children, slugPath, activePath);
+      children.setAttribute("id", childrenId);
+      item.appendChild(children);
+
+      const setExpanded = (open) => {
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+        children.hidden = !open;
+      };
+      setExpanded(expanded);
+
+      toggle.addEventListener("click", () => {
+        const open = toggle.getAttribute("aria-expanded") !== "true";
+        if (open) expandedNavNodes.add(key);
+        else expandedNavNodes.delete(key);
+        setExpanded(open);
+      });
+    } else {
+      row.appendChild(link);
     }
 
     list.appendChild(item);
   }
 
   return list;
+}
+
+/**
+ * True when a node's slug path is a strict prefix of the active route path,
+ * i.e. the node is an ancestor of the current page.
+ *
+ * @param {string[]} slugPath
+ * @param {string[]} activePath
+ * @returns {boolean}
+ */
+function isAncestorPath(slugPath, activePath) {
+  if (!Array.isArray(activePath) || slugPath.length >= activePath.length) {
+    return false;
+  }
+  return slugPath.every((slug, i) => slug === activePath[i]);
 }
 
 /**
