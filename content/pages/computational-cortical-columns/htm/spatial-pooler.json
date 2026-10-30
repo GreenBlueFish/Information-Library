@@ -1,0 +1,108 @@
+{
+  "title": "Spatial Pooler",
+  "intro": "The spatial pooler (SP) is HTM's feedforward stage. It turns the dense or semantically structured bit array produced by an encoder into a sparse distributed representation (SDR) over minicolumns: a fixed, small fraction of minicolumns is active at every step, similar inputs give overlapping SDRs, and every minicolumn gets used. It does this with nothing more than overlap counting, k-winners-take-all inhibition, Hebbian permanence updates and a homeostatic boost.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intuition"
+    },
+    {
+      "type": "prose",
+      "text": "Think of 2048 minicolumns, each looking at a random subset of the input bits through a sieve. When an input arrives, each minicolumn counts how many of its connected input bits are on. The 40 minicolumns with the highest counts win and the rest are inhibited. The winners then sharpen their sieves towards the current input: synapses to active bits get a bit stronger, synapses to inactive bits a bit weaker. Over time each minicolumn specialises on a recurring feature of the input. A homeostatic 'boost' makes sure that minicolumns which rarely win become more eager, so the whole sheet stays in use. This is competitive Hebbian learning — close in spirit to Diehl & Cook-style STDP networks with lateral inhibition and adaptive thresholds, but binary and step-based."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Inputs: encoders"
+    },
+    {
+      "type": "prose",
+      "text": "The SP does not see raw numbers. An encoder maps each value to a bit array in which semantically similar values share active bits: a scalar encoder activates a contiguous block of w bits whose position moves with the value; a random distributed scalar encoder hashes buckets to random overlapping sets; category, date-time and coordinate encoders exist for other data types (Purdy 2016). Encoders matter as much as the SP: the SP can preserve similarity present in the encoding but cannot invent it. For spiking work, the encoder is your input spike-coding scheme (see 'Encoding Schemes' in section 7)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The algorithm, step by step"
+    },
+    {
+      "type": "list",
+      "items": [
+        "1. Potential pool. At initialisation every minicolumn i is given a potential pool: a random subset of the input bits it may ever connect to — a fraction potentialPct of the inputs (within potentialRadius if topology is used). Each potential synapse gets a random permanence near the connection threshold, so about half start connected.",
+        "2. Overlap. For input x, the overlap o_i is the number of connected synapses whose input bit is on. Overlaps below stimulusThreshold are set to zero. The overlap is multiplied by the column's boost factor b_i.",
+        "3. Inhibition. With global inhibition, the k minicolumns with the largest boosted overlap become active, where k = sparsity × number of columns (e.g. 2% of 2048 ≈ 40). With local inhibition, a column is active if its boosted overlap is among the top k within its inhibition neighbourhood, which gives topographic maps but is much slower to compute.",
+        "4. Learning. For each active minicolumn, every synapse in its potential pool is updated: permanence increased by synPermActiveInc if its input bit was on, decreased by synPermInactiveDec otherwise, clipped to [0, 1]. Inactive columns do not learn.",
+        "5. Duty cycles. Each column keeps a moving average of how often it is active (active duty cycle) and how often its overlap exceeds stimulusThreshold (overlap duty cycle), over a window of dutyCyclePeriod steps (e.g. 1000).",
+        "6. Boosting. Boost factors are updated from the active duty cycle, b_i = exp(−β (a_i − ⟨a⟩)), where a_i is column i's active duty cycle, ⟨a⟩ the target (neighbourhood mean) activity and β the boostStrength. Columns that are active less often than average get b_i > 1.",
+        "7. Bumping weak columns. Columns whose overlap duty cycle falls below a small fraction of their neighbours' have all their potential-pool permanences raised slightly, so that a column that never sees enough connected input eventually connects to something."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Spatial pooler step (global inhibition), simplified from Numenta's description.\n# x: binary input (n_in,), perm: (n_cols, n_in) with 0 outside each potential pool,\n# pool: boolean mask (n_cols, n_in), boost: (n_cols,), duty: (n_cols,)\ndef sp_step(x, perm, pool, boost, duty, learn=True):\n    connected = (perm >= SYN_PERM_CONNECTED) & pool\n    overlap = connected @ x                       # integer counts per column\n    overlap[overlap < STIMULUS_THRESHOLD] = 0\n    boosted = overlap * boost\n    k = int(round(SPARSITY * n_cols))              # e.g. 0.02 * 2048 ≈ 40\n    active = top_k_indices(boosted, k)            # ties broken randomly\n    active = active[boosted[active] > 0]\n    if learn:\n        for c in active:\n            p = pool[c]\n            perm[c, p & (x == 1)] += SYN_PERM_ACTIVE_INC\n            perm[c, p & (x == 0)] -= SYN_PERM_INACTIVE_DEC\n            np.clip(perm[c], 0.0, 1.0, out=perm[c])\n        a = np.zeros(n_cols); a[active] = 1\n        duty += (a - duty) / DUTY_CYCLE_PERIOD     # moving average\n        boost[:] = np.exp(-BOOST_STRENGTH * (duty - SPARSITY))\n        bump_up_weak_columns(perm, pool, overlap)  # raise perms of starving columns\n    return active"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Typical parameter values"
+    },
+    {
+      "type": "prose",
+      "text": "Numenta's examples and papers commonly use the values below. They are typical defaults from NuPIC-era example configurations and the SP paper, not universal constants, and they changed between releases (for example, older code used a 'max boost' parameter instead of boostStrength). Read the configuration you are actually running."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Number of columns: 2048; active columns per step: 40 (≈2% sparsity), global inhibition.",
+        "potentialPct: around 0.8–0.85 in many examples (0.5 is the library default in some versions).",
+        "synPermConnected: about 0.1–0.2; synPermActiveInc: about 0.003–0.05; synPermInactiveDec: about 0.0005–0.01. Keep the decrement smaller than the increment, or the SP forgets too fast.",
+        "stimulusThreshold: 0 to a few bits; dutyCyclePeriod: around 1000 steps.",
+        "boostStrength: 0 (off) to a few. Anomaly detection configurations often switch boosting off because a changing representation of the same input looks like an anomaly to the temporal memory.",
+        "Input size: a few hundred to a few thousand bits, with encoder sparsity typically in the 2–10% range."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What the spatial pooler guarantees, and what it does not"
+    },
+    {
+      "type": "prose",
+      "text": "Cui, Ahmad & Hawkins (2017) evaluate the SP against a list of desired properties: fixed sparsity regardless of input density, distributed coding in which all columns participate (they measure entropy of column usage), preservation of semantic similarity (overlapping inputs give overlapping outputs), robustness to input noise, fault tolerance when columns or inputs are removed, and continuous adaptation to changing input statistics. Boosting is what keeps column usage high; without it a few columns tend to win most of the time. The SP is not a classifier and does not optimise a reconstruction or discrimination loss; it is an online, competitive, unsupervised feature mapper, comparable in power to a single layer of competitive learning."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "If you are building one with spiking neurons"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Overlap ↔ feedforward excitatory drive onto a minicolumn's excitatory cells (shared proximal synapses).",
+        "Global k-winners ↔ a pool of inhibitory interneurons with fast, broad feedback; tune inhibitory gain until about 2% of minicolumns spike in each input window. 'Inhibition and k-Winners-Take-All' in section 3 covers how to approximate an exact k with spiking E/I circuits and what goes wrong (oscillations, winner-take-all collapse).",
+        "Permanence learning ↔ STDP with a binary or saturating readout; the 'decrement for inactive inputs while the column is active' term corresponds to the depression branch of pair-based STDP or to the heterosynaptic depression used by Diehl & Cook (2015).",
+        "Boosting ↔ homeostatic intrinsic plasticity, e.g. an adaptive threshold that rises when a neuron fires too often (Diehl & Cook's θ) or synaptic scaling. See 'Homeostatic Plasticity' in section 3.",
+        "Input window ↔ the SP has no time inside a step. In a spiking SP, present each encoded input for a fixed window (e.g. 20–100 ms) and read out which minicolumns fired; or use first-spike latency, where the first k minicolumns to fire are the winners."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Dead columns: with too low an initial connection fraction or too high a stimulus threshold, many columns never win. Check the duty-cycle histogram.",
+        "Representational drift: with boosting and learning on, the SDR for a fixed input keeps changing slowly, which can break downstream temporal memory. Freeze the SP after an initial learning phase or switch boosting off when you need stable codes.",
+        "Local inhibition is expensive and often unnecessary for non-topographic inputs; start with global inhibition.",
+        "A trained SP is only as good as its encoder. If two inputs that should be similar share no input bits, no SP setting will make their SDRs overlap."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Cui, Y., Ahmad, S. & Hawkins, J. (2017). The HTM spatial pooler — a neocortical algorithm for online sparse distributed coding. Frontiers in Computational Neuroscience.; Hawkins, J. et al. (2016). Biological and Machine Intelligence (BAMI), release 0.4. Numenta, online book.; Hawkins, J., Ahmad, S. & Dubinsky, D. (2011). Hierarchical temporal memory including HTM cortical learning algorithms, version 0.2.1. Numenta white paper.; Purdy, S. (2016). Encoding data for HTM systems. arXiv preprint.; Ahmad, S. & Hawkins, J. (2015). Properties of sparse distributed representations and their application to hierarchical temporal memory. arXiv preprint.; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience."
+    }
+  ]
+}

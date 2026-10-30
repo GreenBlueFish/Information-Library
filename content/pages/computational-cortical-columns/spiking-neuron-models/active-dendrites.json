@@ -1,0 +1,118 @@
+{
+  "title": "Dendrites and Active Dendrites",
+  "intro": "Pyramidal neurons are not points: thin dendritic branches can generate local NMDA spikes and plateau potentials, and the apical tuft can trigger calcium spikes and bursts. These nonlinearities let one neuron recognise many independent patterns and hold a depolarised predictive state, which is exactly what HTM's dendritic segments abstract. This page covers the biology, the two-layer-neuron view, and how to implement segments in an SNN.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intuition: a neuron is not a point"
+    },
+    {
+      "type": "prose",
+      "text": "A cortical pyramidal cell receives roughly 10,000 excitatory synapses (often more for large layer-5 cells), spread over a branching tree: thin basal dendrites around the soma, an apical trunk climbing towards layer 1, and an apical tuft there. A point neuron, like LIF, sums all of them in one number. Real dendrites do something more interesting: a thin branch is a semi-independent electrical compartment that can produce its own regenerative event when enough of its synapses are active together. Think of each thin branch as a small detector that votes \"my pattern is present\" by producing a long depolarising plateau, and of the soma as the place where those votes and the proximal (feedforward) input are combined."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Passive cable: why location matters"
+    },
+    {
+      "type": "prose",
+      "text": "Without active channels, a dendrite is a leaky cable (Rall's cable theory). Voltage spreads along it but leaks out through the membrane and is filtered by its capacitance, so distal inputs arrive at the soma smaller and slower than proximal ones. The steady-state attenuation is described by the length constant:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "λ = sqrt( (d / 4) · (R_m / R_i) )\n\nd    dendrite diameter\nR_m  specific membrane resistance (e.g. ≈ 10–30 kΩ·cm²)\nR_i  axial (cytoplasmic) resistivity (e.g. ≈ 100–200 Ω·cm)\n\nexample: d = 1 µm, R_m = 20 kΩ·cm², R_i = 150 Ω·cm  →  λ ≈ 0.6 mm\nfast transients (EPSPs) attenuate much more than this steady-state number suggests"
+    },
+    {
+      "type": "prose",
+      "text": "Two consequences matter for modelling. First, a single distal synapse on a thin branch has little effect at the soma. Second, the same thin branch has a high local input resistance, so a handful of nearby synapses can depolarise it locally by tens of millivolts, enough to unblock NMDA receptors (see the magnesium block in \"Synapse Models\"). Thin dendrites are therefore weak at driving the soma directly but good at local, nonlinear integration."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "NMDA spikes and plateau potentials"
+    },
+    {
+      "type": "prose",
+      "text": "Schiller, Major, Koester & Schiller (2000) showed that in thin basal dendrites of neocortical layer-5 pyramidal neurons, clustered synaptic input produces a regenerative local event, the NMDA spike: once local depolarisation is large enough to relieve the Mg²⁺ block, NMDA current depolarises the branch further, and the branch jumps to a plateau. The plateau is sustained mainly by NMDA conductance (blocked by NMDA antagonists) and lasts tens to hundreds of milliseconds (Major et al. 2008 described spatiotemporally graded plateaus). Measured at the soma it appears as a depolarisation of roughly 10 mV or more that may or may not by itself cause spikes."
+    },
+    {
+      "type": "prose",
+      "text": "The threshold is a matter of clustering: in the experimental and modelling literature summarised by Major, Larkum & Schiller (2013) and used by Hawkins & Ahmad (2016), roughly 8–20 synapses activated near-synchronously within a short stretch of thin dendrite (a few tens of micrometres) are enough to trigger an NMDA spike, whereas the same number of synapses scattered over the tree sum roughly linearly and produce a much smaller somatic effect. Polsky, Mel & Schiller (2004) confirmed the logic directly: two inputs on the same thin branch sum sigmoidally (superlinearly above threshold), two inputs on different branches sum approximately linearly. Treat the 8–20 range as an order of magnitude; it depends on synapse strength, branch diameter and distance from the soma."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The apical tuft and BAC firing"
+    },
+    {
+      "type": "prose",
+      "text": "Layer-5 pyramidal cells have a second nonlinear zone near the main bifurcation of the apical trunk, where calcium channels can generate a dendritic calcium spike. Larkum, Zhu & Sakmann (1999) showed that input to the distal tuft alone is strongly attenuated, and a somatic action potential alone back-propagates into the apical dendrite without much effect; but a back-propagating action potential that coincides with distal tuft input within a short time window triggers a calcium spike, which in turn drives a burst of somatic action potentials. This is backpropagation-activated calcium spike firing, or BAC firing. Larkum (2013) proposed it as a cellular mechanism for associating feedforward input (arriving near the soma, from lower areas and layer 4) with feedback input (arriving in layer 1, from higher areas and non-specific thalamus): the cell signals a match with a burst rather than a single spike."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The neuron as a two-layer network"
+    },
+    {
+      "type": "prose",
+      "text": "Poirazi, Brannon & Mel (2003) fitted a detailed compartmental model of a hippocampal CA1 pyramidal cell and found that its firing rate was well predicted by a two-layer network: each thin branch applies a sigmoidal nonlinearity to the sum of its own inputs, and the soma sums the branch outputs. The study was of CA1, not neocortex, but the Polsky et al. (2004) recordings in neocortical layer-5 cells support the same picture. More recent work pushes further: Beniaguev, Segev & London (2021) needed a temporally convolutional deep network with several hidden layers to mimic a detailed layer-5 neuron model with NMDA synapses, and Gidon et al. (2020) reported calcium-mediated dendritic action potentials in human layer-2/3 neurons that let a single cell compute an XOR-like function. How much of this capacity cortical circuits actually use is an open question."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How HTM abstracts dendrites"
+    },
+    {
+      "type": "prose",
+      "text": "Hawkins & Ahmad (2016) built the HTM neuron directly on these findings. Synapses are split into three zones. Proximal synapses (near the soma, feedforward input) drive the cell to fire, like the input to a point neuron. Distal basal synapses are grouped into many independent dendritic segments; each segment is a coincidence detector that becomes active when at least θ of its synapses see active presynaptic cells (the paper anchors this threshold in the 8–20 coincident synapses suggested by NMDA-spike data). An active distal segment does not make the cell fire; it depolarises it into a predictive state, so that if feedforward input arrives the predicted cell fires slightly earlier than its neighbours and, through fast local inhibition, suppresses them. Apical segments play the same role for feedback context. With sparse distributed representations, a segment of a few dozen synapses can robustly recognise a pattern from a large population, and a neuron with dozens of segments can recognise hundreds of independent patterns (see \"The HTM Neuron\" and \"Temporal Memory\" in section 4)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Implementing dendritic segments in an SNN"
+    },
+    {
+      "type": "prose",
+      "text": "You do not need a multi-compartment simulator to get the essential behaviour. A practical recipe for a point-neuron SNN (LIF or AdEx soma) is: for each neuron keep a list of segments; for each segment keep its presynaptic indices and weights (or HTM-style permanences); compute the segment's input as a sum over recently active presynaptic cells; if it crosses the segment threshold, start a plateau of fixed duration; while any segment is in plateau, inject a depolarising current into the soma (or lower the threshold) that is too weak to cause a spike alone but enough to win the race when feedforward input arrives."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\nclass SegmentedLIF:\n    \"\"\"LIF soma + distal segments that act as NMDA-plateau coincidence detectors.\"\"\"\n    def __init__(self, n, seg_per_cell, syn_per_seg, n_pre, rng,\n                 seg_theta=10, plateau_ms=50.0, i_pred=1.2, dt=0.1):\n        self.pre = rng.integers(0, n_pre, size=(n, seg_per_cell, syn_per_seg))  # presyn ids\n        self.w = np.ones((n, seg_per_cell, syn_per_seg))                          # or permanences\n        self.seg_theta, self.plateau_ms, self.i_pred, self.dt = seg_theta, plateau_ms, i_pred, dt\n        self.plateau = np.zeros((n, seg_per_cell))   # remaining plateau time (ms)\n        self.v = np.full(n, -65.0)\n\n    def step(self, ctx_active, i_ff, tau=20.0, R=10.0, v_rest=-65.0, theta=-50.0):\n        # ctx_active: bool (n_pre,) presynaptic cells active within the last few ms (context)\n        drive = (self.w * ctx_active[self.pre]).sum(axis=2)       # (n, seg)\n        self.plateau = np.where(drive >= self.seg_theta, self.plateau_ms,\n                                np.maximum(self.plateau - self.dt, 0))\n        predictive = (self.plateau > 0).any(axis=1)                # depolarised cells\n        I = i_ff + self.i_pred * predictive                       # nA; i_pred < rheobase\n        self.v += self.dt * (-(self.v - v_rest) + R * I) / tau\n        fired = self.v >= theta\n        self.v[fired] = v_rest\n        return fired, predictive"
+    },
+    {
+      "type": "prose",
+      "text": "With R = 10 MΩ and threshold 15 mV above rest, the rheobase is 1.5 nA (see \"Leaky Integrate-and-Fire\"), so i_pred = 1.2 nA holds a predicted cell about 12 mV above rest but never fires it on its own; when the same feedforward drive reaches all cells of a minicolumn, the predicted ones cross threshold first. Pair this with fast inhibition or k-WTA within each minicolumn (see \"Inhibition and k-WTA\" in section 3) so that early spikes suppress the rest; if no cell was predicted, all fire, which is the HTM \"burst\". Learning then acts on segment synapses: reinforce the segment that caused a correct prediction, grow synapses from previously active cells onto a chosen segment when the column bursts. Bouhadjar, Wouters, Diesmann & Tetzlaff (2022) implemented a spiking version of HTM temporal memory along these lines in NEST, with dendritic action potentials modelled as plateau currents."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Plateau duration: 50–200 ms is consistent with NMDA-plateau data and lets a prediction span a few theta cycles or saccades; it also sets the maximum interval between sequence elements.",
+        "Segment threshold versus segment size: with sparse context (around 2% active) and 20–40 synapses per segment, a threshold of 10–15 rarely fires by chance; use the false-match formulas on \"Sparse Distributed Representations\" in section 3 to choose it.",
+        "Hardware: Loihi 2's programmable neurons and multi-compartment support (and Loihi 1's compartment trees) can express segments as compartments with a threshold join; on FPGAs a segment is a popcount over a bit-vector of active inputs followed by a comparator.",
+        "Alternatives: two-compartment neurons (soma plus dendrite with an NMDA-like nonlinearity), Brian2 SpatialNeuron for real morphology, or NEURON when you need biophysical accuracy."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Do not call it dendritic computation if every segment is just added linearly to the soma: the defining property is a thresholded, local nonlinearity per segment.",
+        "Timing: a segment that integrates context over too long a window becomes a rate detector and loses sequence specificity; too short a window misses jittered spikes. Keep it near the synaptic/NMDA time scale (a few to tens of ms) and tune with noise on.",
+        "Biological numbers are approximate and cell-type specific; most detailed dendritic data come from layer-5 pyramidal cells in rodent slices. Layer 2/3 cells, interneurons and in-vivo conditions differ.",
+        "Whether NMDA spikes in vivo actually implement predictions as HTM proposes is a hypothesis, not established fact; the evidence for dendritic plateaus in behaving animals is growing, but the mapping to HTM's segments and permanences is a modelling abstraction."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Dayan, P. & Abbott, L. F. (2001). Theoretical Neuroscience. MIT Press; Larkum, M. E., Zhu, J. J. & Sakmann, B. (1999). A new cellular mechanism for coupling inputs arriving at different cortical layers. Nature; Schiller, J., Major, G., Koester, H. J. & Schiller, Y. (2000). NMDA spikes in basal dendrites of cortical pyramidal neurons. Nature; Poirazi, P., Brannon, T. & Mel, B. W. (2003). Pyramidal neuron as two-layer neural network. Neuron; Polsky, A., Mel, B. W. & Schiller, J. (2004). Computational subunits in thin dendrites of pyramidal cells. Nature Neuroscience; Major, G., Polsky, A., Denk, W., Schiller, J. & Tank, D. W. (2008). Spatiotemporally graded NMDA spike/plateau potentials in basal dendrites of neocortical pyramidal neurons. Journal of Neurophysiology; Larkum, M. (2013). A cellular mechanism for cortical associations: an organizing principle for the cerebral cortex. Trends in Neurosciences; Major, G., Larkum, M. E. & Schiller, J. (2013). Active properties of neocortical pyramidal neuron dendrites. Annual Review of Neuroscience; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits; Davies, M. et al. (2018). Loihi: A neuromorphic manycore processor with on-chip learning. IEEE Micro; Gidon, A. et al. (2020). Dendritic action potentials and computation in human layer 2/3 cortical neurons. Science; Beniaguev, D., Segev, I. & London, M. (2021). Single cortical neurons as deep artificial neural networks. Neuron; Bouhadjar, Y., Wouters, D. J., Diesmann, M. & Tetzlaff, T. (2022). Sequence learning, prediction, and replay in networks of spiking neurons. PLoS Computational Biology"
+    }
+  ]
+}

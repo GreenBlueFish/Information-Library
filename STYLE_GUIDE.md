@@ -456,6 +456,32 @@ When a control value falls outside its declared range (R10.6), the renderer adds
 `--color-error`, and shows a `.widget__control-error` message (error-colored,
 small). The widget retains the last valid value and visualization.
 
+### Simulation widgets (`alexandria.css` §10b)
+
+The step/play simulation widgets (built on `src/widgets/sim-kit.js`) reuse the
+widget card, controls, and `.widget__plot` host, and add:
+
+- `.widget__actions` — wrapping row of buttons, `--space-3` gaps.
+- `.widget__button` — `--control-min-target` tall, accent fill
+  (`--color-accent`, hover `--color-accent-hover`) with `--color-text-inverse`
+  text, `--radius-sm`. `.widget__button--secondary` is the outlined variant
+  (`--color-control-bg`, `--color-control-border`). A toggle such as Play/Pause
+  sets `aria-pressed="true"`, drawn with the `--color-accent-subtle` fill.
+- `.widget__readout` — a polite live status line (small, muted, mono) for
+  numbers and step narration.
+- SVG parts inside `.widget__plot`: `.sim-label` (axis-colored small text),
+  `.sim-trace` (unfilled 2-unit line; color from `.plot-series--N`),
+  `.sim-spike`, `.sim-threshold` (dashed `--color-error` line).
+- Cell states for grids of neurons/bits: `.sim-cell` (resting,
+  `--color-surface-alt`), `--active` (series 1), `--predicted` (thick series-5
+  outline on `--color-accent-subtle`), `--correct` (series 3), `--burst`
+  (series 2), `--inhibitory` (series-2 outline), `--overlap` (series 4),
+  `--highlight` (thick heading-colored outline).
+- Bars: `.sim-bar` (series 1) and `.sim-bar--winner` (series 3).
+
+Each state is also named in a legend or the readout, so color is never the
+only signal.
+
 ### Accessible contrast
 
 The palette is designed to meet WCAG AA for text: body `--color-text` (`#1a2230`)

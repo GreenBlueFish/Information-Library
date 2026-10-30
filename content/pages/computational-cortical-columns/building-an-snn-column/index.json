@@ -1,0 +1,103 @@
+{
+  "title": "7. Building an SNN Column",
+  "intro": "The practical section: which simulators and chips to use, how to encode inputs into spikes and SDRs, how to evaluate a spiking column, a staged roadmap from one neuron to many voting columns, and the pitfalls that cost the most time. It ends the theory and starts the build.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From reading to running"
+    },
+    {
+      "type": "prose",
+      "text": "Sections 1–6 told you what a cortical column might compute. This section is about getting one to run: which simulator or chip to use, how to turn data into spikes, how to tell whether the thing you built is working, in which order to build it, and which mistakes cost people weeks. Think of it as the lab manual that goes with the textbook."
+    },
+    {
+      "type": "prose",
+      "text": "The guiding idea is incremental validation. A cortical column model has many interacting parts — spiking neurons, excitation/inhibition balance, plasticity, homeostasis, sparse codes, dendritic segments, location signals and lateral voting. If you wire all of them together at once and the network is silent or epileptic, you will not know which part is to blame. If instead each stage is checked against a known reference (an analytic f–I curve, a published firing-rate regime, a replicated benchmark), every failure is local and cheap to find."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why this section matters if you are building a column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Tool choice shapes the model you end up with. Equation-level simulators (Brian2, NEST) make biophysics easy and gradient training hard; PyTorch-based libraries (snnTorch, Norse) are the reverse; neuromorphic chips impose fan-in, weight precision and learning-rule constraints that you should design around from the start rather than discover at the end.",
+        "Encoders decide what your column can learn. An HTM-style column expects sparse distributed input with semantic overlap; a Diehl & Cook-style STDP layer expects Poisson rate input. Feeding the wrong kind of code into a learning rule is one of the most common silent failures.",
+        "Evaluation of spiking columns is under-specified in the literature. Accuracy on MNIST says little about whether you have a working column. You need sanity metrics (rates, irregularity, balance), representation metrics (sparsity, overlap, stability) and task metrics (sequence prediction, anomaly detection, sensorimotor object recognition).",
+        "Most failures are generic: runaway excitation, silent networks, dead or greedy units, time-step artefacts, unit mistakes. Knowing the symptom → cause → fix table saves a lot of time."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Subpages in learning order"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Simulators and Frameworks: Brian2, NEST, Nengo, Norse, snnTorch, Lava, GeNN, PyNN and BindsNET compared, with working Brian2, NEST and snnTorch code.",
+        "Neuromorphic Hardware: Loihi and Loihi 2, SpiNNaker and SpiNNaker2, TrueNorth, BrainScaleS-2 and FPGA designs, and how to map minicolumns, dendritic segments and voting onto them.",
+        "Encoding Schemes: rate (Poisson), latency, rank-order, population, delta/event-camera coding, and HTM scalar, RDSE and grid-cell encoders that produce SDRs, with code.",
+        "Evaluating a Column: sanity metrics (rates, CV of ISI, Fano factor, synchrony, E/I balance), representation metrics, task benchmarks and compute metrics, plus reproducibility.",
+        "Step-by-Step Roadmap: nine stages from tooling and a single validated LIF neuron to multiple voting columns on neuromorphic hardware, each with a goal, a validation check and pitfalls.",
+        "Common Pitfalls: a symptom → cause → fix catalogue, with an interactive raster showing what happens without inhibition."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A minimum viable column (MVC) to start with"
+    },
+    {
+      "type": "prose",
+      "text": "You do not need a million neurons to test column ideas. The numbers below are a deliberately small starting specification that is big enough for sparse codes to behave well (a few percent activity, low false-match probability) and small enough to simulate in seconds on a laptop in Brian2 or as a vectorised NumPy/PyTorch loop. They are a recommendation distilled from HTM defaults and the Thousand Brains papers, scaled down — not values taken from biology. Biological minicolumns contain roughly 80–120 neurons, and real columns contain thousands of minicolumns' worth of cells across six layers."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "MINIMUM VIABLE COLUMN (one cortical column, one sensor patch)\n\nEncoder (input)          n = 400–1024 bits, w ≈ 2–5% active (e.g. 21 of 400)\nFeature layer (\"L4\")     M = 256–512 minicolumns\n  activity               k-WTA with k ≈ 2–4% of minicolumns (e.g. k = 10 of 256, 20 of 512)\n  cells per minicolumn   8 (enough for many contexts; HTM uses 32)\n  proximal inputs        each minicolumn samples ~50–80% of encoder bits (potential pool)\n  distal segments        up to 16 per cell, each with up to 20–32 synapses\n  segment threshold      θ ≈ 8–13 active synapses (must be < k, the number of\n                         winner cells active at each step)\nInhibition               1 fast inhibitory pool, ~20–25% of the E cell count,\n                         or an explicit k-WTA operator as the first version\nLocation layer (\"L6\")    4–10 grid-cell modules, each e.g. 10×10 cells, one bump\n                         active per module (only needed from roadmap stage 6)\nObject layer (\"L2/3\")    1024–4096 cells, ~40 active (stable while sensing one object)\nLateral (voting) links   object layer ↔ object layer of other columns\nTime step                dt = 0.1 ms (Brian2/NEST, biophysical), 1 ms (event/vector sims)\nSensation length         one input every 10–50 ms of simulated time (one \"gamma\"-ish cycle)"
+    },
+    {
+      "type": "prose",
+      "text": "Rough cell count: 256 minicolumns × 8 cells = 2,048 feature-layer cells, plus ~500 inhibitory cells and ~1,000–4,000 object-layer cells — a few thousand neurons and a few hundred thousand synapses per column. For comparison, the network in Hawkins, Ahmad & Cui (2017) used an input layer of 150 minicolumns × 16 cells and an output layer of 4,096 cells with about 40 active; Numenta's temporal memory defaults are 2,048 minicolumns × 32 cells with 40 active minicolumns (≈2%)."
+    },
+    {
+      "type": "prose",
+      "text": "Two consistency rules matter more than the exact numbers. First, the distal segment threshold θ must be smaller than the number of presynaptic cells that are active at each step (with 10 active minicolumns and one winner cell each, a segment can never see more than 10 active synapses). Second, keep activity sparse but not tiny: with k below roughly 10 active units the SDR capacity and noise robustness formulas of Ahmad & Hawkins (2015, 2016) stop being reassuring."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How the pieces of this section fit together"
+    },
+    {
+      "type": "prose",
+      "text": "A typical loop is: choose a simulator for the stage you are on (Brian2 or NEST to validate dynamics; a vectorised or PyTorch implementation to iterate quickly on learning; Lava, SpiNNaker or an FPGA once the algorithm is fixed), choose an encoder that matches what the next layer expects, add one mechanism, run the evaluation checklist, then move to the next stage of the roadmap. When something breaks, check the pitfalls page before changing three parameters at once."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key takeaways"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Build in stages and validate each stage against something you can compute or look up. Never debug the full column first.",
+        "Match encoder to learning rule: Poisson rates for STDP/Diehl & Cook-style layers, sparse overlapping SDRs for HTM-style layers.",
+        "Pick tools by stage: equation-level simulators for dynamics, vectorised/GPU code for fast iteration on learning, neuromorphic hardware only once the algorithm is stable and its constraints are known.",
+        "Report sanity metrics (rates, irregularity, balance) alongside task metrics; an MNIST number alone does not show you have a column.",
+        "Start with a minimum viable column of a few hundred minicolumns and a few thousand neurons; scale only after the stage checks pass."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "If you only have an afternoon: build stage 1 of the roadmap (a single LIF neuron whose firing rate matches the analytic f–I curve) in the simulator you plan to use, then read the pitfalls page. Most later bugs are versions of problems you can already see at that scale."
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Hawkins, J., Ahmad, S. & Cui, Y. (2017). A theory of how columns in the neocortex enable learning the structure of the world. Frontiers in Neural Circuits.; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits.; Cui, Y., Ahmad, S. & Hawkins, J. (2016). Continuous online sequence learning with an unsupervised neural network model. Neural Computation.; Ahmad, S. & Hawkins, J. (2015). Properties of sparse distributed representations and their application to hierarchical temporal memory. arXiv preprint.; Ahmad, S. & Hawkins, J. (2016). How do neurons operate on sparse distributed representations? A mathematical theory of sparsity, neurons and active dendrites. arXiv preprint.; Buxhoeveden, D. P. & Casanova, M. F. (2002). The minicolumn hypothesis in neuroscience. Brain.; Lewis, M., Purdy, S., Ahmad, S. & Hawkins, J. (2019). Locations in the neocortex: a theory of sensorimotor object recognition using cortical grid cells. Frontiers in Neural Circuits.; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience."
+    }
+  ]
+}

@@ -1,0 +1,181 @@
+{
+  "title": "Temporal Memory",
+  "intro": "Temporal memory (TM) is HTM's sequence memory. It takes the active minicolumns produced by the spatial pooler and chooses which cells inside them fire, so that the same input is represented differently in different temporal contexts. Distal segments learn which cells tend to precede which, and the resulting predictive states let the layer anticipate the next input — including in high-order sequences where the next item depends on more than the current one.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intuition: same columns, different cells"
+    },
+    {
+      "type": "prose",
+      "text": "Take the sequences A-B-C-D and X-B-C-Y. The input 'C' always activates the same minicolumns, but the right prediction after C depends on whether the sequence started with A or X. A first-order model (one cell per minicolumn) cannot tell; it can only say 'after C comes D or Y'. Temporal memory solves this by giving each minicolumn several cells. 'C after A-B' and 'C after X-B' activate the same minicolumns but different cells within them, and those different cells can then grow distal segments that predict D and Y respectively."
+    },
+    {
+      "type": "prose",
+      "text": "How does the layer choose which cell? When an input arrives that was predicted, only the cells that were depolarised (predictive) fire, and they carry the context forward. When an input arrives that was not predicted, every cell in the active minicolumns fires — the minicolumn bursts — which says 'this is C, but I don't know which C'. Bursting both flags surprise and provides a broad presynaptic pattern from which new segments can learn. After a few repetitions, bursting gives way to sparse, context-specific activity."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "States and data structures"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Per cell: lists of distal segments; per segment: a list of synapses (presynaptic cell index, permanence).",
+        "At each step t: activeColumns (from the SP), activeCells, winnerCells (one learning cell per active column), activeSegments (connected-synapse overlap with activeCells ≥ activationThreshold), matchingSegments (potential-synapse overlap ≥ minThreshold), and the predictive cells implied by activeSegments.",
+        "Typical NuPIC defaults (hedged; check your release): 2048 columns, 32 cells per column, activationThreshold 13, minThreshold 10, maxNewSynapseCount 20, initialPermanence 0.21, connectedPermanence 0.5, permanenceIncrement 0.1, permanenceDecrement 0.1, predictedSegmentDecrement 0 (or a small value such as 0.001–0.01 when punishment is used), up to 255 segments per cell and 255 synapses per segment."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The algorithm"
+    },
+    {
+      "type": "prose",
+      "text": "This follows the temporal memory pseudocode in Numenta's BAMI book and the description in Cui, Ahmad & Hawkins (2016), simplified for readability. Everything at step t uses the previous step's active cells, winner cells and segment states."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "def tm_step(active_columns, learn=True):\n    prev_active, prev_winners = active_cells, winner_cells\n    active_cells, winner_cells = set(), set()\n\n    # ---- Phase 1: activate cells in each active column ----\n    for col in active_columns:\n        segs = [s for s in active_segments if column_of(s.cell) == col]\n        if segs:                                   # column was predicted\n            for s in segs:\n                active_cells.add(s.cell); winner_cells.add(s.cell)\n                if learn:\n                    reinforce(s, prev_active)      # +inc to active presyn, -dec to others\n                    grow_synapses(s, prev_winners, MAX_NEW - n_active_potential(s))\n        else:                                      # unexpected input: BURST\n            active_cells |= cells_in(col)\n            best = best_matching_segment(col)      # most potential synapses to prev_active\n            if best is not None:\n                winner = best.cell\n            else:\n                winner = least_used_cell(col)      # fewest segments, ties random\n            winner_cells.add(winner)\n            if learn and prev_winners:\n                if best is None:\n                    best = winner.create_segment()\n                reinforce(best, prev_active)\n                grow_synapses(best, prev_winners, MAX_NEW - n_active_potential(best))\n\n    # ---- Punish wrong predictions ----\n    if learn and PREDICTED_SEGMENT_DECREMENT > 0:\n        for s in matching_segments:\n            if column_of(s.cell) not in active_columns:\n                for syn in s.synapses:\n                    if syn.presyn in prev_active:\n                        syn.perm -= PREDICTED_SEGMENT_DECREMENT\n\n    # ---- Phase 2: compute predictions for the next step ----\n    active_segments, matching_segments = [], []\n    for s in all_segments_with_synapses_to(active_cells):\n        n_conn = count(syn.presyn in active_cells and syn.perm >= CONNECTED)\n        n_pot  = count(syn.presyn in active_cells)\n        if n_conn >= ACTIVATION_THRESHOLD: active_segments.append(s)\n        if n_pot  >= MIN_THRESHOLD:        matching_segments.append(s)\n    predictive_cells = {s.cell for s in active_segments}\n    return active_cells, predictive_cells"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Learning, line by line"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Reinforce: on a segment that correctly predicted (or best matched) the current input, synapses to previously active cells are incremented and all other synapses on the segment are decremented. This is Hebbian (pre before post) learning with a built-in depression term, structurally similar to pair-based STDP with a causal window of one time step.",
+        "Grow: new synapses are added from the segment to a random sample of previous winner cells, up to maxNewSynapseCount active synapses per segment. Sampling winner cells rather than all active cells is what makes the representation context-specific: during a burst, all cells are active but only one per column is a winner.",
+        "Create segment: if no segment matches at all, the least-used cell in the bursting column gets a new segment. This is how a new context is allocated.",
+        "Punish: segments that predicted a column that did not become active are weakened by predictedSegmentDecrement. Many configurations set this to zero or very small, because aggressive punishment destroys legitimate alternative predictions in branching sequences.",
+        "New synapses start at initialPermanence. If it is below connectedPermanence (as in the NuPIC default 0.21 vs 0.5), a transition must be seen several times before it predicts, which filters noise; if it is just above (as in the simulator below, 0.51 vs 0.5), one exposure is enough — fast learning, but noise gets learned too."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: learning A-B-C-D versus X-B-C-Y"
+    },
+    {
+      "type": "prose",
+      "text": "The simulator below runs a small temporal memory: each symbol activates its own group of minicolumns (no spatial pooler), and cells, segments and permanences follow the algorithm above. The grid shows minicolumns × cells; the legend marks active, predictive, bursting and correctly predicted cells. The readout shows the current symbol, the symbols the layer currently predicts, and the anomaly score (the fraction of active columns that were not predicted)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "temporal-memory",
+        "title": "Temporal memory: learning A-B-C-D vs X-B-C-Y",
+        "params": [
+          {
+            "key": "sequences",
+            "label": "Training sequences",
+            "control": "select",
+            "options": [
+              "ABCD",
+              "ABCD + XBCY",
+              "ABCDE + ABFGE"
+            ],
+            "default": "ABCD + XBCY"
+          },
+          {
+            "key": "cellsPerColumn",
+            "label": "Cells per minicolumn",
+            "control": "range",
+            "min": 1,
+            "max": 8,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "activationThreshold",
+            "label": "Segment activation threshold",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 3
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 9999,
+            "step": 1,
+            "default": 11
+          }
+        ],
+        "config": {
+          "columnsPerSymbol": 4,
+          "maxNewSynapses": 6,
+          "permanenceIncrement": 0.1,
+          "permanenceDecrement": 0.05,
+          "connectedPermanence": 0.5,
+          "initialPermanence": 0.51
+        }
+      }
+    },
+    {
+      "type": "list",
+      "items": [
+        "Press Step a few times from a fresh start: every column bursts (all cells active) and the anomaly score is 1, because nothing has been learned yet.",
+        "Press Train ×10 once or twice, then Step through the sequences. Bursting turns into sparse activity (one cell per column), predicted cells are marked as correctly predicted, and the anomaly score falls towards 0. The first element of each sequence (A or X) may stay partly unpredicted, because which sequence comes next is not determined by what came before it.",
+        "Watch the step after C: following A-B-C the layer should predict only D; following X-B-C only Y. The context of A or X has been carried through B and C by which cells are active.",
+        "Reset, set Cells per minicolumn to 1 and train again. Now B and C have only one representation each, so after C the layer predicts both D and Y every time. Note that the anomaly score can still fall to zero, because it only counts active columns that were not predicted — extra wrong predictions are not penalised. The failure shows in the predicted-symbols readout: it never commits to one answer. This is the first-order limit.",
+        "Try 2 cells per minicolumn: two contexts per symbol is enough for this pair of sequences. Then raise the Segment activation threshold. Each symbol uses 4 minicolumns, so a segment can only connect to about 4 previous winner cells; with a threshold above that, segments never become active, nothing is predicted and every step bursts.",
+        "Use Play to watch learning unfold continuously, and change the Random seed to see that which cells end up representing each context is arbitrary, while the behaviour is not."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Capacity and high-order memory"
+    },
+    {
+      "type": "prose",
+      "text": "With N columns, M cells per column and w active columns, the same input can be represented in M^w different contexts. For the Numenta defaults (M = 32, w = 40) that is 32^40 = 2^200, so running out of context codes is not the limit in practice (Hawkins & Ahmad 2016). The practical limits are the number of segments per cell and synapses per segment: each learned transition uses one segment on each of about w cells, so the number of transitions a layer can store scales with N × M × (segments per cell). Hawkins & Ahmad (2016) and Cui, Ahmad & Hawkins (2016) show that such networks learn large numbers of high-order sequences and that performance degrades gracefully as segment limits are approached or cells are removed."
+    },
+    {
+      "type": "prose",
+      "text": "Because context is carried from step to step by which cells are active, temporal memory represents arbitrarily long context in principle; in practice, learning a dependency of length L requires seeing the sequence enough times for the context-specific cells to be allocated step by step along it. Long shared subsequences (A-B-C-…-Z versus X-B-C-…-Y) take longer to disambiguate, and the more often a shared subsequence is seen in different contexts, the more cells it consumes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spiking implementation notes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "One HTM time step is one feedforward input window (tens of milliseconds). The distal plateau triggered by step t−1 activity must last into the window of step t; NMDA-like plateaus of 50–200 ms are in the right range for inputs presented every 20–100 ms.",
+        "Predicted cells must fire first and the minicolumn's inhibitory cells must silence the others within a few milliseconds; if not, every column bursts all the time. Build and test one minicolumn of excitatory cells plus a fast inhibitory interneuron before scaling up (see 'The HTM Neuron').",
+        "Winner selection during a burst needs a tie-breaker: in a spiking model, small random differences in excitability or a slightly stronger segment can make one cell fire first. Bouhadjar et al. (2022) build a spiking temporal-memory model in NEST along these lines and discuss the required parameter regime.",
+        "Segment growth is structural plasticity. On FPGAs or neuromorphic chips with fixed connectivity, pre-allocate a pool of potential synapses per segment with a permanence counter (e.g. 8-bit integer) and treat 'connected' as a threshold on the counter."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Frequent bursting after long training usually means either the SP representation is drifting (see 'Spatial Pooler') or segments are being punished too hard.",
+        "Too-low activation thresholds create many spurious predictions; too-high thresholds mean nothing is ever predicted. A threshold of roughly half to three quarters of maxNewSynapseCount is a common starting point.",
+        "Unbounded segment growth on noisy streams wastes memory: cap segments per cell and synapses per segment, and remove the least-recently-used ones when full.",
+        "Repeating inputs (A-A-A-A) and sequences with no reset between them are handled differently by different implementations; some use an explicit 'reset' at sequence boundaries."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits.; Cui, Y., Ahmad, S. & Hawkins, J. (2016). Continuous online sequence learning with an unsupervised neural network model. Neural Computation.; Hawkins, J. et al. (2016). Biological and Machine Intelligence (BAMI), release 0.4. Numenta, online book.; Ahmad, S. & Hawkins, J. (2015). Properties of sparse distributed representations and their application to hierarchical temporal memory. arXiv preprint.; Bouhadjar, Y., Wouters, D. J., Diesmann, M. & Tetzlaff, T. (2022). Sequence learning, prediction, and replay in networks of spiking neurons. PLOS Computational Biology.; Hawkins, J., Ahmad, S. & Dubinsky, D. (2011). Hierarchical temporal memory including HTM cortical learning algorithms, version 0.2.1. Numenta white paper."
+    }
+  ]
+}

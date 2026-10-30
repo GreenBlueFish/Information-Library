@@ -1,0 +1,183 @@
+{
+  "title": "Sensorimotor Object Recognition",
+  "intro": "How a single cortical column could recognise an object by moving a sensor over it: each sensation is a feature at a known location, the column keeps a union of candidate objects and locations, and every new sensation narrows that union. Includes a back-of-the-envelope estimate of how many sensations are needed, an interactive demo, and guidance for a spiking implementation.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The intuition: a game of twenty questions"
+    },
+    {
+      "type": "prose",
+      "text": "Reach into a bag without looking and touch something. 'Smooth and curved' — could be a mug, a bowl, a ball or a can. Move your finger a few centimetres up: 'a sharp circular edge'. The ball drops out; mug, bowl and can remain. Move sideways: 'a loop sticking out'. Only the mug is left. Each touch is a question, each answer eliminates candidates, and crucially each answer is interpreted at a location you know from your own movement."
+    },
+    {
+      "type": "prose",
+      "text": "This is the recognition algorithm of the Thousand Brains Theory in one paragraph. A single cortical column keeps a set of hypotheses — all (object, location-on-object) pairs consistent with what it has sensed so far — and every movement plus sensation narrows that set. Recognition is complete when one object remains. The pages 'Reference Frames' and 'Grid and Displacement Cells' explain where the locations come from; this page explains the narrowing."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The two-layer column model"
+    },
+    {
+      "type": "prose",
+      "text": "Hawkins, Ahmad & Cui (2017) proposed a column with two layers of cells, extended by Lewis et al. (2019) with an explicit grid-cell location layer. In the proposed laminar mapping (a theory, not an established fact) the layers are:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Sensory input layer (proposed L4). Organised in minicolumns exactly like HTM temporal memory (see 'Temporal Memory' in section 4). The sensed feature selects which minicolumns are active via proximal input. Distal basal segments receive the location signal, so the location selects which cell within each active minicolumn fires. If the location predicts the feature, only the predicted cells fire (a sparse, location-specific code of 'feature f at location ℓ'); if nothing was predicted, all cells in the active minicolumns fire (bursting), meaning 'feature f at any location where I have seen it'.",
+        "Location layer (proposed L6a). Grid-cell-like modules that path-integrate motor commands. Feedback from the sensory layer activates the locations at which the current feature was learned.",
+        "Output or object layer (proposed L2/3). Cells whose activity represents the object identity — an SDR per object that stays stable while the sensor moves. Receives feedforward input from the input layer, and lateral input from other columns for voting (see 'Voting Between Columns')."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Learning is simple and local. When a new object is learned, a random sparse set of output-layer cells is chosen as its representation and held active. At each sensation, the input-layer cells active for the feature grow distal segments onto the active location cells (one-shot learning, as in temporal memory), and the output-layer object cells strengthen feedforward synapses from the currently active input-layer cells. After touching each location once, the column knows the object."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Inference as narrowing a union of hypotheses"
+    },
+    {
+      "type": "prose",
+      "text": "Recognition runs the same circuit without the teacher. The first sensation is ambiguous: the output layer activates the union of all objects containing the feature, and in the Lewis et al. (2019) version the location layer activates the union of all locations at which the feature occurs. After a movement, every hypothesised location is shifted by the same displacement, the shifted union predicts a set of features, and the next sensation keeps only the consistent hypotheses. Because sparse codes can be superimposed with few false matches (see 'Sparse Distributed Representations' in section 3), the network can carry many hypotheses in parallel in one population."
+    },
+    {
+      "type": "prose",
+      "text": "A back-of-the-envelope model tells you how many sensations to expect. Assume N stored objects, each location carrying one of F equally likely features, independently across objects."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Known location (oracle, as in Hawkins, Ahmad & Cui 2017):\n  each sensation keeps a wrong object with probability ≈ 1/F\n  E[# wrong candidates after k sensations] ≈ (N − 1) · F^(−k)\n  sensations needed  k* ≈ log(N − 1) / log F\n  e.g. N = 1000, F = 10  →  k* ≈ 3\n\nUnknown starting location (as in Lewis et al. 2019), L locations per object:\n  first sensation: ≈ N·L/F candidate (object, location) pairs\n  E[# wrong pairs after k sensations] ≈ N·L · F^(−k)\n  k* ≈ log(N·L) / log F      e.g. N = 1000, L = 100, F = 10  →  k* ≈ 5\n\nReal objects share features (many locations on a mug and a can look alike),\nso effective F is smaller and k* larger than these idealised estimates."
+    },
+    {
+      "type": "prose",
+      "text": "Those numbers are a guide, not results from the papers. The qualitative findings of Hawkins, Ahmad & Cui (2017) and Lewis et al. (2019) are that a single column does recognise objects after several sensations; that the number of sensations grows as objects share more features; that capacity (how many objects can be stored before recognition degrades) grows with the number of cells and the sparsity of the codes; and that recognition is robust to moderate noise because SDR matching uses thresholds."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: one column needs several sensations"
+    },
+    {
+      "type": "prose",
+      "text": "The widget below is preset to a single column. Each column senses one location per step, knows that location exactly (path integration is assumed perfect), and counts for every stored object how many sensations contradicted it; its candidates are the objects with the fewest mismatches. The objects are deliberately ambiguous: at each location only two feature values are in use, so any single feature-at-location is shared by several objects."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "column-voting",
+        "title": "One column recognising an object by successive sensations",
+        "params": [
+          {
+            "key": "columns",
+            "label": "Number of columns",
+            "control": "range",
+            "min": 1,
+            "max": 9,
+            "step": 1,
+            "default": 1
+          },
+          {
+            "key": "voting",
+            "label": "Lateral voting",
+            "control": "select",
+            "options": [
+              "on",
+              "off"
+            ],
+            "default": "on"
+          },
+          {
+            "key": "object",
+            "label": "Object presented",
+            "control": "select",
+            "options": [
+              "mug",
+              "bowl",
+              "can",
+              "pen",
+              "ball",
+              "box"
+            ],
+            "default": "mug"
+          },
+          {
+            "key": "noise",
+            "label": "Sensing noise (prob.)",
+            "control": "range",
+            "min": 0,
+            "max": 0.5,
+            "step": 0.05,
+            "default": 0
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 9999,
+            "step": 1,
+            "default": 5
+          }
+        ],
+        "config": {
+          "objects": 6,
+          "locations": 9,
+          "features": 5
+        }
+      }
+    },
+    {
+      "type": "list",
+      "items": [
+        "Press Step a few times with 1 column and watch the candidate bars and the check and cross marks: after the first sensation several objects remain candidates; each step crosses some out. The readout reports the step at which recognition happened.",
+        "Press Reset and then Run to recognition for each object in turn (mug, bowl, can, pen, ball, box). Objects that share many features with others take more sensations.",
+        "Change the random seed. This regenerates both the object set and the order in which locations are sensed; the number of steps varies even for the same object, because some locations are more informative than others.",
+        "Raise sensing noise to 0.2–0.3. Recognition now takes longer: a corrupted sensation can contradict the true object, so the column tolerates one mismatch instead of eliminating strictly, and needs more evidence before a single candidate stands out.",
+        "Increase the number of columns to 3 and then 9 with voting on, and compare with voting off. The second chart shows mean sensations-to-recognition against the number of columns for both cases; the drop toward one sensation with voting on is the subject of the next page, 'Voting Between Columns'."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building one in spiking neurons"
+    },
+    {
+      "type": "prose",
+      "text": "The sensory input layer is an HTM temporal memory with the distal context swapped from 'previous cell activity' to 'current location SDR', so the guidance in section 4 transfers directly. What changes in a spiking implementation:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Prediction as a timing advantage. Model each basal segment as a compartment that produces an NMDA-like plateau (tens of ms) when enough of its synapses receive location spikes within a short window (see 'Dendrites and Active Dendrites' in section 2). The plateau depolarises the soma a few mV, so predicted cells reach threshold a few ms earlier when the feature input arrives. Fast PV-like inhibition triggered by the first spikes in a minicolumn then silences unpredicted neighbours. With no prediction, all cells fire together before inhibition arrives — a spiking burst.",
+        "Segment sizes. HTM implementations typically sample on the order of 20–40 location cells per segment with an activation threshold around 10–15 active synapses; with a location SDR of a few percent of a few thousand cells this gives very low false-match rates.",
+        "One-shot learning. Use a permanence-style rule (grow synapses from active location cells onto the segment of the winning cell, increment active, decrement inactive), or a dendrite-gated STDP whose learning rate is high enough to bind a feature to a location in one or a few presentations. Classical pair STDP at low rates will need many repetitions (see 'Spike-Timing-Dependent Plasticity' in section 3).",
+        "A stable object layer. Output cells must stay active across sensations while the sensor moves. Options: recurrent excitation within the object SDR plus k-WTA inhibition (section 3, 'Inhibition and k-Winners-Take-All'), slow NMDA-dominated synapses, or a simple per-sensation evidence integrator. The cells with the most accumulated feedforward plus lateral support should win each step.",
+        "A sensorimotor clock. Treat one movement plus sensation as one cycle (for example 50–100 ms of simulated time) and reset or decay transient activity between cycles, keeping only location and object state."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Union overload. The first sensation of a common feature can activate a huge union of locations; past a few percent density, SDR false matches climb steeply. Cap the union, or start from a less ambiguous feature.",
+        "Movement policy matters. Random moves are inefficient; moving to the location that best discriminates the remaining hypotheses can halve the number of sensations. Monty implements such hypothesis-testing policies.",
+        "Orientation and scale. The basic models assume the object is in a learned pose. Unknown rotation multiplies the hypothesis space; budget for it from the start if your sensors see objects in arbitrary poses.",
+        "Critique: humans recognising an unseen object by touch with one finger typically need several seconds of exploration, whereas visual recognition is fast; the theory explains the difference by voting across many columns, but the sequential, single-column regime is where most published evidence for the model (in simulation) lies."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Hawkins, J., Ahmad, S. & Cui, Y. (2017). A theory of how columns in the neocortex enable learning the structure of the world. Frontiers in Neural Circuits; Lewis, M., Purdy, S., Ahmad, S. & Hawkins, J. (2019). Locations in the neocortex: a theory of sensorimotor object recognition using cortical grid cells. Frontiers in Neural Circuits; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits; Cui, Y., Ahmad, S. & Hawkins, J. (2016). Continuous online sequence learning with an unsupervised neural network model. Neural Computation; Ahmad, S. & Hawkins, J. (2016). How do neurons operate on sparse distributed representations? A mathematical theory of sparsity, neurons and active dendrites. arXiv; Hawkins, J. (2021). A Thousand Brains: A New Theory of Intelligence. Basic Books; Schiller, J., Major, G., Koester, H. J. & Schiller, Y. (2000). NMDA spikes in basal dendrites of cortical pyramidal neurons. Nature."
+    }
+  ]
+}

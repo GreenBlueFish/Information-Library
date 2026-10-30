@@ -81,6 +81,14 @@ import { setMountSink } from "./widgets/registry.js";
 // (design.md — Example Usage / Component 5). Keep this import even though no
 // binding is used.
 import "./widgets/types/parameter-plot.js";
+// Simulation widget types for the computational-cortical-columns topic; each
+// self-registers on import (PROJECT_GUIDE §7.3).
+import "./widgets/types/lif-neuron.js";
+import "./widgets/types/stdp-explorer.js";
+import "./widgets/types/spike-raster.js";
+import "./widgets/types/sdr-overlap.js";
+import "./widgets/types/temporal-memory.js";
+import "./widgets/types/column-voting.js";
 
 /**
  * @typedef {import("./router.js").TopicNode} TopicNode

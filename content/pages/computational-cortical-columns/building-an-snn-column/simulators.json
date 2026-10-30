@@ -1,0 +1,139 @@
+{
+  "title": "Simulators and Frameworks",
+  "intro": "Brian2, NEST, Nengo, snnTorch, Norse, Lava, GeNN, PyNN, BindsNET and friends: what modelling style each supports, where each breaks down, and which one to reach for at each stage of building a column — with working Brian2, NEST, snnTorch and plain NumPy code.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Picking a simulator is picking a modelling style"
+    },
+    {
+      "type": "prose",
+      "text": "An analogy: Brian2 is a whiteboard (write any equation, see it run), NEST is a factory floor (a fixed catalogue of well-tested parts that scale to huge networks), snnTorch and Norse are a deep-learning workshop (everything is a tensor and gradients come for free), Nengo is a compiler (you state the function you want, it solves for weights) and Lava is the toolchain for a specific chip family (Loihi). None of them is best at everything, and a cortical column project usually uses two: one to get the dynamics right, one to iterate fast or deploy."
+    },
+    {
+      "type": "prose",
+      "text": "Two simulation strategies sit under all of these. Clock-driven simulation advances every neuron by a fixed time step dt (typically 0.1 ms for conductance-based models, 0.5–1 ms for simple LIF networks); it is simple, vectorises well on GPUs, and is what Brian2, snnTorch, Norse, GeNN and most homemade NumPy codes do. Event-driven simulation only updates a neuron when a spike arrives, computing the state analytically in between; it is exact for models with closed-form solutions and efficient when activity is sparse, and is the natural model for neuromorphic chips and AER routing. NEST is hybrid: it uses a global grid but integrates many models exactly between grid points and supports precise spike times for some models. Synaptic delays also matter: NEST and SpiNNaker require delays of at least one time step, which sets the minimum communication interval between processes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The tools, one by one"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Brian2 (Stimberg, Brette & Goodman 2019). Paradigm: equation-based; you write differential equations, thresholds, resets and synaptic update rules as strings with physical units, and Brian generates code (Cython, or C++ in standalone mode; GPU via the Brian2GeNN and Brian2CUDA add-ons). Strengths: any neuron or plasticity rule in a few lines, automatic unit checking, ideal for new mechanisms such as adaptive thresholds, dendritic plateau variables or custom STDP. Limits: single machine; runtime mode is slow for large networks; no gradients. Use it for: roadmap stages 1–5, and as your ground truth when a faster implementation disagrees.",
+        "NEST (Gewaltig & Diesmann 2007). Paradigm: large-scale point-neuron simulation with a C++ kernel, a Python front end (PyNEST), and MPI plus multithreading. Strengths: well-tested model catalogue (iaf_psc_alpha, iaf_cond_exp, aeif_cond_alpha, Izhikevich, many STDP variants), exact integration, scales from laptops to supercomputers; the reference implementation of the Potjans–Diesmann microcircuit runs in NEST. Limits: new neuron models need NESTML (Plotnikov et al. 2016) or C++; point neurons are the main focus; no gradients. Use it for: biologically scaled column and microcircuit simulations (tens of thousands of neurons and more), and replication of published networks.",
+        "Nengo (Bekolay et al. 2014). Paradigm: functional modelling with the Neural Engineering Framework (Eliasmith & Anderson 2003); you declare ensembles that represent vectors and connections that compute functions, Nengo solves for decoders. Strengths: fastest route from 'I want a population to represent location and integrate velocity' to a working spiking network; backends for Loihi (NengoLoihi), GPU training (NengoDL), SpiNNaker and FPGAs. Limits: representations are dense population codes rather than SDRs, and learning rules (PES, BCM, Oja, Voja) are mostly rate-based. Use it for: grid-cell path integration, motor loops and other continuous-variable parts of a sensorimotor column.",
+        "snnTorch (Eshraghian et al. 2023). Paradigm: gradient-trained SNNs in PyTorch; neurons (Leaky, Synaptic, Alpha, recurrent variants) are modules called inside a time loop, trained with surrogate gradients and backpropagation through time (Neftci, Mostafa & Zenke 2019). Strengths: GPU, autograd, excellent tutorials, easy comparison with ANNs. Limits: discrete time steps with simple Euler-like updates; local plasticity rules (STDP, homeostasis) must be written by hand. Use it for: training readouts or whole columns end-to-end, or as a fast batched simulator for vector-based experiments.",
+        "Norse (Pehle & Pedersen 2021). Paradigm: PyTorch library of biologically inspired primitives (LIF, AdEx, Izhikevich, adaptive LIF and others) usable as functional or module layers. Strengths: a wider set of neuron models than snnTorch with the same PyTorch tooling. Limits: smaller community; learning is still mainly gradient-based. Use it for: gradient experiments that need adaptation or richer neuron dynamics.",
+        "Lava (Intel, open source, 2021–). Paradigm: neuromorphic programming framework built around asynchronous processes that communicate through ports; the same process can run on a CPU simulation backend or on Loihi 2 (hardware access via the Intel Neuromorphic Research Community). Lava-DL adds deep SNN training (SLAYER). Strengths: the official path to Loihi 2, supports fixed-point, bit-accurate models. Limits: hardware is not publicly purchasable; the ecosystem is younger than Brian2 or NEST. Use it for: the final port of a column to Loihi, and for discovering hardware constraints early via the bit-accurate CPU models.",
+        "GeNN (Yavuz, Turner & Nowotny 2016). Paradigm: code generation for NVIDIA GPUs (and CPU), used directly from C++/PyGeNN or as the backend of Brian2GeNN. Strengths: very fast simulation of large spiking networks with plasticity on a single GPU. Limits: model definition is lower level than Brian2. Use it for: scaling a Brian2-validated column to many columns.",
+        "PyNN (Davison et al. 2009). Paradigm: simulator-independent Python API; the same script runs on NEST, NEURON or Brian, and on SpiNNaker through sPyNNaker. Strengths: portability, especially to SpiNNaker. Limits: lowest-common-denominator model set; custom plasticity is hard. Use it for: networks you intend to run on SpiNNaker.",
+        "BindsNET (Hazan et al. 2018). Paradigm: PyTorch-based library aimed at machine learning with biologically plausible learning (STDP variants, reward-modulated rules); it ships a ready-made Diehl & Cook (2015) network. Strengths: quick STDP-on-GPU experiments. Limits: less maintained than snnTorch; simple neuron models. Use it for: reproducing STDP-MNIST-style layers quickly.",
+        "SpikingJelly (Fang et al. 2023). Paradigm: PyTorch deep SNN framework with CUDA-accelerated neuron kernels and ANN-to-SNN conversion. Use it for: deep, gradient-trained spiking baselines. Not focused on local plasticity.",
+        "NEURON (Hines & Carnevale 1997). Paradigm: multi-compartment, biophysically detailed neurons. Use it if you need real dendritic morphology and ion channels, for example to check whether a reduced 'segment as coincidence detector' abstraction is reasonable; it is the engine behind the Blue Brain reconstructions (see section 6).",
+        "Non-spiking reference implementations: htm.core (the community-maintained continuation of Numenta's NuPIC core) for the spatial pooler and temporal memory, and Monty from the Thousand Brains Project for sensorimotor learning modules and voting. Use them as reference behaviour to compare your spiking column against."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A practical decision rule"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Testing a new neuron, synapse or plasticity mechanism: Brian2.",
+        "Biologically scaled microcircuit with standard models: NEST (or PyNN → NEST).",
+        "Training anything with gradients, or batched vector simulation on a GPU: snnTorch, Norse or a hand-written PyTorch/JAX loop.",
+        "Continuous variables, path integration, control: Nengo.",
+        "Deployment: Lava for Loihi 2, PyNN/sPyNNaker for SpiNNaker, hardware-specific tools for BrainScaleS-2, and your own HLS/RTL or a fixed-point NumPy model for FPGAs (see 'Neuromorphic Hardware')."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Brian2: E/I population with STDP input synapses"
+    },
+    {
+      "type": "prose",
+      "text": "This example builds the core of a Diehl & Cook-style layer: Poisson inputs onto excitatory LIF cells through conductance-based synapses with pair-based trace STDP, an inhibitory pool that provides soft winner-take-all competition, and an adaptive threshold θ that rises with each spike and decays over a second (a simple form of homeostasis). The traces apre and apost are declared event-driven, so Brian updates them analytically only when a spike happens. Check the printed rates: E cells should fire a few Hz to a few tens of Hz; if they sit at hundreds of Hz or zero, see 'Common Pitfalls'."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Brian2: input layer -> E/I population with trace-based STDP and an adaptive threshold\nfrom brian2 import *\n\nstart_scope()\nseed(1234)                          # seeds connectivity, initial values and Poisson input\ndefaultclock.dt = 0.1*ms\n\nN_in, N_E, N_I = 400, 400, 100\ntau_m, tau_e, tau_i = 20*ms, 5*ms, 10*ms\nv_rest, v_reset, v_th0 = -65*mV, -65*mV, -52*mV\nE_exc, E_inh = 0*mV, -80*mV\ntau_theta, d_theta = 1*second, 0.1*mV   # homeostatic threshold (Diehl & Cook-style)\n\neqs = \"\"\"\ndv/dt = (v_rest - v + g_e*(E_exc - v) + g_i*(E_inh - v)) / tau_m : volt (unless refractory)\ndg_e/dt = -g_e / tau_e : 1        # conductances in units of the leak conductance\ndg_i/dt = -g_i / tau_i : 1\ndtheta/dt = -theta / tau_theta : volt\n\"\"\"\nE = NeuronGroup(N_E, eqs, threshold='v > v_th0 + theta',\n                reset='v = v_reset; theta += d_theta',\n                refractory=2*ms, method='euler')\nI = NeuronGroup(N_I, eqs, threshold='v > v_th0', reset='v = v_reset',\n                refractory=1*ms, method='euler')\nE.v = 'v_rest + rand()*10*mV'\nI.v = 'v_rest + rand()*10*mV'\n\ninp = PoissonGroup(N_in, rates=20*Hz)   # replace with your encoder's rates\n\ntaupre = taupost = 20*ms\nwmax = 0.1\nApre = 0.01 * wmax\nApost = -1.05 * Apre                     # slight depression bias keeps weights bounded\nS_in = Synapses(inp, E,\n    model=\"\"\"w : 1\n             dapre/dt  = -apre / taupre   : 1 (event-driven)\n             dapost/dt = -apost / taupost : 1 (event-driven)\"\"\",\n    on_pre=\"\"\"g_e_post += w\n              apre += Apre\n              w = clip(w + apost, 0, wmax)\"\"\",\n    on_post=\"\"\"apost += Apost\n               w = clip(w + apre, 0, wmax)\"\"\")\nS_in.connect(p=0.3)\nS_in.w = 'rand() * 0.5 * wmax'\n\nS_EI = Synapses(E, I, on_pre='g_e_post += 0.05')   # E drives the inhibitory pool\nS_EI.connect(p=0.2)\nS_IE = Synapses(I, E, on_pre='g_i_post += 0.2')    # pool inhibits E: soft WTA\nS_IE.connect(p=0.5)\n\nspk_E, spk_I = SpikeMonitor(E), SpikeMonitor(I)\nrun(2*second, report='text')\nprint('E rate %.2f Hz, I rate %.2f Hz' % (spk_E.num_spikes / (N_E*2.0),\n                                          spk_I.num_spikes / (N_I*2.0)))\nprint('mean w / wmax = %.2f' % (mean(S_in.w) / wmax))"
+    },
+    {
+      "type": "prose",
+      "text": "Points worth noticing. All conductances are expressed relative to the leak, so g_e = 1 means 'as strong as the leak'. The clip in the STDP updates bounds weights to [0, wmax] — this is the additive rule whose weights drift towards the bounds (see 'Spike-Timing-Dependent Plasticity' in section 3). The flag (unless refractory) clamps only v, so θ keeps decaying during refractoriness. seed() makes the run reproducible on the same Brian version and code-generation target."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "NEST: Brunel-style network with plastic input"
+    },
+    {
+      "type": "prose",
+      "text": "NEST works with currents in pA, potentials in mV, times in ms and capacitance in pF; a negative weight makes a synapse inhibitory. The example uses the classic sparse random E/I structure of Brunel (2000), with a 4:1 E:I ratio and inhibitory weights five times stronger, which drives the network towards the asynchronous irregular regime. The relay through parrot neurons is the standard NEST idiom because a poisson_generator sends an independent train to each target and cannot drive plastic synapses directly."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# NEST 3.x: Brunel-style E/I population with plastic input synapses\nimport nest\n\nnest.ResetKernel()\nnest.SetKernelStatus({'resolution': 0.1, 'rng_seed': 42, 'local_num_threads': 4})\n\nneuron = {'C_m': 250.0, 'tau_m': 20.0, 'E_L': -65.0, 'V_reset': -65.0, 'V_m': -65.0,\n          'V_th': -50.0, 't_ref': 2.0, 'tau_syn_ex': 0.5, 'tau_syn_in': 0.5,\n          'tau_minus': 20.0}                       # pF, ms, mV; tau_minus is used by STDP\nE = nest.Create('iaf_psc_alpha', 800, params=neuron)\nI = nest.Create('iaf_psc_alpha', 200, params=neuron)\n\n# Background drive: one generator, independent Poisson train for every target\nbg = nest.Create('poisson_generator', params={'rate': 1000.0})      # Hz\nnest.Connect(bg, E + I, syn_spec={'weight': 87.8, 'delay': 1.0})     # pA, ms\n\n# Plastic input: generators cannot feed plastic synapses directly -> relay via parrots\nstim = nest.Create('poisson_generator', params={'rate': 20.0})\nrelay = nest.Create('parrot_neuron', 400)\nnest.Connect(stim, relay)\nnest.Connect(relay, E, {'rule': 'fixed_indegree', 'indegree': 100},\n             {'synapse_model': 'stdp_synapse', 'weight': 40.0, 'Wmax': 120.0,\n              'tau_plus': 20.0, 'lambda': 0.01, 'alpha': 1.05, 'delay': 1.0})\n\n# Recurrent E/I: inhibitory synapses 5x stronger (inhibition-dominated, cf. Brunel 2000)\nnest.Connect(E, E + I, {'rule': 'fixed_indegree', 'indegree': 80},\n             {'weight': 87.8, 'delay': 1.5})\nnest.Connect(I, E + I, {'rule': 'fixed_indegree', 'indegree': 20},\n             {'weight': -5 * 87.8, 'delay': 0.8})\n\nrec = nest.Create('spike_recorder')\nnest.Connect(E, rec)\nnest.Simulate(2000.0)                                                # ms\nprint('E rate: %.2f Hz' % (rec.n_events / (len(E) * 2.0)))"
+    },
+    {
+      "type": "prose",
+      "text": "With tau_syn = 0.5 ms and C_m = 250 pF, a weight of about 88 pA produces a postsynaptic potential of roughly 0.15 mV with tau_m = 10 ms (the value used in Potjans & Diesmann 2014); with tau_m = 20 ms as here it is somewhat larger. Always measure PSP amplitudes in a two-neuron test rather than trusting a number from another model."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "snnTorch: a Leaky neuron loop"
+    },
+    {
+      "type": "prose",
+      "text": "In snnTorch time is explicit: you call the neuron once per step and carry its membrane state forward. beta is the per-step decay factor, beta = exp(−dt/τ), so with dt = 1 ms, beta = 0.9 corresponds to τ ≈ 9.5 ms. The default reset is subtraction of the threshold rather than reset to zero, which matters when comparing with Brian2 or NEST."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# snnTorch: a two-layer Leaky (LIF) network unrolled in time, trained with surrogate gradients\nimport torch, torch.nn as nn\nimport snntorch as snn\nfrom snntorch import spikegen, surrogate\n\nT, B = 25, 128                                   # time steps, batch size\nfc1, fc2 = nn.Linear(784, 256), nn.Linear(256, 10)\nlif1 = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25))\nlif2 = snn.Leaky(beta=0.9, spike_grad=surrogate.fast_sigmoid(slope=25))\nopt = torch.optim.Adam(list(fc1.parameters()) + list(fc2.parameters()), lr=1e-3)\n\nx = torch.rand(B, 784)                           # stand-in for images scaled to [0, 1]\nlabels = torch.randint(0, 10, (B,))\nspk_in = spikegen.rate(x, num_steps=T)           # Bernoulli/Poisson spikes, shape [T, B, 784]\n\nmem1, mem2 = lif1.init_leaky(), lif2.init_leaky()\nout = []\nfor t in range(T):\n    spk1, mem1 = lif1(fc1(spk_in[t]), mem1)      # beta = exp(-dt/tau): 0.9 -> tau ~ 9.5 steps\n    spk2, mem2 = lif2(fc2(spk1), mem2)\n    out.append(spk2)\ncounts = torch.stack(out).sum(0)                 # spike counts per output neuron, [B, 10]\nloss = nn.functional.cross_entropy(counts, labels)\nopt.zero_grad(); loss.backward(); opt.step()    # BPTT through the unrolled loop"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Rolling your own vector-based simulator"
+    },
+    {
+      "type": "prose",
+      "text": "Many column researchers end up writing their own clock-driven simulator because it is the most transparent and fastest to modify. The pattern is always the same: decay state with exact exponentials, add input as a matrix product, threshold, apply a winner selection, reset, update traces, apply a learning rule as an outer product. Keep a slower Brian2 version of the same network and compare spike counts and weight trajectories on a fixed seed whenever you change the fast one."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Plain NumPy, clock-driven: LIF layer + k-WTA + trace STDP, all as vector/matrix ops\nimport numpy as np\nrng = np.random.default_rng(0)\ndt, steps = 1.0, 1000                    # ms\nN_in, N, k = 400, 256, 10                # inputs, cells, winners per step\ntau_m, v_th, v_reset = 20.0, 1.0, 0.0\nA_plus, A_minus, w_max = 0.005, 0.00525, 1.0\ndm, dpre, dpost = np.exp(-dt/tau_m), np.exp(-dt/20.0), np.exp(-dt/20.0)\n\nW = rng.uniform(0, 0.3, (N_in, N))\nv, x_pre, x_post = np.zeros(N), np.zeros(N_in), np.zeros(N)\nfor t in range(steps):\n    s_in = (rng.random(N_in) < 20e-3 * dt).astype(float)     # 20 Hz Poisson input\n    v = v * dm + 0.03 * (s_in @ W)                            # exact decay + delta input\n    s = v >= v_th\n    if s.sum() > k:                                           # k-WTA: keep top-k only\n        s = np.zeros(N, bool); s[np.argpartition(v, -k)[-k:]] = True\n    v[s] = v_reset\n    x_pre = x_pre * dpre + s_in\n    x_post = x_post * dpost + s\n    W += A_plus * np.outer(x_pre, s) - A_minus * np.outer(s_in, x_post)\n    np.clip(W, 0.0, w_max, out=W)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Different reset conventions (reset to v_reset, subtract threshold, refractory clamp) change firing rates by tens of percent. State them explicitly when porting a model between tools.",
+        "Different integration schemes: Brian2 'euler' versus 'exact', NEST exact integration, snnTorch one-step updates. A model tuned at dt = 1 ms in PyTorch can behave differently at dt = 0.1 ms in Brian2; test dt sensitivity (see 'Evaluating a Column').",
+        "Units: Brian2 enforces units, NEST assumes them silently (pA, mV, ms), PyTorch has none. A weight of 87.8 in NEST is 87.8 pA of current amplitude, not a PSP in mV.",
+        "Version drift: NEST 2 and NEST 3 differ (spike_detector became spike_recorder; GetStatus/SetStatus became attribute access), and Brian1 code does not run on Brian2. Pin versions in your environment file.",
+        "Random number streams differ between simulators, so the same seed number never gives the same network in two tools. Compare distributions, not spike trains."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife.; Gewaltig, M.-O. & Diesmann, M. (2007). NEST (NEural Simulation Tool). Scholarpedia.; Plotnikov, D., Rumpe, B., Blundell, I., Ippen, T., Eppler, J. M. & Morrison, A. (2016). NESTML: a modeling language for spiking neurons. Modellierung 2016, Lecture Notes in Informatics.; Bekolay, T., Bergstra, J., Hunsberger, E., DeWolf, T., Stewart, T. C., Rasmussen, D., Choo, X., Voelker, A. R. & Eliasmith, C. (2014). Nengo: a Python tool for building large-scale functional brain models. Frontiers in Neuroinformatics.; Eliasmith, C. & Anderson, C. H. (2003). Neural Engineering: Computation, Representation, and Dynamics in Neurobiological Systems. MIT Press.; Eshraghian, J. K., Ward, M., Neftci, E. O., Wang, X., Lenz, G., Dwivedi, G., Bennamoun, M., Jeong, D. S. & Lu, W. D. (2023). Training spiking neural networks using lessons from deep learning. Proceedings of the IEEE.; Pehle, C. & Pedersen, J. E. (2021). Norse — a deep learning library for spiking neural networks. Zenodo.; Neftci, E. O., Mostafa, H. & Zenke, F. (2019). Surrogate gradient learning in spiking neural networks. IEEE Signal Processing Magazine.; Orchard, G., Frady, E. P., Rubin, D. B. D., Sanborn, S., Shrestha, S. B., Sommer, F. T. & Davies, M. (2021). Efficient neuromorphic signal processing with Loihi 2. IEEE Workshop on Signal Processing Systems (SiPS).; Yavuz, E., Turner, J. & Nowotny, T. (2016). GeNN: a code generation framework for accelerated brain simulations. Scientific Reports.; Davison, A. P., Brüderle, D., Eppler, J., Kremkow, J., Muller, E., Pecevski, D., Perrinet, L. & Yger, P. (2009). PyNN: a common interface for neuronal network simulators. Frontiers in Neuroinformatics.; Hazan, H., Saunders, D. J., Khan, H., Patel, D., Sanghavi, D. T., Siegelmann, H. T. & Kozma, R. (2018). BindsNET: a machine learning-oriented spiking neural networks library in Python. Frontiers in Neuroinformatics.; Fang, W., Chen, Y., Ding, J., Yu, Z., Masquelier, T., Chen, D., Huang, L., Zhou, H., Li, G. & Tian, Y. (2023). SpikingJelly: an open-source machine learning infrastructure platform for spike-based intelligence. Science Advances.; Hines, M. L. & Carnevale, N. T. (1997). The NEURON simulation environment. Neural Computation.; Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience.; Potjans, T. C. & Diesmann, M. (2014). The cell-type specific cortical microcircuit: relating structure and activity in a full-scale spiking network model. Cerebral Cortex.; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience."
+    }
+  ]
+}

@@ -1,0 +1,87 @@
+{
+  "title": "Evaluating a Column",
+  "intro": "How do you know your column works? Check it at four levels — dynamics, representations, tasks and compute — and make the results reproducible.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "A spiking column can reach a decent score on a benchmark while being broken underneath: half its neurons dead, the rest firing in lock-step, the learning done by a handful of greedy units. And it can be healthy and still score poorly because the encoder or readout is wrong. So evaluate in layers, the way you would test software: first the dynamics (is the network in a sane regime?), then the representations (are the codes sparse, stable and informative?), then the task (does it predict, detect, recognise?), and finally the cost (spikes, synaptic operations, energy, real-time factor). Each layer catches failures the others miss."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "1. Dynamics: sanity metrics"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Firing rate per population. Cortical excitatory neurons typically fire at low mean rates, roughly 0.1 to a few Hz with a long-tailed distribution, and fast-spiking interneurons at higher rates. In the Potjans–Diesmann model, rates differ by layer, with L2/3 excitatory cells among the quietest. Plot the whole rate histogram, not only the mean: a mean of 5 Hz can hide 90% silent cells and a few at 50 Hz.",
+        "Irregularity: the coefficient of variation of inter-spike intervals, CV = σ_ISI / μ_ISI. A Poisson process has CV = 1; cortical neurons in vivo are often near 1. CV well below 1 means clock-like, regular firing — often a sign of strong constant drive.",
+        "Synchrony: mean pairwise spike-count correlation between neurons in bins of a few to tens of ms, or the variance of the population rate relative to the mean single-neuron variance. Weak correlations go with the asynchronous irregular state; large population oscillations or bursts point to too little or too slow inhibition.",
+        "Fano factor of spike counts across repeated trials (variance / mean). About 1 for Poisson; much lower means deterministic responses, much higher means slow fluctuations or bursting.",
+        "E/I balance: compare the mean excitatory and inhibitory input current (or conductance) to a sample of neurons. In a balanced regime they largely cancel and the net input fluctuates around threshold (van Vreeswijk & Sompolinsky 1996; Brunel 2000)."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\ndef cv_isi(spike_times):\n    isi = np.diff(np.sort(spike_times))\n    return isi.std() / isi.mean() if isi.size > 1 else np.nan\n\ndef mean_pairwise_corr(spike_matrix, bin_steps=10):\n    \"\"\"spike_matrix: (steps, neurons) 0/1 array. Correlation of binned counts.\"\"\"\n    steps = spike_matrix.shape[0] // bin_steps * bin_steps\n    counts = spike_matrix[:steps].reshape(-1, bin_steps, spike_matrix.shape[1]).sum(1)\n    active = counts.std(0) > 0\n    c = np.corrcoef(counts[:, active].T)\n    return c[np.triu_indices_from(c, k=1)].mean()"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "2. Representations"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Sparsity: fraction of cells active per input (or per time window). Compare with your target, for example about 2% for an HTM-style layer. Also check lifetime sparsity: every cell should be active for some inputs and none for all of them.",
+        "Usage and entropy: a histogram of how often each cell wins. Dead units (never active) and greedy units (active for many inputs) signal missing homeostasis.",
+        "Overlap structure: similar inputs should give overlapping SDRs, different ones near-chance overlap. Measure the overlap between the representations of input pairs against the overlap of their encodings.",
+        "Stability: present the same input after further learning and measure the overlap with its earlier representation. Continuous learning should refine, not scramble, existing codes.",
+        "Noise robustness: corrupt a fraction of input bits (or jitter spike times) and measure how much the output SDR changes. The SDR calculator in section 3 gives the theoretical baseline.",
+        "Linear decodability: train a simple linear readout (logistic regression) on the column's output. If a linear readout fails, the information is not in an easily usable form, whatever the column's internal accuracy claims."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "3. Tasks"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Sequence prediction: train on sequences with shared sub-sequences (A B C D vs X B C Y) and measure whether the column predicts the correct next element only in the right context. Report accuracy against the number of presentations, which shows online learning speed; Cui, Ahmad & Hawkins (2016) used the New York City taxi passenger data for a continuous-stream version of this test.",
+        "Anomaly detection: the Numenta Anomaly Benchmark (NAB; Lavin & Ahmad 2015) scores detectors on labelled real-world streams, rewarding early detection. Note that NAB and its scoring have been criticised (for example by Wu & Keogh 2021), so use it together with your own controlled anomalies.",
+        "Unsupervised feature learning: MNIST with a Diehl & Cook-style layer is a useful smoke test (roughly 95% with 6,400 excitatory neurons in the original paper), but it says almost nothing about column-specific abilities such as sequences or sensorimotor inference. Do not optimise for it.",
+        "Sensorimotor object recognition: the Thousand Brains Project's Monty is evaluated on recognising objects from the YCB set in a simulated environment, reporting accuracy and the number of steps (sensations) needed. Measuring steps-to-recognition against number of columns, as in the voting demo of section 5, is the most column-specific test available."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "4. Compute"
+    },
+    {
+      "type": "prose",
+      "text": "For neuromorphic targets, report spike counts and synaptic operations (SynOps: each spike times its fan-out) per input, because energy on event-driven hardware scales with them. Report energy per inference when measured on hardware, and the real-time factor (simulated time / wall-clock time) for simulators; the Potjans–Diesmann microcircuit is the usual reference workload for comparing simulators and hardware (van Albada et al. 2018). On fixed-point hardware, also report the accuracy drop from weight and state quantisation relative to a floating-point simulation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "5. Reproducibility"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Fix and record random seeds for connectivity, input generation and initial weights, and report results over several seeds with their spread.",
+        "Test time-step sensitivity: rerun with dt halved. If results change materially, the integration (not the model) is driving them.",
+        "Record simulator name and version, integration method, and every parameter with its unit in a config file stored with the results.",
+        "Keep an ablation table: remove inhibition, homeostasis, dendritic segments or voting one at a time and report the effect. It is the clearest evidence of what each component contributes."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: van Vreeswijk, C. & Sompolinsky, H. (1996). Chaos in neuronal networks with balanced excitatory and inhibitory activity. Science; Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience; Potjans, T. C. & Diesmann, M. (2014). The cell-type specific cortical microcircuit. Cerebral Cortex; Lavin, A. & Ahmad, S. (2015). Evaluating real-time anomaly detection algorithms — the Numenta Anomaly Benchmark. IEEE ICMLA; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Cui, Y., Ahmad, S. & Hawkins, J. (2016). Continuous online sequence learning with an unsupervised neural network model. Neural Computation; van Albada, S. J. et al. (2018). Performance comparison of the digital neuromorphic hardware SpiNNaker and the neural network simulation software NEST for a full-scale cortical microcircuit model. Frontiers in Neuroscience; Wu, R. & Keogh, E. J. (2021). Current time series anomaly detection benchmarks are flawed and are creating the illusion of progress. IEEE Transactions on Knowledge and Data Engineering."
+    }
+  ]
+}

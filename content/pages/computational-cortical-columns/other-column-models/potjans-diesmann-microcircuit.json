@@ -1,0 +1,153 @@
+{
+  "title": "Potjans–Diesmann Microcircuit",
+  "intro": "Potjans and Diesmann (2014) built a full-density spiking model of the local circuit under 1 mm² of early sensory cortex: about 77,000 leaky integrate-and-fire neurons in eight populations across four layers, connected by about 0.3 billion synapses using a data-driven connection table. It reproduces layer-specific firing rates from wiring alone and is now the standard benchmark for spiking simulators and neuromorphic hardware.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why this model matters"
+    },
+    {
+      "type": "prose",
+      "text": "If you build spiking column models you will meet the Potjans–Diesmann microcircuit again and again. Potjans and Diesmann (2014) took the canonical layer structure (see \"Canonical Microcircuit\" in this section), filled it with connection probabilities compiled from anatomy and physiology, and simulated it at full density: every neuron and every synapse under about 1 mm² of early sensory cortex. It uses the simplest reasonable neuron (LIF) and synapse (current-based exponential), so its behaviour comes from the wiring. It has become the standard reference network for spiking simulators and neuromorphic hardware. Think of it as the 'MNIST of cortical simulation': it does not compute anything task-relevant, but it is realistic enough in size, connectivity and activity to stress a simulator honestly, and well characterised enough that you can check whether your implementation reproduces the published activity."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The populations"
+    },
+    {
+      "type": "prose",
+      "text": "The network has four layers (L2/3, L4, L5, L6), each with one excitatory and one inhibitory population: eight populations and about 77,000 neurons in total. There is no layer 1 (it contains few neurons) and no distinction among interneuron classes: all inhibitory cells are one population per layer. Excitatory to inhibitory ratios are roughly 4:1 in every layer, matching the usual cortical estimate. Population sizes in the published model:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "L2/3e: 20,683 excitatory neurons",
+        "L2/3i: 5,834 inhibitory neurons",
+        "L4e: 21,915 excitatory neurons",
+        "L4i: 5,479 inhibitory neurons",
+        "L5e: 4,850 excitatory neurons",
+        "L5i: 1,065 inhibitory neurons",
+        "L6e: 14,395 excitatory neurons",
+        "L6i: 2,948 inhibitory neurons",
+        "Total: 77,169 neurons and roughly 0.3 billion synapses (about 3,000–4,000 recurrent synapses per neuron on average, plus external input)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Connectivity: where the numbers come from"
+    },
+    {
+      "type": "prose",
+      "text": "The key ingredient is an 8 × 8 table of connection probabilities: the probability that a given neuron in population A makes at least one synapse onto a given neuron in population B. Potjans and Diesmann derived it by combining anatomical estimates of synapse numbers between layers and cell types (chiefly Binzegger, Douglas & Martin 2004, cat V1) with electrophysiological paired-recording data on connection probabilities (for example Thomson et al. 2002 and related studies in rat and cat). Read the table for the circuit motifs: strong L4e → L2/3 drive, strong L2/3e → L5e, strong within-layer E↔I loops, very strong L5i → L5 and L6i → L6 inhibition, and L6e → L4 feedback. Synapses are drawn randomly between populations with the computed totals, so within a population pair connectivity is random (no further structure or plasticity). The table below is the version distributed with the reference implementations; rows are targets and columns are sources. Check it against the copy shipped with your simulator before relying on individual entries."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "connection probability C[target][source]\n           from: L2/3e  L2/3i  L4e    L4i    L5e    L5i    L6e    L6i\nto L2/3e        0.1009 0.1689 0.0437 0.0818 0.0323 0.0    0.0076 0.0\nto L2/3i        0.1346 0.1371 0.0316 0.0515 0.0755 0.0    0.0042 0.0\nto L4e          0.0077 0.0059 0.0497 0.1350 0.0067 0.0003 0.0453 0.0\nto L4i          0.0691 0.0029 0.0794 0.1597 0.0033 0.0    0.1057 0.0\nto L5e          0.1004 0.0622 0.0505 0.0057 0.0831 0.3726 0.0204 0.0\nto L5i          0.0548 0.0269 0.0257 0.0022 0.0600 0.3158 0.0086 0.0\nto L6e          0.0156 0.0066 0.0211 0.0166 0.0572 0.0197 0.0396 0.2252\nto L6i          0.0364 0.0010 0.0034 0.0005 0.0277 0.0080 0.0658 0.1443\n\nnumber of synapses between two populations (multapses allowed):\nK = ln(1 − C) / ln(1 − 1/(N_pre · N_post))"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Neurons, synapses and input"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "neuron: leaky integrate-and-fire, current-based exponential synapses\nτm dV/dt = −(V − E_L) + (τm / C_m)·I_syn(t)\nτs dI_syn/dt = −I_syn + τs·Σ_k w_k δ(t − t_k − d_k)\n\nC_m   = 250 pF          τm   = 10 ms\nE_L   = −65 mV          V_th = −50 mV\nV_reset = −65 mV        t_ref = 2 ms\nτs    = 0.5 ms          dt   = 0.1 ms\n\nweights:  mean excitatory PSP ≈ 0.15 mV (w ≈ 87.8 pA), 10% s.d.\n          L4e → L2/3e weight doubled\n          inhibitory weight = −4 × excitatory (g = −4)\ndelays:   excitatory 1.5 ± 0.75 ms, inhibitory 0.75 ± 0.375 ms\n\nexternal input: independent Poisson spike trains at 8 Hz per input,\n  in-degree K_ext ≈ 1,500–2,900 depending on population\n  (or an equivalent DC current)\noptional thalamus: 902 neurons projecting to L4 and L6,\n  used for transient (pulse or oscillatory) stimulation"
+    },
+    {
+      "type": "prose",
+      "text": "The background input stands in for everything outside the 1 mm² patch — the majority of synapses a real cortical neuron receives come from outside its local column. The thalamic population is not needed for spontaneous activity; it is switched on to study how a sensory pulse propagates through the layers."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What emerges: layer-specific activity"
+    },
+    {
+      "type": "prose",
+      "text": "With nothing tuned per layer except the connectivity table and the input in-degrees, the network settles into an asynchronous irregular state with firing rates that differ systematically by layer, broadly in line with in vivo recordings. A thalamic pulse produces a sequence of responses from L4 to L2/3 to L5 and L6, resembling the flow of activity seen experimentally. The paper's main argument is that cell-type- and layer-specific connectivity alone is enough to explain these layer-specific rates and flows. Approximate rates from the published model and its reference implementations (they depend on the version, the input mode and the random seed):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "L2/3e: very low, well below 1 Hz — the sparsest population, consistent with sparse superficial firing in vivo.",
+        "L4e: a few Hz (around 4 Hz).",
+        "L5e: the highest excitatory rate, several Hz (around 7–8 Hz).",
+        "L6e: around 1 Hz.",
+        "Inhibitory populations: higher than their excitatory partners, roughly 3–9 Hz.",
+        "Irregularity: interspike-interval coefficients of variation near or below 1 and low pairwise correlations, as expected for a balanced network (see Brunel 2000)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Running it"
+    },
+    {
+      "type": "prose",
+      "text": "A full-scale run needs a few gigabytes of memory for the synapses and, on a modern multi-core workstation, a simulation time of the same order as or longer than the biological time simulated. Reference implementations exist for NEST (shipped in the NEST example collection), PyNN (and therefore SpiNNaker and other PyNN back-ends), and Brian2 (for example the ReScience replication by Shimoura et al. 2018). In recent NEST releases the example lives in a directory named Potjans_2014 inside the PyNEST examples; file names below are from NEST 3.x and may change between versions:"
+    },
+    {
+      "type": "code",
+      "lang": "bash",
+      "source": "# NEST 3.x reference example (paths may differ by version)\n# examples/pynest/Potjans_2014/\n#   network_params.py   population sizes, connection table, neuron params\n#   sim_params.py       dt, simulation time, threads, recording\n#   stimulus_params.py  Poisson/DC background, thalamic input\n#   network.py          builds and connects the network\n#   helpers.py          plotting, rate and raster analysis\n#   run_microcircuit.py entry point\n\npip install nest-simulator   # or conda install -c conda-forge nest-simulator\ncd Potjans_2014\npython run_microcircuit.py\n\n# for a quick test set the scaling factors in network_params.py\n# (e.g. N_scaling = 0.1, K_scaling = 0.1); see the caveat on downscaling below"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# minimal Brian2 sketch: one population (L4e) with its background input\nfrom brian2 import *\ndefaultclock.dt = 0.1*ms\nC_m, tau_m, tau_s = 250*pF, 10*ms, 0.5*ms\nE_L, V_th, V_r = -65*mV, -50*mV, -65*mV\neqs = '''\ndv/dt = (E_L - v)/tau_m + I/C_m : volt (unless refractory)\ndI/dt = -I/tau_s : amp\n'''\nL4e = NeuronGroup(21915, eqs, threshold='v > V_th', reset='v = V_r',\n                  refractory=2*ms, method='exact')\nL4e.v = 'E_L + 5*mV*randn()'\nw = 87.8*pA\nbg = PoissonInput(L4e, 'I', N=2100, rate=8*Hz, weight=w)\nee = Synapses(L4e, L4e, on_pre='I_post += w', delay=1.5*ms)\nee.connect(p=0.0497)   # approximation: PD draws a fixed total K with multapses\n# ... repeat for all 64 population pairs, with g = -4 for inhibitory sources"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A benchmark for simulators and neuromorphic hardware"
+    },
+    {
+      "type": "list",
+      "items": [
+        "van Albada et al. (2018) ran the full-scale model on SpiNNaker and on NEST on a compute cluster and compared accuracy, speed and energy. Both reproduced the network's statistics; neither ran in real time in that study.",
+        "Knight and Nowotny (2018) simulated it with the GPU code generator GeNN and reported speeds and energy per synaptic event competitive with or better than the published HPC and SpiNNaker figures on a single high-end GPU.",
+        "Later work reported real-time simulation on SpiNNaker (Rhodes et al. 2020) and faster-than-real-time simulation with NEST on CPU servers (Kurth et al. 2022). Treat exact speed-ups as hardware- and version-specific.",
+        "The model is also the local building block of larger models such as the multi-area macaque model (Schmidt et al. 2018), in which each area is a scaled Potjans–Diesmann-like circuit.",
+        "On neuromorphic chips with limited fan-in (for example Loihi's per-core synapse memory) the model's ~3,000–4,000 synapses per neuron and 0.1 ms resolution are the main obstacles; see \"Neuromorphic Hardware\" in section 7."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Using it when you build a column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use it as your validation network: if your simulator or FPGA design reproduces the per-population rates, CV and correlations of the reference implementation, your integration, delays and connectivity generation are probably correct.",
+        "Use it as the 'body' of a column and add function on top: for example, add HTM-like dendritic segments to L2/3e or L4e cells, STDP to selected pathways, or structured thalamic input carrying an encoded stimulus (see \"Encoding Schemes\" in section 7).",
+        "Use its connection table as a prior for your own multi-layer column even if you reduce the cell counts: keep the relative probabilities and E/I ratios.",
+        "Use the thalamic pulse experiment as a test of layer-to-layer propagation in your own variants."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Downscaling changes the dynamics. Reducing N while keeping in-degree K changes correlations; reducing K changes the balance of mean and fluctuating input. Use the compensation scheme in the reference code (DC input to restore mean input, weight scaling ∝ 1/√K) and remember that even then correlations cannot be preserved exactly (van Albada, Helias & Diesmann 2015).",
+        "Random within-population connectivity: there is no feature selectivity, no columns within the column, no plasticity. Any structure you need for computation you must add.",
+        "Only one interneuron type per layer. For disinhibitory or dendrite-targeting circuits (PV, SST, VIP) you need an extension (see \"Cell Types\" in section 1).",
+        "The parameters mix species and areas (cat and rat, mostly visual and somatosensory cortex). They are representative, not specific to any real area.",
+        "Results depend on the time step and on whether input is Poisson or DC; when comparing to published rates, match these settings first."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Potjans, T. C. & Diesmann, M. (2014). The cell-type specific cortical microcircuit: relating structure and activity in a full-scale spiking network model. Cerebral Cortex.; Binzegger, T., Douglas, R. J. & Martin, K. A. C. (2004). A quantitative map of the circuit of cat primary visual cortex. Journal of Neuroscience.; Thomson, A. M., West, D. C., Wang, Y. & Bannister, A. P. (2002). Synaptic connections and small circuits involving excitatory and inhibitory neurons in layers 2–5 of adult rat and cat neocortex. Cerebral Cortex.; Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience.; van Albada, S. J., Helias, M. & Diesmann, M. (2015). Scalability of asynchronous networks is limited by one-to-one mapping between effective connectivity and correlations. PLoS Computational Biology.; van Albada, S. J., Rowley, A. G., Senk, J., Hopkins, M., Schmidt, M., Stokes, A. B., Lester, D. R., Diesmann, M. & Furber, S. B. (2018). Performance comparison of the digital neuromorphic hardware SpiNNaker and the neural network simulation software NEST for a full-scale cortical microcircuit model. Frontiers in Neuroscience.; Knight, J. C. & Nowotny, T. (2018). GPUs outperform current HPC and neuromorphic solutions in terms of speed and energy when simulating a highly-connected cortical model. Frontiers in Neuroscience.; Rhodes, O. et al. (2020). Real-time cortical simulation on neuromorphic hardware. Philosophical Transactions of the Royal Society A.; Kurth, A. C. et al. (2022). Sub-realtime simulation of a neuronal network of natural density. Neuromorphic Computing and Engineering.; Schmidt, M., Bakker, R., Shen, K., Bezgin, G., Diesmann, M. & van Albada, S. J. (2018). A multi-scale layer-resolved spiking network model of resting-state dynamics in macaque visual cortex. PLoS Computational Biology.; Shimoura, R. O. et al. (2018). [Re] The cell-type specific cortical microcircuit: relating structure and activity in a full-scale spiking network model. ReScience.; Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife.; Gewaltig, M.-O. & Diesmann, M. (2007). NEST (NEural Simulation Tool). Scholarpedia."
+    }
+  ]
+}
