@@ -101,22 +101,34 @@ export class AssertionError extends Error {
 /**
  * Run every registered case, printing a line per case and a final summary.
  * Returns the number of failures; `run.js` uses it for the process exit code.
+ *
+ * With `quiet`, passing cases print nothing and the summary comes first, ahead
+ * of the failure details, so a reader who keeps only the head of the output
+ * (the Hive clips a test record to its first 4000 characters) still sees the
+ * totals and which cases failed.
+ * @param {{ quiet?: boolean }} [options]
  * @returns {Promise<number>}
  */
-export async function run() {
+export async function run({ quiet = false } = {}) {
   let passed = 0;
   const failures = [];
   for (const tc of cases) {
     try {
       await tc.fn();
       passed++;
-      console.log(`  \u2713 ${tc.name}`);
+      if (!quiet) console.log(`  \u2713 ${tc.name}`);
     } catch (err) {
       failures.push({ name: tc.name, err });
-      console.log(`  \u2717 ${tc.name}`);
+      if (!quiet) console.log(`  \u2717 ${tc.name}`);
     }
   }
+  const summary = `${passed} passed, ${failures.length} failed, ${cases.length} total`;
   console.log("");
+  if (quiet) {
+    console.log(summary);
+    for (const f of failures) console.log(`  \u2717 ${f.name}`);
+    console.log("");
+  }
   if (failures.length) {
     console.log(`Failures (${failures.length}):`);
     for (const f of failures) {
@@ -125,7 +137,7 @@ export async function run() {
     }
     console.log("");
   }
-  console.log(`${passed} passed, ${failures.length} failed, ${cases.length} total`);
+  if (!quiet || failures.length) console.log(summary);
   return failures.length;
 }
 
