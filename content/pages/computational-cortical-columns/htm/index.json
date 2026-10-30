@@ -1,0 +1,84 @@
+{
+  "title": "4. Hierarchical Temporal Memory",
+  "intro": "Hierarchical Temporal Memory (HTM) is Numenta's algorithmic model of a layer of neocortex: minicolumns of neurons that turn a stream of inputs into sparse distributed representations and learn to predict what comes next using dendritic segments. It is the most concrete, fully specified 'column algorithm' you can implement today, and the direct ancestor of the Thousand Brains Theory in section 5.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What HTM is, in one picture"
+    },
+    {
+      "type": "prose",
+      "text": "Imagine a sheet of a few thousand minicolumns. Every minicolumn contains a small stack of cells that all respond to the same feedforward feature, much like the cells in a biological minicolumn share a receptive field. At each time step a sparse set of minicolumns (about 2%) becomes active because they best match the current input; this is the spatial pooler. Inside each active minicolumn, which particular cell fires depends on what happened just before: cells that were already 'expecting' this input fire, and the rest stay quiet. The identity of the cells inside the active minicolumns therefore encodes the input in the context of its past; this is the temporal memory. When nothing was expected, all cells in the minicolumn fire together (the minicolumn 'bursts'), which is both a signal of surprise and the moment learning happens."
+    },
+    {
+      "type": "prose",
+      "text": "The expectation itself lives on dendrites. An HTM neuron has a proximal zone that drives it to fire, and many distal dendritic segments, each of which acts as an independent coincidence detector that recognises a sparse pattern of activity among neighbouring cells. When a segment recognises its pattern, the cell is depolarised but does not fire: it is in a predictive state. If the predicted input then arrives, the depolarised cell fires slightly earlier than its neighbours and, through fast local inhibition, silences them."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why it matters if you are building an SNN column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "HTM is a complete, tested specification of sequence learning in a cortical layer: data structures, update rules and default parameter values exist, so you have a reference to check a spiking implementation against.",
+        "Its key ideas (sparse codes, k-winners-take-all inhibition, local Hebbian learning with structural plasticity, dendritic coincidence detection, prediction as depolarisation) map directly onto mechanisms you already model: LIF neurons, NMDA-like dendritic nonlinearities, inhibitory interneurons and STDP-like rules.",
+        "It is binary and discrete in time, which makes it cheap to run and easy to debug; turning it into a spiking model forces you to make the timing mechanism explicit, which is exactly where most of the interesting research questions are.",
+        "The Thousand Brains Theory (section 5) reuses the same neuron and layer machinery, but feeds the distal segments with a location signal instead of (or in addition to) the previous input."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Subpages in learning order"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The HTM Neuron: proximal, basal (distal) and apical zones; dendritic segments as threshold coincidence detectors; the three cell states (inactive, predictive, active); permanence-based binary synapses.",
+        "Spatial Pooler: how an encoder's bit array is turned into a stable SDR of active minicolumns using potential pools, overlap scores, inhibition (k-winners), Hebbian permanence learning, boosting and duty cycles.",
+        "Temporal Memory: cells within minicolumns, predicted activation versus bursting, winner-cell selection, segment growth, reinforcement and punishment, and the capacity of high-order sequence memory. Includes the interactive temporal-memory simulator.",
+        "Sequence Prediction and Anomaly Detection: branching sequences, unions of simultaneous predictions, high-order context, the anomaly score and anomaly likelihood, the Numenta Anomaly Benchmark, the comparison with LSTM, and the practical tooling (NuPIC, htm.core, BAMI)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A short history"
+    },
+    {
+      "type": "prose",
+      "text": "HTM began with Jeff Hawkins' book On Intelligence (2004), which argued that the neocortex is a hierarchical memory system that constantly predicts its input. Numenta's first implementations (around 2005–2009) were Bayesian-network-like hierarchies. Around 2010 Numenta replaced these with the 'cortical learning algorithms' — the spatial pooler and the sequence memory now called temporal memory — published as a white paper and in the open-source NuPIC library. The neuroscience case for the neuron model and the sequence memory was published by Hawkins & Ahmad (2016), the engineering evaluation of online sequence learning by Cui, Ahmad & Hawkins (2016), and the spatial pooler analysis by Cui, Ahmad & Hawkins (2017). From 2017 onwards Numenta extended the same layer model with location signals, which became the Thousand Brains Theory."
+    },
+    {
+      "type": "prose",
+      "text": "A naming caution: the 'hierarchical' in HTM is historical. The modern algorithms describe a single layer of a single region; Numenta's own later work argues that much of the work is done within each column rather than by a deep hierarchy."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key takeaways"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Minicolumns share feedforward input; cells within a minicolumn differ by context. Same columns, different cells = same input, different meaning.",
+        "Prediction is a depolarised (predictive) state produced by distal dendritic segments, not a spike. Correctly predicted cells fire first and inhibit their neighbours; unpredicted input produces bursting.",
+        "Representations are very sparse (about 2% of minicolumns active), and segments use thresholds of roughly 10–20 active synapses, which makes recognition robust to noise and allows several predictions to coexist as a union.",
+        "Learning is local, Hebbian and structural: synapses have a scalar permanence and are either connected or not; segments and synapses are grown on demand.",
+        "HTM learns continuously and online, which is its main practical advantage over batch-trained sequence models; its main practical weaknesses are a modest software ecosystem and few independent benchmarks.",
+        "For a spiking implementation, read 'Dendrites and Active Dendrites' in section 2 first and use 'Step-by-Step Roadmap' in section 7 as the build plan."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "If you only have an afternoon: read 'The HTM Neuron', then play with the simulator on 'Temporal Memory' and compare 1 versus 4 cells per minicolumn. That single experiment shows why HTM needs cells inside minicolumns at all."
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Hawkins, J. & Blakeslee, S. (2004). On Intelligence. Times Books.; Hawkins, J., Ahmad, S. & Dubinsky, D. (2011). Hierarchical temporal memory including HTM cortical learning algorithms, version 0.2.1. Numenta white paper.; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits.; Cui, Y., Ahmad, S. & Hawkins, J. (2016). Continuous online sequence learning with an unsupervised neural network model. Neural Computation.; Cui, Y., Ahmad, S. & Hawkins, J. (2017). The HTM spatial pooler — a neocortical algorithm for online sparse distributed coding. Frontiers in Computational Neuroscience.; Hawkins, J. et al. (2016). Biological and Machine Intelligence (BAMI), release 0.4. Numenta, online book.; Hawkins, J., Ahmad, S. & Cui, Y. (2017). A theory of how columns in the neocortex enable learning the structure of the world. Frontiers in Neural Circuits.; Hawkins, J. (2021). A Thousand Brains: A New Theory of Intelligence. Basic Books."
+    }
+  ]
+}

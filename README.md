@@ -49,7 +49,11 @@ nothing is compiled or installed.
   with controls you can adjust to see the result update live.
 
 This export ships with the two template topics — **Calculus** and **Game
-Theory** — as starting examples.
+Theory** — as starting examples, and **Computational Cortical Columns**: a
+learning path from the biology of the neocortical column through spiking
+neuron models, plasticity, HTM and the Thousand Brains Theory to building an
+SNN column, with interactive simulations (LIF neuron, STDP, k-WTA spiking
+layer, SDR overlap, temporal memory, multi-column voting).
 
 ---
 

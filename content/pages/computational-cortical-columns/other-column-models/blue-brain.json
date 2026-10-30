@@ -1,0 +1,132 @@
+{
+  "title": "Blue Brain and Detailed Reconstruction",
+  "intro": "The Blue Brain Project's digital reconstruction of a neocortical microcircuit (Markram et al. 2015) is the most detailed column model built so far: about 31,000 multi-compartment neurons of 55 morphological types in a third of a cubic millimetre of juvenile rat somatosensory cortex, connected by about 37 million synapses. This page covers what was built, how, what it showed, why it is criticised, and what a spiking-column builder can take from it.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The idea: build it bottom-up and see what happens"
+    },
+    {
+      "type": "prose",
+      "text": "Every other model in this section starts from a hypothesis about what the column computes and keeps only the detail that hypothesis needs. The Blue Brain Project took the opposite route: gather as much data as possible about the cells and synapses of one piece of cortex, fill the gaps with rules derived from that data, assemble a digital reconstruction in which every neuron has its real-looking three-dimensional morphology and ion channels, and then simulate it to see which phenomena emerge. If the canonical microcircuit is a wiring diagram on a whiteboard, the Blue Brain microcircuit is an attempt at a working scale model with all the parts in place."
+    },
+    {
+      "type": "prose",
+      "text": "The project was started at EPFL by Henry Markram in 2005 (Markram 2006 describes the plan). Its landmark paper, Markram et al. (2015) in Cell, reported the reconstruction and simulation of a neocortical microcircuit of the juvenile rat somatosensory cortex."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What was reconstructed (Markram et al. 2015)"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Tissue: the hindlimb somatosensory cortex of the juvenile (about two-week-old) rat — all six layers, in a hexagonal-prism volume of about 0.29 mm³ spanning the full cortical depth of roughly 2 mm.",
+        "Neurons: about 31,000, each a multi-compartment model with a reconstructed dendritic and axonal morphology.",
+        "Morphological types (m-types): 55, defined by layer and shape (for example L5 thick-tufted pyramidal cells, L2/3 large basket cells, Martinotti cells, chandelier cells).",
+        "Electrical types (e-types): 11 firing-pattern classes such as continuous adapting, continuous non-adapting, bursting, stuttering and delayed firing.",
+        "Morpho-electrical types (me-types): 207 observed combinations of m-type and e-type, each with its own ion-channel parameter set.",
+        "Synapses: about 37 million, forming about 8 million connections (several synapses per connected pair), each with stochastic short-term dynamics (Tsodyks–Markram depression and facilitation) of one of several synapse types.",
+        "Simulation: NEURON-based, on a supercomputer, with in vivo-like spontaneous and evoked activity as the target."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "These numbers are from the 2015 paper; treat them as approximate (the paper reports averages over several instantiated microcircuits built from different individual-animal data)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How the reconstruction is built"
+    },
+    {
+      "type": "prose",
+      "text": "Very few connections in the model were measured directly. The pipeline is a set of data-driven rules that turn sparse measurements into a dense model:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Layer thicknesses and cell densities set how many neurons of each m-type go where.",
+        "Each neuron receives a reconstructed morphology from a library of real cells (repaired and cloned with small variations to increase diversity).",
+        "Ion-channel densities for each me-type are fitted with multi-objective optimisation so that model cells reproduce recorded firing features (the tooling became BluePyOpt; Van Geit et al. 2016).",
+        "Synapse positions are predicted from appositions — places where axons and dendrites come close — then pruned with rules that match measured bouton densities and numbers of synapses per connection (Reimann et al. 2015). This yields a predicted connectome rather than a measured one.",
+        "Synaptic physiology (amplitude, kinetics, short-term dynamics) is assigned per pathway from paired recordings, generalised to unmeasured pathways by synapse type.",
+        "The model is validated against data that were not used to build it, such as connection probabilities and firing behaviour reported in separate experiments."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What emerged"
+    },
+    {
+      "type": "prose",
+      "text": "Without tuning the circuit for a specific network behaviour, the simulated microcircuit produced spontaneous activity ranging from synchronous bursts to asynchronous irregular firing. The state depended strongly on extracellular calcium (which scales synaptic release probability) and on background depolarisation: at in vivo-like calcium levels activity was asynchronous with low rates, whereas at the higher calcium typical of slice experiments it became synchronous. The paper also reported that a range of in vitro and in vivo findings, for example about the diversity of neuronal coupling to population activity and layer-specific responses to thalamic stimulation, were reproduced. Several of these comparisons are qualitative, and some reviewers questioned how strongly they validate the model."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Critiques and limits"
+    },
+    {
+      "type": "list",
+      "items": [
+        "What is it for? The main criticism is that the reconstruction does not, by itself, explain any computation: no task, no learning in the 2015 microcircuit, no sensory input structured like real touch. Detail is not understanding.",
+        "Juvenile rat. The data come mostly from P14 rat slices; circuits mature substantially after that, and species differences matter if you care about primate or human cortex.",
+        "Predicted connectivity. Connections are derived from apposition-based rules. Dense electron-microscopy connectomics has since shown target specificity that such rules may miss; the predicted connectome should be treated as a hypothesis.",
+        "Unconstrained parameters. With tens of thousands of parameters, many emerge from rules and extrapolation rather than measurement, making it hard to know which results are robust.",
+        "Missing pieces in the 2015 model: long-range inputs other than a thalamic projection, neuromodulation, glia and vasculature, and long-term plasticity were absent or simplified (some were added in later work).",
+        "Cost. Running the model needs supercomputing-scale resources, and the full pipeline is far more than a model file you can download and run on a laptop.",
+        "Politics. The Blue Brain Project shaped the founding of the EU Human Brain Project, which drew a widely publicised open letter of criticism from neuroscientists in 2014. That controversy concerned governance and goals more than the 2015 paper, but it colours how the work is discussed."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What it is useful for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Data. The reconstruction and its parameter sets (morphologies, me-type models, pathway statistics) have been released through the Neocortical Microcircuit Collaboration Portal (Ramaswamy et al. 2015) and later Blue Brain open-source releases. They are an excellent source of cell-type numbers and pathway statistics for simpler models.",
+        "In silico experiments. Because every cell is modelled explicitly, you can test mechanistic hypotheses (what happens if a pathway is removed, or calcium is changed) that are hard to do in an animal.",
+        "Constraints for reduced models. Point-neuron and rate models can be fitted to reproduce the detailed model's behaviour, and the connection statistics can replace guesswork in a Potjans–Diesmann-style table.",
+        "Tooling. NEURON with CoreNEURON for large detailed simulations, BluePyOpt for fitting single-cell models, and the circuit-building pipeline itself are reusable."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Later work, briefly"
+    },
+    {
+      "type": "prose",
+      "text": "Later Blue Brain studies extended the approach to larger volumes, including models of large parts of the rat non-barrel somatosensory cortex with millions of neurons (released as preprints and papers from about 2022 onward), and added long-range connectivity and plasticity models. The Blue Brain Project as an EPFL institute concluded at the end of 2024, with parts of its tooling and data continuing in open-source form. Check the current state of these releases before relying on them, as names and hosting have changed."
+    },
+    {
+      "type": "prose",
+      "text": "A related, more modest strategy is the Allen Institute's model of mouse primary visual cortex (Billeh et al. 2020): about 230,000 neurons in a cylinder of mouse V1, available both as a biophysically detailed version and as a generalised leaky integrate-and-fire (GLIF) point-neuron version, built from Allen cell-type and connectivity data and driven by a model of LGN input. It sits between Potjans–Diesmann and Blue Brain in detail, and its point-neuron version is much easier to run."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "If you are building an SNN column"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Do not start here. A biophysically detailed column is not a sensible first target for a researcher who wants a learning column on neuromorphic hardware: you would spend years on infrastructure and get a model that does not learn.",
+        "Mine it for numbers. Use the reconstruction's cell-type proportions per layer, connection probabilities, synapses per connection and short-term dynamics per pathway to parameterise point-neuron models.",
+        "Borrow short-term plasticity. Tsodyks–Markram synapses with pathway-specific depression (E→E) and facilitation (E→Martinotti) are cheap in point-neuron models and change dynamics substantially (see \"Synapse Models\" in section 2).",
+        "Use it to test reduced-model claims. If your simplified column depends on a particular motif, check whether the detailed reconstruction supports that motif's prevalence.",
+        "Keep one interneuron distinction even in small models: soma-targeting (basket, PV-like) versus dendrite-targeting (Martinotti, SST-like) inhibition, because dendritic computation matters for HTM-style prediction (see \"Active Dendrites\" in section 2)."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Markram, H. (2006). The Blue Brain Project. Nature Reviews Neuroscience.; Markram, H. et al. (2015). Reconstruction and simulation of neocortical microcircuitry. Cell.; Reimann, M. W., King, J. G., Muller, E. B., Ramaswamy, S. & Markram, H. (2015). An algorithm to predict the connectome of neural microcircuits. Frontiers in Computational Neuroscience.; Ramaswamy, S. et al. (2015). The neocortical microcircuit collaboration portal: a resource for rat somatosensory cortex. Frontiers in Neural Circuits.; Van Geit, W. et al. (2016). BluePyOpt: leveraging open source software and cloud infrastructure to optimise model parameters in neuroscience. Frontiers in Neuroinformatics.; Tsodyks, M. V. & Markram, H. (1997). The neural code between neocortical pyramidal neurons depends on neurotransmitter release probability. PNAS.; Markram, H., Toledo-Rodriguez, M., Wang, Y., Gupta, A., Silberberg, G. & Wu, C. (2004). Interneurons of the neocortical inhibitory system. Nature Reviews Neuroscience.; Hines, M. L. & Carnevale, N. T. (1997). The NEURON simulation environment. Neural Computation.; Billeh, Y. N. et al. (2020). Systematic integration of structural and functional data into multi-scale models of mouse primary visual cortex. Neuron."
+    }
+  ]
+}

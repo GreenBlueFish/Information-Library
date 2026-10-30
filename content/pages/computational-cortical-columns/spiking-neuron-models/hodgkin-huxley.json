@@ -1,0 +1,106 @@
+{
+  "title": "Hodgkin–Huxley Overview",
+  "intro": "The Hodgkin–Huxley model explains the action potential with voltage-gated sodium and potassium conductances. It is the foundation of all biophysical neuron modelling, but for most cortical-column SNNs it is more detail than you need. This page gives the equations, what they buy you, what they cost, and when they are worth it.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intuition: the spike as a race between two gates"
+    },
+    {
+      "type": "prose",
+      "text": "The membrane is a capacitor (the lipid bilayer) in parallel with several leaky, voltage-controlled resistors (ion channels). Each ion species has a battery: the reversal potential at which its concentration gradient and the electric field balance, about +50 mV for sodium and about −77 mV for potassium in the squid axon. Whichever conductance dominates pulls the membrane towards its battery."
+    },
+    {
+      "type": "prose",
+      "text": "A spike is a race. When the membrane is depolarised, sodium channels open fast (activation gate m), sodium rushes in and depolarises the membrane further: positive feedback, the upstroke. Two slower processes then end the spike: sodium channels inactivate (gate h closes) and potassium channels open (gate n), pulling the voltage back down and briefly below rest. While h is still closed and n still open, a new spike is hard or impossible to trigger: that is the refractory period, which LIF imposes by hand. Hodgkin and Huxley (1952) worked this out from voltage-clamp experiments on the squid giant axon and wrote it down as four coupled differential equations; the work earned them the 1963 Nobel Prize."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equations"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "C · dV/dt = −g_Na · m³h · (V − E_Na) − g_K · n⁴ · (V − E_K) − g_L · (V − E_L) + I_ext\n\ndx/dt = α_x(V) · (1 − x) − β_x(V) · x          for each gate x ∈ {m, h, n}\n      ≡ (x∞(V) − x) / τ_x(V),   x∞ = α/(α+β),  τ_x = 1/(α+β)\n\nSquid-axon values (modern sign convention, rest ≈ −65 mV, 6.3 °C):\nC = 1 µF/cm²,  g_Na = 120,  g_K = 36,  g_L = 0.3 mS/cm²\nE_Na = +50 mV,  E_K = −77 mV,  E_L = −54.4 mV\n\nRate functions (V in mV, rates in 1/ms):\nα_m = 0.1 (V + 40) / (1 − exp(−(V + 40)/10))      β_m = 4 exp(−(V + 65)/18)\nα_h = 0.07 exp(−(V + 65)/20)                       β_h = 1 / (1 + exp(−(V + 35)/10))\nα_n = 0.01 (V + 55) / (1 − exp(−(V + 55)/10))     β_n = 0.125 exp(−(V + 65)/80)"
+    },
+    {
+      "type": "prose",
+      "text": "Each gating variable x is a probability between 0 and 1 that relaxes towards a voltage-dependent steady state x∞(V) with a voltage-dependent time constant τ_x(V). The m gate is fast (τ well under 1 ms), h and n are several times slower (a few ms). The exponents (m³, n⁴) came from fitting the sigmoidal onset of the measured currents; they are often read as the number of independent gating particles per channel, an interpretation that molecular biology later only partly confirmed. Hodgkin and Huxley's original paper measured voltage relative to rest with the opposite sign; the shifted form above is the one used in modern textbooks such as Dayan & Abbott (2001) and Gerstner et al. (2014)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What it buys you that LIF does not"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A real spike waveform and an emergent threshold, refractoriness and after-hyperpolarisation, rather than hand-imposed ones.",
+        "Correct interaction with conductance-based synapses and dendritic currents: an inhibitory conductance during the upstroke, or a backpropagating spike meeting a dendritic input, behaves physically.",
+        "Extensibility: add more channels (persistent sodium, M-type and calcium-activated potassium, T-type calcium, Ih) in exactly the same formalism to get adaptation, bursting, rebound and resonance. Models of cortical cells built this way (for example the reduced models of Pospischil et al. 2008, or the Blue Brain Project's multi-compartment neurons with a dozen or more channel types per cell, Markram et al. 2015) are HH-type models.",
+        "A route to pharmacology and disease models: blocking a channel is changing one g."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What it costs"
+    },
+    {
+      "type": "prose",
+      "text": "Four (or many more) coupled nonlinear equations per compartment, with exponentials in every rate function, integrated at small steps (typically 0.01–0.025 ms, versus 0.1 ms for LIF). Izhikevich (2004) estimated roughly 1200 floating-point operations per millisecond of simulated time for HH, against about 5 for LIF; the exact numbers depend on the integrator and on look-up tables, but two orders of magnitude is a fair rule of thumb. Neuromorphic chips do not implement HH channels natively (BrainScaleS implements AdEx in analogue circuits; Loihi and SpiNNaker typically run LIF-family or Izhikevich neurons)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Python sketch"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\ndef rates(V):\n    am = 0.1 * (V + 40) / (1 - np.exp(-(V + 40) / 10)); bm = 4 * np.exp(-(V + 65) / 18)\n    ah = 0.07 * np.exp(-(V + 65) / 20);                bh = 1 / (1 + np.exp(-(V + 35) / 10))\n    an = 0.01 * (V + 55) / (1 - np.exp(-(V + 55) / 10)); bn = 0.125 * np.exp(-(V + 65) / 80)\n    return am, bm, ah, bh, an, bn\n\ndef hh(I_ext=10.0, T=100.0, dt=0.01):           # I_ext in µA/cm²\n    gNa, gK, gL, ENa, EK, EL, C = 120, 36, 0.3, 50, -77, -54.4, 1.0\n    V = -65.0\n    am, bm, ah, bh, an, bn = rates(V)\n    m, h, n = am / (am + bm), ah / (ah + bh), an / (an + bn)   # start at steady state\n    trace = []\n    for _ in range(int(T / dt)):\n        am, bm, ah, bh, an, bn = rates(V)\n        m += dt * (am * (1 - m) - bm * m)\n        h += dt * (ah * (1 - h) - bh * h)\n        n += dt * (an * (1 - n) - bn * n)\n        I_ion = gNa * m**3 * h * (V - ENa) + gK * n**4 * (V - EK) + gL * (V - EL)\n        V += dt * (I_ext - I_ion) / C\n        trace.append(V)\n    return np.array(trace)"
+    },
+    {
+      "type": "prose",
+      "text": "With I_ext = 10 µA/cm² the model fires repetitively at roughly 70 Hz in the squid parameters. Note that the squid HH model is a type-II neuron: it starts firing at a non-zero minimum rate (a Hopf bifurcation), unlike most cortical pyramidal cells, whose f–I curve starts near zero (type I). That is one reason the squid parameters should not be used as a stand-in for a cortical neuron. Expressions like (V + 40)/(1 − exp(−(V + 40)/10)) are 0/0 at exactly V = −40 mV; production code handles that limit explicitly. For real work use NEURON (Hines & Carnevale 1997), Brian2 (which ships an HH example and supports multi-compartment SpatialNeuron models) or NEST's hh_psc_alpha."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When to use it for a cortical column (rarely)"
+    },
+    {
+      "type": "prose",
+      "text": "For the reader building an SNN column aimed at learning and representation, HH is usually the wrong level of detail. Column-scale questions (how minicolumns form sparse codes, how temporal memory predicts, how columns vote) depend on connectivity, inhibition, plasticity and dendritic nonlinearity far more than on sodium channel kinetics. The standard large-scale column models make the same choice: Potjans & Diesmann (2014) use current-based LIF neurons for about 77,000 neurons and 0.3 billion synapses under 1 mm² of cortex, whereas the Blue Brain reconstruction (Markram et al. 2015) uses detailed HH-type multi-compartment neurons and needs a supercomputer for a column-sized volume of about 31,000 neurons."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use HH-type models when the question is biophysical: channelopathies, drug effects, spike initiation, dendritic calcium and sodium spikes, back-propagation of action potentials, or validating that a reduced model captures a mechanism.",
+        "Use them to derive and check reduced models: AdEx, Izhikevich and two-compartment neurons are tuned to reproduce HH-type behaviour at a fraction of the cost.",
+        "Use LIF/AdEx/Izhikevich point neurons plus explicit dendritic segment logic for everything else (see \"Dendrites and Active Dendrites\").",
+        "A pragmatic hybrid: simulate a handful of detailed HH neurons to calibrate how many coincident synaptic inputs trigger a dendritic plateau, then implement that as a rule in your large SNN."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Stiffness: with dt above about 0.05 ms forward Euler becomes inaccurate or unstable. Use exponential Euler for the gates (exact for fixed V) or an implicit scheme, as NEURON does.",
+        "Temperature: rate constants scale with temperature (Q10 of roughly 3 for the original squid gates). Squid values at 6.3 °C are not mammalian values at 37 °C.",
+        "Parameter explosion: every additional channel brings conductance densities and kinetics that are rarely all measured in one cell type; many different parameter sets give similar behaviour, so detailed models are under-constrained.",
+        "Do not mix units: the classic model is in per-area units (µA/cm², mS/cm²); simulators may expect absolute values (nA, nS) for a given membrane area."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Hodgkin, A. L. & Huxley, A. F. (1952). A quantitative description of membrane current and its application to conduction and excitation in nerve. Journal of Physiology; Dayan, P. & Abbott, L. F. (2001). Theoretical Neuroscience. MIT Press; Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014). Neuronal Dynamics: From Single Neurons to Networks and Models of Cognition. Cambridge University Press; Izhikevich, E. M. (2004). Which model to use for cortical spiking neurons? IEEE Transactions on Neural Networks; Izhikevich, E. M. (2007). Dynamical Systems in Neuroscience: The Geometry of Excitability and Bursting. MIT Press; Pospischil, M., Toledo-Rodriguez, M., Monier, C., Piwkowska, Z., Bal, T., Frégnac, Y., Markram, H. & Destexhe, A. (2008). Minimal Hodgkin–Huxley type models for different classes of cortical and thalamic neurons. Biological Cybernetics; Hines, M. L. & Carnevale, N. T. (1997). The NEURON simulation environment. Neural Computation; Markram, H. et al. (2015). Reconstruction and simulation of neocortical microcircuitry. Cell; Potjans, T. C. & Diesmann, M. (2014). The cell-type specific cortical microcircuit: relating structure and activity in a full-scale spiking network model. Cerebral Cortex; Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife"
+    }
+  ]
+}

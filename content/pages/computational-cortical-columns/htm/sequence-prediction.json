@@ -1,0 +1,201 @@
+{
+  "title": "Sequence Prediction and Anomaly Detection",
+  "intro": "Once a temporal memory has learned transitions, its predictive cells are a running forecast of the next input. This page covers how HTM handles branching and ambiguous sequences, how several predictions coexist as a union, how surprise is turned into an anomaly score and an anomaly likelihood, how HTM fares against LSTMs and on the Numenta Anomaly Benchmark, and which software you can use today.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Branching and multiple simultaneous predictions"
+    },
+    {
+      "type": "prose",
+      "text": "Real sequences branch: after 'A-B' you may see C or F. A temporal memory that has seen both continuations has segments for both, so after A-B the cells for C and for F are depolarised at the same time. Because each prediction is a sparse set of cells (about 40 out of 65,536 with the Numenta defaults), several of them can be superimposed without much interference: the union is still sparse, and the next input selects whichever member is actually present. When C arrives, only the C cells that were predicted fire; the F predictions simply lapse. No probabilities are computed explicitly, but how many cells per prediction are depolarised, and how strongly connected their segments are, tracks how often each continuation has occurred. The union has a limit. As more predictions are superimposed, the predicted set grows and the chance that an unexpected input happens to overlap a predicted cell set increases. With 2% activity and segment thresholds in the low teens, unions of a handful up to a few tens of patterns stay reliable; beyond that false positives rise. The exact numbers follow from the SDR union analysis in Ahmad & Hawkins (2015, 2016) and depend on n, w and thresholds; the SDR overlap widget in 'Sparse Distributed Representations' (section 3) shows the underlying arithmetic."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "High-order context"
+    },
+    {
+      "type": "prose",
+      "text": "Branching that can be resolved by earlier context is handled by using different cells: in A-B-C-D versus X-B-C-Y the prediction after C depends on A or X two steps back, and temporal memory carries that information in which cells of B and C are active (see 'Temporal Memory'). Branching that cannot be resolved by context, like the C/F choice after A-B when both are equally common, is handled by a union. Both cases coexist in the same network without any change of mechanism, which is one of the attractive properties of the model."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: branching sequences"
+    },
+    {
+      "type": "prose",
+      "text": "This instance of the simulator trains on A-B-C-D-E and A-B-F-G-E: a shared prefix, a branch, and a shared ending."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "temporal-memory",
+        "title": "Temporal memory: branching sequences A-B-C-D-E vs A-B-F-G-E",
+        "params": [
+          {
+            "key": "sequences",
+            "label": "Training sequences",
+            "control": "select",
+            "options": [
+              "ABCD",
+              "ABCD + XBCY",
+              "ABCDE + ABFGE"
+            ],
+            "default": "ABCDE + ABFGE"
+          },
+          {
+            "key": "cellsPerColumn",
+            "label": "Cells per minicolumn",
+            "control": "range",
+            "min": 1,
+            "max": 8,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "activationThreshold",
+            "label": "Segment activation threshold",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 3
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 9999,
+            "step": 1,
+            "default": 11
+          }
+        ],
+        "config": {
+          "columnsPerSymbol": 4,
+          "maxNewSynapses": 6,
+          "permanenceIncrement": 0.1,
+          "permanenceDecrement": 0.05,
+          "connectedPermanence": 0.5,
+          "initialPermanence": 0.51
+        }
+      }
+    },
+    {
+      "type": "list",
+      "items": [
+        "Press Train ×10, then Step through. After A-B the predicted-symbols readout should list both C and F: a union of two predictions. Whichever one arrives is correctly predicted and the anomaly score stays near 0.",
+        "Look at E: it ends both sequences but is reached through different cells in each (after D or after G). With several cells per minicolumn, the two E contexts are represented by different cells in the same columns.",
+        "Reset, set Cells per minicolumn to 1 and train again. This pair of sequences is still mostly predictable, because the branch after B cannot be resolved by context anyway. Then switch Training sequences to ABCD + XBCY with 1 cell per minicolumn: after C the layer predicts both D and Y every time — the first-order failure. Set cells back to 4 and the ambiguity disappears after training.",
+        "Lower the Segment activation threshold to 1 and step through: spurious predictions appear because a single coincident synapse is enough to depolarise a cell. Raise it back to 3.",
+        "Press Reset and Step: everything bursts and the anomaly score is 1 until the network relearns, which is what an HTM anomaly detector reports when a stream changes regime."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The anomaly score"
+    },
+    {
+      "type": "prose",
+      "text": "The raw anomaly score at time t is the fraction of currently active columns that were not predicted at t−1:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "  s_t = 1 − |π(t−1) ∩ a(t)| / |a(t)|\n\n  a(t)    = set of active minicolumns at t (from the spatial pooler)\n  π(t−1)  = set of minicolumns containing at least one predictive cell at t−1\n  s_t = 0 : everything was predicted;  s_t = 1 : nothing was predicted (full burst)"
+    },
+    {
+      "type": "prose",
+      "text": "Two properties follow. First, a union of predictions does not raise the score: predicting C and F and seeing C gives s = 0. Second, the score is noisy: streams with inherent unpredictability (e.g. random fluctuations around a daily pattern) produce many non-zero scores even when nothing unusual happens, so thresholding s_t directly gives many false alarms."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The anomaly likelihood"
+    },
+    {
+      "type": "prose",
+      "text": "Ahmad, Lavin, Purdy & Agha (2017) therefore turn the raw score into an anomaly likelihood: a measure of how unusual the recent anomaly scores are relative to this stream's own history. Keep a long window of recent raw scores (several thousand records), model them as a normal distribution with mean μ_t and standard deviation σ_t, compute a short-term moving average μ̃_t over the last few scores (about ten), and ask how far into the tail that average lies:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "  L_t = 1 − Q( (μ̃_t − μ_t) / σ_t )\n\n  Q(z) = Gaussian tail probability, P(Z > z)\n  report an anomaly when L_t ≥ 1 − ε   (ε very small, e.g. 1e−5 in the paper)\n  windows in Numenta's implementation: long ≈ thousands of records, short ≈ 10 (hedged)"
+    },
+    {
+      "type": "prose",
+      "text": "The likelihood adapts to each stream: a stream that is always somewhat unpredictable gets a high baseline and only sustained increases are flagged. It also introduces a lag of a few records and a warm-up period before reliable estimates exist."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Numenta Anomaly Benchmark (NAB)"
+    },
+    {
+      "type": "prose",
+      "text": "Lavin & Ahmad (2015) introduced NAB to evaluate streaming anomaly detectors. It contains several dozen labelled time series (about 58 files, real and artificial: server metrics, traffic, social-media counts, industrial sensors and others). Each labelled anomaly has a window around it; a detector is rewarded for the first detection inside a window, more for earlier detections (via a scaled sigmoid), penalised for false positives outside windows, and penalised for missing a window. Scores are normalised so that a perfect detector scores 100 and a detector that never fires scores 0, and three application profiles weight false positives and false negatives differently. In Numenta's published evaluations HTM ranked at or near the top of the detectors tested, which included several open-source and commercial streaming methods (Ahmad et al. 2017). Treat this with appropriate caution: the benchmark and the leading entries were produced by the same organisation, later entries from other groups reported comparable or better scores with different methods, and Wu & Keogh (2021) argue that several popular anomaly benchmarks, NAB included, contain trivially solvable series and labelling problems that make rankings unreliable. If you use NAB to evaluate your own column, report raw detection results alongside the NAB score."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "HTM versus LSTM"
+    },
+    {
+      "type": "prose",
+      "text": "Cui, Ahmad & Hawkins (2016) compare temporal memory with LSTM (Hochreiter & Schmidhuber 1997) and other sequence models on artificial high-order sequences and on New York City taxi passenger counts. Their main findings, as reported in the paper:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "On the taxi data, HTM's prediction error was comparable to LSTM's and better than simpler baselines such as ARIMA in their setup.",
+        "When the statistics of the stream changed (they altered the data partway through), HTM adapted quickly because it learns on every step; the LSTM, retrained on a sliding window of recent data, adapted more slowly.",
+        "On artificial sequences with ambiguous continuations, HTM naturally produced multiple simultaneous predictions, whereas a standard LSTM trained with a single-target loss represents ambiguity less directly.",
+        "HTM degraded gracefully when a fraction of its cells was removed, and it used the same parameters across tasks without per-dataset tuning."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The comparison is with LSTMs of that era trained in a particular online setting. A modern LSTM, temporal convolutional network or transformer trained offline on enough data will usually win on raw predictive accuracy for stationary data; HTM's case rests on continuous online learning, robustness and biological plausibility rather than on state-of-the-art accuracy."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Tooling in practice"
+    },
+    {
+      "type": "list",
+      "items": [
+        "NuPIC (Numenta Platform for Intelligent Computing) is the original open-source implementation. Numenta has placed it in maintenance mode; it targets Python 2.7, so it is mainly useful as a reference.",
+        "htm.core is a community-maintained continuation of NuPIC's C++ core with Python 3 bindings, and is the most practical way to run spatial pooler, temporal memory, encoders and anomaly likelihood today.",
+        "BAMI (Biological and Machine Intelligence) is Numenta's online book with the authoritative pseudocode for the spatial pooler and temporal memory and chapters on SDRs and encoders. Use it as the specification when you write your own implementation.",
+        "Numenta's research repositories contain code for the Thousand Brains layer models (location-based and apical variants); for the sensorimotor successor, see 'Monty and the Thousand Brains Project' in section 5."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "If you are building an SNN column: implement the binary temporal memory first (a few hundred lines of NumPy), reproduce the ABCD/XBCY result and the anomaly-score curve, then replace one piece at a time with spiking components while checking you still get the same predictions. 'Step-by-Step Roadmap' in section 7 lays out this sequence, and 'Dendrites and Active Dendrites' in section 2 covers the dendritic mechanics you will need."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "An anomaly score that never decays usually means the input representation is not stable (encoder or spatial pooler drift), not that the stream is anomalous.",
+        "Anomaly likelihood needs a warm-up period; ignore its output for the first few hundred records (Numenta's implementation has an explicit probationary period).",
+        "Unions of predictions make the layer look accurate under the anomaly score even when it is hedging between many outcomes. Also measure prediction specificity, e.g. the number of predicted columns divided by the number actually active.",
+        "Benchmarks for streaming anomaly detection are contested; compare against simple baselines (moving-average z-scores, last-value predictors) before claiming a win."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Cui, Y., Ahmad, S. & Hawkins, J. (2016). Continuous online sequence learning with an unsupervised neural network model. Neural Computation.; Ahmad, S., Lavin, A., Purdy, S. & Agha, Z. (2017). Unsupervised real-time anomaly detection for streaming data. Neurocomputing.; Lavin, A. & Ahmad, S. (2015). Evaluating real-time anomaly detection algorithms — the Numenta Anomaly Benchmark. IEEE 14th International Conference on Machine Learning and Applications (ICMLA).; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits.; Ahmad, S. & Hawkins, J. (2015). Properties of sparse distributed representations and their application to hierarchical temporal memory. arXiv preprint.; Ahmad, S. & Hawkins, J. (2016). How do neurons operate on sparse distributed representations? A mathematical theory of sparsity, neurons and active dendrites. arXiv preprint.; Hawkins, J. et al. (2016). Biological and Machine Intelligence (BAMI), release 0.4. Numenta, online book.; Hochreiter, S. & Schmidhuber, J. (1997). Long short-term memory. Neural Computation.; Wu, R. & Keogh, E. J. (2021). Current time series anomaly detection benchmarks are flawed and are creating the illusion of progress. IEEE Transactions on Knowledge and Data Engineering."
+    }
+  ]
+}

@@ -1,0 +1,127 @@
+{
+  "title": "Neuromorphic Hardware",
+  "intro": "Loihi and Loihi 2, SpiNNaker and SpiNNaker2, TrueNorth, BrainScaleS-2 and FPGAs: what each chip offers, the constraints (fan-in, weight precision, delays, on-chip learning, dendrites) that decide whether your column fits, and how to map minicolumns, dendritic segments, inhibition and voting onto event-driven silicon.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why put a column on silicon at all"
+    },
+    {
+      "type": "prose",
+      "text": "A neuromorphic chip is a computer whose memory sits next to its arithmetic and whose messages are spikes. Instead of a CPU fetching every synaptic weight from DRAM every millisecond, thousands of small cores each hold the state of their own neurons and synapses and only exchange packets when a neuron fires. If activity is sparse — and a cortical column built from SDRs is sparse by design, typically 2–5% of cells active — most of the chip does nothing most of the time, which is where the energy savings come from."
+    },
+    {
+      "type": "prose",
+      "text": "The price is constraints. Every chip limits how many synapses a neuron can receive (fan-in), how many targets it can reach (fan-out), how many bits a weight has, which delays are possible, which learning rules run on-chip and whether dendrites exist. A column algorithm that is easy in float32 NumPy can be impossible as written on a given chip. The productive approach is to know these constraints early and simulate them in software before porting."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The main platforms"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Intel Loihi (Davies et al. 2018). A 14 nm digital, asynchronous chip with 128 neuromorphic cores and 3 embedded x86 cores; each core implements up to 1,024 current-based LIF compartments, giving about 130,000 neurons and on the order of 130 million synapses per chip. Distinctive features: multi-compartment neurons (compartments combined into dendritic trees with configurable join operations), configurable synaptic delays, low-precision signed weights (at most about 8–9 bits, precision configurable per synapse group), and a programmable on-chip learning engine that applies sum-of-products rules over pre- and postsynaptic traces and a reward/third-factor signal — enough for pair STDP, triplet-like rules and reward-modulated variants. Multi-chip boards (Nahuku) and systems (Pohoiki Springs, 768 chips, about 100 million neurons) were built for research access.",
+        "Intel Loihi 2 (2021; see Orchard et al. 2021). Same basic architecture with 128 neuromorphic cores per chip on the Intel 4 process, up to about 1 million neurons per chip, neuron models programmable by microcode (so not only LIF), and graded spikes that carry an integer payload instead of a single bit. It is programmed through the open-source Lava framework. The 2024 Hala Point system combines 1,152 Loihi 2 chips (about 1.15 billion neurons). Access is through the Intel Neuromorphic Research Community rather than retail.",
+        "SpiNNaker (Furber et al. 2014). A digital many-core machine from the University of Manchester: each chip has 18 ARM968 cores, neuron and synapse models run as software on the cores, and spikes travel as small multicast packets routed by key — a packet-switched version of address-event representation. The largest machine has about one million ARM cores. Strengths: flexibility (any model you can write in C), real-time operation at 1 ms (or 0.1 ms) time steps, PyNN support via sPyNNaker. Limits: per-core memory and CPU time cap the number of synapses per core, so dense or high-rate networks need fewer neurons per core. Van Albada et al. (2018) compared SpiNNaker and NEST on the Potjans–Diesmann microcircuit; later work (Rhodes et al. 2020) reached real-time simulation of that model on SpiNNaker.",
+        "SpiNNaker2 (Mayr, Höppner & Furber 2019). The second generation: 152 ARM Cortex-M4F cores per chip in 22 nm FDSOI, adaptive body biasing for low power, and hardware accelerators (exponential/logarithm units, multiply-accumulate arrays) that let it mix spiking and conventional deep-learning workloads. Treat system-scale figures quoted for SpiNNaker2 as targets unless you have a published measurement.",
+        "IBM TrueNorth (Merolla et al. 2014). A 28 nm, 5.4-billion-transistor chip with 4,096 neurosynaptic cores, each a 256-axon × 256-neuron binary crossbar, giving 1 million neurons and 256 million synapses; it consumed roughly 65–70 mW running typical real-time networks. Each neuron sees its inputs through one of four axon types with a signed integer weight per type, so effective weights are very low precision; neurons are a configurable digital LIF variant with optional stochasticity. There is no on-chip learning: networks are trained off-chip and deployed. Its fan-in of 256 per core is the clearest example of a hard mapping constraint.",
+        "BrainScaleS-2 (Pehle et al. 2022; first generation: Schemmel et al. 2010). Mixed-signal hardware from Heidelberg: physical analog circuits emulate AdEx neurons and synapses, running about 1,000 times faster than biological real time. A BrainScaleS-2 chip has 512 neuron circuits and 131,072 synapses with 6-bit weights, plus embedded SIMD plasticity processors that can run custom learning rules on-chip (hybrid plasticity); neurons can be combined into multi-compartment structures. Strengths: speed (a day of biological learning in under two minutes) and on-chip plasticity. Limits: analog mismatch requires calibration, and per-chip scale is small.",
+        "FPGAs. Field-programmable gate arrays let you build your own neuromorphic core: time-multiplexed neuron update pipelines, weights in on-chip block RAM, AER-style spike queues, fixed-point arithmetic. Examples range from event-driven accelerators such as Minitaur (Neil & Liu 2014) to custom designs in HLS or RTL. Strengths: full control over precision, learning rule and connectivity; they are also the most realistic route to a custom column accelerator. Limits: on-chip memory (a few to a few tens of MB of block/ultra RAM) bounds synapse counts unless you stream from external DRAM, which costs bandwidth and energy.",
+        "Others you will meet: BrainChip Akida and SynSense chips (commercial, inference-oriented, mostly convolutional SNNs), and memristive crossbar prototypes. They are useful for edge inference but rarely suit plastic, recurrent column models today."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Exact capacity figures (neurons and synapses per chip, power) depend heavily on the network mapped: synapse memory, not neuron count, is usually the binding limit. Quote the numbers above as headline specifications from the cited papers, not as guarantees for your network."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mapping constraints you must design around"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Fan-in. TrueNorth caps it at 256 axons per core; Loihi and SpiNNaker bound it by per-core synapse memory. A temporal-memory cell with 16 segments × 32 synapses needs 512 distal inputs plus proximal ones; a spatial-pooler minicolumn with an 80% potential pool over a 1,024-bit encoder needs about 800. Plan the encoder size and potential pools so a minicolumn fits on one core.",
+        "Fan-out and routing. Every spike that must reach many cores costs packets. Global k-WTA inhibition is the expensive case; local inhibitory pools per core, or a timing-based 'first k spikes win' scheme, scale better.",
+        "Weight precision. 1–9 bits are typical (TrueNorth: a few signed types per neuron; BrainScaleS-2: 6 bits; Loihi: at most about 8–9 bits, signed). HTM permanences are naturally low precision, but small STDP increments can fall below one least-significant bit and freeze learning (see the code below).",
+        "Delays. Loihi and SpiNNaker support small programmable delays measured in time steps; analog systems have their own fixed latencies. Do not rely on precise sub-millisecond timing unless the chip guarantees it.",
+        "Learning-rule support. Loihi, Loihi 2, SpiNNaker (software) and BrainScaleS-2 (plasticity processors) can learn on-chip; TrueNorth and most commercial chips cannot. Synapse creation — central to HTM, where segments grow new synapses to previous winners — is generally not supported in hardware; the workaround is to preallocate a potential pool of zero-weight synapses, which multiplies memory.",
+        "Dendrites. Only some platforms have compartments (Loihi's dendritic trees, BrainScaleS-2's multi-compartment neurons). Elsewhere a distal segment must be emulated by an extra 'segment neuron' feeding the cell, which multiplies the neuron count by the number of segments.",
+        "Time-step semantics. Digital chips update on a global step (often 1 ms biological); mixed-signal ones run continuously and faster than real time. A model whose correctness depends on the order of updates inside one step (for example 'predicted cells fire first and inhibit the rest') must make that order explicit."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mapping an HTM / Thousand Brains column"
+    },
+    {
+      "type": "prose",
+      "text": "Two strategies work. The direct one maps each algorithmic object onto the closest hardware primitive; the table below summarises the usual choices. The alternative is to change the algorithm into an explicitly spiking one before mapping — for example, implement 'prediction' as a small depolarisation that makes predicted cells reach threshold a few milliseconds earlier, and implement minicolumn inhibition as a fast inhibitory neuron triggered by the first spikes, which is how Hawkins & Ahmad (2016) describe the biological mechanism. The second strategy usually maps better because it uses only standard LIF neurons, synapses and timing."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "HTM / TBT element             Loihi (1/2)                         TrueNorth / fixed crossbar        SpiNNaker / FPGA\n---------------------------   ---------------------------------   -------------------------------   -------------------------------\nMinicolumn (shared input)     group of compartments on one core   neurons sharing axons in a core   neurons on one ARM core / tile\nProximal (feedforward) zone   soma compartment synapses           crossbar row inputs               software/RTL synapse list\nDistal dendritic segment      dendritic compartment with           extra 'segment neuron' whose      extra state variable per segment,\n                              threshold, joined to soma            spike excites the cell            thresholded in the update loop\nPredictive (depolarised)      raised soma bias or sub-threshold    lower threshold via a bias        offset added to v or threshold\n  state                       input from segment compartment       neuron / extra input\nk-WTA inhibition              inhibitory population or             inhibitory neurons with large     global inhibition packet or a\n                              earliest-spike-wins via timing        fan-out                           sorting/top-k unit\nPermanence learning           on-chip trace-based rule, integer    off-chip only (no plasticity)     ARM software rule / custom RTL\n                              weights, potential pool preallocated\nSynapse growth                not supported: preallocate zeros     not supported                     possible in software, costs memory\nGrid-cell modules (location)  ring/torus attractors or NEF          precomputed connectivity          attractors or direct lookup tables\nVoting between columns        lateral spikes between chips/cores   lateral spikes, fan-out limited   multicast packets (natural fit)"
+    },
+    {
+      "type": "prose",
+      "text": "Rough budget for the minimum viable column from the section overview (256 minicolumns × 8 cells, 16 segments × 24 synapses per cell): 2,048 cells, about 32,768 segments and about 786,000 distal synapses if fully preallocated. On a chip without dendritic compartments, 32,768 segment neurons dominate the neuron budget; on Loihi each segment can be a compartment in the same tree as its soma. Many teams therefore start with far fewer segments per cell (4–8) on hardware, or learn the distal weights off-chip and deploy them fixed."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulate the hardware before you have it"
+    },
+    {
+      "type": "prose",
+      "text": "The single most useful habit is a 'hardware-faithful' version of your float model: integer state variables, saturating arithmetic, quantised weights and learning increments, the chip's reset and leak semantics, and its time step. Lava ships bit-accurate CPU models of Loihi processes; for FPGAs write the fixed-point model in NumPy first and use it as the golden reference for the RTL. Compare its spike counts and learned weights with the float model on fixed seeds before porting."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Simulate hardware weight precision in your float model before porting.\nimport numpy as np\nrng = np.random.default_rng(0)\n\ndef quantize(w, bits=8, w_max=1.0, stochastic=True):\n    \"\"\"Map float weights in [0, w_max] to integers 0..2^bits-1 and back.\"\"\"\n    levels = 2**bits - 1\n    x = np.clip(w, 0, w_max) / w_max * levels\n    if stochastic:                 # stochastic rounding keeps the expected value\n        x = np.floor(x + rng.random(x.shape))\n    else:\n        x = np.round(x)\n    return x / levels * w_max\n\n# STDP increments smaller than one LSB vanish under deterministic rounding:\nw = np.full(10000, 0.50)\ndw = 0.001                         # typical A+ for 1000-synapse cells\nprint(quantize(w + dw, bits=6, stochastic=False).mean() - 0.5)  # 0.0 -> learning frozen\nprint(quantize(w + dw, bits=6, stochastic=True).mean() - 0.5)   # about 0.001 on average"
+    },
+    {
+      "type": "prose",
+      "text": "Stochastic rounding is a standard remedy (Loihi's learning engine supports stochastic rounding of weight updates). Others are accumulating updates in a higher-precision shadow variable and applying them in batches, or using larger, rarer updates as HTM permanence increments already do (0.05–0.1 per update rather than 0.001)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Which platform for which goal"
+    },
+    {
+      "type": "list",
+      "items": [
+        "On-chip learning of a recurrent column with dendrites: Loihi 2 via Lava.",
+        "Large, real-time, biologically scaled networks with flexible models: SpiNNaker / SpiNNaker2 via PyNN.",
+        "Many fast learning trials, parameter sweeps over learning dynamics: BrainScaleS-2 (accelerated time).",
+        "Fixed, trained networks at minimal power: TrueNorth-style crossbars and commercial inference chips.",
+        "A custom column accelerator, or exploring precision/architecture trade-offs: FPGA, starting from a fixed-point NumPy model."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Energy comparisons are only meaningful against a stated baseline (same task, same accuracy, measured CPU/GPU numbers). Report energy per inference and per synaptic operation together with accuracy, as surveyed for Loihi by Davies et al. (2021).",
+        "High firing rates erase the advantage. A network that runs at 50 Hz average where 5 Hz would do costs ten times the routing and energy.",
+        "Analog chips (BrainScaleS) give each neuron slightly different parameters; algorithms that need exact thresholds or perfectly balanced weights must be made robust to that variability.",
+        "Porting is not the research. Keep the float and fixed-point models as the primary research vehicle and port only stable algorithms; debugging plasticity on hardware is slow."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Davies, M., Srinivasa, N., Lin, T.-H., Chinya, G., Cao, Y., Choday, S. H., Dimou, G., Joshi, P., Imam, N., Jain, S., Liao, Y., Lin, C.-K., Lines, A., Liu, R., Mathaikutty, D., McCoy, S., Paul, A., Tse, J., Venkataramanan, G., Weng, Y.-H., Wild, A., Yang, Y. & Wang, H. (2018). Loihi: a neuromorphic manycore processor with on-chip learning. IEEE Micro.; Davies, M., Wild, A., Orchard, G., Sandamirskaya, Y., Fonseca Guerra, G. A., Joshi, P., Plank, P. & Risbud, S. R. (2021). Advancing neuromorphic computing with Loihi: a survey of results and outlook. Proceedings of the IEEE.; Orchard, G., Frady, E. P., Rubin, D. B. D., Sanborn, S., Shrestha, S. B., Sommer, F. T. & Davies, M. (2021). Efficient neuromorphic signal processing with Loihi 2. IEEE Workshop on Signal Processing Systems (SiPS).; Furber, S. B., Galluppi, F., Temple, S. & Plana, L. A. (2014). The SpiNNaker project. Proceedings of the IEEE.; Mayr, C., Höppner, S. & Furber, S. (2019). SpiNNaker 2: a 10 million core processor system for brain simulation and machine learning. arXiv preprint.; Merolla, P. A., Arthur, J. V., Alvarez-Icaza, R., Cassidy, A. S., Sawada, J., Akopyan, F., Jackson, B. L., Imam, N., Guo, C., Nakamura, Y., Brezzo, B., Vo, I., Esser, S. K., Appuswamy, R., Taba, B., Amir, A., Flickner, M. D., Risk, W. P., Manohar, R. & Modha, D. S. (2014). A million spiking-neuron integrated circuit with a scalable communication network and interface. Science.; Schemmel, J., Brüderle, D., Grübl, A., Hock, M., Meier, K. & Millner, S. (2010). A wafer-scale neuromorphic hardware system for large-scale neural modeling. IEEE International Symposium on Circuits and Systems (ISCAS).; Pehle, C., Billaudelle, S., Cramer, B., Kaiser, J., Schreiber, K., Stradmann, Y., Weis, J., Leibfried, A., Müller, E. & Schemmel, J. (2022). The BrainScaleS-2 accelerated neuromorphic system with hybrid plasticity. Frontiers in Neuroscience.; van Albada, S. J., Rowley, A. G., Senk, J., Hopkins, M., Schmidt, M., Stokes, A. B., Lester, D. R., Diesmann, M. & Furber, S. B. (2018). Performance comparison of the digital neuromorphic hardware SpiNNaker and the neural network simulation software NEST for a full-scale cortical microcircuit model. Frontiers in Neuroscience.; Rhodes, O., Peres, L., Rowley, A. G. D., Gait, A., Plana, L. A., Brenninkmeijer, C. & Furber, S. B. (2020). Real-time cortical simulation on neuromorphic hardware. Philosophical Transactions of the Royal Society A.; Neil, D. & Liu, S.-C. (2014). Minitaur, an event-driven FPGA-based spiking network accelerator. IEEE Transactions on Very Large Scale Integration (VLSI) Systems.; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits."
+    }
+  ]
+}

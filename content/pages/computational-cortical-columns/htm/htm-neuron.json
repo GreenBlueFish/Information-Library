@@ -1,0 +1,118 @@
+{
+  "title": "The HTM Neuron",
+  "intro": "A typical neocortical pyramidal neuron receives thousands of excitatory synapses, yet a point neuron model can only use them as one weighted sum. The HTM neuron, proposed by Hawkins & Ahmad (2016), treats the dendritic tree as many independent pattern detectors and gives the neuron a third state between silence and firing: the predictive state.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intuition: one cell, three kinds of input"
+    },
+    {
+      "type": "prose",
+      "text": "Picture a pyramidal cell as a receptionist with three phones. The proximal phone (synapses near the soma) carries the actual request: if enough of these synapses are active, the cell fires. The basal phone (distal dendrites on the basal tree) carries context from neighbouring cells in the same layer: it cannot make the cell fire, but it can say 'get ready, your input is probably coming'. The apical phone (the apical tuft, reaching up into layer 1) carries feedback from higher regions and works in the same way, priming the cell from above. A primed cell answers its proximal phone a little faster than unprimed neighbours, and in a competitive circuit, being faster is enough to win."
+    },
+    {
+      "type": "prose",
+      "text": "The key move is to treat each distal dendritic segment as a separate unit with its own threshold. A segment does not add a little current to a global sum; it detects whether a specific sparse pattern of presynaptic cells is active, and if so produces a large local event. Biologically that event is an NMDA spike (or plateau potential), a regenerative depolarisation triggered when enough nearby synapses on a thin dendrite are co-active (Schiller et al. 2000; Major, Larkum & Schiller 2013). Each segment is effectively one pattern detector, so a cell with dozens of segments can recognise dozens of different contexts."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The biological numbers behind the model"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Pyramidal neurons in neocortex typically carry several thousand to over ten thousand excitatory synapses; Hawkins & Ahmad (2016) use 'thousands' as the working figure.",
+        "Only a minority of those synapses (Hawkins & Ahmad estimate under 10%, i.e. a few hundred) are proximal enough to drive the soma directly in a roughly linear way.",
+        "Experimental work they cite shows that roughly 8–20 co-active synapses clustered within a few tens of micrometres of a thin basal or apical branch can trigger an NMDA spike; distant uncorrelated inputs have little effect at the soma.",
+        "NMDA spikes and plateaus last tens to hundreds of milliseconds and depolarise the soma by a few to around ten millivolts — enough to bring a cell closer to threshold but usually not enough to fire it on their own. Exact amplitudes vary with cell type, location and preparation."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "These are the facts the model abstracts; they are reviewed in 'Dendrites and Active Dendrites' in section 2, which also covers the two-layer-network view of pyramidal neurons (Poirazi, Brannon & Mel 2003) and apical-basal coupling (Larkum 2013)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The model"
+    },
+    {
+      "type": "prose",
+      "text": "An HTM neuron is binary in its output and discrete in time. It has one proximal zone that connects to the feedforward input and determines whether the cell can become active, plus a set of distal segments (each a list of synapses onto other cells in the layer) and optionally apical segments (synapses onto feedback cells). Every synapse has a scalar permanence p in [0, 1] and is connected if p ≥ θ_conn; the effective weight is 1 if connected and 0 otherwise. Learning changes permanences, so a synapse can be 'on the way to forming' without yet having any effect, which models structural plasticity (the growth and retraction of spines) rather than graded weight change."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "For a distal segment d of cell i at time t, with A(t) the set of active cells:\n  connected(d)   = { synapses s on d with permanence p_s ≥ θ_conn }\n  activity(d,t)  = | { s ∈ connected(d) : presyn(s) ∈ A(t) } |\n  d is ACTIVE    if activity(d,t) ≥ θ_seg       (an NMDA-spike-like event)\n  d is MATCHING  if |{ s on d : presyn(s) ∈ A(t) }| ≥ θ_min   (counts unconnected synapses too)\n\nCell state at time t+1:\n  PREDICTIVE(i) = OR over segments d of i : d is ACTIVE at t\n  ACTIVE(i)     = cell's minicolumn wins feedforward competition AND\n                  (PREDICTIVE(i) OR no cell in the minicolumn was predictive)\n\nTypical values (Numenta temporal memory, hedged; vary by release and application):\n  θ_conn ≈ 0.5   θ_seg ≈ 10–16   θ_min ≈ 8–10   synapses per segment ≈ 20–40 sampled"
+    },
+    {
+      "type": "prose",
+      "text": "Mathematically a segment is a threshold unit over a sparse binary vector, and the cell is an OR over its segments. This is why HTM leans on the properties of sparse distributed representations (see 'Sparse Distributed Representations' in section 3): if the layer activity has w active cells out of n, and a segment samples s of the active cells of a remembered pattern with threshold θ_seg, the chance that a random unrelated pattern crosses threshold is astronomically small for realistic numbers, while a noisy version of the remembered pattern still crosses it. Ahmad & Hawkins (2015, 2016) derive these error rates; you can explore them in the SDR overlap widget in section 3."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A worked example"
+    },
+    {
+      "type": "prose",
+      "text": "Hawkins & Ahmad (2016) discuss segments that sample around 20 synapses from a remembered pattern with a threshold of around 10. Such a segment still recognises the pattern if half of the sampled cells are missing or replaced by noise, and with a population of thousands of cells at about 2% activity the probability that an unrelated pattern produces 10 coincident hits on the same segment is vanishingly small. Doubling the sampled synapses (to about 40) while keeping a similar threshold further increases noise tolerance. Treat these as illustrative choices from the paper and from Numenta's code rather than measured biological constants; the qualitative conclusion — that sampling a small subset of a sparse pattern with a modest threshold gives robust, specific recognition — is the robust part."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The three zones and what each does in the models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Proximal (feedforward) zone: modelled as one shared receptive field per minicolumn in the spatial pooler and temporal memory, so all cells in a minicolumn have the same proximal input. Activation of proximal synapses above threshold makes the cell (minicolumn) a candidate to fire.",
+        "Basal (distal) zone: many independent segments receiving lateral input from other cells in the same layer. In temporal memory this input is the previous time step's active cells, so the segments learn transitions. In the Thousand Brains layer models (Hawkins, Ahmad & Cui 2017) basal input can instead come from a location signal.",
+        "Apical zone: segments receiving top-down feedback. In Hawkins & Ahmad (2016) apical depolarisation plays the same role as basal depolarisation, biasing which cells fire; Numenta's later research code includes an 'apical' variant of temporal memory, and the 2017 columns paper uses lateral connections between columns for voting. Apical function is the least specified part of the model."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mapping the HTM neuron onto a spiking neuron"
+    },
+    {
+      "type": "prose",
+      "text": "The HTM neuron is a rate-free, binary abstraction, but every element has a spiking counterpart. A practical mapping for Brian2, NEST or a custom vectorised simulator:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Soma: an LIF or AdEx compartment with proximal synapses (AMPA-like, τ ≈ 2–5 ms) as its main drive.",
+        "Distal segment: a separate nonlinear subunit. Sum the conductances of the segment's connected synapses; if the summed input crosses a segment threshold (equivalent to roughly 10–20 coincident inputs within a few milliseconds), trigger a plateau: inject a depolarising current into the soma for 50–200 ms (NMDA-like), sized to depolarise the soma by a few millivolts without firing it. Implementing the plateau as a state variable with its own decay keeps it cheap on hardware.",
+        "Predictive state = the soma sitting closer to threshold during the plateau. When the proximal input arrives, depolarised cells reach threshold a few milliseconds earlier than their undepolarised neighbours.",
+        "Inhibition inside each minicolumn: a fast inhibitory population (basket-cell-like, short delay of about 1–2 ms) that the first spikes in the minicolumn activate and that suppresses the remaining cells. This is what turns 'fired earlier' into 'only the predicted cells fired'. If no cell was depolarised, all cells reach threshold at nearly the same time, inhibition arrives too late, and the minicolumn bursts.",
+        "Apical input: a second plateau compartment with the same mechanics, or a gain modulation of the soma, depending on the question you are asking."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The timing lead created by depolarisation must be longer than the jitter of feedforward input and the latency of local inhibition, otherwise predicted and unpredicted cells fire together. That margin is set by the plateau amplitude, the membrane time constant and the rise time of the feedforward input; check it explicitly in a single-minicolumn test before building a layer. A spiking implementation of temporal-memory-style sequence learning along these lines, in NEST, is described by Bouhadjar et al. (2022)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Do not let segments fire the cell. If a dendritic plateau alone can push the soma over threshold, the layer will hallucinate sequences. Keep plateau depolarisation sub-threshold.",
+        "Segment thresholds must be set relative to the number of active presynaptic cells per step. If your layer is 10% active instead of 2%, the same threshold produces many false matches.",
+        "Binary permanence synapses are a modelling choice, not a biological fact. Graded weights with a soft threshold work too, but you lose the clean separation between 'forming' and 'formed' synapses and the noise-robustness analysis no longer applies directly.",
+        "Numbers quoted for NMDA spike thresholds and plateau durations come from slice experiments on specific cell types; treat them as ranges to explore, not as constants."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits.; Ahmad, S. & Hawkins, J. (2015). Properties of sparse distributed representations and their application to hierarchical temporal memory. arXiv preprint.; Ahmad, S. & Hawkins, J. (2016). How do neurons operate on sparse distributed representations? A mathematical theory of sparsity, neurons and active dendrites. arXiv preprint.; Schiller, J., Major, G., Koester, H. J. & Schiller, Y. (2000). NMDA spikes in basal dendrites of cortical pyramidal neurons. Nature.; Major, G., Larkum, M. E. & Schiller, J. (2013). Active properties of neocortical pyramidal neuron dendrites. Annual Review of Neuroscience.; Poirazi, P., Brannon, T. & Mel, B. W. (2003). Pyramidal neuron as two-layer neural network. Neuron.; Larkum, M. (2013). A cellular mechanism for cortical associations: an organizing principle for the cerebral cortex. Trends in Neurosciences.; Hawkins, J., Ahmad, S. & Cui, Y. (2017). A theory of how columns in the neocortex enable learning the structure of the world. Frontiers in Neural Circuits.; Bouhadjar, Y., Wouters, D. J., Diesmann, M. & Tetzlaff, T. (2022). Sequence learning, prediction, and replay in networks of spiking neurons. PLOS Computational Biology."
+    }
+  ]
+}

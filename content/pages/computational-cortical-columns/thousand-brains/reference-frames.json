@@ -1,0 +1,137 @@
+{
+  "title": "Reference Frames",
+  "intro": "The Thousand Brains Theory's first idea: a column does not just recognise a pattern, it learns where each feature sits on an object, in a coordinate system attached to that object. This page explains why location is central, how an object becomes a set of feature-at-location pairs, and how to represent such a frame in spiking neurons.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The intuition: a coffee mug in the dark"
+    },
+    {
+      "type": "prose",
+      "text": "Close your eyes and run a fingertip over a coffee mug. Each touch delivers a tiny feature — a curved rim, a smooth glaze, the edge where the handle joins the body. None of these features is a mug on its own: a rim is shared by bowls and glasses, smooth glaze by plates. What turns a stream of features into 'mug' is knowing where on the object each feature was felt. 'Curved edge here, and 8 cm below and to the right of it, a handle' is a mug; the same features in a different arrangement is something else."
+    },
+    {
+      "type": "prose",
+      "text": "The Thousand Brains Theory (TBT) builds on exactly this observation. Its central claim is that every cortical column learns models of objects as sets of features at locations, and that those locations are expressed in a reference frame attached to the object itself rather than to the body or the retina. A reference frame here simply means a coordinate system: a way of assigning each point on (or around) the object a location code, together with the ability to update that code when the sensor moves."
+    },
+    {
+      "type": "callout",
+      "text": "Status: the claim that columns learn object models in object-centric reference frames is a theoretical proposal (Hawkins, Ahmad & Cui 2017; Hawkins, Lewis et al. 2019; Hawkins 2021). It is consistent with a lot of sensorimotor neuroscience but has not been directly demonstrated in neocortical columns. Treat it as a design hypothesis you can build and test, not as settled biology."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why location, and why object-centric?"
+    },
+    {
+      "type": "prose",
+      "text": "A classic feedforward recogniser (a convolutional network, or a spatial pooler feeding a classifier) learns a mapping from an input pattern to a label. It has no explicit notion of where on the object the current input came from. That works when the whole object is presented at once in a canonical view, but it scales poorly to the situation biology actually faces: a sensor patch that sees only a small part of the object at a time, and that is constantly moving. There are three natural frames in which to record a feature's location:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Sensor-centric (egocentric to the sensor patch): 'the edge is at the top-left of my receptive field'. Changes every time the sensor moves; cannot by itself relate two touches made at different times.",
+        "Body- or world-centric (allocentric to the room): 'the edge is 40 cm in front of my chest'. Stable while you move your finger, but changes whenever the object itself is moved or rotated, so a model stored this way does not transfer to the same mug placed elsewhere.",
+        "Object-centric: 'the edge is at the rim, 3 cm left of the handle'. Invariant to where the object is in the world and to which sensor touched it. A model learned this way can be recognised from any starting point and any sequence of movements."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The TBT argues for the third option. The cost is that the brain must work out, for each sensation, where the sensor is relative to the object — which means combining the motor command (how far and in which direction the sensor moved) with an internal location code that gets updated by the movement. This updating is called path integration, and the TBT proposes that the neocortex reuses the mechanism that the entorhinal cortex uses to path-integrate the animal's position in space: grid cells (see 'Grid and Displacement Cells' in this section)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The model: an object is a set of feature-at-location pairs"
+    },
+    {
+      "type": "prose",
+      "text": "Formally, the theory treats an object as a finite set of pairs. The column holds a location code ℓ, receives a sensed feature f, and learns the association between them. Recognition is the inverse: given a sequence of features and the movements between them, find the object (and the location on it) consistent with all of them."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Object model (one column):\n  O = { (ℓ₁, f₁), (ℓ₂, f₂), … , (ℓₖ, fₖ) }      ℓ ∈ object-centric location codes, f ∈ feature codes\n\nMovement updates location (path integration):\n  ℓ_{t+1} = ℓ_t ⊕ Δ_t                         Δ_t = sensor displacement in the object's frame\n\nRecognition = find (O, ℓ_t) such that  (ℓ_τ, f_τ) ∈ O  for every sensation τ ≤ t,\n  with consecutive ℓ_τ related by the observed movements Δ_τ.\n\nNote: ⊕ is vector addition for an idealised Cartesian frame;\nin the grid-cell implementation it is addition of phases modulo 1 in each module."
+    },
+    {
+      "type": "prose",
+      "text": "Two subtleties matter for implementation. First, the location code must be object-specific: if every object used the same coordinate system with origin at its centre, a location code by itself would not distinguish a mug from a bowl. In the grid-cell version of the theory (Lewis et al. 2019), each newly learned object is anchored at a random set of grid-module phases, so the location code itself is effectively unique to the object — the location layer encodes 'this point on this object'. Second, the location code must support movement in a frame whose orientation is not known in advance. If the mug is upside down, the same finger movement corresponds to a different displacement in the mug's frame. The original papers mostly side-step rotation by assuming the orientation is known; handling unknown orientation and scale is one of the main open problems (see below and 'Monty and the Thousand Brains Project', which tracks object pose explicitly)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Where would this live in a column? (proposed laminar mapping)"
+    },
+    {
+      "type": "prose",
+      "text": "The theory assigns roles to layers. The anatomy that motivated this — L6 to L4 projections, L4 to L2/3 feedforward drive, long-range horizontal L2/3 axons, L5 subcortical motor outputs — is real (see 'Cortical Layers L1–L6' in section 1). The functional assignments below are the theory's interpretation: hypotheses, not established facts."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Layer 4 (and parts of L3): the sensory input layer. Proximal (feedforward) dendrites receive thalamic sensory input, i.e. the feature. Basal distal dendrites receive the location signal, so a cell becomes predicted when the current location is one at which its feature was previously sensed.",
+        "Layer 6 (especially L6a): the location layer, proposed to contain grid-cell-like modules that path-integrate using a copy of the motor command (Lewis et al. 2019). L6 to L4 projections carry the location signal; L4 to L6 projections let the sensed feature narrow the location estimate.",
+        "Layers 2/3: the output or object layer, whose cells represent object identity stably across sensations and connect laterally to other columns for voting (Hawkins, Ahmad & Cui 2017; see 'Voting Between Columns').",
+        "Layer 5: proposed to hold displacement cells and to drive behaviour (Hawkins, Lewis et al. 2019) — the most speculative part of the mapping."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reference frames beyond physical objects"
+    },
+    {
+      "type": "prose",
+      "text": "Hawkins (2021) extends the idea: if columns everywhere run the same algorithm (Mountcastle's hypothesis, section 1), then columns in non-sensory areas would also organise knowledge in reference frames, and thinking would be a kind of movement through those frames. There is suggestive evidence that grid-like codes appear for non-spatial variables in humans — Constantinescu, O'Reilly & Behrens (2016) reported a hexadirectional fMRI signal while people navigated a two-dimensional space of bird shapes — but the leap from this to 'all knowledge is stored in reference frames' is a philosophical extension, not a tested claim."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building one: how to represent a reference frame in an SNN"
+    },
+    {
+      "type": "prose",
+      "text": "If you are building a spiking column, you need a location signal that (1) is a sparse code (so it can be the presynaptic input to dendritic segments), (2) can be shifted by a velocity or displacement input, and (3) is object-specific. Keep the interface between the location layer and the sensory layer fixed — an SDR of a few percent active cells, broadcast to the distal (basal) dendritic segments of L4 cells — so you can swap location implementations without touching the rest of the column. Practical options, in rising order of biological realism:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Oracle locations (start here). Give each column the true location on the object as an SDR from a coordinate encoder (Purdy 2016 describes coordinate and grid-cell encoders for HTM; see 'Encoding Schemes' in section 7). This isolates feature-location learning and voting from path integration. The 2017 Hawkins, Ahmad & Cui simulations essentially did this.",
+        "Algorithmic grid modules. Keep a phase vector per module in software, update it with the movement, and convert it to a bump of active cells per module. This is what Lewis et al. (2019) did, and it gives you object-specific codes and unions of hypotheses with very little machinery.",
+        "Spiking continuous attractor modules. Replace each module with a 2D sheet of LIF neurons with periodic boundary and centre-surround connectivity, whose activity bump is shifted by velocity-gated input (Burak & Fiete 2009). This is the expensive but most mechanistic option; details in 'Grid and Displacement Cells'."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Rotation and scale. A displacement measured in the sensor's frame must be rotated into the object's frame before path integration. If you ignore this, your column only recognises objects in the orientation they were learned in. Monty handles this by maintaining pose hypotheses; spiking implementations of rotation are an open problem.",
+        "Drift. Real path integration accumulates error. Re-anchoring — using a recognised feature to snap the location code back — is essential; the sensory-to-location feedback in Lewis et al. (2019) does exactly this.",
+        "Initial ambiguity. On the first sensation the column has no idea where it is on which object, so it must represent a union of all (object, location) pairs consistent with the feature. Your location code must therefore tolerate unions without too many false matches — a property of sparse codes (see 'Sparse Distributed Representations' in section 3).",
+        "Do not confuse this with the place where the object sits in the world. Object-centric location is relative; a separate mechanism (not detailed by the theory) must link object frames to body frames for reaching and manipulation."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Open questions and critiques"
+    },
+    {
+      "type": "list",
+      "items": [
+        "No one has yet recorded grid-like cells encoding object-centric locations in a primary sensory neocortical column. Grid-like cells have been reported in rat somatosensory cortex during navigation (Long & Zhang 2021), which is encouraging but is not the same claim.",
+        "How the brain would learn reference frames for objects whose parts move (a stapler, a body) is only sketched; Hawkins, Lewis et al. (2019) propose composition via displacements, but this remains unimplemented in spiking form.",
+        "Alternative accounts explain many of the same phenomena (view-invariant recognition, active touch) with hierarchical feature pooling and learned invariances rather than explicit locations. Part-whole models such as capsule networks (Sabour, Frosst & Hinton 2017) and GLOM (Hinton 2021) share the emphasis on coordinate frames and are worth comparing against."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Hawkins, J., Ahmad, S. & Cui, Y. (2017). A theory of how columns in the neocortex enable learning the structure of the world. Frontiers in Neural Circuits; Lewis, M., Purdy, S., Ahmad, S. & Hawkins, J. (2019). Locations in the neocortex: a theory of sensorimotor object recognition using cortical grid cells. Frontiers in Neural Circuits; Hawkins, J., Lewis, M., Klukas, M., Purdy, S. & Ahmad, S. (2019). A framework for intelligence and cortical function based on grid cells in the neocortex. Frontiers in Neural Circuits; Hawkins, J. (2021). A Thousand Brains: A New Theory of Intelligence. Basic Books; Constantinescu, A. O., O'Reilly, J. X. & Behrens, T. E. J. (2016). Organizing conceptual knowledge in humans with a gridlike code. Science; Burak, Y. & Fiete, I. R. (2009). Accurate path integration in continuous attractor network models of grid cells. PLoS Computational Biology; Purdy, S. (2016). Encoding data for HTM systems. arXiv; Long, X. & Zhang, S.-J. (2021). A novel somatosensory spatial navigation system outside the hippocampal formation. Cell Research; Sabour, S., Frosst, N. & Hinton, G. E. (2017). Dynamic routing between capsules. NeurIPS; Hinton, G. (2021). How to represent part-whole hierarchies in a neural network. arXiv."
+    }
+  ]
+}

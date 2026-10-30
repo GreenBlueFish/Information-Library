@@ -1,0 +1,201 @@
+{
+  "title": "Sparse Distributed Representations",
+  "intro": "A sparse distributed representation (SDR) is a large binary vector with a small, fixed number of active bits. SDRs are the common currency of HTM and Thousand Brains models, and k-WTA layers in spiking networks produce them naturally. This page derives their key properties: capacity, overlap-based matching, false-match probabilities, subsampling by dendritic segments, and the union property with its limits. It also explains why HTM uses about 2% sparsity and what cortical recordings do and do not support.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The intuition"
+    },
+    {
+      "type": "prose",
+      "text": "A sparse distributed representation (SDR) is a long binary vector in which only a small fraction of bits are on, for example 40 of 2048 (about 2%). Each active bit stands for a cell, or a minicolumn, that is active. Two properties carry the whole idea. Distributed: no single bit means \"cat\"; the meaning is in the set of active bits, so losing a few bits barely matters. Sparse: because so few bits are on, two unrelated SDRs almost never share many bits by chance, so a large overlap is strong evidence that two SDRs encode something similar. Similarity becomes a cheap operation, a bitwise AND followed by a popcount, and a neuron can recognise a pattern by connecting to only a handful of its bits."
+    },
+    {
+      "type": "prose",
+      "text": "The idea has a long history. Willshaw, Buneman and Longuet-Higgins (1969) showed that associative memories storing sparse binary patterns have high capacity; Kanerva (1988) developed sparse distributed memory, built on the geometry of high-dimensional binary spaces where random points are almost always far apart; Olshausen and Field (1996) showed that learning a sparse code for natural images yields receptive fields resembling V1 simple cells. Note a difference in usage: Olshausen and Field's sparse coding uses real-valued coefficients with a sparsity penalty, whereas HTM SDRs (Ahmad and Hawkins 2015, 2016; Hawkins and Ahmad 2016) are binary with a fixed number of active bits w, usually enforced by k-WTA (see \"Inhibition and k-Winners-Take-All\"). The math below is for the binary, fixed-w case."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Capacity"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Number of distinct SDRs with n bits and w active:\n\nC(n, w) = n! / (w! (n − w)!)\n\nn = 2048, w = 2   →  2,096,128\nn = 2048, w = 40  →  about 2.4 × 10⁸⁴\n\nExpected overlap of two random SDRs: w² / n   (2048, 40 → about 0.78 bits)"
+    },
+    {
+      "type": "prose",
+      "text": "Capacity is astronomically large even at 2% sparsity, so capacity is never the binding constraint for a column model. Raw capacity is maximised at w = n/2, but that is not the property that matters. What matters is how reliably we can tell a noisy version of a stored pattern from an unrelated one, and how many patterns we can store and compare at once."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Overlap, matching and false matches"
+    },
+    {
+      "type": "prose",
+      "text": "Define the overlap of two SDRs x and y as the number of bits active in both, overlap(x, y) = |x ∧ y|. Say x matches y if overlap(x, y) ≥ θ. A threshold below w buys noise tolerance: a stored pattern still matches when up to w − θ of its bits are wrong. The risk is a false match, an unrelated random SDR that happens to reach θ. Ahmad and Hawkins count these exactly:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Overlap set: number of w-bit SDRs that overlap a given x (w bits on) in exactly b bits\n\n|Ω_x(n, w, b)| = C(w, b) · C(n − w, w − b)\n\nProbability that a random SDR falsely matches x:\n\nP(false match) = Σ_{b = θ}^{w} C(w, b) · C(n − w, w − b) / C(n, w)\n\nExamples (n = 2048, w = 40):\n  θ = 20 → about 2.5 × 10⁻²⁶\n  θ = 12 → about 2.0 × 10⁻¹²\n  θ = 8  → about 5.0 × 10⁻⁷\n  θ = 5  → about 8.8 × 10⁻⁴"
+    },
+    {
+      "type": "prose",
+      "text": "So with n = 2048 and w = 40 you can set θ = 20 and tolerate half of the active bits being wrong while false matches remain essentially impossible. The terms grow very large, so compute them in log space (sums of log-gamma values) rather than with exact integers in a tight loop."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "sdr-overlap",
+        "title": "SDR overlap and false matches",
+        "params": [
+          {
+            "key": "n",
+            "label": "Size n (bits)",
+            "control": "range",
+            "min": 64,
+            "max": 4096,
+            "step": 64,
+            "default": 2048
+          },
+          {
+            "key": "w",
+            "label": "Active bits w",
+            "control": "range",
+            "min": 2,
+            "max": 200,
+            "step": 1,
+            "default": 40
+          },
+          {
+            "key": "theta",
+            "label": "Match threshold θ",
+            "control": "range",
+            "min": 1,
+            "max": 200,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "noise",
+            "label": "Noise (% of active bits moved)",
+            "control": "range",
+            "min": 0,
+            "max": 100,
+            "step": 1,
+            "default": 30
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 9999,
+            "step": 1,
+            "default": 3
+          }
+        ],
+        "config": {}
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Things to try"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Keep the defaults: n = 2048, w = 40, θ = 20, 30% noise. Noise moves 12 of the 40 active bits, so the noisy copy still shares 28 bits with the original, comfortably above θ = 20, and is recognised. The false-match probability for a random SDR is around 10⁻²⁶: noise tolerance and selectivity together.",
+        "Increase noise to 50%: the overlap drops to 20, just at threshold. Go to 60% and the noisy copy no longer matches. Now lower θ to 10: it matches again, and the false-match probability rises to about 10⁻⁹, still negligible. With sparse codes you have a wide safe range of θ.",
+        "Try a dense code: n = 256, w = 128 (50% active). Two random patterns now share about 64 bits on average, and with 30% noise the noisy copy shares about 90. The usable band for θ is squeezed between 64 and 90; at θ = 80 the false-match probability is around 5 × 10⁻⁵, many orders of magnitude worse than the sparse default, and every comparison has to read 128 active bits. With n = 64, w = 32, θ = 22 it is a few in a thousand.",
+        "Keep w = 40, θ = 20 and shrink n from 2048 to 256. The false-match probability rises from about 10⁻²⁶ to about 10⁻⁸: sparsity (w/n) and size together set robustness.",
+        "Set w very small (2–5). Capacity collapses and a single moved bit can destroy a match, because θ cannot be much below w. Very sparse codes are fragile; HTM's choice of about 40 active bits is large enough for robust thresholds and small enough to stay sparse."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Subsampling: how a neuron recognises an SDR"
+    },
+    {
+      "type": "prose",
+      "text": "A dendritic segment does not need synapses to all w active bits of a pattern. If it connects to s of them (s < w) and fires when at least θ of those are active, false matches remain rare. The same counting argument applies, with the segment's s synapses playing the role of x:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "P(false match | s synapses, threshold θ) = Σ_{b = θ}^{s} C(s, b) · C(n − s, w − b) / C(n, w)\n\nn = 2048, w = 40:\n  s = 20, θ = 10 → about 4 × 10⁻¹³\n  s = 20, θ = 12 → about 6 × 10⁻¹⁷"
+    },
+    {
+      "type": "prose",
+      "text": "This is the core of the argument in Hawkins and Ahmad (2016) and Ahmad and Hawkins (2016): a dendritic segment with roughly 10–20 synapses onto a pattern and an NMDA-spike-like threshold of about 8–15 coincident inputs is a reliable pattern detector, and a neuron with dozens of such segments can recognise dozens of independent patterns. It is why the HTM neuron (see \"The HTM Neuron\" in section 4) uses many small threshold segments rather than one weighted sum."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The union property and its limits"
+    },
+    {
+      "type": "prose",
+      "text": "Because SDRs are sparse, you can OR several of them into a single vector and still test membership: a stored pattern is fully contained in the union, and an unrelated pattern rarely is. HTM temporal memory uses this to represent several predictions at once (the predictive cells for every possible next element), and Thousand Brains models use unions to represent sets of candidate objects or locations before inference narrows them down (see section 5). The limit is that each added pattern turns on more bits:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "After OR-ing M random SDRs (n, w), the fraction of bits on is\n\np = 1 − (1 − w/n)^M\n\nn = 2048, w = 40:\n  M = 10  → p ≈ 0.18      M = 20 → p ≈ 0.33      M = 50 → p ≈ 0.63\n\nP(an unrelated SDR has all w bits inside the union) ≈ p^w\n  M = 10 → ~10⁻³⁰   M = 20 → ~10⁻²⁰   M = 50 → ~10⁻⁸   M = 100 → ~2 × 10⁻³\n\nWith a noise-tolerant threshold θ = 20 (instead of all 40 bits):\n  M = 10 → ~4 × 10⁻⁶   M = 20 → ~2 × 10⁻²   M = 50 → ~0.96"
+    },
+    {
+      "type": "prose",
+      "text": "Unions are reliable for exact membership up to a few tens of patterns at these sizes, but noise tolerance and unions compete: the lower your θ, the fewer patterns you can safely union. A union of 50 patterns with θ = 20 matches almost anything. In practice, keep unions small (tens of patterns), keep θ near w when testing against unions, or make the vectors larger and sparser."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why about 2% in HTM"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Robustness: with w ≈ 40 the false-match probability stays negligible even with θ around w/2, so codes tolerate heavy noise. This needs w in the tens, which pushes n into the thousands to stay sparse.",
+        "Subsampling: sparse patterns can be recognised by small dendritic segments, matching the observation that pyramidal neurons have thousands of synapses spread over many branches.",
+        "Unions: a code at 2% density can union a few tens of patterns before the union saturates; a code at 20% saturates after a handful.",
+        "Learning with competition: k-WTA with k = 40 of 2048 minicolumns gives an exact, controllable sparsity (Cui, Ahmad and Hawkins 2017).",
+        "Energy: spikes are metabolically expensive. Attwell and Laughlin (2001) and Lennie (2003) estimated that cortex can afford only a small fraction of neurons to be strongly active at once (Lennie suggested on the order of 1% or less), which favours sparse codes. These are estimates with large uncertainties.",
+        "The 2% figure is an engineering choice consistent with these arguments, not a measured constant of cortex."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What the biology says (with caveats)"
+    },
+    {
+      "type": "prose",
+      "text": "Experimental evidence for sparse firing in neocortex is substantial but quantitatively uncertain. Barth and Poulet (2012) review evidence that many cortical excitatory neurons, especially in layer 2/3, fire at low rates (often below 1 Hz) and that a minority of cells produce most spikes. Vinje and Gallant (2000) found that stimulation of the non-classical receptive field during natural vision increased the sparseness of V1 responses. Shoham, O'Connor and Segev (2006) argued that extracellular recordings over-sample active cells, so many neurons may be nearly silent. However, the measured degree of sparseness depends on the method (electrophysiology versus calcium imaging), on the definition (population versus lifetime sparseness), on brain area and layer, and on behavioural state. Treat the claim \"cortex uses SDRs with about 2% activity\" as a modelling hypothesis inspired by this evidence, not an established fact."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "If you are building one"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use n ≈ 1000–4000 and w ≈ 20–60 (1–4% density) for layer outputs that other layers must match against; check the false-match probability for your n, w and θ with the formula above.",
+        "Enforce sparsity with k-WTA or strong inhibition plus homeostasis; let w be a parameter rather than an emergent property.",
+        "Make encoders produce SDRs whose overlap reflects semantic similarity (nearby scalar values share bits); random hashing gives SDRs but no similarity structure (Purdy 2016 discusses encoder design).",
+        "For hardware: SDRs compress well as lists of active indices (40 indices of 11 bits each for n = 2048), and overlap is an AND plus popcount, cheap on FPGAs.",
+        "Spiking SDRs need a time window: decide whether a bit is \"on\" if the cell spiked within, say, one gamma cycle (10–25 ms) or one input presentation."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Willshaw, D. J., Buneman, O. P. & Longuet-Higgins, H. C. (1969). Non-holographic associative memory. Nature; Kanerva, P. (1988). Sparse Distributed Memory. MIT Press; Olshausen, B. A. & Field, D. J. (1996). Emergence of simple-cell receptive field properties by learning a sparse code for natural images. Nature; Vinje, W. E. & Gallant, J. L. (2000). Sparse coding and decorrelation in primary visual cortex during natural vision. Science; Attwell, D. & Laughlin, S. B. (2001). An energy budget for signaling in the grey matter of the brain. Journal of Cerebral Blood Flow and Metabolism; Lennie, P. (2003). The cost of cortical computation. Current Biology; Olshausen, B. A. & Field, D. J. (2004). Sparse coding of sensory inputs. Current Opinion in Neurobiology; Shoham, S., O'Connor, D. H. & Segev, R. (2006). How silent is the brain: is there a \"dark matter\" problem in neuroscience? Journal of Comparative Physiology A; Barth, A. L. & Poulet, J. F. A. (2012). Experimental evidence for sparse firing in the neocortex. Trends in Neurosciences; Ahmad, S. & Hawkins, J. (2015). Properties of sparse distributed representations and their application to hierarchical temporal memory. arXiv; Ahmad, S. & Hawkins, J. (2016). How do neurons operate on sparse distributed representations? A mathematical theory of sparsity, neurons and active dendrites. arXiv; Hawkins, J. & Ahmad, S. (2016). Why neurons have thousands of synapses, a theory of sequence memory in neocortex. Frontiers in Neural Circuits; Purdy, S. (2016). Encoding data for HTM systems. arXiv; Cui, Y., Ahmad, S. & Hawkins, J. (2017). The HTM spatial pooler — a neocortical algorithm for online sparse distributed coding. Frontiers in Computational Neuroscience."
+    }
+  ]
+}

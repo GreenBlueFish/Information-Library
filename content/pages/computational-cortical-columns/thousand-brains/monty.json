@@ -1,0 +1,108 @@
+{
+  "title": "Monty and the Thousand Brains Project",
+  "intro": "Monty is the open-source sensorimotor learning system built by the Thousand Brains Project to put the theory into practice. It replaces neurons with explicit data structures but keeps the architecture: many column-like learning modules, sensor modules, voting, and one common message format, the Cortical Messaging Protocol. This page explains the design, what it has shown, and how to use it as a reference and test harness for a spiking column.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The intuition: the theory as software"
+    },
+    {
+      "type": "prose",
+      "text": "Papers can show that a circuit works on toy objects. To find out whether the Thousand Brains Theory scales to real 3D objects, with real sensors and movement, you need a working system. Monty is that system. It is named after Vernon Mountcastle, and it is the reference implementation of the Thousand Brains Project, an open-source effort that grew out of Numenta's research on the theory."
+    },
+    {
+      "type": "prose",
+      "text": "The easiest way to picture Monty is as a set of artificial cortical columns, called learning modules, each attached to a sensor patch through a sensor module. Every learning module learns complete models of objects as features at locations in an object-centric reference frame, recognises objects by moving its sensor and accumulating evidence, and votes with the others. Everything you read on the previous pages is there, but implemented with explicit data structures rather than neurons."
+    },
+    {
+      "type": "callout",
+      "text": "Status and hedging: the Thousand Brains Project was announced by Numenta in 2024 with funding from the Gates Foundation, and Monty's code was released publicly under an open-source licence around the end of 2024. The overview paper is Clay, Leadholm & Hawkins (2024) on arXiv. The project evolves quickly; component names, default settings and benchmark results below describe the design as documented at its public release and may have changed since — check the project's current documentation before relying on details."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The architecture"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Sensor modules (SMs). Each receives raw data from one small sensor patch (for example a small depth-and-colour camera patch) and converts it into a feature at a pose: the 3D location of the sensed point, its orientation (surface normal and principal curvature directions), and non-morphological features such as colour or curvature magnitude. This is the role the theory gives to thalamic input arriving in L4.",
+        "Learning modules (LMs). The column analogue. Each LM learns object models in its own reference frame and, during inference, maintains hypotheses about which object is being sensed and in which pose. LMs output their most likely object and pose, vote with other LMs, and can propose goal states (where the sensor should go next).",
+        "Motor system and policies. Converts goal states into actions for the agent. Policies range from simple model-free exploration (follow surface curvature, random saccades) to model-based hypothesis-testing moves that go to the location best able to separate the top hypotheses.",
+        "Cortical Messaging Protocol (CMP). The common format for everything exchanged between modules: a message that carries a location and pose in a common reference frame, features, a confidence, and the identity of the sender. Because every SM and LM speaks the CMP, modules can be combined freely — several SMs into one LM, many LMs voting, or an LM's output becoming another LM's input in a hierarchy."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The CMP is the most important idea to take away if you are building hardware or spiking systems. The theory's claim that all columns run the same algorithm becomes an engineering claim: if every module communicates through one protocol of features at poses, then modules are interchangeable, and you can replace any one of them — including with a spiking implementation — without touching the rest."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How a learning module learns and infers"
+    },
+    {
+      "type": "prose",
+      "text": "The main learning module family in Monty uses graph or point-cloud models: an object is stored as a set of nodes, each holding a location in the object's reference frame, the surface orientation there, and the sensed features. Learning is incremental and requires no gradient descent: new observations are added as nodes (or merged with nearby ones), so an object can be learned from one exploratory episode and extended later."
+    },
+    {
+      "type": "prose",
+      "text": "Inference in the evidence-based graph learning module keeps a hypothesis for every combination of known object, location on that object and object rotation that is consistent with the first observation; the surface orientation at the first sensed point constrains which rotations are plausible. After each movement, the module transforms the displacement into each hypothesis's frame, predicts what should be sensed, and adds or subtracts evidence depending on how well the prediction matches. Evidence is continuous rather than a strict elimination, which makes the system tolerant of noise — the same design choice as the mismatch counting in the voting widget."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Evidence-based inference, simplified (one learning module):\n  hypotheses h = (object o, location ℓ on o, rotation R)       initialised from first sensation\n  after movement Δ (in body/sensor frame):\n      ℓ_h ← ℓ_h + R_h⁻¹ Δ                                         path integration per hypothesis\n      E_h ← E_h + match( model_o(ℓ_h), observed feature, observed pose )\n  voting: each LM sends its top hypotheses (object, pose) as CMP messages;\n      receiving LMs add evidence for compatible hypotheses, using the known relative\n      displacement between the sensors.\n  terminal condition: one object/pose hypothesis exceeds the others by a margin."
+    },
+    {
+      "type": "prose",
+      "text": "Unlike the 2017 neural model, Monty votes on pose as well as object identity, and it handles arbitrary 3D rotations explicitly. That is a large step towards real-world use, and also the part that has no proposed neural implementation yet."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulation environment and benchmarks"
+    },
+    {
+      "type": "prose",
+      "text": "Monty's standard experiments run in Meta's Habitat simulator, with 3D object meshes from the YCB object set (the Yale-CMU-Berkeley object and model set, about 77 household objects in the benchmarks). Two agents are commonly used: a 'distant' agent that, like an eye, stays in place and tilts a camera patch across the object, and a 'surface' agent that, like a fingertip, moves along the object's surface. The benchmark suites report object and pose recognition accuracy and the number of steps needed, for objects in unseen rotations, with sensor noise, with single and multiple learning modules, and on harder subsets of similar-looking objects. The details and numbers change with releases, so consult the project's current benchmark tables rather than quoting fixed figures."
+    },
+    {
+      "type": "prose",
+      "text": "Reported results so far support the qualitative predictions of the theory: objects can be learned from little data, recognised in novel poses, and recognised in fewer steps when several learning modules vote. They are not yet a demonstration that the approach beats deep networks on standard large-scale vision benchmarks, which Monty is not designed for."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Using Monty if you build spiking columns"
+    },
+    {
+      "type": "list",
+      "items": [
+        "As a test harness. Monty supplies the environment, sensors, motor policies and evaluation. If your spiking column accepts CMP-style inputs (feature + pose) and emits CMP-style outputs (object, pose, confidence), it can be dropped into the same experiments and compared with the reference learning modules.",
+        "As a specification. Read the evidence-based learning module as a precise statement of what a column must compute. Map its pieces onto spiking circuits: hypotheses ↔ union of active location and object cells; evidence ↔ accumulated dendritic or somatic depolarisation; voting messages ↔ L2/3 lateral connections (see 'Voting Between Columns'); goal states ↔ L5 motor outputs.",
+        "As a reality check on rotation. Your spiking design will probably assume known orientation at first. Monty shows how much machinery rotation invariance takes; plan explicitly for whether your column will hypothesise rotations, use a canonical orientation, or learn several views.",
+        "On neuromorphic hardware. CMP messages are sparse and event-like, which suits spike-based interconnect. A practical partition is to run each learning module (column) on one core or tile, and route only CMP-level summaries (object SDR, pose) between tiles — see 'Neuromorphic Hardware' in section 7."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for, and critiques"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Monty is not a neural model. Graphs, explicit 3D coordinates and rotation matrices stand in for grid cells, dendrites and SDRs. Success in Monty supports the algorithm the theory proposes, not the specific laminar and cellular mapping.",
+        "Scale of evaluation. Benchmarks use tens of objects in simulation. Learning thousands of objects, real cameras, deformable or articulated objects, and compositional (hierarchical) models are active areas of development.",
+        "Hypothesis explosion. Every object times location times rotation is a large hypothesis space. Monty prunes it carefully; a naive spiking version that represents all hypotheses as a union will hit SDR capacity limits quickly.",
+        "Hedge on details. Class names, default parameters and the exact contents of the CMP may change between releases; treat any specific implementation detail on this page as illustrative."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Clay, V., Leadholm, N. & Hawkins, J. (2024). The Thousand Brains Project: a new paradigm for sensorimotor intelligence. arXiv:2412.18354; Hawkins, J., Ahmad, S. & Cui, Y. (2017). A theory of how columns in the neocortex enable learning the structure of the world. Frontiers in Neural Circuits; Lewis, M., Purdy, S., Ahmad, S. & Hawkins, J. (2019). Locations in the neocortex: a theory of sensorimotor object recognition using cortical grid cells. Frontiers in Neural Circuits; Hawkins, J. (2021). A Thousand Brains: A New Theory of Intelligence. Basic Books; Savva, M. et al. (2019). Habitat: a platform for embodied AI research. ICCV; Calli, B., Walsman, A., Singh, A., Srinivasa, S., Abbeel, P. & Dollar, A. M. (2015). Benchmarking in manipulation research: using the Yale-CMU-Berkeley object and model set. IEEE Robotics & Automation Magazine."
+    }
+  ]
+}

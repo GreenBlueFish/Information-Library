@@ -1,0 +1,196 @@
+{
+  "title": "Voting Between Columns",
+  "intro": "One column needs several sensations to recognise an object. Many columns sensing different parts at once can share their hypotheses over long-range lateral connections and agree in a single step. This page explains the voting mechanism, why it could account for fast recognition, what is and is not established about it, and how to build it with spiking neurons.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The intuition: many fingers, one mug"
+    },
+    {
+      "type": "prose",
+      "text": "Touching a mug with one fingertip, you need several movements before you are sure what it is. Grab it with your whole hand and you know at once. Each fingertip still senses only a small patch — a rim here, a curved side there, a handle under the thumb — and each patch on its own is ambiguous. But the patches are sensed at the same time, at different locations on the same object, and only one object is consistent with all of them together."
+    },
+    {
+      "type": "prose",
+      "text": "The Thousand Brains Theory says this is what columns do with each other. Each column builds its own hypothesis set (see 'Sensorimotor Object Recognition'), then columns share their hypotheses over long-range lateral connections and settle on the object they all agree on. The theory calls this voting. Because every column in a sensory region is effectively one fingertip, a single glance or grasp can be enough to recognise a familiar object, with no movement at all."
+    },
+    {
+      "type": "callout",
+      "text": "Status: long-range horizontal connections between columns in layers 2/3 are an established anatomical fact. That they carry votes about object identity, so that columns reach consensus on what object is being sensed, is a proposal of Hawkins, Ahmad & Cui (2017) and Hawkins (2021). It has been shown to work in simulation; it has not been demonstrated in the brain."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The mechanism"
+    },
+    {
+      "type": "prose",
+      "text": "In the two-layer model of Hawkins, Ahmad & Cui (2017), each column's output layer (proposed L2/3) represents object identity as an SDR. During learning, the same object is represented in all columns at the same time, so Hebbian learning on lateral connections links each column's object SDR to the other columns' SDRs for the same object. During inference, each column's output layer starts with the union of the objects consistent with its own sensation. Output cells then receive two inputs: feedforward support from their own column, and lateral support from cells in other columns. Inhibition keeps only the cells with the most total support. Cells representing an object that is in every column's union receive support from all columns and survive; the others are silenced. In practice the network settles within a few iterations, all within one sensation."
+    },
+    {
+      "type": "prose",
+      "text": "Note what is voted on: object identity, not location. Each column senses a different location in its own reference frame, so columns cannot compare locations directly — they only need to agree on what the object is. (Monty also votes on object pose, transforming each module's pose hypothesis using the known relative position of the sensors; see 'Monty and the Thousand Brains Project'.)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The math: voting as intersection or as evidence summation"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Strict (noise-free) voting = intersection of candidate sets:\n  C_consensus = C₁ ∩ C₂ ∩ … ∩ C_K\nWith N objects, F equally likely features, K columns sensing K different locations:\n  E[# wrong objects after one glance] ≈ (N − 1) · F^(−K)\n  single-glance recognition when  K ≳ log(N − 1) / log F\n  e.g. N = 1000, F = 10  →  K ≈ 3 columns suffice for one-touch recognition (idealised)\n\nNoise-tolerant voting = summing evidence:\n  e_c(o) = # sensations of column c contradicting object o\n  E(o)  = Σ_c e_c(o);     candidates = { o : E(o) ≤ min_o' E(o') + slack }\n\nSpiking/neural version (one settling step):\n  a_i ← kWTA( ff_i + β · Σ_{c' ≠ c} Σ_j W^lat_ij a_j )    β < threshold, so lateral input\n                                                          biases but cannot drive firing alone"
+    },
+    {
+      "type": "prose",
+      "text": "The key qualitative result of Hawkins, Ahmad & Cui (2017) follows directly: the number of sensations needed falls steeply as columns are added, approaching one sensation with enough columns, while columns that do not vote gain nothing from each other."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why voting explains fast ('flash') recognition"
+    },
+    {
+      "type": "prose",
+      "text": "People categorise briefly flashed natural images very quickly: Thorpe, Fize & Marlot (1996) found EEG differences between animal and non-animal images about 150 ms after onset — too fast for a sequence of eye movements. In the TBT account, a single fixation activates many columns of V1, V2 and beyond, each sensing a different patch at a different location on the object, and voting resolves the object in one step. Movement then serves learning and resolving the remaining ambiguity. Be aware that fast recognition has an older, competing explanation: a single feedforward sweep through a hierarchy of increasingly invariant feature detectors (for example Serre, Oliva & Poggio 2007). The two are not exclusive, but rapid recognition is not by itself evidence for voting."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The anatomical basis — and its limits"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Established: pyramidal cells in L2/3 send long horizontal axons over several millimetres, forming patchy, clustered connections between columns with similar preferences (Gilbert & Wiesel 1983, 1989). Long-range projections from L2/3 and L5 also connect regions, including different modalities.",
+        "Established role in V1: these connections are usually associated with contextual modulation such as contour integration and surround effects — modulating, rather than driving, responses.",
+        "Proposed by the TBT: the same connections, in object-representing layers, carry votes about object identity across columns and even across modalities (vision and touch agreeing on 'mug').",
+        "Open: no experiment has yet shown a consensus object representation forming across neocortical columns via lateral connections; and whether a V1 column with a receptive field of a fraction of a degree learns models of whole objects is contested."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: watch columns reach consensus"
+    },
+    {
+      "type": "prose",
+      "text": "The widget defaults to three columns with voting on. Each column senses a different location on the presented object each step, counts per object how many of its sensations contradicted it, and (with voting on) the counts are summed across columns so every column narrows to the consensus. Locations are given to the columns directly, as if path integration were perfect."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "column-voting",
+        "title": "Thousand-brains voting between columns",
+        "params": [
+          {
+            "key": "columns",
+            "label": "Number of columns",
+            "control": "range",
+            "min": 1,
+            "max": 9,
+            "step": 1,
+            "default": 3
+          },
+          {
+            "key": "voting",
+            "label": "Lateral voting",
+            "control": "select",
+            "options": [
+              "on",
+              "off"
+            ],
+            "default": "on"
+          },
+          {
+            "key": "object",
+            "label": "Object presented",
+            "control": "select",
+            "options": [
+              "mug",
+              "bowl",
+              "can",
+              "pen",
+              "ball",
+              "box"
+            ],
+            "default": "mug"
+          },
+          {
+            "key": "noise",
+            "label": "Sensing noise (prob.)",
+            "control": "range",
+            "min": 0,
+            "max": 0.5,
+            "step": 0.05,
+            "default": 0
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 9999,
+            "step": 1,
+            "default": 5
+          }
+        ],
+        "config": {
+          "objects": 6,
+          "locations": 9,
+          "features": 5
+        }
+      }
+    },
+    {
+      "type": "list",
+      "items": [
+        "Press Step once with 3 columns and voting on. Compare each column's own candidates with the consensus panel: one sensation per column is often enough for the consensus to be a single object, even when every column alone is still ambiguous.",
+        "Use Run to recognition and Reset to repeat for each object. Watch the readout for the step at which recognition happened.",
+        "Vary columns from 1 to 9 with voting on. With the default settings a single column needs about three sensations on average, three voting columns about one and a half, and from about six columns onward a single sensation is enough.",
+        "Toggle voting off. Each column must now recognise the object alone, and the widget counts a trial as recognised only when every column has done so — so adding columns does not help; the mean actually rises, because the slowest of the columns sets the pace.",
+        "Add sensing noise (0.1–0.3). Each column tolerates one contradicting sensation, so recognition needs more evidence (at noise 0.2 a lone column needs roughly eight sensations, nine voting columns little more than one); voting now also gives robustness, because one column's corrupted sensation is outvoted by the others.",
+        "Read the second chart: it plots mean sensations-to-recognition against the number of columns (1–9), averaged over seeded trials, for voting on and voting off. Change the seed (which regenerates the object set) and noise and see how the gap between the curves changes."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building voting in spiking neurons"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Representation. Give each column an object layer of a few thousand excitatory cells with about 2% active per object (the 2017 simulations used an output layer on the order of 4,000 cells with roughly 40 active). Choose each object's SDR at random during learning and hold it active while the column explores the object.",
+        "Lateral connections. Learn excitatory synapses from object cells of column c' onto object cells of column c with a Hebbian or STDP rule while the same object is presented to all columns. Make them sparse (each cell samples a subset of other columns' cells) — all-to-all grows as K²n² and is a memory problem on neuromorphic hardware.",
+        "Lateral input should bias, not drive. Put lateral synapses on a separate dendritic compartment or scale them so that lateral input alone stays subthreshold. Otherwise columns can 'hallucinate' an object with no feedforward support.",
+        "Inhibition does the selection. Use k-WTA or strong local PV-like feedback inhibition (see 'Inhibition and k-Winners-Take-All' in section 3) so that, among cells with feedforward support, those with the most lateral support win. Without it, unions never narrow.",
+        "Settling time. Allow a few iterations per sensation — a few cycles of 10–20 ms each with millisecond-scale axonal delays for long-range links. Check that the result does not depend on update order.",
+        "Reset between objects. Strong recurrent consensus has hysteresis: after the object changes, the old consensus can persist. Decay or reset the object layer when the input changes drastically, or detect a surprise (many unpredicted cells bursting in the input layer)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A sensible build order (see 'Step-by-Step Roadmap' in section 7): first get one column recognising objects with oracle locations; then duplicate it K times with independent sensors and add lateral voting; only then replace oracle locations with grid-cell modules. Measure sensations-to-recognition versus K, as in the widget, as your first benchmark (see 'Evaluating a Column' in section 7)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What to watch out for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Runaway excitation through lateral loops between many columns — monitor the active fraction and keep lateral gain low (see 'Common Pitfalls' in section 7).",
+        "Ties and premature consensus: with strict intersection, a single noisy column can eliminate the true object everywhere. Evidence summation with a tolerance, as in the widget, is more robust.",
+        "Correlated sensors: columns that sense overlapping patches give correlated evidence, so they reduce ambiguity less than the independent-feature estimate above suggests.",
+        "Related ideas: Hinton's GLOM (2021) proposes 'islands of agreement' among columns sharing a part-whole hypothesis — a useful comparison when designing consensus dynamics."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Hawkins, J., Ahmad, S. & Cui, Y. (2017). A theory of how columns in the neocortex enable learning the structure of the world. Frontiers in Neural Circuits; Hawkins, J., Lewis, M., Klukas, M., Purdy, S. & Ahmad, S. (2019). A framework for intelligence and cortical function based on grid cells in the neocortex. Frontiers in Neural Circuits; Hawkins, J. (2021). A Thousand Brains: A New Theory of Intelligence. Basic Books; Gilbert, C. D. & Wiesel, T. N. (1983). Clustered intrinsic connections in cat visual cortex. Journal of Neuroscience; Gilbert, C. D. & Wiesel, T. N. (1989). Columnar specificity of intrinsic horizontal and corticocortical connections in cat visual cortex. Journal of Neuroscience; Thorpe, S., Fize, D. & Marlot, C. (1996). Speed of processing in the human visual system. Nature; Serre, T., Oliva, A. & Poggio, T. (2007). A feedforward architecture accounts for rapid categorization. Proceedings of the National Academy of Sciences; Hinton, G. (2021). How to represent part-whole hierarchies in a neural network. arXiv."
+    }
+  ]
+}

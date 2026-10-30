@@ -73,8 +73,16 @@ Where content, code, CSS, and governance material live:
 │   └── widgets/
 │       ├── registry.js          # registerWidget(type, mountFn) + mountWidget(spec, container).
 │       ├── plot.js              # Shared plotting primitive (makePlot) used by widget types.
+│       ├── sim-kit.js           # Shared kit for simulation widgets: frame, controls, buttons,
+│       │                        #   readout, SVG stage, seeded RNG, play/pause ticker (§7.3).
 │       └── types/               # One module per widget type; each self-registers on import.
-│           └── parameter-plot.js
+│           ├── parameter-plot.js
+│           ├── lif-neuron.js     # The simulation types of §7.3 (computational cortical columns).
+│           ├── stdp-explorer.js
+│           ├── spike-raster.js
+│           ├── sdr-overlap.js
+│           ├── temporal-memory.js
+│           └── column-voting.js
 ├── content/                     # The DATA layer — pure JSON, no presentation logic.
 │   ├── topics.json              # The topic/subtopic tree (single manifest of topics).
 │   ├── terms.json               # The lookup table (array of term entries).
@@ -86,6 +94,9 @@ Where content, code, CSS, and governance material live:
 │       │   ├── izhikevich.json
 │       │   ├── neuron-filters.json
 │       │   └── encoding.json
+│       ├── computational-cortical-columns/  # Learning path: biology → neuron models →
+│       │                        #   plasticity → HTM → Thousand Brains → other models →
+│       │                        #   building an SNN column → reading list (one folder per section).
 │       ├── calculus/            # Template topic.
 │       └── game-theory/         # Template topic.
 ├── STYLE_GUIDE.md               # Governance doc #1 — visual standards.
@@ -431,6 +442,36 @@ import "./widgets/types/parameter-plot.js"; // self-registers with the registry
 
 Add an equivalent side-effect import for your new type in `main.js` (alongside
 the existing one) so it is registered before any page tries to mount it.
+
+### 7.3 The simulation widget types (computational cortical columns)
+
+Six interactive simulations back the Computational Cortical Columns topic. They
+are built on the shared kit `src/widgets/sim-kit.js`, which gives every
+simulation the same frame, `params`-driven control panel (same defaults and
+out-of-range rejection contract as `parameter-plot`), `.widget__actions`
+buttons, `.widget__readout` status line, SVG stage in `.widget__plot`, a seeded
+RNG (`makeRng`) so a given seed always redraws identically, and a play/pause
+`makeTicker` that `destroy()` stops. Each type module exports its pure model
+functions (no DOM) so tests can check the science, and is styled only by the
+§10b classes in `alexandria.css` (see `STYLE_GUIDE.md`).
+
+Pages must use exactly these parameter `key`s, in this order, with the ranges
+used on the existing pages (copy a block from the page listed); titles and
+defaults within range may change. `tests/src/integration/cortical-columns-content.test.js`
+enforces the keys.
+
+| Type | Example page | `params` keys | `config` |
+|------|--------------|---------------|----------|
+| `lif-neuron` | `spiking-neuron-models/leaky-integrate-and-fire` | `current`, `tau`, `threshold`, `refractory`, `noise`, `input` | `duration`, `dt`, `vRest`, `vReset`, `resistance`, `showFI` |
+| `stdp-explorer` | `plasticity-and-learning/stdp` | `aPlus`, `aMinus`, `tauPlus`, `tauMinus`, `deltaT`, `rule` | `pairings`, `w0`, `wMax` |
+| `spike-raster` | `plasticity-and-learning/inhibition-and-k-wta` | `inhibition`, `k`, `inhibitoryGain`, `inputRate`, `seed` | `excitatory`, `inhibitory`, `inputs`, `patterns`, `patternMs`, `dt` |
+| `sdr-overlap` | `plasticity-and-learning/sparse-distributed-representations` | `n`, `w`, `theta`, `noise`, `seed` | (none) |
+| `temporal-memory` | `htm/temporal-memory` | `sequences`, `cellsPerColumn`, `activationThreshold`, `seed` | `columnsPerSymbol`, `maxNewSynapses`, `permanenceIncrement`, `permanenceDecrement`, `connectedPermanence`, `initialPermanence` |
+| `column-voting` | `thousand-brains/column-voting` | `columns`, `voting`, `object`, `noise`, `seed` | `objects`, `locations`, `features` |
+
+Every `config` field is optional; a missing field falls back to the value on
+the example page. To add another simulation type, follow §7.2 and build it on
+`sim-kit.js` the same way.
 
 ---
 
