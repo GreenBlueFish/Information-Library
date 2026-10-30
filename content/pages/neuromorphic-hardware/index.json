@@ -1,0 +1,104 @@
+{
+  "title": "Neuromorphic Hardware",
+  "intro": "Neuromorphic computing designs chips around the way brains compute rather than the way conventional processors do. Carver Mead coined the term in the late 1980s for analog circuits that mimic neural physics. Today it covers a family of digital, analog and mixed chips that share three ideas: computation is event-driven, it is massively parallel, and memory sits next to the compute that uses it.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why not just use a GPU?"
+    },
+    {
+      "type": "prose",
+      "text": "A conventional processor separates memory from compute. Every operation fetches its weights and state across a bus, and moving data costs far more energy than the arithmetic itself: the von Neumann bottleneck. A GPU is superb at dense matrix multiplication, but a spiking network is sparse in two ways: only a few percent of neurons spike in any millisecond, and each spike touches only that neuron's synapses. Doing a dense update every time step wastes nearly all of the work."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The shared principles"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Event-driven computation. Hardware does work only when a spike, an event, arrives. Idle neurons and synapses consume almost nothing, so energy scales with activity, not network size.",
+        "Address-event representation (AER). A spike is sent as a small packet carrying the address of the neuron that fired. Time is implicit in when the packet arrives (or explicit as a timestamp). Many neurons share one digital bus or network-on-chip, with routing tables mapping each source address to its targets. Mahowald and Boahen developed AER for neuromorphic vision chips, and it is also how event cameras (dynamic vision sensors) output data.",
+        "Colocated memory and compute. Each core stores its own synaptic weights and neuron states in local SRAM, so network parameters never travel to a distant memory. This is why neuromorphic chips can be so efficient, and also why network size per chip is limited by on-chip memory.",
+        "Neurosynaptic cores. Large chips are tiled from many identical cores. Each core is a crossbar of input axons and output neurons joined by programmable synapses, with its own neuron update logic and a router to the network-on-chip.",
+        "Massive parallelism and asynchrony. Cores run in parallel, often without a global clock (asynchronous logic), synchronizing only as much as the model's time steps require."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Event-driven versus clock-driven"
+    },
+    {
+      "type": "prose",
+      "text": "The widget compares the synaptic operations per 1 ms time step for a network of N neurons, each with F synapses. Clock-driven hardware updates every synapse every step. Event-driven hardware processes only the synapses of neurons that spiked, which is proportional to the firing rate."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Synaptic operations per time step",
+        "params": [
+          {
+            "key": "neurons",
+            "label": "Neurons N",
+            "control": "range",
+            "min": 100,
+            "max": 10000,
+            "step": 100,
+            "default": 1000
+          },
+          {
+            "key": "fanout",
+            "label": "Synapses per neuron F",
+            "control": "range",
+            "min": 10,
+            "max": 1000,
+            "step": 10,
+            "default": 100
+          }
+        ],
+        "config": {
+          "sim": "event-driven",
+          "xLabel": "mean firing rate (Hz)",
+          "yLabel": "thousands of synaptic operations per 1 ms step"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What to read off the plot"
+    },
+    {
+      "type": "prose",
+      "text": "At cortical rates of a few hertz, event-driven processing does a few hundred times less work than updating every synapse each step. The two lines would meet only at 1000 Hz, one spike per neuron per millisecond, far above any realistic rate. Real chips also pay per-step costs to update neuron states and fixed overheads, so actual savings are smaller, but the scaling argument holds: sparse activity is where neuromorphic hardware wins."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The landscape"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Intel Loihi and Loihi 2: digital, asynchronous many-core chips with programmable on-chip learning. See #/neuromorphic-hardware/loihi.",
+        "IBM TrueNorth: a million neurons at about 70 mW with fixed synapses, built for low-power inference. See #/neuromorphic-hardware/truenorth.",
+        "SpiNNaker and SpiNNaker 2: many ARM cores exchanging spike packets, a flexible real-time simulator for large models. See #/neuromorphic-hardware/spinnaker.",
+        "BrainScaleS (Heidelberg): analog neuron circuits on wafers that run about 1000 to 10,000 times faster than biological real time.",
+        "FPGAs: reconfigurable logic for custom spiking accelerators and prototypes. See #/neuromorphic-hardware/fpga-neuromorphic.",
+        "Event sensors (DVS cameras, silicon cochleas) feed AER spikes straight into such chips."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: you do not need neuromorphic hardware to start. A column of a few thousand neurons simulates comfortably in JavaScript or Python. The hardware matters later, when you want many columns running in real time on a robot or sensor, and it shapes design choices now: local learning rules, sparse activity and limited fan-in map well onto every neuromorphic chip, while global backpropagation and dense all-to-all connectivity do not."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Mead, C. (1990), \"Neuromorphic electronic systems\", Proceedings of the IEEE 78:1629-1636. Mahowald, M. (1992), VLSI Analogs of Neuronal Visual Processing: A Synthesis of Form and Function, PhD thesis, Caltech. Boahen, K. A. (2000), \"Point-to-point connectivity between neuromorphic chips using address events\", IEEE Transactions on Circuits and Systems II 47:416-434. Davies, M. et al. (2018), \"Loihi: a neuromorphic manycore processor with on-chip learning\", IEEE Micro 38(1):82-99. Merolla, P. A. et al. (2014), Science 345:668-673. Furber, S. B. et al. (2014), Proceedings of the IEEE 102:652-665. Schuman, C. D. et al. (2022), \"Opportunities for neuromorphic computing algorithms and applications\", Nature Computational Science 2:10-19."
+    }
+  ]
+}

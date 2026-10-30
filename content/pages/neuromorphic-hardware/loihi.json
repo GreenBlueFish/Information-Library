@@ -1,0 +1,75 @@
+{
+  "title": "Loihi",
+  "intro": "Loihi is Intel's line of research neuromorphic processors. The first chip, announced in 2017 and described by Davies et al. in 2018, ran spiking networks entirely on-chip with programmable synaptic plasticity. Loihi 2 (2021) added programmable neuron models and graded spikes. The chips are available to researchers through Intel's Neuromorphic Research Community and are programmed with the open-source Lava framework.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Loihi (2018)"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Process and scale: a 14 nm chip with 128 neuromorphic cores and 3 embedded x86 cores for management, supporting up to about 130,000 neurons and 130 million synapses.",
+        "Neurons: each core implements up to 1024 compartments of a current-based leaky integrate-and-fire model (CUBA LIF), with separate synaptic-current and membrane decays. Compartments can be combined into multi-compartment neurons with dendritic trees.",
+        "Communication: an asynchronous mesh network-on-chip carries spike messages between cores (address-event style). Time advances in algorithmic time steps that cores agree on through a barrier handshake, so the chip runs as fast as activity allows, not on a fixed real-time clock.",
+        "Memory: synaptic weights, delays and neuron states are stored in each core's SRAM. This is colocated memory and compute, and it is also the limit on network size per chip.",
+        "Scaling: chips tile into larger systems. Nahuku boards hold 32 chips, and Pohoiki Springs (2020) combined 768 chips for about 100 million neurons."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "On-chip learning"
+    },
+    {
+      "type": "prose",
+      "text": "Loihi's signature feature is on-chip learning. Each core can update synaptic weights, delays and tags while the network runs, with rules written in a sum-of-products form over local variables:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "dw = sum_i  S_i * prod_j (V_ij + C_ij)\n\nV_ij: local variables such as presynaptic traces x1, x2, postsynaptic traces y1, y2, y3,\n      the current weight w, and a modulatory \"reward\" trace\nC_ij: constants;   S_i: scaling factors"
+    },
+    {
+      "type": "prose",
+      "text": "Because traces are available on both sides of each synapse, this covers pair-based STDP, triplet STDP, weight-dependent rules and three-factor rules in which a reward or error signal arrives through a special input. Learning epochs can run every few time steps to save energy. Demonstrations include online learning of odor representations in a model of the olfactory bulb (Imam & Cleland 2020) and few-shot gesture learning."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Loihi 2 (2021)"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Built on a pre-production Intel 4 process, with up to about 1 million neurons per chip in a smaller die.",
+        "Programmable neurons: neuron models are microcode programs, so models beyond LIF (resonate-and-fire, adaptive neurons, custom dynamics) run natively.",
+        "Graded spikes: a spike can carry an integer payload instead of a single bit, which reduces message counts for rate-like signals.",
+        "Faster chip-to-chip links and support for 3-factor learning carried over and extended.",
+        "Hala Point (2024) combines 1152 Loihi 2 chips for about 1.15 billion neurons, the largest neuromorphic system reported at the time."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Programming it"
+    },
+    {
+      "type": "prose",
+      "text": "Lava, Intel's open-source framework, describes networks as communicating processes that can run on a CPU for development and then on Loihi. Nengo also had a Loihi backend (nengo-loihi), so NEF models compile to the chip."
+    },
+    {
+      "type": "prose",
+      "text": "Published comparisons (Davies et al. 2021) found the largest energy and latency gains over CPUs and GPUs on workloads that are sparse, recurrent or need online adaptation: constraint satisfaction, nearest-neighbor search, optimization, and small-batch inference with event-camera data. For feedforward deep networks converted to spikes, gains were smaller or absent."
+    },
+    {
+      "type": "callout",
+      "text": "For a cortical column: Loihi is the most natural hardware target for a Thousand Brains-style column, for three reasons. Multi-compartment neurons map onto dendritic segments, on-chip plasticity with traces supports STDP and three-factor rules, and core-local memory suits columns that connect densely inside and sparsely between. Keep fan-in per neuron and synaptic precision modest (weights are low-precision integers) and simulate in Lava on a CPU first."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Davies, M. et al. (2018), \"Loihi: a neuromorphic manycore processor with on-chip learning\", IEEE Micro 38(1):82-99. Davies, M. et al. (2021), \"Advancing neuromorphic computing with Loihi: a survey of results and outlook\", Proceedings of the IEEE 109:911-934. Orchard, G. et al. (2021), \"Efficient neuromorphic signal processing with Loihi 2\", IEEE Workshop on Signal Processing Systems. Imam, N. & Cleland, T. A. (2020), \"Rapid online learning and robust recall in a neuromorphic olfactory circuit\", Nature Machine Intelligence 2:181-191."
+    }
+  ]
+}
