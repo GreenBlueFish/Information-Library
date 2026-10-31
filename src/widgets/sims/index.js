@@ -26,6 +26,7 @@ export const SIMS = {
   srm: neurons.srm,
   "stochastic-lif": neurons.stochasticLif,
   "two-compartment": neurons.twoCompartment,
+  ifb: neurons.ifb,
   "stdp-window": plasticity.stdpWindow,
   "stdp-triplet": plasticity.stdpTriplet,
   "stdp-multiplicative": plasticity.stdpMultiplicative,

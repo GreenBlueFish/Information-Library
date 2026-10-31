@@ -1,0 +1,72 @@
+{
+  "title": "CA3 Pyramidal Cells",
+  "intro": "CA3 pyramidal cells connect to each other more densely than almost any other excitatory cells in the brain, and many of them fire intrinsic bursts. These two facts made CA3 the classic model of an autoassociative memory, a network that can recall a whole stored pattern from a fragment, and made its bursting the subject of two of the best-known reduced neuron models: Traub's CA3 cell and the Pinsky-Rinzel two-compartment model.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Biology"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Morphology: large pyramidal cells whose proximal apical dendrites carry 'thorny excrescences', complex spines that receive the giant mossy fibre boutons from dentate granule cells in stratum lucidum.",
+        "Three inputs: mossy fibres from the dentate gyrus (few, about 50 per CA3 cell in rat, but very strong, 'detonator' synapses that facilitate dramatically with repeated firing; Henze, Urban & Barrionuevo 2000); recurrent collaterals from other CA3 cells (thousands per cell, the largest input); and direct perforant path input from entorhinal layer 2 on the distal tuft.",
+        "Recurrent connectivity: in rat each CA3 cell receives on the order of 10^4 synapses from other CA3 cells, a connection probability of a few per cent across the whole of CA3, high for such a large population (Amaral, Ishizuka & Claiborne 1990; Guzman et al. 2016 measured about 1 per cent in slices).",
+        "Firing: many CA3 cells are intrinsically bursting, firing bursts of 3 to 7 spikes on a calcium-driven depolarisation, followed by a long after-hyperpolarisation from calcium-activated potassium currents (Wong & Prince 1981).",
+        "Sharp-wave ripples: during rest and slow-wave sleep, CA3 generates synchronous population bursts, sharp waves, that drive ripple oscillations in CA1 and replay sequences of place cells, thought to consolidate memories (Buzsaki 2015).",
+        "Epileptogenesis: the same recurrent excitation and bursting make CA3 prone to seizure-like synchronous activity when inhibition is reduced, which is why early CA3 models were models of epilepsy."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Computational models of the cell"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Traub et al. (1991): a 19-compartment conductance-based CA3 pyramidal cell with sodium, delayed rectifier, A-type, calcium, and calcium-activated potassium currents, which reproduces intrinsic bursting and the slow after-hyperpolarisation. Traub and Miles' book (1991) used networks of these cells to model synchronised epileptiform bursts.",
+        "Pinsky and Rinzel (1994): a reduction of the Traub model to two compartments. The soma has fast sodium and delayed-rectifier potassium currents; the dendrite has a calcium current, a calcium-activated potassium current and an after-hyperpolarisation current. A single coupling parameter g_c sets how strongly the two interact. Weak coupling produces bursts (the somatic spike drives the dendrite, the dendritic calcium spike drives more somatic spikes); strong coupling makes the cell behave like a single compartment that fires regular spikes. It is one of the simplest models that bursts for a biophysical reason and is widely used in network studies.",
+        "Hemond et al. (2008): detailed CA3 models with different morphologies reproducing the range of bursting and regular firing seen in recordings.",
+        "Izhikevich point models: the intrinsically bursting preset; Hippocampome.org lists fitted CA3 pyramidal Izhikevich parameters."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Pinsky-Rinzel (1994), two compartments, soma fraction p = 0.5\n\nC dVs/dt = -I_Leak(Vs) - I_Na(Vs,h) - I_K-DR(Vs,n)\n           + (g_c / p)     (Vd - Vs) + I_s / p\nC dVd/dt = -I_Leak(Vd) - I_Ca(Vd,s) - I_K-AHP(Vd,q) - I_K-C(Vd,Ca,c)\n           + (g_c / (1-p)) (Vs - Vd) + I_d / (1-p) - I_syn / (1-p)\nd[Ca]/dt = -0.13 I_Ca - 0.075 [Ca]\n\nC = 3 µF/cm²;  g_c ≈ 2.1 mS/cm² gives bursting; larger g_c gives\nrepetitive single spikes.  Gating kinetics follow Traub et al. (1991)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Computational models of the network"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Autoassociative memory: Marr (1971), McNaughton and Morris (1987) and Treves and Rolls (1994) proposed that CA3's recurrent collaterals store patterns by Hebbian learning and complete them from partial cues, a Hopfield-like attractor network. Capacity scales with the number of recurrent connections per cell and inversely with the sparseness of the code.",
+        "Mossy fibres as teachers: in the Treves-Rolls account, strong mossy fibre input from the dentate gyrus forces a new, sparse pattern onto CA3 during learning, while the perforant path provides the cue during recall.",
+        "Sequence and replay models: asymmetric recurrent connections learned by STDP produce sequence replay; sharp-wave generation models rely on CA3 bursting and recurrent excitation with adaptation (e.g. Ecker et al. 2022; Taxidis et al. 2012).",
+        "Rhythm models: the Traub and Pinsky-Rinzel cells are the excitatory element in many CA3 models of gamma and of epileptiform bursting."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this means for your SNN"
+    },
+    {
+      "type": "list",
+      "items": [
+        "If your model needs one-shot storage and completion of patterns, a CA3-like recurrent excitatory layer with Hebbian learning and strong inhibition is the classic design; keep the code sparse to raise capacity.",
+        "Use a two-compartment model with a coupling parameter (Pinsky-Rinzel style) if bursting matters; it is cheap and the coupling knob moves the cell between bursting and regular spiking.",
+        "Recurrent excitation plus bursting is unstable: budget for strong, fast inhibition and adaptation, or your network will produce epileptiform synchrony."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Traub, R. D., Wong, R. K. S., Miles, R., & Michelson, H. (1991). A model of a CA3 hippocampal pyramidal neuron incorporating voltage-clamp data on intrinsic conductances. Journal of Neurophysiology; Traub, R. D., & Miles, R. (1991). Neuronal Networks of the Hippocampus. Cambridge University Press; Pinsky, P. F., & Rinzel, J. (1994). Intrinsic and network rhythmogenesis in a reduced Traub model for CA3 neurons. Journal of Computational Neuroscience; Wong, R. K. S., & Prince, D. A. (1981). Afterpotential generation in hippocampal pyramidal cells. Journal of Neurophysiology; Henze, D. A., Urban, N. N., & Barrionuevo, G. (2000). The multifarious hippocampal mossy fiber pathway: a review. Neuroscience; Amaral, D. G., Ishizuka, N., & Claiborne, B. (1990). Neurons, numbers and the hippocampal network. Progress in Brain Research; Guzman, S. J., Schlogl, A., Frotscher, M., & Jonas, P. (2016). Synaptic mechanisms of pattern completion in the hippocampal CA3 network. Science; Hemond, P., et al. (2008). Distinct classes of pyramidal cells exhibit mutually exclusive firing patterns in hippocampal area CA3b. Hippocampus; Treves, A., & Rolls, E. T. (1994). Computational analysis of the role of the hippocampus in memory. Hippocampus; Buzsaki, G. (2015). Hippocampal sharp wave-ripple: a cognitive biomarker for episodic memory and planning. Hippocampus; Taxidis, J., Coombes, S., Mason, R., & Owen, M. R. (2012). Modeling sharp wave-ripple complexes through a CA3-CA1 network model with chemical synapses. Hippocampus."
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "title": "Firing Patterns",
+  "intro": "Inject the same step of current into different neurons and they answer differently: some fire a steady train that slows down, some fire bursts, some fire fast and never slow, some only fire a burst when the current is switched off. These electrophysiological classes (e-types) are one of the oldest ways of telling cell types apart, and each comes from a specific mix of ion channels that a model has to capture.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The classic cortical classes"
+    },
+    {
+      "type": "prose",
+      "text": "Connors and Gutnick (1990) sorted neocortical neurons recorded in slices into three main classes: regular spiking, intrinsically bursting and fast spiking. Gray and McCormick (1996) added chattering cells in cat visual cortex, and later work separated low-threshold spiking interneurons. Thalamic and some other cells add rebound bursting and resonance. The list below names each class, the cells that show it and the channels behind it."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Regular spiking (RS): a train whose interspike intervals lengthen during a step (spike-frequency adaptation). Most pyramidal and spiny stellate cells. Mechanism: slow potassium currents that build up with each spike, mainly the M-current (Kv7/KCNQ) and calcium-activated potassium currents (SK, and the slow AHP current).",
+        "Intrinsically bursting (IB): an initial burst of two to five spikes riding on a depolarising wave, then single spikes. Many thick-tufted layer 5 pyramidal cells and CA3 pyramidal cells. Mechanism: a persistent sodium or calcium current that outlasts each spike and produces a depolarising after-potential, often helped by dendritic calcium spikes.",
+        "Chattering or fast rhythmic bursting (CH/FRB): repeated high-frequency bursts at 20 to 80 Hz. Some superficial pyramidal cells in cat visual cortex and some layer 5 cells. Mechanism: a fast depolarising after-potential that resets quickly, so bursts repeat.",
+        "Fast spiking (FS): narrow spikes (around 0.3 ms at half height), high rates (up to several hundred Hz) and almost no adaptation. PV basket and chandelier cells. Mechanism: Kv3 potassium channels that activate only at high voltage and close fast, so the cell repolarises quickly without accumulating slow inhibition.",
+        "Low-threshold spiking (LTS): fires at low current, adapts, and can fire a rebound burst after hyperpolarisation. Many SST (Martinotti) interneurons. Mechanism: a T-type calcium current that de-inactivates when the cell is hyperpolarised.",
+        "Thalamocortical (TC): two modes. When depolarised, tonic single spikes that encode input linearly; when released from hyperpolarisation, a low-threshold calcium spike crowned by a burst. Thalamic relay cells. Mechanism: T-type calcium (Cav3) plus the h-current.",
+        "Resonator (RZ): subthreshold oscillations and a preference for inputs at a particular frequency, typically theta (4 to 12 Hz). Entorhinal stellate cells and some interneurons. Mechanism: the h-current and persistent sodium current together.",
+        "Irregular, stuttering and delayed spiking: further interneuron e-types catalogued by the Petilla group. Delayed onset is typical of striatal medium spiny neurons and some neurogliaform cells (slowly inactivating A-type potassium current)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: one equation, many cell types"
+    },
+    {
+      "type": "prose",
+      "text": "Izhikevich (2003) showed that a two-variable model, v' = 0.04v² + 5v + 140 − u + I and u' = a(bv − u), with a reset v ← c, u ← u + d after each spike, reproduces all of these classes by changing only a, b, c and d. Pick a class below and compare the spike trains. Regular spiking slows as u builds up; intrinsically bursting starts with a burst (higher reset c, so the cell restarts close to threshold); chattering repeats bursts; fast spiking keeps a high constant rate (fast recovery a = 0.1, small d); the thalamocortical preset barely adapts (d = 0.05)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Firing classes of the Izhikevich neuron",
+        "params": [
+          {
+            "key": "preset",
+            "label": "Cell class",
+            "control": "select",
+            "options": [
+              "Regular spiking",
+              "Intrinsically bursting",
+              "Chattering",
+              "Fast spiking",
+              "Low-threshold spiking",
+              "Thalamo-cortical",
+              "Resonator"
+            ],
+            "default": "Intrinsically bursting"
+          },
+          {
+            "key": "current",
+            "label": "Input current I",
+            "control": "range",
+            "min": 0,
+            "max": 20,
+            "step": 0.5,
+            "default": 10
+          }
+        ],
+        "config": {
+          "sim": "izhikevich",
+          "xLabel": "time (ms)",
+          "yLabel": "v (mV) and u"
+        }
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The widget only shows responses to a positive step. Rebound bursting, the signature of thalamocortical and LTS cells, needs a hyperpolarising step followed by release; see Thalamic Neurons (#/neuroscience/cell-types/thalamic)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Measuring a firing pattern"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Common e-type features (current-step protocol)\n\nrheobase           smallest step current that evokes a spike\nf-I slope          extra Hz per extra pA above rheobase\nadaptation index   mean over n of (ISI_n+1 - ISI_n) / (ISI_n+1 + ISI_n)\n                   ~0 for FS, clearly > 0 for RS\nburst index        fraction of spikes with ISI < 10 ms at step onset\nAP half-width      ~0.3 ms FS interneuron, ~1 ms pyramidal cell\nAHP depth          undershoot after the spike, mV below threshold\nsag ratio          (peak - steady) / peak of a hyperpolarising step;\n                   large when the h-current is strong\nrebound spikes     spikes after release from hyperpolarisation"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this means for your SNN"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Excitatory populations: regular spiking with adaptation is the safe default. Adaptation lowers rates under sustained input and makes cells respond to change, which matters for prediction and novelty signals.",
+        "Inhibitory populations: fast spiking for PV-like cells so inhibition can follow excitation within a few milliseconds; low-threshold spiking for SST-like cells.",
+        "Bursts are information: a burst from a layer 5 cell can signal that bottom-up and top-down input coincided (see Layer 5 Pyramidal Cells, #/neuroscience/cell-types/cortical-excitatory/l5-pyramidal). A model whose excitatory cells can only fire single spikes loses that channel.",
+        "Plain LIF has no adaptation and no bursting. Adding one adaptation variable (AdEx, or LIF plus an adaptation current) recovers RS, and the AdEx b and reset parameters can also give bursting (Naud et al. 2008)."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Connors, B. W., & Gutnick, M. J. (1990). Intrinsic firing patterns of diverse neocortical neurons. Trends in Neurosciences; Gray, C. M., & McCormick, D. A. (1996). Chattering cells: superficial pyramidal neurons contributing to the generation of synchronous oscillations in the visual cortex. Science; Izhikevich, E. M. (2003). Simple model of spiking neurons. IEEE Transactions on Neural Networks; Izhikevich, E. M. (2004). Which model to use for cortical spiking neurons? IEEE Transactions on Neural Networks; Naud, R., Marcille, N., Clopath, C., & Gerstner, W. (2008). Firing patterns in the adaptive exponential integrate-and-fire model. Biological Cybernetics; Ascoli, G. A., et al. (2008). Petilla terminology. Nature Reviews Neuroscience; Rudy, B., & McBain, C. J. (2001). Kv3 channels: voltage-gated K+ channels designed for high-frequency repetitive firing. Trends in Neurosciences."
+    }
+  ]
+}

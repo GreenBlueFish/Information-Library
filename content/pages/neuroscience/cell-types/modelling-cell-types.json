@@ -1,0 +1,78 @@
+{
+  "title": "Modelling a Cell Type",
+  "intro": "A computational model of a cell type is a neuron model plus a parameter set that makes it behave like recordings from that type. The same type can be modelled at very different levels of detail, from a reconstructed morphology with a dozen ion channels to a two-variable equation tuned to reproduce the spike pattern. This page lays out the levels, how parameters are fitted, and where to find published models.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The ladder of detail"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Detailed multi-compartment, conductance-based models: the real 3D morphology split into hundreds or thousands of compartments, each with Hodgkin-Huxley-style channels (Na, several K, Ca, h-current, Ca-activated K). They reproduce dendritic spikes, back-propagation and the effect of where a synapse lands. Cost: about 10^3 to 10^4 equations per cell. Examples: the Hay et al. (2011) layer 5 pyramidal cell, the De Schutter and Bower (1994) Purkinje cell, Blue Brain's 207 morpho-electrical types.",
+        "Reduced compartmental models: two to a few dozen compartments that keep the key soma-dendrite interaction. The Pinsky-Rinzel (1994) two-compartment CA3 cell and two-compartment pyramidal cells with an apical calcium zone are classics. Cost: tens of equations.",
+        "Single-compartment conductance-based models: one compartment with the type's characteristic channels. The Wang-Buzsaki (1996) fast-spiking interneuron, the Pospischil et al. (2008) family of cortical and thalamic cell models, and thalamocortical cells with a T-type calcium current. Cost: 3 to 10 equations.",
+        "Adaptive integrate-and-fire models: AdEx (Brette & Gerstner 2005), Izhikevich (2003) and generalized LIF (GLIF; Mihalas & Niebur 2009, Teeter et al. 2018). Two or three variables, with parameters chosen to match the type's firing pattern, adaptation and f-I curve. Cost: 2 to 5 equations, cheap enough for networks of millions.",
+        "Plain LIF with type-specific constants: different membrane time constant, threshold, refractory period and synaptic time constants per type. The Potjans-Diesmann (2014) microcircuit uses the same LIF for all types and puts the differences into connectivity.",
+        "Rate or statistical models: a firing-rate unit, or a generalized linear model (GLM) fitted directly to spike trains (Pillow et al. 2008). These capture input-output behaviour without any membrane dynamics."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Rule of thumb: choose the cheapest level that still has the mechanism your question depends on. If you need dendritic gating of feedback, you need at least two compartments. If you need fast-spiking versus adapting cells, an Izhikevich or AdEx point neuron is enough. If only connectivity matters, LIF will do."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How a type-specific model is fitted"
+    },
+    {
+      "type": "prose",
+      "text": "The standard recipe starts from a set of recordings of the type: responses to current steps of several amplitudes, sometimes ramps, noisy currents and hyperpolarising steps. Features are extracted from each trace (spike count, first-spike latency, adaptation index, spike height and width, after-hyperpolarisation depth, sag ratio and so on). An optimiser, usually a multi-objective evolutionary algorithm, then searches the model's free parameters (mostly maximal channel conductances) to match those features within the cell-to-cell spread of the data. Druckmann et al. (2007) introduced this feature-based approach; BluePyOpt (Van Geit et al. 2016) is the open-source tool Blue Brain uses for it, and the Allen Institute fitted its biophysical and GLIF models the same way."
+    },
+    {
+      "type": "prose",
+      "text": "For point models there are also direct fitting methods. The Allen GLIF models are fitted by linear regression on noise-driven recordings (Teeter et al. 2018). Spike-train similarity measures, such as the coincidence factor used in the INCF spike-time prediction competitions (Jolivet et al. 2008), showed that a well-fitted adaptive threshold integrate-and-fire model can predict a large share of the spikes of a real cortical neuron under noisy input (often 70 per cent or more of the spikes that the cell itself reproduces across repeated trials)."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Fitting a cell-type model (feature-based)\n\n1. Collect traces:   current steps  -0.1 .. +0.5 nA, 1-2 s each\n2. Extract features: spike count, ISI CV, adaptation index,\n                     AP amplitude & width, AHP depth, sag ratio,\n                     first-spike latency, input resistance\n3. Choose a model:   morphology + channel set, or a point model\n4. Free parameters:  gNa, gKdr, gKm, gCaL, gSK, gH ... per region\n5. Optimise:         error_i = |model_feature_i - mean_i| / sd_i\n                     minimise all error_i (multi-objective GA)\n6. Validate:         on stimuli NOT used for fitting\n                     (noise current, synaptic input, other cells)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where to find published models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "ModelDB (senselab.med.yale.edu/modeldb): thousands of published neuron and network models with their code, searchable by cell type, channel and simulator.",
+        "Allen Cell Types Database: GLIF and all-active biophysical models fitted to individual mouse and human neurons, downloadable with the recordings they were fitted to.",
+        "Blue Brain Project / Open Brain Platform: the detailed m-type/e-type models of the rat somatosensory microcircuit and hippocampal CA1 models.",
+        "Hippocampome.org: Izhikevich parameter sets for over 100 hippocampal neuron types (Venkadesh et al. 2018), directly usable in a point-neuron network.",
+        "Open Source Brain and NeuroML-DB: models in the simulator-independent NeuroML format, which can be run in NEURON, NEST, Brian2 or jNeuroML.",
+        "Izhikevich (2003, 2004) tables: four parameters (a, b, c, d) for regular spiking, intrinsically bursting, chattering, fast spiking, low-threshold spiking, thalamocortical and resonator cells, plus his 2007 book's parameters for many specific types."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this means for your SNN"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Start with Izhikevich or AdEx parameters for each type: they are cheap, well documented and reproduce the main firing classes (see Firing Patterns, #/neuroscience/cell-types/firing-patterns).",
+        "Move a type to two compartments only when a result needs dendrites, typically the pyramidal cells that receive feedback.",
+        "Keep a detailed model of one cell around as a reference: drive it and your reduced model with the same input, and compare spike times.",
+        "Use the variability in the data. Cells of one type differ; drawing each model cell's parameters from the measured spread is more realistic than cloning one cell."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Druckmann, S., et al. (2007). A novel multiple objective optimization framework for constraining conductance-based neuron models by experimental data. Frontiers in Neuroscience; Van Geit, W., et al. (2016). BluePyOpt: leveraging open source software and cloud infrastructure to optimise model parameters in neuroscience. Frontiers in Neuroinformatics; Teeter, C., et al. (2018). Generalized leaky integrate-and-fire models classify multiple neuron types. Nature Communications; Jolivet, R., et al. (2008). The quantitative single-neuron modeling competition. Biological Cybernetics; Pospischil, M., et al. (2008). Minimal Hodgkin-Huxley type models for different classes of cortical and thalamic neurons. Biological Cybernetics; Brette, R., & Gerstner, W. (2005). Adaptive exponential integrate-and-fire model as an effective description of neuronal activity. Journal of Neurophysiology; Izhikevich, E. M. (2003). Simple model of spiking neurons. IEEE Transactions on Neural Networks; Venkadesh, S., et al. (2018). Evolving simple models of diverse intrinsic dynamics in hippocampal neuron types. Frontiers in Neuroinformatics; Hines, M. L., et al. (2004). ModelDB: a database to support computational neuroscience. Journal of Computational Neuroscience."
+    }
+  ]
+}

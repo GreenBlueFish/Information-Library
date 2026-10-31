@@ -92,7 +92,8 @@ Where content, code, CSS, and governance material live:
 │       ├── snn/                 # Spiking neural networks (index, encoding, neuron-filters,
 │       │   ├── neuron-models/   #   neuron-models.json, learning-rules.json); children of
 │       │   └── learning-rules/  #   neuron-models / learning-rules live in these folders.
-│       ├── neuroscience/        # Cortical columns (+ cortical-columns/), dynamics, mushroom bodies, manifolds.
+│       ├── neuroscience/        # Cortical columns (+ cortical-columns/), dynamics, mushroom bodies, manifolds,
+│       │                        #   cell types (+ cell-types/, one folder per cell family).
 │       ├── foundations/         # NEF, semantic pointers, LMU.
 │       ├── neuromorphic-hardware/  # Overview, Loihi, TrueNorth, SpiNNaker, FPGA.
 │       ├── computational-cortical-columns/  # Learning path: biology → neuron models →
