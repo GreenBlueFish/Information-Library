@@ -317,8 +317,10 @@ breadcrumb is placed in the `main` grid area so it reads above the body content.
   (`--prev` / `--next`) is a bordered `--radius-md` card at least
   `--control-min-target` tall: an accent `.page-pager__arrow` (← or →,
   `aria-hidden`), a small muted `.page-pager__label` ("Previous"/"Next") and the
-  semibold `.page-pager__title`. "Next" sits right-aligned with its arrow
-  trailing, even when it is alone. Hover: accent border, `--color-surface-alt`.
+  semibold `.page-pager__title`. The two cards share the row half each; once
+  half is narrower than `--card-min-width` they wrap and each fills its own
+  row, while a lone card keeps half the row. "Next" sits right-aligned with its
+  arrow trailing, even when it is alone. Hover: accent border, `--color-surface-alt`.
 
 ---
 
