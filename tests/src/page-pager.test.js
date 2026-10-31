@@ -97,4 +97,13 @@ describe("page pager (previous / next arrows)", () => {
     expect(prev).toBe(null);
     expect(next).toBe(null);
   });
+
+  it("builds the order once per tree and reuses it", () => {
+    const t = tree();
+    pageNeighbours(t, ["snn", "neuron-models"]);
+    const b = pageNeighbours(t, ["snn", "neuron-models", "lif"]);
+    expect(pageNeighbours(t, ["snn"]).next === b.prev).toBe(true);
+    // A different tree object gets its own order.
+    expect(pageNeighbours(tree(), ["snn"]).next === b.prev).toBe(false);
+  });
 });

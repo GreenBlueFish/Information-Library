@@ -632,6 +632,28 @@ function renderTopicPage(resolution, pageContent) {
  *   next: {node: TopicNode, path: string[]}|null}}
  */
 export function pageNeighbours(tree, activePath) {
+  const order = pageOrder(tree);
+  const i = order.findIndex((entry) => isActivePath(entry.path, activePath));
+  if (i === -1) return { prev: null, next: null };
+  return { prev: order[i - 1] ?? null, next: order[i + 1] ?? null };
+}
+
+/** @type {WeakMap<object, {node: TopicNode, path: string[]}[]>} */
+const pageOrderCache = new WeakMap();
+
+/**
+ * Every topic in the sidebar's depth-first order, built once per tree object
+ * and cached, so each render doesn't re-walk the whole tree. The tree is
+ * treated as immutable once loaded; a changed tree must be a new object.
+ *
+ * @param {TopicNode|undefined} tree The root topic tree.
+ * @returns {{node: TopicNode, path: string[]}[]}
+ */
+function pageOrder(tree) {
+  if (!tree || typeof tree !== "object") return [];
+  const cached = pageOrderCache.get(tree);
+  if (cached) return cached;
+
   /** @type {{node: TopicNode, path: string[]}[]} */
   const order = [];
   const walk = (nodes, ancestors) => {
@@ -643,11 +665,9 @@ export function pageNeighbours(tree, activePath) {
       walk(node.children, path);
     }
   };
-  walk(tree && tree.children, []);
-
-  const i = order.findIndex((entry) => isActivePath(entry.path, activePath));
-  if (i === -1) return { prev: null, next: null };
-  return { prev: order[i - 1] ?? null, next: order[i + 1] ?? null };
+  walk(tree.children, []);
+  pageOrderCache.set(tree, order);
+  return order;
 }
 
 /**
