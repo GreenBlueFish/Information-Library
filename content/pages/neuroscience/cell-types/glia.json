@@ -1,0 +1,76 @@
+{
+  "title": "Glial Cells",
+  "intro": "Glia are the non-neuronal cells of the nervous system: astrocytes, oligodendrocytes, microglia and their relatives. They are roughly as numerous as neurons in the human brain (the old claim of ten glia per neuron is wrong; the ratio is close to one overall; Azevedo et al. 2009; von Bartheld et al. 2016). They do not fire action potentials, but they shape what neurons compute: astrocytes regulate synapses and respond to activity with calcium signals, oligodendrocytes set conduction speed, and microglia prune synapses. Most spiking network models leave them out, and that is usually a defensible simplification, but there are well-developed models of each.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Astrocytes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Structure: star-shaped cells whose fine processes contact blood vessels and wrap synapses. In rodent hippocampus one astrocyte contacts roughly 100,000 synapses in its own non-overlapping domain (Bushong et al. 2002); human astrocytes are larger and more complex (Oberheim et al. 2009). Astrocytes are coupled to each other by gap junctions into networks.",
+        "Housekeeping that matters for computation: they clear glutamate from synapses through transporters (shaping synaptic time course and limiting spillover), buffer extracellular potassium, supply lactate to neurons and control local blood flow.",
+        "Calcium signalling: neurotransmitter acting on astrocytic G-protein receptors raises IP3, releasing calcium from internal stores. The resulting calcium transients and waves last seconds and spread within and between astrocytes.",
+        "The tripartite synapse: Araque et al. (1999) proposed that a synapse consists of presynaptic terminal, postsynaptic site and the astrocyte process around them, and that astrocytes respond to transmitter and release 'gliotransmitters' (glutamate, ATP/adenosine, D-serine) that modulate synaptic strength. Whether astrocytes release glutamate in a vesicular, neuron-like way in vivo is contested (Fiacco & McCarthy 2018; Savtchouk & Volterra 2018), but their role in neuromodulation is better supported: in mice and zebrafish, noradrenaline acts through astrocyte calcium to change network state (Paukert et al. 2014; Mu et al. 2019)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Oligodendrocytes and myelin"
+    },
+    {
+      "type": "prose",
+      "text": "Oligodendrocytes wrap axons in the central nervous system with myelin, raising conduction velocity five- to fifty-fold through saltatory conduction between nodes of Ranvier. One oligodendrocyte can myelinate up to around 50 axon segments. Myelination is plastic: it changes with learning and activity in adults (McKenzie et al. 2014; Gibson et al. 2014), which could tune conduction delays. For a spiking model, this is the biological basis for learnable synaptic delays, which some SNN training methods now exploit (for example delay learning in Hammouamri, Khalfaoui-Hassani & Masquelier 2024)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Microglia"
+    },
+    {
+      "type": "prose",
+      "text": "Microglia are the brain's resident immune cells. Their processes constantly survey the tissue (Nimmerjahn, Kirchhoff & Helmchen 2005), and they remove synapses tagged by complement proteins during development, a form of activity-dependent pruning (Schafer et al. 2012). They also respond to injury and are implicated in many diseases. In modelling terms, pruning by microglia is one biological counterpart to structural plasticity: removing weak or unused synapses."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Computational models of glia"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Li and Rinzel (1994): a two-variable reduction of the De Young-Keizer (1992) IP3 receptor model, describing calcium release from internal stores with an IP3-dependent oscillation. It is the core of nearly every astrocyte calcium model.",
+        "De Pitta et al. (2009): the 'G-ChI' model adding IP3 production and degradation to Li-Rinzel, reproducing amplitude- and frequency-modulated calcium oscillations driven by glutamate.",
+        "Tripartite synapse models: Nadkarni and Jung (2003) coupled a Li-Rinzel astrocyte to a Hodgkin-Huxley neuron; Volman, Ben-Jacob and Levine (2007) modelled astrocytic regulation of short-term synaptic plasticity; De Pitta, Volman, Berry and Ben-Jacob (2011) showed astrocytes could switch synapses between depressing and facilitating.",
+        "Network models: the review by Manninen, Havela and Linne (2018) surveys dozens of astrocyte and neuron-astrocyte models; Stimberg et al. (2019) provide Brian2 implementations of many of them for large networks.",
+        "Myelin and delays: cable models of myelinated axons (McIntyre, Richardson & Grill 2002) and SNN models with plastic delays.",
+        "Machine learning analogy: Kozachkov, Kastanenka and Krotov (2023) argued that neuron-astrocyte networks can implement transformer-like attention, a speculative but concrete proposal."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Li-Rinzel (1994) astrocyte calcium, per unit cytosol volume\n\ndC/dt = J_chan + J_leak - J_pump\nJ_chan = r_C · m∞³ · n∞³ · h³ · (C_ER - C)     IP3R channel release\n   m∞  = IP3 / (IP3 + d1)                       IP3 activation\n   n∞  = C / (C + d5)                           Ca activation\nJ_pump = v_ER · C² / (C² + K_ER²)                SERCA re-uptake\ndh/dt  = (h∞ - h) / τ_h                          slow Ca inactivation\n   h∞  = Q2 / (Q2 + C),  τ_h = 1 / (a2 (Q2 + C)),  Q2 = d2 (IP3 + d1)/(IP3 + d3)\n\nAt intermediate IP3, C oscillates on a timescale of seconds."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this means for your SNN"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Leaving glia out is the norm and usually fine for a first column model.",
+        "The glial functions most worth copying are cheap: slow, local modulation of synaptic strength (an astrocyte-like variable integrating activity over seconds), learnable delays (myelin), and pruning of weak synapses (microglia).",
+        "If you model astrocytes explicitly, use Li-Rinzel calcium dynamics driven by local synaptic activity and let the calcium scale release probability or add a slow current; the Brian2 implementations of Stimberg et al. (2019) are a good starting point."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Azevedo, F. A. C., et al. (2009). Equal numbers of neuronal and nonneuronal cells make the human brain an isometrically scaled-up primate brain. Journal of Comparative Neurology; von Bartheld, C. S., Bahney, J., & Herculano-Houzel, S. (2016). The search for true numbers of neurons and glial cells in the human brain: a review of 150 years of cell counting. Journal of Comparative Neurology; Bushong, E. A., Martone, M. E., Jones, Y. Z., & Ellisman, M. H. (2002). Protoplasmic astrocytes in CA1 stratum radiatum occupy separate anatomical domains. Journal of Neuroscience; Oberheim, N. A., et al. (2009). Uniquely hominid features of adult human astrocytes. Journal of Neuroscience; Araque, A., Parpura, V., Sanzgiri, R. P., & Haydon, P. G. (1999). Tripartite synapses: glia, the unacknowledged partner. Trends in Neurosciences; Fiacco, T. A., & McCarthy, K. D. (2018). Multiple lines of evidence indicate that gliotransmission does not occur under physiological conditions. Journal of Neuroscience; Savtchouk, I., & Volterra, A. (2018). Gliotransmission: beyond black-and-white. Journal of Neuroscience; Paukert, M., et al. (2014). Norepinephrine controls astroglial responsiveness to local circuit activity. Neuron; Mu, Y., et al. (2019). Glia accumulate evidence that actions are futile and suppress unsuccessful behavior. Cell; McKenzie, I. A., et al. (2014). Motor skill learning requires active central myelination. Science; Gibson, E. M., et al. (2014). Neuronal activity promotes oligodendrogenesis and adaptive myelination in the mammalian brain. Science; Nimmerjahn, A., Kirchhoff, F., & Helmchen, F. (2005). Resting microglial cells are highly dynamic surveillants of brain parenchyma in vivo. Science; Schafer, D. P., et al. (2012). Microglia sculpt postnatal neural circuits in an activity and complement-dependent manner. Neuron; Li, Y.-X., & Rinzel, J. (1994). Equations for InsP3 receptor-mediated [Ca2+]i oscillations derived from a detailed kinetic model: a Hodgkin-Huxley like formalism. Journal of Theoretical Biology; De Young, G. W., & Keizer, J. (1992). A single-pool inositol 1,4,5-trisphosphate-receptor-based model for agonist-stimulated oscillations in Ca2+ concentration. PNAS; De Pitta, M., Goldberg, M., Volman, V., Berry, H., & Ben-Jacob, E. (2009). Glutamate regulation of calcium and IP3 oscillating and pulsating dynamics in astrocytes. Journal of Biological Physics; Nadkarni, S., & Jung, P. (2003). Spontaneous oscillations of dressed neurons: a new mechanism for epilepsy? Physical Review Letters; Volman, V., Ben-Jacob, E., & Levine, H. (2007). The astrocyte as a gatekeeper of synaptic information transfer. Neural Computation; De Pitta, M., Volman, V., Berry, H., & Ben-Jacob, E. (2011). A tale of two stories: astrocyte regulation of synaptic depression and facilitation. PLoS Computational Biology; Manninen, T., Havela, R., & Linne, M.-L. (2018). Computational models for calcium-mediated astrocyte functions. Frontiers in Computational Neuroscience; Stimberg, M., Goodman, D. F. M., Brette, R., & De Pitta, M. (2019). Modeling neuron-glia interactions with the Brian 2 simulator. In Computational Glioscience, Springer; McIntyre, C. C., Richardson, A. G., & Grill, W. M. (2002). Modeling the excitability of mammalian nerve fibers: influence of afterpotentials on the recovery cycle. Journal of Neurophysiology; Hammouamri, I., Khalfaoui-Hassani, I., & Masquelier, T. (2024). Learning delays in spiking neural networks using dilated convolutions with learnable spacings. ICLR; Kozachkov, L., Kastanenka, K. V., & Krotov, D. (2023). Building transformers from neurons and astrocytes. PNAS."
+    }
+  ]
+}

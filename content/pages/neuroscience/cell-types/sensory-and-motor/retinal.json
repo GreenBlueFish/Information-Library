@@ -1,0 +1,72 @@
+{
+  "title": "Retinal Neurons",
+  "intro": "The retina is a small, layered piece of brain at the back of the eye that does far more than capture images. Five classes of neuron, split into more than 100 types, turn light into about 40 parallel streams of spike trains, each a different feature of the visual scene, sent to the brain by retinal ganglion cells. Because its input is light that can be controlled exactly, the retina is where statistical models of how neurons turn stimuli into spikes were developed and tested.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The five classes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Photoreceptors: rods (dim light; about 120 million per human eye) and cones (daylight and colour; about 6 million, in three types in humans). They hyperpolarise to light through a G-protein cascade and release glutamate continuously in the dark. Their response is graded and adapts over a range of about ten orders of magnitude of light intensity.",
+        "Horizontal cells: connect laterally across photoreceptor terminals and feed inhibition back to them, creating the antagonistic surround of receptive fields.",
+        "Bipolar cells: about 15 types in mouse. ON bipolar cells invert the photoreceptor signal (metabotropic mGluR6 receptors), OFF bipolar cells keep its sign (ionotropic receptors); some are sustained and some transient. They do not spike, in most types, and release glutamate from ribbon synapses.",
+        "Amacrine cells: over 40 types, mostly inhibitory (GABA or glycine), shaping timing and computing features. Starburst amacrine cells make the retina's direction selectivity: their dendrites release GABA preferentially for motion away from the soma (Euler, Detwiler & Denk 2002).",
+        "Retinal ganglion cells (RGCs): the only output neurons; their axons form the optic nerve. Around 40 types in mouse (Baden et al. 2016; Goetz et al. 2022), including ON and OFF midget and parasol cells in primates, ON-OFF direction-selective cells, object-motion-sensitive cells, and intrinsically photosensitive (melanopsin) cells. Each type tiles the retina with receptive fields."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What ganglion cells compute"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Centre-surround antagonism: an ON-centre cell is excited by light in the centre of its receptive field and inhibited by light in the surround (Kuffler 1953); a difference-of-Gaussians filter is a good first model. This removes redundancy and enhances edges.",
+        "Temporal filtering and adaptation: biphasic temporal filters respond to change; contrast adaptation rescales the response to the current range of contrasts (Smirnakis et al. 1997; Baccus & Meister 2002).",
+        "Precise timing: RGC spikes can be timed to about a millisecond, and the first spike after a saccade carries much of the information (Gollisch & Meister 2008).",
+        "Feature detection: direction selectivity, object motion against a moving background (Olveczky, Baccus & Meister 2003), and anticipation of moving objects (Berry et al. 1999)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Computational models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Linear-nonlinear (LN) models: a spatio-temporal linear filter (estimated by spike-triggered averaging of white-noise stimuli; Chichilnisky 2001) followed by a static nonlinearity and Poisson spiking. Simple and often good for slowly varying stimuli.",
+        "Generalized linear models (GLMs): Pillow et al. (2008) added a spike-history filter (refractoriness, bursting) and coupling filters between neighbouring cells to the LN model. Fitted to a complete population of primate parasol cells, it predicted single-trial spike timing and showed that correlations between cells carry extra information. The GLM is equivalent to a stochastic spike-response model with an exponential escape rate.",
+        "Mechanistic cascade models: photoreceptor phototransduction models (e.g. the Hamer et al. 2005 rod model), and bipolar-cell subunit models in which a ganglion cell sums rectified bipolar inputs, explaining non-linear spatial summation (Victor & Shapley 1979; Schwartz & Rieke 2011).",
+        "Deep network models: convolutional networks trained to predict RGC responses to natural movies (McIntosh et al. 2016; Maheswaranathan et al. 2023) outperform LN and GLM models and develop internal units that resemble bipolar and amacrine cells.",
+        "Neuromorphic retinas: silicon retinas (Mahowald & Mead 1991) and the dynamic vision sensor (Lichtsteiner, Posch & Delbruck 2008) copy the ON/OFF, change-detecting design of the outer retina."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "GLM for one ganglion cell (Pillow et al. 2008)\n\nλ(t) = exp( k · x(t)  +  h · y_hist(t)  +  Σ_j c_j · y_j(t)  +  b )\n        stimulus filter   own spike history   coupling to        baseline\n        (centre-surround, (refractoriness,    neighbours' spikes\n         biphasic in time) bursting)\n\nspikes ~ Poisson(λ(t) Δt);  fit k, h, c, b by maximising the log-likelihood\n          (concave, so the fit is unique)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this means for your SNN"
+    },
+    {
+      "type": "list",
+      "items": [
+        "If your network takes visual input, an ON/OFF centre-surround front end with temporal filtering and Poisson or GLM spiking gives realistic spike trains for very little code.",
+        "Event cameras (DVS) already produce ON/OFF change events, close to transient retinal channels (see Encoding Schemes, #/computational-cortical-columns/building-an-snn-column/encoding-schemes).",
+        "The GLM is a good tool for fitting any spiking neuron to recorded data: it is quick to fit and its parameters map to filters you can interpret."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Masland, R. H. (2012). The neuronal organization of the retina. Neuron; Kuffler, S. W. (1953). Discharge patterns and functional organization of mammalian retina. Journal of Neurophysiology; Euler, T., Detwiler, P. B., & Denk, W. (2002). Directionally selective calcium signals in dendrites of starburst amacrine cells. Nature; Baden, T., et al. (2016). The functional diversity of retinal ganglion cells in the mouse. Nature; Goetz, J., et al. (2022). Unified classification of mouse retinal ganglion cells using function, morphology, and gene expression. Cell Reports; Chichilnisky, E. J. (2001). A simple white noise analysis of neuronal light responses. Network; Pillow, J. W., et al. (2008). Spatio-temporal correlations and visual signalling in a complete neuronal population. Nature; Gollisch, T., & Meister, M. (2008). Rapid neural coding in the retina with relative spike latencies. Science; Baccus, S. A., & Meister, M. (2002). Fast and slow contrast adaptation in retinal circuitry. Neuron; Olveczky, B. P., Baccus, S. A., & Meister, M. (2003). Segregation of object and background motion in the retina. Nature; Berry, M. J., Brivanlou, I. H., Jordan, T. A., & Meister, M. (1999). Anticipation of moving stimuli by the retina. Nature; Schwartz, G. W., & Rieke, F. (2011). Perspectives on: information and coding in mammalian sensory physiology: nonlinear spatial encoding by retinal ganglion cells. Journal of General Physiology; McIntosh, L. T., Maheswaranathan, N., Nayebi, A., Ganguli, S., & Baccus, S. A. (2016). Deep learning models of the retinal response to natural scenes. NeurIPS; Mahowald, M. A., & Mead, C. (1991). The silicon retina. Scientific American; Lichtsteiner, P., Posch, C., & Delbruck, T. (2008). A 128×128 120 dB 15 µs latency asynchronous temporal contrast vision sensor. IEEE Journal of Solid-State Circuits."
+    }
+  ]
+}

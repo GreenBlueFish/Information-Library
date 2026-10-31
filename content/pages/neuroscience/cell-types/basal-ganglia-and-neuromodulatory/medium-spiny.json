@@ -1,0 +1,59 @@
+{
+  "title": "Medium Spiny Neurons",
+  "intro": "Medium spiny neurons (MSNs, also called spiny projection neurons) make up about 95 per cent of the neurons in the rodent striatum. They are GABAergic projection neurons: each receives thousands of weak inputs from cortex and thalamus, needs many of them to coincide before it fires, and then inhibits its targets in the basal ganglia. Two classes, D1 and D2, form the direct and indirect pathways, and dopamine pushes them in opposite directions.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Biology"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Morphology: medium-sized soma (about 12 to 20 µm), four to eight dendrites densely covered with spines, around 5,000 to 10,000 spines per cell, most of them receiving cortical or thalamic glutamate; dopamine terminals contact the necks of the same spines.",
+        "Two classes: direct-pathway MSNs express D1 dopamine receptors and substance P and project to GPi/SNr; indirect-pathway MSNs express D2 receptors and enkephalin and project to GPe (Gerfen et al. 1990). They are intermixed, roughly half each.",
+        "Up and down states: in vivo under anaesthesia and in some awake states, MSN membrane potential alternates between a hyperpolarised down state near −85 mV, held there by inward-rectifier potassium current (Kir2), and a depolarised up state near −60 mV driven by synchronous cortical input, where they can fire (Wilson & Kawaguchi 1996).",
+        "Firing: very low rates in vivo (often below 1 Hz); a delayed first spike to current steps, caused by slowly inactivating A-type (Kv1) potassium current; a high spike threshold.",
+        "Connectivity: weak, sparse lateral inhibition between MSNs (connection probability about 10 to 20 per cent nearby, unitary IPSPs of a fraction of a mV; Tunstall et al. 2002; Taverna et al. 2008), plus strong feedforward inhibition from FSIs.",
+        "Plasticity: corticostriatal synapses show dopamine-dependent plasticity; in D1 MSNs, pre-before-post pairing with dopamine gives LTP, while in D2 MSNs dopamine depletion favours LTP and dopamine favours LTD (Shen et al. 2008). This is a biological three-factor learning rule."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Computational models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Izhikevich (2007): a two-variable MSN model in the scaled form C v' = k(v − vr)(v − vt) − u + I, u' = a(b(v − vr) − u), with C = 50 pF, k = 1, vr = −80 mV, vt = −25 mV, a = 0.01, b = −20, c = −55 mV, d = 150, peak 40 mV. It reproduces the deep resting potential, high threshold and delayed firing. Humphries, Lepora, Wood and Gurney (2009) extended it with dopamine effects on D1 and D2 cells for network models.",
+        "Wolf et al. (2005): a 189-compartment conductance-based MSN with 11 channel types and NMDA and AMPA synapses, reproducing up and down states and showing how NMDA receptors stabilise the up state. Moyer, Wolf and Finkel (2007) studied dopamine modulation in it.",
+        "Lindroos et al. (2018) and Hjorth et al. (2020): detailed D1 and D2 MSN models fitted with BluePyOpt, used in the Snudda full-scale striatal microcircuit model (Hjorth et al. 2020).",
+        "Gruber, Solla, Surmeier and Houk (2003): a reduced model in which D1 receptor activation makes the cell bistable, so that both up and down states become more stable and the contrast between strongly and weakly driven MSNs grows.",
+        "Network models: Ponzi and Wickens (2010) showed that weak MSN lateral inhibition produces slowly switching cell assemblies; Humphries et al. (2009) built a large spiking striatal model with FSIs and dopamine; Frank (2005) used rate-based D1/D2 'Go/NoGo' units in an action-learning model."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// Izhikevich (2007) medium spiny neuron, scaled form; dt in ms, I in pA\nconst msn = { C: 50, k: 1, vr: -80, vt: -25, a: 0.01, b: -20,\n              c: -55, d: 150, vpeak: 40 };\nfunction msnStep(n, I, dt) {\n  const p = msn;\n  n.v += dt * (p.k * (n.v - p.vr) * (n.v - p.vt) - n.u + I) / p.C;\n  n.u += dt * p.a * (p.b * (n.v - p.vr) - n.u);\n  if (n.v >= p.vpeak) { n.v = p.c; n.u += p.d; return true; }\n  return false;\n}\n// start at n = { v: -80, u: 0 }; the deep rest and high threshold mean\n// about 400 pA are needed before the first spike, which then comes\n// only after a delay of a few hundred ms."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this means for your SNN"
+    },
+    {
+      "type": "list",
+      "items": [
+        "If your system has to choose actions from cortical states, an MSN layer is the canonical reader: many weak cortical inputs, a high threshold that demands coincident input, and output that disinhibits the selected action.",
+        "Split it into D1 'go' and D2 'no-go' populations and modulate their plasticity with opposite-sign dopamine; this gives learning from both reward and its absence.",
+        "Use a three-factor rule (pre-post eligibility × dopamine) for corticostriatal synapses, as in reward-modulated STDP."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Gerfen, C. R., et al. (1990). D1 and D2 dopamine receptor-regulated gene expression of striatonigral and striatopallidal neurons. Science; Wilson, C. J., & Kawaguchi, Y. (1996). The origins of two-state spontaneous membrane potential fluctuations of neostriatal spiny neurons. Journal of Neuroscience; Tunstall, M. J., Oorschot, D. E., Kean, A., & Wickens, J. R. (2002). Inhibitory interactions between spiny projection neurons in the rat striatum. Journal of Neurophysiology; Taverna, S., Ilijic, E., & Surmeier, D. J. (2008). Recurrent collateral connections of striatal medium spiny neurons are disrupted in models of Parkinson's disease. Journal of Neuroscience; Shen, W., Flajolet, M., Greengard, P., & Surmeier, D. J. (2008). Dichotomous dopaminergic control of striatal synaptic plasticity. Science; Izhikevich, E. M. (2007). Dynamical Systems in Neuroscience. MIT Press; Humphries, M. D., Lepora, N., Wood, R., & Gurney, K. (2009). Capturing dopaminergic modulation and bimodal membrane behaviour of striatal medium spiny neurons in accurate, reduced models. Frontiers in Computational Neuroscience; Wolf, J. A., et al. (2005). NMDA/AMPA ratio impacts state transitions and entrainment to oscillations in a computational model of the nucleus accumbens medium spiny projection neuron. Journal of Neuroscience; Lindroos, R., et al. (2018). Basal ganglia neuromodulation over multiple temporal and structural scales. Frontiers in Neuroscience; Hjorth, J. J. J., et al. (2020). The microcircuits of striatum in silico. PNAS; Gruber, A. J., Solla, S. A., Surmeier, D. J., & Houk, J. C. (2003). Modulation of striatal single units by expected reward: a spiny neuron model displaying dopamine-induced bistability. Journal of Neurophysiology; Ponzi, A., & Wickens, J. (2010). Sequentially switching cell assemblies in random inhibitory networks of spiking neurons in the striatum. Journal of Neuroscience; Humphries, M. D., Wood, R., & Gurney, K. (2009). Dopamine-modulated dynamic cell assemblies generated by the GABAergic striatal microcircuit. Neural Networks."
+    }
+  ]
+}

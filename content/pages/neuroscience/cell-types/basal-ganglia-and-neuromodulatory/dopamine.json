@@ -1,0 +1,69 @@
+{
+  "title": "Dopamine Neurons",
+  "intro": "Dopamine neurons in the ventral tegmental area (VTA) and substantia nigra pars compacta (SNc) are only a few hundred thousand cells in a human brain, but their axons reach the whole striatum and much of the cortex. They fire like slow pacemakers, and on top of that they burst when something is better than expected and pause when it is worse. That firing matches the reward prediction error of temporal-difference learning so closely that it is one of the clearest cases in neuroscience of a cell type implementing a known algorithm.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Biology"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Numbers and projections: about 400,000 to 600,000 midbrain dopamine neurons in human (fewer than 30,000 in mouse). SNc neurons project mainly to the dorsal striatum; VTA neurons to the ventral striatum (nucleus accumbens), prefrontal cortex, amygdala and hippocampus. Each SNc axon is enormous: in rat, a single axon can form hundreds of thousands of synapses in the striatum (Matsuda et al. 2009).",
+        "Pacemaking: in slices they fire regular spikes at about 1 to 5 Hz without any input, driven by L-type (Cav1.3) calcium and HCN channels and slow sodium currents, with a broad spike and a long after-hyperpolarisation from SK potassium channels (Grace & Bunney 1984; Guzman et al. 2009).",
+        "Bursting: in vivo, glutamatergic input through NMDA receptors switches them to bursts of 2 to 10 spikes at 15 to 30 Hz, which release much more dopamine per spike than tonic firing (Grace & Bunney 1984; Overton & Clark 1997).",
+        "Pauses: GABAergic input from the VTA's own GABA neurons, the rostromedial tegmental nucleus and the striatum briefly silences them.",
+        "Transmission: dopamine acts through slow G-protein coupled receptors (D1-like and D2-like), mostly by volume transmission, so its effects last hundreds of milliseconds to seconds.",
+        "Vulnerability: SNc dopamine neurons die in Parkinson's disease. Their constant calcium-driven pacemaking and huge axons are thought to make them metabolically fragile (Surmeier et al. 2017)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reward prediction errors"
+    },
+    {
+      "type": "prose",
+      "text": "Schultz and colleagues recorded dopamine neurons in monkeys learning that a cue predicts juice. Before learning, the neurons burst when the juice arrived. After learning, they burst at the cue instead and did not respond to the predicted juice; if the juice was then withheld, they paused at the time it should have come. Schultz, Dayan and Montague (1997) pointed out that this is exactly the temporal-difference (TD) error δ = r + γV(s′) − V(s) of reinforcement learning: positive when outcomes beat predictions, zero when predicted, negative when worse. Later work showed graded encoding of reward size and probability (Fiorillo, Tobler & Schultz 2003), causal roles of the burst in learning (Steinberg et al. 2013 with optogenetics), and that distributions of dopamine neurons with different optimism encode a distribution of reward, as in distributional reinforcement learning (Dabney et al. 2020). Some dopamine neurons also signal salience, novelty or movement, so the reward prediction error is the main but not the only message."
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "TD error and dopamine firing (after Schultz et al. 1997)\n\n                 cue                reward\nbefore learning  ───────────────────▲──────    burst at reward   (δ > 0 at r)\nafter learning   ──▲────────────────────────   burst at cue      (δ moves to cue)\nreward omitted   ──▲────────────────▼──────    pause at reward time (δ < 0)\n\nδ(t) = r(t) + γ V(t+1) − V(t)        V learned by  V(t) += α δ(t)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Computational models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Wilson and Callaway (1993): a coupled-oscillator model of a dopamine neuron in which soma and dendrites have different natural frequencies, explaining slow pacemaking and why NMDA input can raise firing to bursts.",
+        "Amini, Clark and Canavier (1999) and Canavier and Landry (2006): multi-compartment models of the interaction of calcium, SK and NMDA currents in pacemaking and bursting; Kuznetsov, Kopell and Wilson (2006) explained why dendritic NMDA input allows high-rate bursts while somatic depolarisation does not.",
+        "Drion, Massotte, Sepulchre and Seutin (2011): showed how calcium and sodium currents combine to make pacemaking robust to channel variability.",
+        "Algorithmic models: TD learning (Sutton 1988) and actor-critic architectures in which dopamine is the critic's error; Montague, Dayan and Sejnowski (1996) first proposed the TD account for midbrain dopamine; Dabney et al. (2020) distributional TD.",
+        "Spiking networks: dopamine as the third factor in reward-modulated STDP (Izhikevich 2007; Fremaux & Gerstner 2016), where a global, delayed dopamine signal turns eligibility traces into weight changes."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this means for your SNN"
+    },
+    {
+      "type": "list",
+      "items": [
+        "If your model has to learn from reward, add a small population (or a single scalar signal) that computes a prediction error and broadcasts it to every plastic synapse that should learn from reward.",
+        "Implement learning as eligibility × dopamine: STDP-like coincidences mark synapses, and the delayed dopamine signal decides whether those marks become potentiation or depression.",
+        "Keep dopamine slow and global: it is a modulatory broadcast, not a point-to-point synapse.",
+        "For a cortical column, reward signals are not the main learning driver; but a dopamine-like 'novelty' or 'surprise' signal can gate when a column learns, which is a cheap way to stop it overwriting old memories."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: Schultz, W., Dayan, P., & Montague, P. R. (1997). A neural substrate of prediction and reward. Science; Montague, P. R., Dayan, P., & Sejnowski, T. J. (1996). A framework for mesencephalic dopamine systems based on predictive Hebbian learning. Journal of Neuroscience; Fiorillo, C. D., Tobler, P. N., & Schultz, W. (2003). Discrete coding of reward probability and uncertainty by dopamine neurons. Science; Steinberg, E. E., et al. (2013). A causal link between prediction errors, dopamine neurons and learning. Nature Neuroscience; Dabney, W., et al. (2020). A distributional code for value in dopamine-based reinforcement learning. Nature; Grace, A. A., & Bunney, B. S. (1984). The control of firing pattern in nigral dopamine neurons: burst firing. Journal of Neuroscience; Overton, P. G., & Clark, D. (1997). Burst firing in midbrain dopaminergic neurons. Brain Research Reviews; Matsuda, W., et al. (2009). Single nigrostriatal dopaminergic neurons form widely spread and highly dense axonal arborizations in the neostriatum. Journal of Neuroscience; Guzman, J. N., Sanchez-Padilla, J., Chan, C. S., & Surmeier, D. J. (2009). Robust pacemaking in substantia nigra dopaminergic neurons. Journal of Neuroscience; Surmeier, D. J., Obeso, J. A., & Halliday, G. M. (2017). Selective neuronal vulnerability in Parkinson disease. Nature Reviews Neuroscience; Wilson, C. J., & Callaway, J. C. (1993). Coupled oscillator model of the dopaminergic neuron of the substantia nigra. Journal of Neurophysiology; Amini, B., Clark, J. W., & Canavier, C. C. (1999). Calcium dynamics underlying pacemaker-like and burst firing oscillations in midbrain dopaminergic neurons: a computational study. Journal of Neurophysiology; Kuznetsov, A. S., Kopell, N. J., & Wilson, C. J. (2006). Transient high-frequency firing in a coupled-oscillator model of the mesencephalic dopaminergic neuron. Journal of Neurophysiology; Drion, G., Massotte, L., Sepulchre, R., & Seutin, V. (2011). How modeling can reconcile apparently discrepant experimental results: the case of pacemaking in dopaminergic neurons. PLoS Computational Biology; Sutton, R. S. (1988). Learning to predict by the methods of temporal differences. Machine Learning; Fremaux, N., & Gerstner, W. (2016). Neuromodulated spike-timing-dependent plasticity, and theory of three-factor learning rules. Frontiers in Neural Circuits; Izhikevich, E. M. (2007). Solving the distal reward problem through linkage of STDP and dopamine signaling. Cerebral Cortex."
+    }
+  ]
+}
