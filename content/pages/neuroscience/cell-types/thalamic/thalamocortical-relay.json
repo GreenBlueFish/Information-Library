@@ -1,0 +1,104 @@
+{
+  "title": "Thalamocortical Relay Neurons",
+  "intro": "Thalamocortical (TC) relay neurons carry input from the senses, and from layer 5 of other cortical areas, into the cortex. They have two firing modes. Depolarised, they fire single spikes whose rate follows their input, a faithful relay. Hyperpolarised for more than about 100 ms, they switch to burst mode: the next depolarisation triggers a low-threshold calcium spike crowned by a burst of sodium spikes. The membrane potential, set by brain state and by cortical and reticular feedback, decides which mode a relay cell is in.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Biology"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Morphology: bushy, radially symmetric dendrites; axons project to layer 4 (core, first-order cells) or more diffusely to layer 1 and other layers (matrix cells; Jones 2001). Local GABAergic interneurons exist in some nuclei (like the LGN) and are rare in rodent somatosensory thalamus.",
+        "Inputs: a few strong 'driver' synapses on proximal dendrites (from the retina, lemniscal pathways or cortical layer 5) and many weak 'modulator' synapses on distal dendrites (from layer 6, the brainstem and the TRN). In the LGN, retinal synapses are only about 5 to 10 per cent of the synapses on a relay cell, yet they determine its receptive field (Sherman & Guillery 1998).",
+        "Low-threshold calcium current (I_T, Cav3.1): inactivated at rest near −60 mV; de-inactivates when the cell is held below about −70 mV for ~100 ms. A depolarisation from there opens it, producing a low-threshold spike lasting tens of ms with 2 to 6 sodium spikes on top.",
+        "h-current (I_h): opens on hyperpolarisation and depolarises the cell back, which de-inactivates and triggers I_T again; the interplay of I_T and I_h makes isolated TC cells oscillate at about 0.5 to 4 Hz, the delta rhythm (McCormick & Pape 1990).",
+        "Tonic versus burst mode in vivo: tonic mode transmits input linearly; burst mode transmits a non-linear, more detectable signal, and bursts occur in awake animals too, often at stimulus onset after a period of hyperpolarisation (Guido & Weyand 1995; Lesica & Stanley 2004). During slow-wave sleep TC cells are hyperpolarised and burst rhythmically.",
+        "Neuromodulation: acetylcholine and noradrenaline from the brainstem depolarise TC cells and push them into tonic mode on waking."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Computational models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "McCormick and Huguenard (1992): the standard single-compartment HH-type TC cell, with Na, K, I_T, I_h, A-type and other potassium currents, built from voltage-clamp data. It reproduces tonic firing, rebound bursts and delta oscillations. The I_T kinetics of Huguenard and McCormick (1992) and the I_h model of Destexhe et al. (1993) are the versions used in nearly every thalamic model since.",
+        "Destexhe et al. (1998): a dendritic TC model showing that I_T is concentrated in the dendrites, which affects how bursts are triggered.",
+        "Integrate-and-fire-or-burst (IFB) model (Smith et al. 2000): an LIF neuron plus a single slow, de-inactivating calcium variable h_T. When the cell is hyperpolarised h_T recovers; a following depolarisation triggers a calcium current that produces a burst. Fitted to cat LGN data, it is the cheapest model with both relay modes.",
+        "Izhikevich: the thalamo-cortical preset (a = 0.02, b = 0.25, c = −65, d = 0.05) gives tonic firing when depolarised and a rebound burst after a hyperpolarising step; Izhikevich (2007) gives a more accurate TC parameter set in his scaled model.",
+        "AdEx with negative a (subthreshold coupling that de-inactivates) can also produce rebound bursts (Naud et al. 2008)."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "js",
+      "source": "// Integrate-and-fire-or-burst (after Smith et al. 2000), dt in ms\n// V: membrane (mV); h: availability of the T-type calcium current (0..1)\nconst p = { C: 2, gL: 0.035, EL: -65, gT: 0.07, ET: 120,\n            Vh: -60, Vth: -35, Vreset: -50, tauMinus: 20, tauPlus: 100 };\nfunction ifbStep(n, I, dt) {\n  const iT = n.V >= p.Vh ? p.gT * n.h * (n.V - p.ET) : 0; // T-current flows above Vh\n  n.V += dt * (I - p.gL * (n.V - p.EL) - iT) / p.C;\n  // below Vh, h recovers slowly; above it, h inactivates faster\n  n.h += dt * (n.V < p.Vh ? (1 - n.h) / p.tauPlus : -n.h / p.tauMinus);\n  if (n.V >= p.Vth) { n.V = p.Vreset; return true; }\n  return false;\n}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: tonic and burst mode"
+    },
+    {
+      "type": "prose",
+      "text": "The widget runs the integrate-and-fire-or-burst cell above. It sits at a holding current until 300 ms, then the current steps up. With the default hold of 0 the cell rests at −65 mV, below the T-current's gate at −60 mV, so the T-current is fully available (the h trace sits at the top). The step then triggers a burst: a quick run of spikes at intervals of 3 to 5 ms, slowing into tonic firing as h inactivates. Raise the hold to 0.5 and the cell waits at about −51 mV, above the gate, so h is already inactivated when the step comes: the same step now gives only regular tonic spikes. A negative hold hyperpolarises the cell and gives the burst too, after a short delay. This is the switch between burst and relay mode that cortical feedback and arousal control in real thalamic cells."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Thalamic relay cell: burst versus tonic mode (IFB model)",
+        "params": [
+          {
+            "key": "hold",
+            "label": "Holding current before the step (µA/cm²)",
+            "control": "range",
+            "min": -0.5,
+            "max": 0.8,
+            "step": 0.05,
+            "default": 0
+          },
+          {
+            "key": "current",
+            "label": "Step current after 300 ms (µA/cm²)",
+            "control": "range",
+            "min": 0,
+            "max": 3,
+            "step": 0.1,
+            "default": 1.5
+          }
+        ],
+        "config": {
+          "sim": "ifb",
+          "xLabel": "time (ms)",
+          "yLabel": "membrane potential (mV)"
+        }
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The constants are the values usually quoted for the Smith et al. (2000) fit to cat LGN cells, with the spike drawn as a line to 20 mV and reset to −50 mV. The model keeps only the gating logic of the T-current, not its exact voltage dependence, so burst lengths are indicative only."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this means for your SNN"
+    },
+    {
+      "type": "list",
+      "items": [
+        "If your column gets its input through a model thalamus, use a cell that can burst after hyperpolarisation (IFB or Izhikevich TC); bursts at stimulus onset are a strong, reliable 'something new' signal to cortex.",
+        "Separate driver input (strong, proximal, few) from modulator input (weak, many, from layer 6 and TRN) on your relay cells.",
+        "State matters: a depolarising 'arousal' input that puts relay cells in tonic mode is the simplest model of switching from sleep-like to awake processing."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Sources: McCormick, D. A., & Huguenard, J. R. (1992). A model of the electrophysiological properties of thalamocortical relay neurons. Journal of Neurophysiology; Huguenard, J. R., & McCormick, D. A. (1992). Simulation of the currents involved in rhythmic oscillations in thalamic relay neurons. Journal of Neurophysiology; McCormick, D. A., & Pape, H.-C. (1990). Properties of a hyperpolarization-activated cation current and its role in rhythmic oscillation in thalamic relay neurones. Journal of Physiology; Smith, G. D., Cox, C. L., Sherman, S. M., & Rinzel, J. (2000). Fourier analysis of sinusoidally driven thalamocortical relay neurons and a minimal integrate-and-fire-or-burst model. Journal of Neurophysiology; Destexhe, A., Neubig, M., Ulrich, D., & Huguenard, J. (1998). Dendritic low-threshold calcium currents in thalamic relay cells. Journal of Neuroscience; Sherman, S. M., & Guillery, R. W. (1998). On the actions that one nerve cell can have on another: distinguishing 'drivers' from 'modulators'. PNAS; Jones, E. G. (2001). The thalamic matrix and thalamocortical synchrony. Trends in Neurosciences; Guido, W., & Weyand, T. (1995). Burst responses in thalamic relay cells of the awake behaving cat. Journal of Neurophysiology; Lesica, N. A., & Stanley, G. B. (2004). Encoding of natural scene movies by tonic and burst spikes in the lateral geniculate nucleus. Journal of Neuroscience; Izhikevich, E. M. (2007). Dynamical Systems in Neuroscience. MIT Press."
+    }
+  ]
+}

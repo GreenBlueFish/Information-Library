@@ -282,3 +282,38 @@ export function fiCurve(config, state) {
   };
   return [curve("LIF rate (Hz)", rate, 0, 5)];
 }
+
+/**
+ * Integrate-and-fire-or-burst (after Smith et al. 2000): an LIF thalamic relay
+ * cell plus a T-type calcium current gated by one slow variable h. Below Vh
+ * (−60 mV) h recovers toward 1 (τ = 100 ms); above it h inactivates (τ = 20
+ * ms) and the T-current gT·h·(V − ET) flows. The cell sits at `hold` until
+ * t = 300 ms, starting from that holding level's steady state, then steps to
+ * `current`: from rest or hyperpolarisation h is available and the step
+ * triggers a burst before tonic firing; from a depolarised hold h is
+ * inactivated and the step gives tonic spikes only.
+ */
+export function ifb(config, state) {
+  const T = num(state, config, "duration", 600);
+  const hold = num(state, config, "hold", 0); // µA/cm²
+  const I1 = num(state, config, "current", 1.5); // µA/cm²
+  const STEP = 300;
+  const C = 2, gL = 0.035, EL = -65, gT = 0.07, ET = 120;
+  const Vh = -60, Vth = -35, Vreset = -50, tauMinus = 20, tauPlus = 100, dt = 0.02;
+  let v = Math.min(EL + hold / gL, Vth - 1);
+  let h = v < Vh ? 1 : 0;
+  const ts = [], vs = [], hs = [];
+  const hScaled = () => -80 + 40 * h;
+  for (let t = 0; t <= T; t += dt) {
+    const I = t < STEP ? hold : I1;
+    const iT = v >= Vh ? gT * h * (v - ET) : 0;
+    v += (dt * (I - gL * (v - EL) - iT)) / C;
+    h += dt * (v < Vh ? (1 - h) / tauPlus : -h / tauMinus);
+    if (v >= Vth) {
+      ts.push(t); vs.push(20); hs.push(hScaled());
+      v = Vreset;
+    }
+    ts.push(t); vs.push(v); hs.push(hScaled());
+  }
+  return [series("V (mV)", ts, vs), series("h, T-current availability (−80 = 0, −40 = 1)", ts, hs)];
+}

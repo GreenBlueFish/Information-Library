@@ -42,6 +42,17 @@ describe("widgets/sims", () => {
     expect(peaks(1)).toBe(0);
   });
 
+  it("ifb: a step from rest starts with a burst; from a depolarised hold it does not", () => {
+    const isis = (hold) => {
+      const pts = SIMS.ifb({}, { hold, current: 1.5 })[0].points;
+      const t = pts.filter((p) => p.y >= 19.9 && p.x > 300).map((p) => p.x);
+      return t.slice(1).map((x, i) => x - t[i]);
+    };
+    const fromRest = isis(0), fromDepolarised = isis(0.5);
+    expect(fromRest.slice(0, 3).every((d) => d < 8)).toBe(true);
+    expect(fromDepolarised.length > 3 && fromDepolarised.every((d) => d > 20)).toBe(true);
+  });
+
   it("stdp-triplet: post-before-pre turns from depression to potentiation as frequency rises", () => {
     const [, postPre] = SIMS["stdp-triplet"]({}, {});
     expect(postPre.points[0].y < 0).toBe(true);
