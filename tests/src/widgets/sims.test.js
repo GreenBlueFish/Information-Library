@@ -49,7 +49,7 @@ describe("widgets/sims", () => {
       return t.slice(1).map((x, i) => x - t[i]);
     };
     const fromRest = isis(0), fromDepolarised = isis(0.5);
-    expect(fromRest.slice(0, 3).every((d) => d < 8)).toBe(true);
+    expect(fromRest.length >= 3 && fromRest.slice(0, 3).every((d) => d < 8)).toBe(true);
     expect(fromDepolarised.length > 3 && fromDepolarised.every((d) => d > 20)).toBe(true);
   });
 
