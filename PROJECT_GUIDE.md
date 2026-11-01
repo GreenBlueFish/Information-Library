@@ -55,9 +55,11 @@ Where content, code, CSS, and governance material live:
 ├── package.json                 # Only { "type": "module", "private": true } — marks ES modules.
 │                                 #   NOT a dependency manifest; there is nothing to install.
 ├── assets/
-│   └── css/
-│       ├── tokens.css           # Design tokens ONLY: colors, type scale, spacing (hex + scales).
-│       └── alexandria.css       # Component + layout styles that CONSUME the tokens.
+│   ├── css/
+│   │   ├── tokens.css           # Design tokens ONLY: colors, type scale, spacing (hex + scales).
+│   │   └── alexandria.css       # Component + layout styles that CONSUME the tokens.
+│   └── figures/                 # Images for `figure` blocks (§3.2), foldered by topic slug,
+│                                #   e.g. figures/communication-protocols/vga-line-timing.svg.
 ├── src/                         # Runtime — shared vanilla-JS ES modules (the "code" layer).
 │   ├── main.js                  # Entry point: boot(), wire router→loader→renderer→lookup,
 │   │                            #   import widget types so they self-register. (Added in the
@@ -84,7 +86,8 @@ Where content, code, CSS, and governance material live:
 │           ├── spike-raster.js
 │           ├── sdr-overlap.js
 │           ├── temporal-memory.js
-│           └── column-voting.js
+│           ├── column-voting.js
+│           └── vga-scanline.js   # VGA beam stepper (communication-protocols/vga, §7.4).
 ├── content/                     # The DATA layer — pure JSON, no presentation logic.
 │   ├── topics.json              # The topic/subtopic tree (single manifest of topics).
 │   ├── terms.json               # The lookup table (array of term entries).
@@ -99,6 +102,7 @@ Where content, code, CSS, and governance material live:
 │       ├── computational-cortical-columns/  # Learning path: biology → neuron models →
 │       │                        #   plasticity → HTM → Thousand Brains → other models →
 │       │                        #   building an SNN column → reading list (one folder per section).
+│       ├── communication-protocols/  # Overview (index.json) and its one subtopic, vga.json.
 │       ├── calculus/            # Template topic.
 │       └── game-theory/         # Template topic.
 ├── STYLE_GUIDE.md               # Governance doc #1 — visual standards.
@@ -207,6 +211,7 @@ literally and never interpreted as HTML.
 | `list`    | `items` (string[])             | A bulleted list. |
 | `code`    | `lang`, `source`               | A non-executed, labeled code block. `source` is shown verbatim. |
 | `callout` | `text`                         | A highlighted aside. |
+| `figure`  | `src`, `alt`, `caption`        | An image. `src` is a repo-relative path to a file under `assets/figures/` (no scheme, no leading `/`, no `..`; `.svg`, `.png`, `.jpg`, `.gif` or `.webp`). `alt` is **required** text describing what the image shows; `caption` is optional and shown under it as text. A figure with a missing `alt` or an unsafe `src` renders a placeholder instead. |
 | `widget`  | `widget` (a `Widget_Spec`, §3.4) | Delegated to the widget registry; see §7. |
 
 An unknown `type` renders a visible placeholder rather than breaking the page.
@@ -384,6 +389,14 @@ Guidance:
 - **Styling is centralized:** no inline or per-page styles. Colors, type, and
   spacing are tokens in `assets/css/tokens.css`; components are styled in
   `alexandria.css`. See `STYLE_GUIDE.md`.
+- **Images:** add them as `figure` blocks (§3.2) with the file under
+  `assets/figures/<topic-slug>/`. Prefer diagrams you draw yourself as SVG, so
+  there is no licensing question and they match the site. An SVG loaded as an
+  image cannot read the CSS tokens, so write the token hex values from
+  `STYLE_GUIDE.md` §1 into the file and keep a white background. Every figure
+  needs `alt` text that says what the picture shows, not just its title, and
+  the prose around it should still make sense without it.
+  `content/pages/communication-protocols/vga.json` has four examples.
 - **Where to copy a template from:** start a new page by copying an existing one
   with the blocks you need. `content/pages/snn/index.json` is a good prose/list/
   callout template; `content/pages/snn/neuron-models.json` additionally shows a
@@ -488,6 +501,18 @@ enforces the keys.
 Every `config` field is optional; a missing field falls back to the value on
 the example page. To add another simulation type, follow §7.2 and build it on
 `sim-kit.js` the same way.
+
+### 7.4 The VGA scanline widget
+
+`vga-scanline` (`src/widgets/types/vga-scanline.js`, example page
+`communication-protocols/vga`) steps a beam through a VGA frame and draws the
+frame to scale, the painted picture and the RGB/HSYNC/VSYNC waveforms. Its
+`params` keys, in order, are `mode` (a select whose options must be names in
+the module's exported `MODES`: `"640x480 at 60 Hz"`, `"800x600 at 60 Hz"`,
+`"1024x768 at 60 Hz"`) and `step` (a select of `"1 pixel"`, `"8 pixels"`,
+`"1 line"`, `"10 lines"`). It takes no `config`. Adding a mode is one entry in
+`MODES` with its VESA DMT timing. `tests/src/integration/communication-protocols-content.test.js`
+checks the page's keys and options.
 
 ---
 
