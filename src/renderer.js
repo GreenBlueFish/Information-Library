@@ -38,6 +38,7 @@ import { installHome } from "./home.js";
 /**
  * @typedef {import("./router.js").TopicNode} TopicNode
  * @typedef {import("./router.js").RouteResolution} RouteResolution
+ * @typedef {import("./content-loader.js").TermEntry} TermEntry
  * @typedef {import("./widgets/registry.js").WidgetSpec} WidgetSpec
  * @typedef {import("./widgets/registry.js").WidgetInstance} WidgetInstance
  */
@@ -438,7 +439,7 @@ export function sortByTitle(nodes) {
  * empty and the nav tree remains the browse affordance. (The boot wiring in
  * task 11 passes the tree through; see design.md Example Usage.)
  *
- * @param {(RouteResolution & { tree?: TopicNode })|null} resolution
+ * @param {(RouteResolution & { tree?: TopicNode, terms?: TermEntry[] })|null} resolution
  * @returns {HTMLElement} A `.home` container.
  */
 function renderHome(resolution) {
@@ -453,6 +454,15 @@ function renderHome(resolution) {
   // The Topic_Lookup search control sits above the grid (Requirement 1.1).
   home.appendChild(buildHomeSearch());
 
+  // Glossary terms matching the search, filled live by `installHome`; empty
+  // and hidden until the search names a term (issue #47).
+  const termResults = el("section", "home-terms");
+  termResults.setAttribute("aria-label", "Matching terms");
+  termResults.hidden = true;
+  termResults.appendChild(el("h2", "home-terms__heading", "Matching terms"));
+  termResults.appendChild(el("ul", "home-terms__list"));
+  home.appendChild(termResults);
+
   const grid = el("ul", "home-grid");
   for (const node of roots) {
     const card = buildHomeCard(node, [node.slug]);
@@ -464,7 +474,8 @@ function renderHome(resolution) {
   // freshly built nodes before returning (home-topic-browse — Requirements 1.3,
   // 2.3, 2.4, 2.6, 2.7). Each render builds new nodes and attaches their own
   // listeners, so there is no listener accumulation across navigations.
-  installHome(home, tree);
+  const terms = resolution && Array.isArray(resolution.terms) ? resolution.terms : [];
+  installHome(home, tree, terms);
 
   return home;
 }

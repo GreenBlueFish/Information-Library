@@ -40,6 +40,19 @@ import { createTrieNode, insert, normalize } from "./trie.js";
  * @typedef {Object} SearchIndex
  * @property {import("./trie.js").TrieNode} root The trie root; walk its
  *   `children` by normalized token to reach terminal `TermEntry` nodes.
+ * @property {Map<string, TermEntry[]>} byTerm Every entry grouped by its
+ *   normalized canonical `term`, in `terms.json` order, so a term with several
+ *   definitions can show all of them.
+ */
+
+/**
+ * One definition of a matched term, as the UI shows it.
+ *
+ * @typedef {Object} Definition
+ * @property {string} term The entry's canonical term.
+ * @property {string} definition The definition text.
+ * @property {string|null} pageRef Route to a page explaining it, or null.
+ * @property {string|null} acronym The entry's acronym, or null.
  */
 
 /**
@@ -55,6 +68,9 @@ import { createTrieNode, insert, normalize } from "./trie.js";
  *   term (Requirement 8.3). Omitted entries resolve to `null` (Requirement 6.5).
  * @property {"exact"|"fuzzy"} matchKind How the match was found: an exact
  *   token-path walk, or the bounded fuzzy fallback.
+ * @property {Definition[]} definitions Every definition of the matched term,
+ *   the resolved one first; more than one when `terms.json` defines the same
+ *   term (or surface form) more than once, so the panel can cycle through them.
  */
 
 /**
@@ -85,6 +101,8 @@ const FUZZY_MAX_DISTANCE = 2;
  */
 export function buildIndex(termEntries) {
   const root = createTrieNode();
+  /** @type {Map<string, TermEntry[]>} */
+  const byTerm = new Map();
 
   const entries = Array.isArray(termEntries) ? termEntries : [];
   for (const entry of entries) {
@@ -95,9 +113,15 @@ export function buildIndex(termEntries) {
       if (tokens.length === 0) continue; // nothing to index for this surface
       insert(root, tokens, entry);
     }
+
+    const key = termKey(entry.term);
+    if (key !== "") {
+      if (!byTerm.has(key)) byTerm.set(key, []);
+      byTerm.get(key).push(entry);
+    }
   }
 
-  return { root };
+  return { root, byTerm };
 }
 
 /**
@@ -161,6 +185,8 @@ export function query(index, selectionText) {
   let node = index.root;
   /** @type {TermEntry|null} */
   let bestEntry = null;
+  /** @type {TermEntry[]} */
+  let bestEntries = [];
 
   // Walk as far as the trie allows; the deepest terminal on the walked path is
   // the longest known term that is a token-prefix of the selection.
@@ -169,12 +195,15 @@ export function query(index, selectionText) {
     if (next === undefined) break; // the token path ends here
     node = next;
     if (node.entry !== null) {
-      bestEntry = node.entry; // a longer terminal overwrites the shorter one
+      // A longer terminal overwrites the shorter one. When several entries end
+      // here, the first in `terms.json` order is shown first.
+      bestEntries = node.entries?.length ? node.entries : [node.entry];
+      bestEntry = bestEntries[0];
     }
   }
 
   if (bestEntry !== null) {
-    return makeResult(bestEntry, "exact");
+    return makeResult(bestEntry, "exact", alternatives(index, bestEntries, bestEntry));
   }
 
   // No exact token path: hand the whole selection to the fuzzy fallback
@@ -183,7 +212,7 @@ export function query(index, selectionText) {
   // only one that returns — which is correct for everything already indexed.
   const candidate = fuzzyNearest(index, selectionText, FUZZY_MAX_DISTANCE);
   if (candidate) {
-    return makeResult(candidate, "fuzzy");
+    return makeResult(candidate, "fuzzy", alternatives(index, [candidate], candidate));
   }
 
   return null;
@@ -198,16 +227,106 @@ export function query(index, selectionText) {
  *
  * @param {TermEntry} entry The resolved term entry.
  * @param {"exact"|"fuzzy"} matchKind How it was matched.
+ * @param {TermEntry[]} [all] Every entry to offer, `entry` first.
  * @returns {LookupResult}
  */
-function makeResult(entry, matchKind) {
+function makeResult(entry, matchKind, all = [entry]) {
+  return { ...toDefinition(entry), matchKind, definitions: all.map(toDefinition) };
+}
+
+/**
+ * Shape one `TermEntry` as a `Definition`.
+ *
+ * @param {TermEntry} entry
+ * @returns {Definition}
+ */
+function toDefinition(entry) {
   return {
     term: entry.term,
     definition: entry.definition,
     pageRef: entry.pageRef ?? null,
     acronym: typeof entry.acronym === "string" && entry.acronym !== "" ? entry.acronym : null,
-    matchKind,
   };
+}
+
+/**
+ * Every entry the reader can cycle through for a match: the entries ending at
+ * the matched surface form, plus every other entry sharing one of their
+ * canonical terms, without repeats and with `first` leading.
+ *
+ * @param {SearchIndex} index
+ * @param {TermEntry[]} matched The entries the match landed on.
+ * @param {TermEntry} first The entry to show first.
+ * @returns {TermEntry[]}
+ */
+function alternatives(index, matched, first) {
+  const out = [first];
+  for (const entry of matched) {
+    for (const same of [entry, ...(index.byTerm?.get(termKey(entry.term)) ?? [])]) {
+      if (!out.includes(same)) out.push(same);
+    }
+  }
+  return out;
+}
+
+/**
+ * The grouping key for a canonical term: its normalized tokens, space-joined.
+ *
+ * @param {unknown} term
+ * @returns {string}
+ */
+function termKey(term) {
+  return normalize(typeof term === "string" ? term : "").join(" ");
+}
+
+/**
+ * Find the terms a typed search text names, for the home page's search: an
+ * entry matches when the normalized text is a substring of its normalized
+ * term, any alias, or its acronym. Entries sharing a canonical term are grouped
+ * into one result whose `definitions` holds each of them, so a term defined
+ * several times appears once and the reader cycles through its definitions.
+ *
+ * Results are ordered by how well they match (a surface form equal to the text,
+ * then one starting with it, then one containing it), then alphabetically by
+ * term, and capped at `limit`.
+ *
+ * @param {TermEntry[]} termEntries The parsed `terms.json` array.
+ * @param {string} text The typed search text.
+ * @param {number} [limit] The most results to return.
+ * @returns {Array<{term: string, definitions: Definition[]}>} Empty for an
+ *   empty text or no match.
+ */
+export function findTerms(termEntries, text, limit = 8) {
+  const q = normalize(text).join(" ");
+  if (q === "" || !Array.isArray(termEntries)) return [];
+
+  /** @type {Map<string, {term: string, rank: number, entries: TermEntry[]}>} */
+  const groups = new Map();
+  for (const entry of termEntries) {
+    if (!entry || typeof entry !== "object") continue;
+    let rank = Infinity;
+    for (const surface of surfaceForms(entry)) {
+      const form = normalize(surface).join(" ");
+      if (form === q) rank = Math.min(rank, 0);
+      else if (form.startsWith(q)) rank = Math.min(rank, 1);
+      else if (form.includes(q)) rank = Math.min(rank, 2);
+    }
+    if (rank === Infinity) continue;
+
+    const key = termKey(entry.term);
+    const group = groups.get(key);
+    if (group) {
+      group.rank = Math.min(group.rank, rank);
+      group.entries.push(entry);
+    } else {
+      groups.set(key, { term: entry.term, rank, entries: [entry] });
+    }
+  }
+
+  return [...groups.values()]
+    .sort((a, b) => a.rank - b.rank || a.term.localeCompare(b.term, undefined, { sensitivity: "base" }))
+    .slice(0, limit)
+    .map((g) => ({ term: g.term, definitions: g.entries.map(toDefinition) }));
 }
 
 /**

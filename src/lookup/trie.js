@@ -29,6 +29,10 @@
  * @property {import("../content-loader.js").TermEntry|null} entry The terminal
  *   `TermEntry` set when some term/alias/acronym ends exactly at this node;
  *   `null` for interior-only nodes.
+ * @property {import("../content-loader.js").TermEntry[]} entries Every
+ *   distinct `TermEntry` whose term/alias/acronym ends exactly at this node, in
+ *   insertion order. More than one when the same term has several definitions,
+ *   so the lookup can let the reader cycle through them.
  */
 
 /**
@@ -37,7 +41,7 @@
  * @returns {TrieNode}
  */
 export function createTrieNode() {
-  return { children: new Map(), entry: null };
+  return { children: new Map(), entry: null, entries: [] };
 }
 
 /**
@@ -46,8 +50,9 @@ export function createTrieNode() {
  * on the node reached by the last token. An empty token list is a no-op (there
  * is no path to mark, so nothing is indexed).
  *
- * Re-inserting the same token path simply overwrites the terminal `entry`,
- * which keeps the build idempotent per surface form.
+ * Re-inserting the same token path overwrites the terminal `entry` and adds the
+ * entry to `entries` once (inserting the same entry again is a no-op there), so
+ * the build stays idempotent per surface form.
  *
  * @param {TrieNode} root The trie root to insert into.
  * @param {string[]} tokens Normalized tokens (as produced by `normalize`).
@@ -68,6 +73,7 @@ export function insert(root, tokens, entry) {
   }
   if (tokens.length > 0) {
     node.entry = entry;
+    if (!node.entries.includes(entry)) node.entries.push(entry);
   }
   return node;
 }
