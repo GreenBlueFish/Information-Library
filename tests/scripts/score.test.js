@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, it, expect } from "../harness.js";
 import { measure, workingSim, MIN_TEXT } from "../../scripts/score.js";
+import { getWidget, registerWidget } from "../../src/widgets/registry.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const readJson = (rel) => JSON.parse(readFileSync(join(root, rel), "utf8"));
@@ -40,6 +41,20 @@ function score(children, files, terms = []) {
 const node = (slug, page, children) => ({ slug, title: slug, page, ...(children ? { children } : {}) });
 
 describe("scripts/score", () => {
+  // First, so the score's one-time load of the widget types runs while the
+  // stand-in is registered.
+  it("measures the real widget, and leaves a stand-in other tests registered in place", async () => {
+    const original = getWidget("parameter-plot");
+    const standIn = () => ({ update() {}, destroy() {} });
+    registerWidget("parameter-plot", standIn);
+    try {
+      expect(await workingSim(plot("lif").widget)).toBe("parameter-plot:lif");
+      expect(getWidget("parameter-plot")).toBe(standIn);
+    } finally {
+      if (original) registerWidget("parameter-plot", original);
+    }
+  });
+
   it("counts a page with real text once, and not a stub", async () => {
     const r = await score([node("a", "a.json"), node("b", "b.json"), node("c", "a.json")], {
       "a.json": page(),
@@ -65,12 +80,28 @@ describe("scripts/score", () => {
   it("credits a page with a working simulator, and each distinct simulator once", async () => {
     const r = await score([node("a", "a.json"), node("b", "b.json"), node("c", "c.json")], {
       "a.json": page(plot("lif"), plot("hh")),
-      "b.json": page(plot("lif")),
+      "b.json": page({ ...plot("lif"), widget: { ...plot("lif").widget, config: { sim: "lif", duration: 50 } } }),
       "c.json": page(),
     });
     expect(r.simPages).toBe(2);
     expect(r.sims).toBe(2);
     expect(r.score).toBe(3 + 3 * 2 + 3 * 2);
+  });
+
+  it("gives no sim page for a copy of a plot an earlier page already counted", async () => {
+    const relabelled = plot("lif");
+    relabelled.widget.title = "Same plot, new title";
+    relabelled.widget.config.xLabel = "t (ms)";
+    const tuned = plot("lif");
+    tuned.widget.config.duration = 50;
+    const r = await score([node("a", "a.json"), node("b", "b.json"), node("c", "c.json"), node("d", "d.json")], {
+      "a.json": page(plot("lif")),
+      "b.json": page(plot("lif")),
+      "c.json": page(relabelled),
+      "d.json": page(tuned),
+    });
+    expect(r.simPages).toBe(2);
+    expect(r.sims).toBe(1);
   });
 
   it("gives nothing for a widget that simulates nothing or can't mount", async () => {

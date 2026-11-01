@@ -11,6 +11,9 @@
 //   column pages — such pages under one of COLUMN_ROOTS, the Computational
 //                  Cortical Columns material goals.md asks to understand
 //   sim pages    — such pages with at least one working simulation widget
+//                  set up in a way no earlier page in the tree already counted
+//                  (its simulation and config, labels and titles aside): the
+//                  same plot pasted onto another page adds nothing
 //   sims         — distinct simulations working on such pages: a widget type,
 //                  or for `parameter-plot` the `config.sim` it runs
 //   links        — terms in content/terms.json whose `pageRef` lands on a
@@ -34,6 +37,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { parseHash, resolveRoute } from "../src/router.js";
+import { clearWidgetRegistry, registerWidget } from "../src/widgets/registry.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -65,7 +69,8 @@ let widgetsReady = null;
  * A DOM to mount into, and the mount function of every widget type in
  * src/widgets/types/. Each type module is loaded afresh and its mount function
  * taken from the registry straight away, so a stand-in registered for the same
- * type elsewhere (as some tests do) is never the one measured.
+ * type elsewhere (as some tests do) is never the one measured. The registry is
+ * then put back as it was, so those stand-ins stay registered for their tests.
  */
 function prepareWidgets() {
   widgetsReady ??= (async () => {
@@ -74,11 +79,17 @@ function prepareWidgets() {
     const { getWidget, widgetTypes } = await import("../src/widgets/registry.js");
     const snapshot = () => new Map(widgetTypes().map((t) => [t, getWidget(t)]));
     const mounts = new Map();
+    const original = snapshot();
     const dir = join(root, "src/widgets/types");
-    for (const name of readdirSync(dir).filter((n) => n.endsWith(".js")).sort()) {
-      const before = snapshot();
-      await import(`${pathToFileURL(join(dir, name)).href}?score`);
-      for (const [type, mount] of snapshot()) if (before.get(type) !== mount) mounts.set(type, mount);
+    try {
+      for (const name of readdirSync(dir).filter((n) => n.endsWith(".js")).sort()) {
+        const before = snapshot();
+        await import(`${pathToFileURL(join(dir, name)).href}?score`);
+        for (const [type, mount] of snapshot()) if (before.get(type) !== mount) mounts.set(type, mount);
+      }
+    } finally {
+      clearWidgetRegistry();
+      for (const [type, mount] of original) registerWidget(type, mount);
     }
     const { SIMS } = await import("../src/widgets/sims/index.js");
     return { dom, mounts, SIMS };
@@ -140,12 +151,29 @@ export async function workingSim(spec) {
   }
 }
 
+/** A widget's setup for telling copies apart: its config without labels or titles. */
+function setup(spec) {
+  const strip = (v) =>
+    Array.isArray(v)
+      ? v.map(strip)
+      : v && typeof v === "object"
+        ? Object.fromEntries(
+            Object.keys(v)
+              .filter((k) => !/label|title/i.test(k))
+              .sort()
+              .map((k) => [k, strip(v[k])]),
+          )
+        : v;
+  return JSON.stringify(strip(spec?.config ?? null));
+}
+
 /**
  * Score a library: `topics` is the tree, `terms` the glossary, `readPage` reads
  * a page file by its path (throwing when it can't).
  */
 export async function measure(topics, terms, readPage) {
-  const pages = new Map(); // page file -> { column, sims: Set }
+  const pages = new Map(); // page file -> { column, sims: Set, fresh }
+  const setups = new Set(); // simulation + setup of every working widget so far
   const nodes = [];
   const walk = (node, path) => {
     if (node !== topics) nodes.push({ node, path });
@@ -163,12 +191,17 @@ export async function measure(topics, terms, readPage) {
     const page = loadPage(node.page, readPage);
     if (!page) continue;
     const sims = new Set();
+    const found = new Set();
     for (const block of page.blocks) {
       if (block?.type !== "widget") continue;
       const name = await workingSim(block.widget);
-      if (name) sims.add(name);
+      if (!name) continue;
+      sims.add(name);
+      found.add(`${name} ${setup(block.widget)}`);
     }
-    pages.set(node.page, { column, sims });
+    const fresh = [...found].some((s) => !setups.has(s));
+    for (const s of found) setups.add(s);
+    pages.set(node.page, { column, sims, fresh });
   }
 
   let links = 0;
@@ -184,7 +217,7 @@ export async function measure(topics, terms, readPage) {
   const counts = {
     pages: all.length,
     columnPages: all.filter((p) => p.column).length,
-    simPages: all.filter((p) => p.sims.size > 0).length,
+    simPages: all.filter((p) => p.fresh).length,
     sims: sims.size,
     links,
     terms: withRefs.length,
@@ -206,7 +239,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const r = await measure(readJson("content/topics.json"), readJson("content/terms.json"), readJson);
   console.log(`pages with content (>= ${MIN_TEXT} chars): ${r.pages}`);
   console.log(`  of them on cortical columns: ${r.columnPages}`);
-  console.log(`  of them with a working simulation: ${r.simPages}`);
+  console.log(`  of them with a working simulation set up anew: ${r.simPages}`);
   console.log(`distinct working simulations: ${r.sims}`);
   console.log(`term links that land: ${r.links} of ${r.terms}`);
   console.log(r.score);
