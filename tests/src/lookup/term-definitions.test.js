@@ -12,6 +12,10 @@
 //     with Previous / "n of N" / Next buttons on a term defined more than once.
 //   - The lookup panel shows the same cycle control.
 //   - Against the real content: "VGA" resolves, and the home search lists it.
+//   - VGA vs VSA (one letter apart): an exact term/alias/acronym match always
+//     beats the fuzzy fallback, and no fuzzy candidate joins the definitions.
+//   - Content is fetched with `cache: "no-cache"`, so a browser never keeps
+//     serving a terms.json from before a term was added (the VSA report).
 //
 // DOM: the shared linkedom DOM from tests/dom.js, re-pinned on the globals per
 // case (see home-behavior.test.js). linkedom has no Selection API, so the panel
@@ -29,6 +33,7 @@ globalThis.document = dom.document;
 globalThis.window = dom.window;
 
 const { buildIndex, query, findTerms } = await import("../../../src/lookup/search-index.js");
+const { loadJson, clearContentCache } = await import("../../../src/content-loader.js");
 const { installLookup } = await import("../../../src/lookup/lookup-ui.js");
 const { renderPage } = await import("../../../src/renderer.js");
 
@@ -201,5 +206,69 @@ describe("real content: VGA is found", () => {
     typeInto(home, "VGA");
     const terms = [...home.querySelectorAll(".home-term__term")].map((t) => t.textContent);
     expect(terms[0]).toBe("Video Graphics Array (VGA)");
+  });
+});
+
+/** Query once and let the lazily imported fuzzy fallback finish loading. */
+async function warmFuzzy(index) {
+  query(index, "zzqqxx");
+  await new Promise((r) => setTimeout(r, 50));
+}
+
+describe("VGA vs VSA: exact beats fuzzy", () => {
+  const VSA = { term: "Vector Symbolic Architecture", acronym: "VSA", definition: "Computing with high-dimensional vectors.", pageRef: null };
+  const VGA = { term: "Video Graphics Array", acronym: "VGA", definition: "An analog video standard.", pageRef: null };
+
+  it("'VGA' resolves exactly to Video Graphics Array, in any case, with VSA indexed first", async () => {
+    const index = buildIndex([VSA, VGA]);
+    await warmFuzzy(index);
+    for (const text of ["VGA", "vga", "Vga", "(VGA)", "VGA:"]) {
+      const result = query(index, text);
+      expect(result.term).toBe("Video Graphics Array");
+      expect(result.matchKind).toBe("exact");
+      // The one-letter-off VSA is never mixed into the definitions to cycle.
+      expect(result.definitions.map((d) => d.term)).toEqual(["Video Graphics Array"]);
+    }
+  });
+
+  it("'VSA' still resolves exactly to Vector Symbolic Architecture", async () => {
+    const index = buildIndex([VGA, VSA]);
+    await warmFuzzy(index);
+    expect(query(index, "VSA").term).toBe("Vector Symbolic Architecture");
+  });
+
+  it("against the real terms.json, 'VGA' is exact and its definitions hold only VGA", async () => {
+    const index = buildIndex(realTerms);
+    await warmFuzzy(index);
+    const result = query(index, "VGA");
+    expect(result.matchKind).toBe("exact");
+    expect(result.definitions.every((d) => d.term === "Video Graphics Array")).toBe(true);
+  });
+
+  it("without a VGA entry (a stale terms.json), the VSA hit is flagged approximate", async () => {
+    const index = buildIndex([VSA]);
+    await warmFuzzy(index);
+    const result = query(index, "VGA");
+    expect(result.term).toBe("Vector Symbolic Architecture");
+    expect(result.matchKind).toBe("fuzzy");
+  });
+});
+
+describe("content is revalidated on load", () => {
+  it("fetches with cache: no-cache so a newly added term is never missed", async () => {
+    const realFetch = globalThis.fetch;
+    let seen = null;
+    globalThis.fetch = async (url, init) => {
+      seen = init;
+      return { ok: true, status: 200, text: async () => "[]", json: async () => [] };
+    };
+    try {
+      clearContentCache();
+      await loadJson("content/terms-revalidate-check.json");
+      expect(seen && seen.cache).toBe("no-cache");
+    } finally {
+      globalThis.fetch = realFetch;
+      clearContentCache();
+    }
   });
 });
