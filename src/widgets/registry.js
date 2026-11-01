@@ -113,6 +113,23 @@ export function hasWidget(type) {
 }
 
 /**
+ * The mount function registered for a widget type, if any.
+ * @param {string} type
+ * @returns {WidgetMountFn | undefined}
+ */
+export function getWidget(type) {
+  return registry.get(type);
+}
+
+/**
+ * Every registered widget type.
+ * @returns {string[]}
+ */
+export function widgetTypes() {
+  return [...registry.keys()];
+}
+
+/**
  * Optional sink notified of every {@link WidgetInstance} a `mountWidget` call
  * creates. This is the single chokepoint the boot wiring (task 11) uses to
  * COLLECT the widgets mounted during one `renderPage` pass so it can call
