@@ -290,7 +290,7 @@ function drawFrame(doc, stage, t, pos) {
     el.textContent = text;
     svg.appendChild(el);
   };
-  label(`visible ${hv}×${vv}`, x0 + 6, y0 + 16);
+  label(`visible ${hv}×${vv}`, x0, y0 - 6);
   label("HSYNC", x0 + (hv + hfp + hs / 2) * k, y0 - 6, "middle");
   label("VSYNC", x0 + t.hTotal * k + 4, y0 + (vv + vfp + vs) * k + 4);
 

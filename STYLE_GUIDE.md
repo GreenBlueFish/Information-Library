@@ -161,8 +161,8 @@ Long text is capped so it stays legible.
 | `--measure` | `70ch` | Ideal body / prose column width |
 | `--measure-wide` | `90ch` | Wide content (code blocks, plots, widgets) |
 
-Prose, headings, lists, callouts, the page intro, and errors are capped at
-`--measure`. Code blocks, widgets, and the widget placeholder use `--measure-wide`.
+Prose, headings, lists, callouts, figure captions, the page intro, and errors are capped at
+`--measure`. Code blocks, figures, widgets, and the widget placeholder use `--measure-wide`.
 
 ---
 
@@ -363,6 +363,24 @@ and preserves whitespace (`white-space: pre`).
 Capped at `--measure`. `--color-callout-bg` background with a `--border-width-thick`
 left border in `--color-callout-border`, `--radius-sm`, padded `--space-4`/`--space-5`.
 
+### Figures (`.block--figure`)
+
+A `<figure>` capped at `--measure-wide`, laid out as a column with `--space-2`
+gaps. `.figure__image` fills the width (height auto) on a `--color-surface`
+card with a `--color-border` border and `--radius-md`. `.figure__caption` is
+muted `--font-size-small` text capped at `--measure`.
+
+Figure files are drawn as SVG under `assets/figures/<topic-slug>/`. An image
+cannot read CSS custom properties, so a figure writes the token **hex values**
+directly, by role: `#ffffff` background, `#1a2230` text, `#5a6577` muted labels
+and axes, `#eef1f6` / `#d6dbe3` neutral fills and lines, `#2f6fed` /
+`#e6efff` / `#1d57cc` for the accent, and the series colors (`#2f6fed`,
+`#e5533c`, `#2a9d5c`, `#b659d6`, `#d9a000`, `#1aa3b3`) for categories, with
+`#fff7e0` as a light amber fill. Use the `--font-sans` stack as the SVG
+`font-family`, 12–14 px labels and an 18 px semibold title, and give the file a
+`<title>`. As everywhere, color is never the only signal: label each region in
+text. If a token changes, update the figures that copy it.
+
 ### Navigation (`nav#nav.site-nav`)
 
 - `.nav-tree` is an unstyled nested list. Each nesting level indents `--space-4`
@@ -506,6 +524,13 @@ widget card, controls, and `.widget__plot` host, and add:
   (series 2), `--inhibitory` (series-2 outline), `--overlap` (series 4),
   `--highlight` (`--stroke-width-plot-thick` heading-colored outline).
 - Bars: `.sim-bar` (series 1) and `.sim-bar--winner` (series 3).
+- VGA frame (the `vga-scanline` widget): `.vga-area` (blanking,
+  `--color-surface-alt` on `--color-border`), `.vga-area--visible`
+  (`--color-accent-subtle` on `--color-accent`), `.vga-area--sync`
+  (`--color-callout-bg` on series 5), `.vga-beam` (series-2 dot with a
+  `--color-surface` ring) and `.vga-cursor` (`--stroke-dash-plot` dashed
+  `--color-heading` line marking the beam's line and position). The painted
+  picture is six colour bars drawn with `.plot-series--1` … `--6`.
 
 Each state is also named in a legend or the readout, so color is never the
 only signal.
