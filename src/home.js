@@ -34,10 +34,25 @@
 // `.home-card__child--match` (R2.8).
 
 import { normalizeTitle } from "./renderer.js";
+import { findTerms } from "./lookup/search-index.js";
+import { fillDefinitionCard } from "./lookup/definition-card.js";
 
 /**
  * @typedef {import("./renderer.js").TopicNode} TopicNode
+ * @typedef {import("./content-loader.js").TermEntry} TermEntry
  */
+
+/** CSS classes for one term result; the card parts match `definition-card.js`. */
+const TERM_CLASS = {
+  item: "home-term",
+  term: "home-term__term",
+  acronym: "home-term__acronym",
+  definition: "home-term__definition",
+  link: "home-term__link",
+  cycle: "home-term__cycle",
+  cycleButton: "home-term__cycle-button",
+  cycleCount: "home-term__cycle-count",
+};
 
 /**
  * Wire behavior onto an already-built Home_Page element (Requirements 1.3, 2.3,
@@ -51,21 +66,24 @@ import { normalizeTitle } from "./renderer.js";
  *     `aria-expanded` and toggles its children list's `hidden`, touching only
  *     that card (R2.3, R2.4, R2.6, R2.7);
  *   - one `input` listener on the `.home-search__input` that runs the live
- *     filter over the cards (R1.3).
+ *     filter over the cards (R1.3) and lists the glossary terms the text
+ *     names in the `.home-terms` section (issue #47).
  *
  * Every lookup is guarded: a home missing its search control, grid, or cards
  * still wires whatever is present and never throws (design.md Error Handling).
  *
  * @param {HTMLElement} homeEl The `.home` element built by `renderHome`.
  * @param {TopicNode|null} [tree] The root topic tree (reserved for the filter).
+ * @param {TermEntry[]} [terms] The lookup table, searched for term results.
  * @returns {void}
  */
-export function installHome(homeEl, tree) {
+export function installHome(homeEl, tree, terms = []) {
   if (!homeEl) return;
 
   const input = homeEl.querySelector(".home-search__input");
   const status = homeEl.querySelector(".home-search__status");
   const cards = [...homeEl.querySelectorAll(".home-card")];
+  const termResults = homeEl.querySelector(".home-terms");
 
   // Prevent the search form from submitting/reloading the page (R1.3). The
   // filter runs live on `input`, so a submit never needs to do anything.
@@ -87,7 +105,10 @@ export function installHome(homeEl, tree) {
   // Live filter: re-run on every keystroke so the visible set updates without a
   // page reload (R1.3). Full match/status logic lives in `applyFilter`.
   if (input) {
-    input.addEventListener("input", () => applyFilter(input.value, cards, status));
+    input.addEventListener("input", () => {
+      applyFilter(input.value, cards, status);
+      showTermResults(input.value, terms, termResults);
+    });
   }
 }
 
@@ -251,5 +272,36 @@ function clearMatchMarks(card) {
         .filter((c) => c !== "home-card__child--match");
       li.className = classes.join(" ");
     }
+  }
+}
+
+/**
+ * List the glossary terms a search text names (issue #47): every entry in
+ * `terms` whose term, alias or acronym contains the normalized text, best
+ * matches first (see `findTerms`). Each result shows one definition at a time;
+ * a term defined more than once gets Previous / "n of N" / Next buttons to
+ * cycle through its definitions. The section is hidden when nothing matches or
+ * the text is empty, and rebuilt from scratch on every call.
+ *
+ * @param {string} query The raw search text.
+ * @param {TermEntry[]} terms The lookup table.
+ * @param {HTMLElement|null} section The `.home-terms` section.
+ * @returns {void}
+ */
+export function showTermResults(query, terms, section) {
+  if (!section) return;
+  const list = section.querySelector(".home-terms__list");
+  if (!list) return;
+
+  const results = findTerms(terms, query ?? "");
+  list.replaceChildren();
+  section.hidden = results.length === 0;
+
+  const doc = section.ownerDocument;
+  for (const result of results) {
+    const item = doc.createElement("li");
+    item.className = TERM_CLASS.item;
+    fillDefinitionCard(doc, item, result.definitions, TERM_CLASS);
+    list.appendChild(item);
   }
 }

@@ -25,6 +25,8 @@
 //   8.3 — when the entry has an `acronym`, show it alongside the canonical term.
 //   8.4 — at most one panel at a time; a new selection replaces the prior panel.
 //   8.5 — when the result is a fuzzy match, indicate it is an approximate match.
+//   #47 — when the term has several definitions, the panel shows one at a
+//         time with Previous / "n of N" / Next buttons to cycle through them.
 //   4.1 — normalize + query on a double-click or highlight (normalization is
 //         done inside `query`; this module passes the raw selected text).
 //   4.5 — a selection that normalizes to zero tokens shows no panel (`query`
@@ -34,6 +36,7 @@
 //         full error-handling pass is task 10.2).
 
 import { query } from "./search-index.js";
+import { fillDefinitionCard } from "./definition-card.js";
 
 /**
  * @typedef {import("./search-index.js").SearchIndex} SearchIndex
@@ -49,6 +52,9 @@ const CLASS = {
   definition: "lookup-panel__definition",
   link: "lookup-panel__link",
   fuzzy: "lookup-panel__fuzzy",
+  cycle: "lookup-panel__cycle",
+  cycleButton: "lookup-panel__cycle-button",
+  cycleCount: "lookup-panel__cycle-count",
 };
 
 /** How long the "No definition found" message lingers before auto-dismiss. */
@@ -143,35 +149,15 @@ export function installLookup(index, rootEl) {
     p.classList.remove(CLASS.empty);
     p.replaceChildren();
 
-    // Term heading, with the acronym alongside it when present (8.3).
-    const termEl = doc.createElement("p");
-    termEl.className = CLASS.term;
-    termEl.textContent = result.term;
-    if (result.acronym) {
-      const acr = doc.createElement("span");
-      acr.className = CLASS.acronym;
-      acr.textContent = ` (${result.acronym})`;
-      termEl.appendChild(acr);
-    }
-    p.appendChild(termEl);
-
-    // Definition (8.1).
-    const defEl = doc.createElement("p");
-    defEl.className = CLASS.definition;
-    defEl.textContent = result.definition;
-    p.appendChild(defEl);
-
-    // Page link when the entry points at a page (8.2). The route is a hash
-    // address so navigation stays client-side and never reloads the shell.
-    if (result.pageRef) {
-      const link = doc.createElement("a");
-      link.className = CLASS.link;
-      link.href = toHashHref(result.pageRef);
-      link.textContent = "Open page";
-      // Dismiss the panel once the user follows the link.
-      link.addEventListener("click", () => hidePanel());
-      p.appendChild(link);
-    }
+    // Term heading (with its acronym, 8.3), definition (8.1) and the page
+    // link (8.2), plus a control to cycle through the term's other
+    // definitions when it has more than one. Following the link dismisses
+    // the panel.
+    const definitions =
+      Array.isArray(result.definitions) && result.definitions.length > 0
+        ? result.definitions
+        : [result];
+    fillDefinitionCard(doc, p, definitions, CLASS, () => hidePanel());
 
     // Approximate-match indicator for fuzzy results (8.5).
     if (result.matchKind === "fuzzy") {
@@ -262,17 +248,4 @@ export function installLookup(index, rootEl) {
       hidePanel();
     }
   });
-}
-
-/**
- * Turn a `pageRef` route into a hash href the client router understands. A ref
- * that already carries a leading `#` is used as-is; otherwise it becomes
- * `#<ref>` so `/snn/neuron-models` navigates to `#/snn/neuron-models`.
- *
- * @param {string} pageRef The entry's route (e.g. "/snn" or "#/snn").
- * @returns {string} A hash href for an anchor's `href`.
- */
-function toHashHref(pageRef) {
-  if (pageRef.startsWith("#")) return pageRef;
-  return `#${pageRef}`;
 }

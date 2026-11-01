@@ -117,7 +117,11 @@ export function loadJson(url) {
 async function fetchAndParse(url) {
   let response;
   try {
-    response = await fetch(url);
+    // Revalidate with the server on every load: a simple static server (the
+    // README's `python -m http.server`) sends no Cache-Control, so a browser
+    // may otherwise reuse a stale terms.json and miss newly added terms
+    // (issue #47: an old copy without VGA resolved "VGA" to VSA).
+    response = await fetch(url, { cache: "no-cache" });
   } catch (cause) {
     // A thrown fetch (as opposed to a non-ok response) under file:// is the
     // classic local-access block; flag it so the UI can link to the tip.

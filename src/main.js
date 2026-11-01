@@ -119,9 +119,11 @@ export async function boot() {
   let tree;
   /** @type {ReturnType<typeof buildIndex>} */
   let index;
+  /** @type {import("./content-loader.js").TermEntry[]} */
+  let terms;
   try {
     tree = /** @type {TopicNode} */ (await loadTopics());
-    const terms = await loadTerms();
+    terms = await loadTerms();
     index = buildIndex(terms);
   } catch (err) {
     reportBootError(err, app);
@@ -166,10 +168,11 @@ export async function boot() {
     // below fails (Requirement 15.1).
     renderNav(tree, resolution?.path ?? [], nav);
 
-    // Attach the tree to the home resolution so the renderer's home view can
-    // build its topic cards (renderHome reads `resolution.tree`); harmless for
+    // Attach the tree (and the terms, for the home search's term results) to
+    // the home resolution so the renderer's home view can build its topic
+    // cards (renderHome reads `resolution.tree`); harmless for
     // a topic-page resolution, which the renderer builds from `resolution.node`.
-    const renderResolution = attachTree(resolution, tree);
+    const renderResolution = attachTree(resolution, tree, terms);
 
     // Load the page JSON only when the resolved route has a backing page file.
     // The home route and non-leaf groupings have none, so they render from the
@@ -227,19 +230,22 @@ export async function boot() {
 
 /**
  * Attach the root topic tree to a resolution so the renderer's home view can
- * build its topic cards (renderHome reads `resolution.tree`). Returns a shallow
- * copy so the frozen HOME_ROUTE singleton from the router is never mutated. A
- * null resolution (treated as home by the renderer) still gets the tree.
+ * build its topic cards (renderHome reads `resolution.tree`), and the lookup
+ * table so its search also lists matching terms (`resolution.terms`). Returns
+ * a shallow copy so the frozen HOME_ROUTE singleton from the router is never
+ * mutated. A null resolution (treated as home by the renderer) still gets the
+ * tree and terms.
  *
  * @param {ReturnType<typeof resolveRoute>} resolution
  * @param {TopicNode} tree
- * @returns {object} A resolution-shaped object carrying `tree`.
+ * @param {import("./content-loader.js").TermEntry[]} terms
+ * @returns {object} A resolution-shaped object carrying `tree` and `terms`.
  */
-function attachTree(resolution, tree) {
+function attachTree(resolution, tree, terms) {
   if (!resolution) {
-    return { path: [], node: null, pageFile: null, crumbs: [], tree };
+    return { path: [], node: null, pageFile: null, crumbs: [], tree, terms };
   }
-  return { ...resolution, tree };
+  return { ...resolution, tree, terms };
 }
 
 /**
