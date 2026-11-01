@@ -92,6 +92,25 @@ export function ensureDom() {
       }
     }
 
+    // linkedom's <select> has a `value` getter (the selected option's value)
+    // but no setter, so a widget doing `select.value = ...`, as browsers allow,
+    // throws here. Add the browser's setter: select the first option with that
+    // value, or none.
+    const Select = window.HTMLSelectElement;
+    const value = Select && Object.getOwnPropertyDescriptor(Select.prototype, "value");
+    if (value && value.get && !value.set) {
+      Object.defineProperty(Select.prototype, "value", {
+        configurable: true,
+        get: value.get,
+        set(v) {
+          const want = String(v);
+          const match = [...this.querySelectorAll("option")].find((o) => o.value === want);
+          for (const o of this.querySelectorAll("option[selected]")) o.selected = false;
+          if (match) match.selected = true;
+        },
+      });
+    }
+
     return makeContext(document, window);
   })();
 
