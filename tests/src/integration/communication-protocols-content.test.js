@@ -9,7 +9,7 @@
 //   - the VGA page embeds the vga-scanline widget with the keys it documents
 //     and at least one figure;
 //   - every figure block on any page names an image file that exists under
-//     assets/ and carries alt text;
+//     assets/figures/ (PROJECT_GUIDE §3.2) and carries alt text;
 //   - glossary terms pointing into the topic resolve.
 
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
@@ -73,7 +73,7 @@ describe("communication-protocols content", () => {
       for (const block of readPage(file).blocks ?? []) {
         if (block.type !== "figure") continue;
         figures++;
-        expect(block.src.startsWith("assets/")).toBe(true);
+        expect(block.src.startsWith("assets/figures/")).toBe(true);
         expect(existsSync(join(repoRoot, block.src))).toBe(true);
         expect(typeof block.alt === "string" && block.alt.trim().length > 20).toBe(true);
       }
