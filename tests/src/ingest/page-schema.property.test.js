@@ -93,7 +93,7 @@ async function ensureAllWidgetTypesRegistered() {
 // also nest it under `default`. Normalize to a single `fc` handle either way.
 const fc = fcNS && typeof fcNS.property === "function" ? fcNS : fcNS.default;
 
-const SUPPORTED_BLOCK_TYPES = ["prose", "heading", "list", "code", "callout", "widget"];
+const SUPPORTED_BLOCK_TYPES = ["prose", "heading", "list", "code", "callout", "figure", "widget"];
 const HEADING_LEVELS = [2, 3, 4];
 const PARAM_CONTROLS = ["range", "number", "select"];
 
@@ -201,6 +201,13 @@ function checkBlock(block, isRegistered) {
     case "code":
       if (typeof block.lang !== "string") return "code.lang must be a string";
       if (typeof block.source !== "string") return "code.source must be a string";
+      return null;
+    case "figure":
+      if (!isNonEmptyString(block.src)) return "figure.src must be a non-empty string";
+      if (!isNonEmptyString(block.alt)) return "figure.alt must be a non-empty string";
+      if (block.caption !== undefined && typeof block.caption !== "string") {
+        return "figure.caption, when present, must be a string";
+      }
       return null;
     case "widget":
       return checkWidgetSpec(block.widget, isRegistered);

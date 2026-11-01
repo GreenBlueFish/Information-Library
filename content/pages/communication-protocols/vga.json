@@ -1,0 +1,191 @@
+{
+  "title": "VGA Connection",
+  "intro": "VGA (Video Graphics Array) began as IBM's display standard for the PS/2 computers in 1987. The name now means the blue 15-pin connector and the analog signal it carries. VGA is the simplest video interface still in use: three wires carry colour as plain voltages, two wires carry timing pulses, and a picture is painted one line at a time. Because it is so direct, it is the classic first video output for an FPGA or microcontroller project.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What travels on the cable"
+    },
+    {
+      "type": "prose",
+      "text": "A VGA cable ends in a DE-15 plug: a D-shaped shell with fifteen pins in three rows of five. Only a handful of pins do the real work."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/communication-protocols/vga-de15-pinout.svg",
+      "alt": "A DE-15 plug seen from the pin side, a D-shaped shell with three rows of five numbered pins, colour coded by function. Top row: 1 red, 2 green, 3 blue, 4 reserved, 5 ground. Middle row: 6, 7 and 8 the red, green and blue returns, 9 +5 V, 10 sync ground. Bottom row: 11 reserved, 12 DDC data, 13 HSYNC, 14 VSYNC, 15 DDC clock. A legend beside the plug lists each pin and its signal.",
+      "caption": "The DE-15 (VGA) pinout, looking at the pins of the plug on the cable. The colour pins each have their own ground return (6, 7 and 8) so the analog signals stay clean."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Red, green and blue (pins 1, 2, 3): analog voltages from 0 V (none of that colour) to 0.7 V (full brightness), each on a 75 Ω line with its own return wire.",
+        "HSYNC and VSYNC (pins 13, 14): digital pulses at TTL levels that mark the end of each line and of each frame.",
+        "DDC (pins 12 and 15, powered from pin 9): a small I²C bus the computer uses to read the monitor's identity and supported modes.",
+        "Grounds (5, 10) and reserved pins (4, 11): pins 4, 11 and 12 once carried fixed monitor-ID bits; DDC took over pin 12 and the others are mostly unused today."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Painting a picture one line at a time"
+    },
+    {
+      "type": "prose",
+      "text": "VGA comes from cathode-ray tubes, where an electron beam swept across the screen from left to right, line after line from top to bottom, lighting phosphor as it went. The colour wires set the beam's intensity at each instant. At the end of every line the beam had to fly back to the left edge, and at the end of every frame back to the top. During those returns nothing may be drawn, so the signal holds the colours at 0 V: the blanking intervals. A pulse on HSYNC tells the monitor to start a new line, and a pulse on VSYNC to start a new frame."
+    },
+    {
+      "type": "prose",
+      "text": "Notice what is missing: there is no pixel clock on the cable. The sender changes the colour voltages once per pixel clock, but the monitor only sees a continuous voltage. A CRT simply drew it. A flat-panel monitor has to sample it at exactly the right moments, so it rebuilds the pixel clock by multiplying the HSYNC rate with a phase-locked loop. When that guess is slightly off, the picture shimmers or shows vertical bands, which is what a monitor's \"auto adjust\" (clock and phase) button fixes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One line: visible pixels, porches and the sync pulse"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/communication-protocols/vga-line-timing.svg",
+      "alt": "A timing diagram of one scanline at 640 by 480, 60 Hz. A bar 800 pixel clocks long is split into a long visible part of 640 clocks, then a front porch of 16, a sync pulse of 96 and a back porch of 48. Below it, the RGB signal varies during the visible part and sits at 0 volts for the rest of the line, and the HSYNC signal stays high except for a low pulse of 3.81 microseconds during the sync part. An axis marks clock counts 0, 640, 656, 752 and 800.",
+      "caption": "One scanline of the standard 640×480 mode. Of the 800 pixel clocks only 640 carry picture; the other 160 are horizontal blanking, with the sync pulse sitting between a short front porch and a longer back porch."
+    },
+    {
+      "type": "prose",
+      "text": "In the standard 640×480 mode at 60 Hz the pixel clock is 25.175 MHz, so one clock lasts about 39.7 ns. Each line takes 800 clocks: 640 visible pixels, a front porch of 16 clocks, a sync pulse of 96 clocks and a back porch of 48 clocks. That makes a line 31.78 µs long, a line rate of 31.47 kHz. The porches are the guard time around the sync pulse. On a CRT they gave the beam time to switch off before flyback and to settle afterwards; the back porch also gives the monitor a stretch of known black to measure the zero level of each colour."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One frame: lines and vertical blanking"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/communication-protocols/vga-frame-layout.svg",
+      "alt": "A to-scale drawing of one 640 by 480 frame as an 800 by 525 rectangle. The visible area of 640 pixels by 480 lines fills the top-left. A vertical band on the right is horizontal blanking, split into front porch, HSYNC and back porch columns. A thin band along the bottom is vertical blanking: front porch 10 lines, VSYNC 2 lines, back porch 33 lines. Arrows show the beam drawing each line left to right, dashed arrows show it returning to the left edge, and a dashed path outside the frame shows the return from the bottom-right corner to the top-left.",
+      "caption": "The whole frame to scale. The visible picture is only 73% of the clocks; the rest is the horizontal blanking on every line and the vertical blanking lines after the last visible one."
+    },
+    {
+      "type": "prose",
+      "text": "The vertical direction follows the same pattern, counted in lines instead of clocks: 480 visible lines, a front porch of 10 lines, a sync pulse of 2 lines and a back porch of 33 lines, 525 lines in all. A frame is therefore 800 × 525 = 420,000 pixel clocks, and 25.175 MHz ÷ 420,000 gives 59.94 frames per second. In this mode both sync pulses are active low: the wires sit high and drop to 0 V during the pulse."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Step through a frame"
+    },
+    {
+      "type": "prose",
+      "text": "Move the beam yourself. Step a few pixels at a time to watch it cross the end of the visible area into the front porch and the HSYNC pulse, then switch to whole lines to reach the bottom of the picture and the VSYNC pulse. The image being painted is a set of colour bars, the classic test pattern. Try the other modes to see that the structure stays the same while the numbers change."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "vga-scanline",
+        "title": "VGA beam stepper",
+        "params": [
+          {
+            "key": "mode",
+            "label": "Video mode",
+            "control": "select",
+            "options": [
+              "640x480 at 60 Hz",
+              "800x600 at 60 Hz",
+              "1024x768 at 60 Hz"
+            ],
+            "default": "640x480 at 60 Hz"
+          },
+          {
+            "key": "step",
+            "label": "Each step moves",
+            "control": "select",
+            "options": [
+              "1 pixel",
+              "8 pixels",
+              "1 line",
+              "10 lines"
+            ],
+            "default": "8 pixels"
+          }
+        ]
+      }
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Other modes and sync polarity"
+    },
+    {
+      "type": "prose",
+      "text": "Every resolution and refresh rate has its own pixel clock and its own porch and sync widths, published by VESA in the Display Monitor Timings standard. 800×600 at 60 Hz uses a 40 MHz clock with 1056 clocks per line and 628 lines per frame; 1024×768 at 60 Hz uses 65 MHz with 1344 clocks and 806 lines. The sync polarity varies too: 800×600 at 60 Hz uses positive pulses, while 640×480 and 1024×768 use negative ones. The original IBM monitors used the combination of the two polarities to tell which of the VGA line counts (350, 400 or 480) was coming; modern monitors measure the line and frame rates instead."
+    },
+    {
+      "type": "list",
+      "items": [
+        "640×480 at 60 Hz: 25.175 MHz; horizontal 640 + 16 + 96 + 48 = 800; vertical 480 + 10 + 2 + 33 = 525; both syncs negative.",
+        "800×600 at 60 Hz: 40 MHz; horizontal 800 + 40 + 128 + 88 = 1056; vertical 600 + 1 + 4 + 23 = 628; both syncs positive.",
+        "1024×768 at 60 Hz: 65 MHz; horizontal 1024 + 24 + 136 + 160 = 1344; vertical 768 + 3 + 6 + 29 = 806; both syncs negative."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Colour levels and the 75 Ω line"
+    },
+    {
+      "type": "prose",
+      "text": "Each colour wire is a 75 Ω transmission line terminated by a 75 Ω resistor inside the monitor. Matching the line's impedance at the far end stops the signal reflecting back and causing ghost images. The brightness is set by the voltage across that termination: 0 V is black and 0.7 V is full intensity. A video card produces the voltage with a fast digital-to-analog converter, one per colour. A hobby board makes a cheap one from resistors: each digital output pin drives the colour wire through its own resistor, with the resistor values doubling from the most significant bit down, so each bit contributes twice the current of the bit below it."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/communication-protocols/vga-resistor-dac.svg",
+      "alt": "A circuit diagram. Four FPGA output pins, R3 down to R0, each connect through a resistor of 510 ohms, 1 kilohm, 2 kilohms and 4 kilohms respectively to one shared node. The node runs to pin 1 of the DE-15 plug and on to a 75 ohm resistor to ground inside the monitor. Notes explain that with all four bits high the parallel resistors, about 270 ohms, and the 75 ohm load divide 3.3 volts to about 0.72 volts, giving 16 brightness levels per colour.",
+      "caption": "A 4-bit resistor DAC for the red channel, as on many FPGA boards. With all bits high, 3.3 V × 75 / (270 + 75) ≈ 0.72 V, just over full brightness; with all bits low the wire sits at 0 V."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "DDC and EDID: how the computer learns what the monitor supports"
+    },
+    {
+      "type": "prose",
+      "text": "Pins 12 and 15 form an I²C bus, the Display Data Channel (DDC), powered by +5 V from the computer on pin 9. The monitor holds a small memory at I²C address 0x50 containing its EDID (Extended Display Identification Data): a 128-byte block naming the manufacturer and model and listing the timings the monitor supports, including its preferred native resolution. The computer reads it when the cable is plugged in and picks a mode. A simple FPGA design can ignore DDC entirely and just send a standard mode such as 640×480, which practically every VGA monitor accepts."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Generating VGA from an FPGA"
+    },
+    {
+      "type": "prose",
+      "text": "Producing the timing takes two counters. A horizontal counter advances on every pixel clock and wraps at the end of the line; a vertical counter advances each time the horizontal one wraps. Comparing the counters with the porch and sync boundaries gives HSYNC, VSYNC and a \"visible\" flag, and the colour outputs are driven from your picture whenever the flag is set. The module below is the whole timing generator for 640×480."
+    },
+    {
+      "type": "code",
+      "lang": "verilog",
+      "source": "// 640x480 at 60 Hz timing from a 25 MHz pixel clock.\n// Monitors accept 25.000 MHz in place of 25.175 MHz (0.7% slow, 59.5 Hz).\nmodule vga_timing (\n  input  wire       clk25,\n  output reg  [9:0] h = 0,         // 0..799, pixel within the line\n  output reg  [9:0] v = 0,         // 0..524, line within the frame\n  output wire       hsync_n,       // active low\n  output wire       vsync_n,       // active low\n  output wire       visible\n);\n  always @(posedge clk25) begin\n    if (h == 799) begin\n      h <= 0;\n      v <= (v == 524) ? 0 : v + 1;\n    end else begin\n      h <= h + 1;\n    end\n  end\n\n  // 640 visible + 16 front porch = 656: the sync pulse lasts 96 clocks.\n  assign hsync_n = ~(h >= 656 && h < 752);\n  // 480 visible + 10 front porch = 490: the sync pulse lasts 2 lines.\n  assign vsync_n = ~(v >= 490 && v < 492);\n  assign visible = (h < 640) && (v < 480);\nendmodule\n\n// In the top level, force the colour outputs to zero outside the\n// visible area, or the monitor will mistake them for the black level:\n//   assign vga_r = visible ? pixel_r : 4'd0;"
+    },
+    {
+      "type": "callout",
+      "text": "A use for this library's projects: send a live spike raster to a monitor. Give each neuron a row of pixels and each simulation step a column; when the horizontal and vertical counters reach a neuron and a time step that spiked, drive the colour high. A 640×480 frame shows 480 neurons over 640 steps, refreshed 60 times a second, with no computer in the loop. See #/computational-cortical-columns/building-an-snn-column/evaluation for what to look for in a raster."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Limits and what replaced it"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Analog noise and bandwidth: at high resolutions the pixel clock reaches hundreds of MHz, and long or cheap cables blur and ghost the picture.",
+        "Resampling: a flat panel must re-sample the analog signal, so the image is never quite as sharp as a digital link.",
+        "Successors: DVI (1999) carried the same timing structure digitally, HDMI (2002) added audio and consumer features, and DisplayPort (2006) moved to a packet-based link. All three keep the idea of active pixels surrounded by blanking.",
+        "Still useful: VGA survives on servers, projectors and FPGA development boards because it needs nothing but counters and resistors."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Sources: VESA (2013), VESA and Industry Standards and Guidelines for Computer Display Monitor Timing (DMT), Version 1.0, Rev. 13. VESA (2006), Enhanced Extended Display Identification Data (E-EDID) Standard, Release A, Rev. 2, and VESA Enhanced Display Data Channel (E-DDC) Standard, Version 1.2 (2007). IBM (1987), Personal System/2 Model 50 and 60 Technical Reference. Chu, P. P. (2008), FPGA Prototyping by Verilog Examples, Wiley, chapter 13 (VGA controller). NXP Semiconductors (2021), UM10204 I²C-bus specification and user manual, Rev. 7."
+    }
+  ]
+}

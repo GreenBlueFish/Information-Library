@@ -46,13 +46,16 @@ import { installHome } from "./home.js";
  * One ordered unit of page body content (design.md — Model 2: ContentBlock).
  *
  * @typedef {Object} ContentBlock
- * @property {"prose"|"heading"|"list"|"code"|"callout"|"widget"} type The block
+ * @property {"prose"|"heading"|"list"|"code"|"callout"|"figure"|"widget"} type The block
  *   kind, used by {@link renderBlock} to pick a per-type renderer.
  * @property {string} [text]   For prose/heading/callout.
  * @property {number} [level]  For heading (2..4).
  * @property {string[]} [items] For list.
  * @property {string} [lang]   For code (e.g. "javascript").
  * @property {string} [source] For code (the snippet).
+ * @property {string} [src]    For figure (repo-relative image path).
+ * @property {string} [alt]    For figure (required text alternative).
+ * @property {string} [caption] For figure (optional caption).
  * @property {object} [widget] For widget blocks (a WidgetSpec).
  */
 
@@ -746,6 +749,7 @@ const BLOCK_RENDERERS = {
   list: renderListBlock,
   code: renderCodeBlock,
   callout: renderCalloutBlock,
+  figure: renderFigureBlock,
   widget: renderWidgetBlock,
 };
 
@@ -915,6 +919,46 @@ function renderCalloutBlock(block, mountEl) {
     container.appendChild(el("p", undefined, block.text));
   }
   mountEl.appendChild(container);
+}
+
+/**
+ * A figure `src` the renderer will load: a relative path inside the repo (no
+ * scheme, no leading slash, no `..`) ending in an image extension. Anything
+ * else, such as a `javascript:` or remote URL, is refused.
+ */
+const FIGURE_SRC = /^(?!.*\.\.)[A-Za-z0-9_][A-Za-z0-9_./-]*\.(svg|png|jpe?g|gif|webp)$/i;
+
+/**
+ * Render a `figure` block: an image from `block.src` with the required
+ * `block.alt` text, and `block.caption` (when present) as a `<figcaption>`
+ * written via `textContent`. A figure whose `src` is not a relative image path
+ * or whose `alt` is missing renders the non-fatal placeholder instead, so an
+ * image never ships without a text alternative.
+ *
+ * @param {ContentBlock} block
+ * @param {HTMLElement} mountEl
+ * @returns {void}
+ */
+function renderFigureBlock(block, mountEl) {
+  const src = block && typeof block.src === "string" ? block.src : "";
+  const alt = block && typeof block.alt === "string" ? block.alt.trim() : "";
+  if (!FIGURE_SRC.test(src) || !alt) {
+    mountEl.appendChild(
+      el("div", "block block--placeholder", "Figure needs a relative image src and alt text"),
+    );
+    return;
+  }
+
+  const figure = el("figure", "block block--figure");
+  const img = el("img", "figure__image");
+  img.setAttribute("src", src);
+  img.setAttribute("alt", alt);
+  img.setAttribute("loading", "lazy");
+  figure.appendChild(img);
+  if (typeof block.caption === "string" && block.caption.length > 0) {
+    figure.appendChild(el("figcaption", "figure__caption", block.caption));
+  }
+  mountEl.appendChild(figure);
 }
 
 /**

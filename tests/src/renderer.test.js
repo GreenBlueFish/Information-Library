@@ -274,6 +274,47 @@ describe("renderer", () => {
       expect(p.textContent).toBe("Note this.");
     });
 
+    it("figure → <figure class=block--figure> with img src/alt and a figcaption", () => {
+      const m = mount();
+      renderBlock(
+        { type: "figure", src: "assets/figures/x.svg", alt: "A diagram", caption: "<b>Cap</b>" },
+        m,
+      );
+      const block = m.children[0];
+      expect(block.tagName).toBe("FIGURE");
+      expect(hasClass(block, "block--figure")).toBe(true);
+      const img = findTag(block, "img");
+      expect(img.getAttribute("src")).toBe("assets/figures/x.svg");
+      expect(img.getAttribute("alt")).toBe("A diagram");
+      const cap = findTag(block, "figcaption");
+      expect(cap.textContent).toBe("<b>Cap</b>");
+      expect(cap.children.length).toBe(0);
+    });
+
+    it("figure without a caption renders only the image", () => {
+      const m = mount();
+      renderBlock({ type: "figure", src: "a.png", alt: "Alt" }, m);
+      expect(findTag(m.children[0], "figcaption")).toBe(null);
+    });
+
+    it("figure with no alt text or an unsafe src → placeholder, no image", () => {
+      const bad = [
+        { type: "figure", src: "assets/figures/x.svg" },
+        { type: "figure", src: "assets/figures/x.svg", alt: "  " },
+        { type: "figure", src: "javascript:alert(1)//.svg", alt: "x" },
+        { type: "figure", src: "https://example.com/x.svg", alt: "x" },
+        { type: "figure", src: "/etc/x.svg", alt: "x" },
+        { type: "figure", src: "assets/../../x.svg", alt: "x" },
+        { type: "figure", src: "assets/figures/x.html", alt: "x" },
+      ];
+      for (const b of bad) {
+        const m = mount();
+        renderBlock(b, m);
+        expect(hasClass(m.children[0], "block--placeholder")).toBe(true);
+        expect(findTag(m, "img")).toBe(null);
+      }
+    });
+
     it("unknown type → a visible non-fatal placeholder (Req 15.2)", () => {
       const m = mount();
       renderBlock({ type: "no-such-type" }, m);
