@@ -166,10 +166,6 @@
       "source": "// 640x480 at 60 Hz timing from a 25 MHz pixel clock.\n// Monitors accept 25.000 MHz in place of 25.175 MHz (0.7% slow, 59.5 Hz).\nmodule vga_timing (\n  input  wire       clk25,\n  output reg  [9:0] h = 0,         // 0..799, pixel within the line\n  output reg  [9:0] v = 0,         // 0..524, line within the frame\n  output wire       hsync_n,       // active low\n  output wire       vsync_n,       // active low\n  output wire       visible\n);\n  always @(posedge clk25) begin\n    if (h == 799) begin\n      h <= 0;\n      v <= (v == 524) ? 0 : v + 1;\n    end else begin\n      h <= h + 1;\n    end\n  end\n\n  // 640 visible + 16 front porch = 656: the sync pulse lasts 96 clocks.\n  assign hsync_n = ~(h >= 656 && h < 752);\n  // 480 visible + 10 front porch = 490: the sync pulse lasts 2 lines.\n  assign vsync_n = ~(v >= 490 && v < 492);\n  assign visible = (h < 640) && (v < 480);\nendmodule\n\n// In the top level, force the colour outputs to zero outside the\n// visible area, or the monitor will mistake them for the black level:\n//   assign vga_r = visible ? pixel_r : 4'd0;"
     },
     {
-      "type": "callout",
-      "text": "A use for this library's projects: send a live spike raster to a monitor. Give each neuron a row of pixels and each simulation step a column; when the horizontal and vertical counters reach a neuron and a time step that spiked, drive the colour high. A 640×480 frame shows 480 neurons over 640 steps, refreshed 60 times a second, with no computer in the loop. See #/computational-cortical-columns/building-an-snn-column/evaluation for what to look for in a raster."
-    },
-    {
       "type": "heading",
       "level": 2,
       "text": "Limits and what replaced it"
