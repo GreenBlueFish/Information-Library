@@ -50,8 +50,8 @@ export function createTrieNode() {
  * on the node reached by the last token. An empty token list is a no-op (there
  * is no path to mark, so nothing is indexed).
  *
- * Re-inserting the same token path overwrites the terminal `entry` and adds the
- * entry to `entries` once (inserting the same entry again is a no-op there), so
+ * Re-inserting the same token path keeps the first terminal `entry` (so it
+ * always equals `entries[0]`) and adds the entry to `entries` once (inserting the same entry again is a no-op there), so
  * the build stays idempotent per surface form.
  *
  * @param {TrieNode} root The trie root to insert into.
@@ -72,7 +72,9 @@ export function insert(root, tokens, entry) {
     node = next;
   }
   if (tokens.length > 0) {
-    node.entry = entry;
+    // The first entry inserted stays the terminal `entry`, so `entry` and
+    // `entries[0]` always agree (exact and fuzzy hits show the same one first).
+    if (node.entry === null) node.entry = entry;
     if (!node.entries.includes(entry)) node.entries.push(entry);
   }
   return node;

@@ -36,6 +36,7 @@ const { buildIndex, query, findTerms } = await import("../../../src/lookup/searc
 const { loadJson, clearContentCache } = await import("../../../src/content-loader.js");
 const { installLookup } = await import("../../../src/lookup/lookup-ui.js");
 const { renderPage } = await import("../../../src/renderer.js");
+const { fuzzyNearest } = await import("../../../src/lookup/fuzzy.js");
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
 const realTerms = JSON.parse(readFileSync(join(repoRoot, "content", "terms.json"), "utf8"));
@@ -80,6 +81,12 @@ describe("query: every definition of the matched term", () => {
     expect(result.definitions.map((d) => d.definition).sort()).toEqual(
       [TERMS[0].definition, TERMS[2].definition].sort(),
     );
+  });
+
+  it("shows the first definition in terms.json order, for exact and fuzzy hits alike", () => {
+    const index = buildIndex(TERMS);
+    expect(query(index, "spike").definition).toBe(TERMS[0].definition);
+    expect(fuzzyNearest(index, "spikr", 1).definition).toBe(TERMS[0].definition);
   });
 
   it("returns a single definition for a term defined once", () => {
@@ -151,6 +158,15 @@ describe("home search lists matching terms", () => {
     expect(count()).toBe("1 of 2");
     click(prev);
     expect(count()).toBe("2 of 2");
+  });
+
+  it("points at the term results when no topic matches but a term does", () => {
+    const home = buildHome(tree, TERMS);
+    const status = home.querySelector(".home-search__status");
+    typeInto(home, "vga");
+    expect(status.textContent).toBe("No matching topics. Matching terms are listed below.");
+    typeInto(home, "zzzz");
+    expect(status.textContent).toBe("No matching topics.");
   });
 
   it("shows no cycle control for a term defined once", () => {

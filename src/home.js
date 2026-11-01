@@ -107,7 +107,12 @@ export function installHome(homeEl, tree, terms = []) {
   if (input) {
     input.addEventListener("input", () => {
       applyFilter(input.value, cards, status);
-      showTermResults(input.value, terms, termResults);
+      const termCount = showTermResults(input.value, terms, termResults);
+      // No topic matched but some terms did: point at the term results rather
+      // than saying the search found nothing (PR #52 review).
+      if (status && !status.hidden && termCount > 0) {
+        status.textContent = "No matching topics. Matching terms are listed below.";
+      }
     });
   }
 }
@@ -286,12 +291,12 @@ function clearMatchMarks(card) {
  * @param {string} query The raw search text.
  * @param {TermEntry[]} terms The lookup table.
  * @param {HTMLElement|null} section The `.home-terms` section.
- * @returns {void}
+ * @returns {number} How many terms are listed (0 when nothing is shown).
  */
 export function showTermResults(query, terms, section) {
-  if (!section) return;
+  if (!section) return 0;
   const list = section.querySelector(".home-terms__list");
-  if (!list) return;
+  if (!list) return 0;
 
   const results = findTerms(terms, query ?? "");
   list.replaceChildren();
@@ -304,4 +309,5 @@ export function showTermResults(query, terms, section) {
     fillDefinitionCard(doc, item, result.definitions, TERM_CLASS);
     list.appendChild(item);
   }
+  return results.length;
 }
