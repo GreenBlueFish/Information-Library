@@ -99,14 +99,11 @@ function log10Sum(lns) {
  *     replaced, so each synapse still sees an active cell with probability
  *     1 − noise, and fewer than θ are hit (binomial tail).
  * Low θ misses nothing but matches noise; high θ is specific but brittle.
- * The sliders allow a > n (or s > n), which has no patterns at all; both are
- * clamped to n and the false-match label says so.
  */
 export function dendriteMatch(config, state) {
-  const n = Math.max(1, Math.round(num(state, config, "cells", 2048)));
-  const aIn = Math.round(num(state, config, "active", 40));
-  const a = Math.min(n, aIn);
-  const s = Math.min(n, Math.round(num(state, config, "synapses", 20)));
+  const n = Math.round(num(state, config, "cells", 2048));
+  const a = Math.round(num(state, config, "active", 40));
+  const s = Math.round(num(state, config, "synapses", 20));
   const noise = num(state, config, "noise", 30) / 100;
   const floor = -30;
   const thetas = [], falseMatch = [], miss = [];
@@ -120,8 +117,7 @@ export function dendriteMatch(config, state) {
     falseMatch.push(Math.max(floor, log10Sum(fm)));
     miss.push(Math.max(floor, log10Sum(ms)));
   }
-  const fmLabel = aIn > n ? `false match: log10 P (a clamped to n = ${n})` : "false match: log10 P";
-  return [series(fmLabel, thetas, falseMatch), series(`miss at ${Math.round(noise * 100)}% noise: log10 P`, thetas, miss)];
+  return [series("false match: log10 P", thetas, falseMatch), series(`miss at ${Math.round(noise * 100)}% noise: log10 P`, thetas, miss)];
 }
 
 /**
@@ -366,27 +362,6 @@ export function nmdaDendrite(config, state) {
 }
 
 /**
- * The random part of the Izhikevich network that the sliders don't touch:
- * cell parameters and unscaled weights (rand for excitatory rows, −rand for
- * inhibitory), a million of them, kept for the last seed so moving the
- * excitation or noise slider reruns only the dynamics.
- */
-let izhikevichCache = null;
-function izhikevichCells(seed, Ne, Ni) {
-  if (izhikevichCache?.seed === seed) return izhikevichCache;
-  const N = Ne + Ni, rand = rng(seed);
-  const a = new Float64Array(N), b = new Float64Array(N), c = new Float64Array(N), d = new Float64Array(N);
-  for (let i = 0; i < N; i++) {
-    const r = rand();
-    if (i < Ne) { a[i] = 0.02; b[i] = 0.2; c[i] = -65 + 15 * r * r; d[i] = 8 - 6 * r * r; }
-    else { a[i] = 0.02 + 0.08 * r; b[i] = 0.25 - 0.05 * r; c[i] = -65; d[i] = 2; }
-  }
-  const S = Array.from({ length: N }, (_, j) => Float64Array.from({ length: N }, () => (j < Ne ? rand() : -rand())));
-  izhikevichCache = { seed, a, b, c, d, S };
-  return izhikevichCache;
-}
-
-/**
  * Izhikevich's (2003) 1000-neuron network, as in his MATLAB listing: 800
  * excitatory regular-spiking-to-chattering cells and 200 inhibitory
  * fast-spiking-to-LTS cells, all-to-all with random weights (excitatory
@@ -398,10 +373,15 @@ function izhikevichCells(seed, Ne, Ni) {
 export function izhikevichNetwork(config, state) {
   const exc = num(state, config, "excitation", 1);
   const noise = num(state, config, "noise", 1);
-  const seed = num(state, config, "seed", 3);
+  const rand = rng(num(state, config, "seed", 3));
   const Ne = 800, Ni = 200, N = Ne + Ni, T = 1000;
-  const { a, b, c, d, S } = izhikevichCells(seed, Ne, Ni);
-  const rand = rng(seed + 1);
+  const a = new Float64Array(N), b = new Float64Array(N), c = new Float64Array(N), d = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const r = rand();
+    if (i < Ne) { a[i] = 0.02; b[i] = 0.2; c[i] = -65 + 15 * r * r; d[i] = 8 - 6 * r * r; }
+    else { a[i] = 0.02 + 0.08 * r; b[i] = 0.25 - 0.05 * r; c[i] = -65; d[i] = 2; }
+  }
+  const S = Array.from({ length: N }, (_, j) => Float64Array.from({ length: N }, () => (j < Ne ? 0.5 * exc * rand() : -rand())));
   const v = new Float64Array(N).fill(-65), u = Float64Array.from(b, (bi) => bi * -65);
   const I = new Float64Array(N);
   const xs = [], eRate = [], iRate = [];
@@ -412,8 +392,8 @@ export function izhikevichNetwork(config, state) {
       if (v[j] < 30) continue;
       if (j < Ne) ne++; else ni++;
       v[j] = c[j]; u[j] += d[j];
-      const row = S[j], w = j < Ne ? 0.5 * exc : 1;
-      for (let i = 0; i < N; i++) I[i] += w * row[i];
+      const row = S[j];
+      for (let i = 0; i < N; i++) I[i] += row[i];
     }
     for (let i = 0; i < N; i++) {
       for (let h = 0; h < 2; h++) v[i] = Math.min(30, v[i] + 0.5 * (0.04 * v[i] * v[i] + 5 * v[i] + 140 - u[i] + I[i]));

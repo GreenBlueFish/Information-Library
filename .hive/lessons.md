@@ -18,3 +18,4 @@ is. A topic outside SNNs and neuroscience is written to stand on its own: no
 the link. Pages that are already about SNNs or the brain (such as the
 cell-types pages) are not covered by this; the person has not said whether
 their "What this means for your SNN" sections should stay.
+- 2026-11-02: "Follow up the review of Give the Computational Cortical Columns pages working JS simulations they don't have yet" (PR #61, a999caa8) was reverted: the tests went red after it merged: skipped (known gap): src/ingest/extraction-smoke.test.js | skipped (known gap): src/ingest/flagged-not-authored.property.test.js | skipped (known gap): src/ingest/inventory-completeness.test.js | skipped (known gap): src/ingest/inventory-schema.property.test.js
