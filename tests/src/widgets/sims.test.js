@@ -143,4 +143,28 @@ describe("widgets/sims (mushroom body)", () => {
     const peak = (s) => s.points.reduce((a, p) => (p.y > a.y ? p : a)).x;
     expect(peak(l4) < peak(l23)).toBe(true);
   });
+
+  it("cuba-coba: conductance-based input saturates below the reversal potential, current-based does not", () => {
+    const [cuba, coba] = SIMS["cuba-coba"]({}, { inputs: 1000 });
+    expect(Math.max(...ys(cuba)) > 0).toBe(true);
+    expect(Math.max(...ys(coba)) < 0).toBe(true);
+  });
+
+  it("nmda-dendrite: NMDA turns a small response into a plateau past a few synapses", () => {
+    const [withNmda, ampa] = SIMS["nmda-dendrite"]({}, {});
+    expect(withNmda.points[1].y < 10 && withNmda.points[19].y > 40).toBe(true);
+    expect(Math.max(...ys(ampa)) < 10).toBe(true);
+  });
+
+  it("path-integration: landmarks keep the error from accumulating", () => {
+    const end = (landmark) => SIMS["path-integration"]({}, { landmark })[0].points.at(-1).y;
+    expect(end(0) > 10).toBe(true);
+    expect(end(20) < end(0)).toBe(true);
+  });
+
+  it("scalar-encoder: full overlap at the reference, none far away", () => {
+    const [o] = SIMS["scalar-encoder"]({}, {});
+    expect(o.points.find((p) => p.x === 50).y).toBe(21);
+    expect(o.points[0].y).toBe(0);
+  });
 });

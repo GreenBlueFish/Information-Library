@@ -296,3 +296,163 @@ export function laminarFlow(config, state) {
   }
   return traces.map((ys, L) => series(PD_POPS[2 * L], xs, ys));
 }
+
+/**
+ * Current-based versus conductance-based synapses (CUBA vs COBA) on a passive
+ * membrane (C = 200 pF, gL = 10 nS, EL = −65 mV, no spiking). `inputs`
+ * excitatory synapses fire as Poisson trains at 10 Hz each from 50 ms to
+ * 250 ms, each spike adding `weight` nS of conductance that decays with
+ * τ = 5 ms. CUBA injects w·s(t)·(Ee − EL), the current that conductance would
+ * carry at rest; COBA injects g(t)·(Ee − V), which shrinks as V nears
+ * Ee = 0 mV. Small inputs look the same; large ones saturate under COBA.
+ */
+export function cubaCoba(config, state) {
+  const n = Math.round(num(state, config, "inputs", 200));
+  const w = num(state, config, "weight", 1);
+  const rand = rng(num(state, config, "seed", 12));
+  const C = 200, gL = 10, EL = -65, Ee = 0, tau = 5, dt = 0.1, T = 300;
+  const p = n * 10 * dt / 1000; // expected input spikes per step
+  let g = 0, vC = EL, vG = EL;
+  const xs = [], cs = [], gs = [];
+  for (let t = 0; t <= T; t += dt) {
+    if (t >= 50 && t < 250) {
+      // Poisson count by inversion; p stays small enough for a short loop
+      let k = 0, prob = Math.exp(-p), cum = prob;
+      const u = rand();
+      while (u > cum && k < 1000) { k++; prob *= p / k; cum += prob; }
+      g += k * w;
+    }
+    g -= (dt / tau) * g;
+    vC += (dt / C) * (-gL * (vC - EL) + g * (Ee - EL));
+    vG += (dt / C) * (-gL * (vG - EL) + g * (Ee - vG));
+    xs.push(t); cs.push(Math.min(200, vC)); gs.push(vG);
+  }
+  return [series("current-based (CUBA)", xs, cs), series("conductance-based (COBA)", xs, gs)];
+}
+
+/**
+ * NMDA spikes in a thin dendrite: one compartment (τ = 10 ms at rest, EL =
+ * −70 mV) receives n synchronous synapses at t = 0, each with an AMPA
+ * conductance (τ = 2 ms) and, optionally, an NMDA conductance (rise 2 ms,
+ * decay `nmdaDecay` ms) gated by the magnesium block
+ * B(V) = 1 / (1 + [Mg]/3.57 · exp(−0.062 V)), [Mg] = 1 mM. Plots the
+ * depolarisation 30 ms after the input against n: AMPA alone grows smoothly
+ * and has decayed by then; with NMDA the response jumps to a plateau once
+ * enough synapses are coactive — the threshold an HTM segment abstracts.
+ */
+export function nmdaDendrite(config, state) {
+  const gA = num(state, config, "ampa", 0.05);
+  const gN = num(state, config, "nmda", 0.04);
+  const tauN = num(state, config, "nmdaDecay", 80);
+  const maxN = 40, dt = 0.05, EL = -70, tau = 10;
+  const B = (v) => 1 / (1 + (1 / 3.57) * Math.exp(-0.062 * v));
+  const plateau = (n, withNmda) => {
+    let v = EL, a = n * gA, x = n * gN, s = 0;
+    for (let t = 0; t < 30; t += dt) {
+      const iSyn = a * (0 - v) + (withNmda ? s * B(v) * (0 - v) : 0);
+      v += (dt / tau) * (EL - v + iSyn * 10);
+      a -= (dt / 2) * a;
+      s += dt * (x / 2 - s / tauN);
+      x -= (dt / 2) * x;
+    }
+    return v - EL;
+  };
+  const ns = Array.from({ length: maxN }, (_, i) => i + 1);
+  return [series("AMPA + NMDA", ns, ns.map((n) => plateau(n, true))), series("AMPA only", ns, ns.map((n) => plateau(n, false)))];
+}
+
+/**
+ * Izhikevich's (2003) 1000-neuron network, as in his MATLAB listing: 800
+ * excitatory regular-spiking-to-chattering cells and 200 inhibitory
+ * fast-spiking-to-LTS cells, all-to-all with random weights (excitatory
+ * 0.5·rand·`excitation`, inhibitory −rand), thalamic noise 5·N(0,1) to
+ * excitatory and 2·N(0,1) to inhibitory cells. Plots spikes per ms for each
+ * population over 1 s: alpha- and gamma-band rhythms emerge without being
+ * built in.
+ */
+export function izhikevichNetwork(config, state) {
+  const exc = num(state, config, "excitation", 1);
+  const noise = num(state, config, "noise", 1);
+  const rand = rng(num(state, config, "seed", 3));
+  const Ne = 800, Ni = 200, N = Ne + Ni, T = 1000;
+  const a = new Float64Array(N), b = new Float64Array(N), c = new Float64Array(N), d = new Float64Array(N);
+  for (let i = 0; i < N; i++) {
+    const r = rand();
+    if (i < Ne) { a[i] = 0.02; b[i] = 0.2; c[i] = -65 + 15 * r * r; d[i] = 8 - 6 * r * r; }
+    else { a[i] = 0.02 + 0.08 * r; b[i] = 0.25 - 0.05 * r; c[i] = -65; d[i] = 2; }
+  }
+  const S = Array.from({ length: N }, (_, j) => Float64Array.from({ length: N }, () => (j < Ne ? 0.5 * exc * rand() : -rand())));
+  const v = new Float64Array(N).fill(-65), u = Float64Array.from(b, (bi) => bi * -65);
+  const I = new Float64Array(N);
+  const xs = [], eRate = [], iRate = [];
+  for (let t = 0; t < T; t++) {
+    for (let i = 0; i < N; i++) I[i] = noise * (i < Ne ? 5 : 2) * gauss(rand);
+    let ne = 0, ni = 0;
+    for (let j = 0; j < N; j++) {
+      if (v[j] < 30) continue;
+      if (j < Ne) ne++; else ni++;
+      v[j] = c[j]; u[j] += d[j];
+      const row = S[j];
+      for (let i = 0; i < N; i++) I[i] += row[i];
+    }
+    for (let i = 0; i < N; i++) {
+      for (let h = 0; h < 2; h++) v[i] = Math.min(30, v[i] + 0.5 * (0.04 * v[i] * v[i] + 5 * v[i] + 140 - u[i] + I[i]));
+      u[i] += a[i] * (b[i] * v[i] - u[i]);
+    }
+    xs.push(t); eRate.push(ne); iRate.push(ni);
+  }
+  return [series("excitatory spikes / ms", xs, eRate), series("inhibitory spikes / ms", xs, iRate)];
+}
+
+/**
+ * Path integration with grid-cell phases: an animal walks a 1-D track at a
+ * varying speed and updates its position estimate by integrating velocity,
+ * with independent noise added each 50 ms step so the error performs a
+ * random walk: its spread grows like `noise`·√t (noise in cm/√s). Every `landmark` s a sensed landmark resets the
+ * estimate (0 = never). Plots the absolute position error in cm, alongside
+ * the smallest grid spacing (30 cm): past it the module phases name the wrong
+ * place.
+ */
+export function pathIntegration(config, state) {
+  const noise = num(state, config, "noise", 3);
+  const landmark = num(state, config, "landmark", 0);
+  const rand = rng(num(state, config, "seed", 9));
+  const dt = 0.05, T = 120, trials = 20;
+  const every = landmark > 0 ? Math.round(landmark / dt) : 0;
+  const xs = [], err = [];
+  const sum = new Array(Math.round(T / dt)).fill(0);
+  for (let k = 0; k < trials; k++) {
+    let x = 0, est = 0;
+    for (let i = 0; i < sum.length; i++) {
+      const t = i * dt;
+      const vel = 20 + 10 * Math.sin(t / 3 + k); // cm/s
+      x += vel * dt;
+      est += vel * dt + noise * Math.sqrt(dt) * gauss(rand);
+      if (every > 0 && i % every === 0) est = x;
+      sum[i] += Math.abs(est - x);
+    }
+  }
+  for (let i = 0; i < sum.length; i++) { xs.push(i * dt); err.push(sum[i] / trials); }
+  return [series("mean position error (cm)", xs, err), series("smallest grid spacing", [0, T], [30, 30])];
+}
+
+/**
+ * HTM scalar encoder (as in the page's code): values in [0, 100] map to `n`
+ * bits with a run of `w` consecutive active bits whose start moves with the
+ * value. Plots the overlap (shared active bits) between the code for 50 and
+ * the code for every other value: a triangle whose width is set by w / n, so
+ * nearby values share bits and distant ones share none.
+ */
+export function scalarEncoder(config, state) {
+  const n = Math.round(num(state, config, "bits", 400));
+  const w = Math.round(num(state, config, "width", 21));
+  const ref = num(state, config, "reference", 50);
+  const start = (v) => Math.round(((Math.min(100, Math.max(0, v))) / 100) * (n - w));
+  const s0 = start(ref);
+  const xs = [], ys = [];
+  for (let v = 0; v <= 100; v += 0.25) {
+    xs.push(v);
+    ys.push(Math.max(0, w - Math.abs(start(v) - s0)));
+  }
+  return [series(`overlap with the code for ${ref}`, xs, ys)];
+}

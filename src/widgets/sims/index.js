@@ -56,4 +56,9 @@ export const SIMS = {
   "ei-amplifier": columns.eiAmplifier,
   "predictive-coding": columns.predictiveCoding,
   "laminar-flow": columns.laminarFlow,
+  "cuba-coba": columns.cubaCoba,
+  "nmda-dendrite": columns.nmdaDendrite,
+  "izhikevich-network": columns.izhikevichNetwork,
+  "path-integration": columns.pathIntegration,
+  "scalar-encoder": columns.scalarEncoder,
 };
