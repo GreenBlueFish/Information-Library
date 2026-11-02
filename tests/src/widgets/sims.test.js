@@ -114,6 +114,22 @@ describe("widgets/sims (mushroom body)", () => {
     expect(fm.points[15].y < fm.points[5].y && miss.points[15].y > miss.points[5].y).toBe(true);
   });
 
+  it("dendrite-match: more active cells than cells is clamped, not a flat line at the floor", () => {
+    const [fm, miss] = SIMS["dendrite-match"]({}, { cells: 256, active: 400 });
+    expect(fm.label.includes("clamped")).toBe(true);
+    expect(fm.points.every((p) => Number.isFinite(p.y))).toBe(true);
+    expect(fm.points.some((p) => p.y > -30) && miss.points.some((p) => p.y > -30)).toBe(true);
+  });
+
+  it("izhikevich-network: both populations spike, and more excitation means more spikes", () => {
+    const total = (s) => ys(s).reduce((x, y) => x + y, 0);
+    const [e, i] = SIMS["izhikevich-network"]({}, {});
+    expect(total(e) > 0 && total(i) > 0).toBe(true);
+    const [eHigh] = SIMS["izhikevich-network"]({}, { excitation: 1.5 });
+    expect(total(eHigh) > total(e)).toBe(true);
+    expect(JSON.stringify(SIMS["izhikevich-network"]({}, {})[0])).toBe(JSON.stringify(e));
+  });
+
   it("hebb-oja: plain Hebb grows without bound, Oja settles at |w| = 1 along the first component", () => {
     const [hebb, ojaNorm, ojaAlign] = SIMS["hebb-oja"]({}, {});
     expect(hebb.points.at(-1).y > 5).toBe(true);
