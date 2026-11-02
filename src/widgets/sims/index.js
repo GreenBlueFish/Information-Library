@@ -61,4 +61,5 @@ export const SIMS = {
   "izhikevich-network": columns.izhikevichNetwork,
   "path-integration": columns.pathIntegration,
   "scalar-encoder": columns.scalarEncoder,
+  "evidence-inference": columns.evidenceInference,
 };

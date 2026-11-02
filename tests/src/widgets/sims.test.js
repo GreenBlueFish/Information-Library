@@ -167,4 +167,10 @@ describe("widgets/sims (mushroom body)", () => {
     expect(o.points.find((p) => p.x === 50).y).toBe(21);
     expect(o.points[0].y).toBe(0);
   });
+
+  it("evidence-inference: with noisy sensing, evidence finds the object where elimination loses it", () => {
+    const [evidence, elimination] = SIMS["evidence-inference"]({}, { noise: 10 });
+    expect(evidence.points.at(-1).y > 90).toBe(true);
+    expect(elimination.points.at(-1).y < 50).toBe(true);
+  });
 });

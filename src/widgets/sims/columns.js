@@ -456,3 +456,44 @@ export function scalarEncoder(config, state) {
   }
   return [series(`overlap with the code for ${ref}`, xs, ys)];
 }
+
+/**
+ * Evidence versus elimination when sensing is noisy (after Monty's evidence-
+ * based learning module, simplified to known locations): `objects` objects
+ * each store one of 8 features at each of 20 locations. A sensor visits a
+ * random location of the true object each step and reports its feature,
+ * replaced by a random one with probability `noise`%. Elimination drops any
+ * object that ever mismatched; evidence adds +1 for a match and −1 for a
+ * mismatch. Plots, over 200 trials, the share in which the true object is
+ * the single best hypothesis after each step.
+ */
+export function evidenceInference(config, state) {
+  const nObj = Math.round(num(state, config, "objects", 30));
+  const noise = num(state, config, "noise", 10) / 100;
+  const rand = rng(num(state, config, "seed", 21));
+  const L = 20, F = 8, steps = 15, trials = 200;
+  const models = Array.from({ length: nObj }, () => Array.from({ length: L }, () => Math.floor(rand() * F)));
+  const evid = new Array(steps).fill(0), elim = new Array(steps).fill(0);
+  for (let trial = 0; trial < trials; trial++) {
+    const truth = Math.floor(rand() * nObj);
+    const score = new Array(nObj).fill(0);
+    const alive = new Array(nObj).fill(true);
+    for (let s = 0; s < steps; s++) {
+      const loc = Math.floor(rand() * L);
+      const seen = rand() < noise ? Math.floor(rand() * F) : models[truth][loc];
+      for (let o = 0; o < nObj; o++) {
+        const match = models[o][loc] === seen;
+        score[o] += match ? 1 : -1;
+        if (!match) alive[o] = false;
+      }
+      const best = Math.max(...score);
+      if (score[truth] === best && score.filter((x) => x === best).length === 1) evid[s]++;
+      if (alive[truth] && alive.filter(Boolean).length === 1) elim[s]++;
+    }
+  }
+  const xs = Array.from({ length: steps }, (_, i) => i + 1);
+  return [
+    series("evidence (+1 / −1)", xs, evid.map((c) => (100 * c) / trials)),
+    series("strict elimination", xs, elim.map((c) => (100 * c) / trials)),
+  ];
+}
