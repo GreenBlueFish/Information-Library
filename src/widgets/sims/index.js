@@ -12,6 +12,7 @@ import * as plasticity from "./plasticity.js";
 import * as coding from "./coding.js";
 import * as cortex from "./cortex.js";
 import * as foundations from "./foundations.js";
+import * as columns from "./columns.js";
 
 export const SIMS = {
   lif: neurons.lif,
@@ -48,4 +49,11 @@ export const SIMS = {
   "nef-decode": foundations.nefDecode,
   "spa-binding": foundations.spaBinding,
   ldn: foundations.ldn,
+  "spatial-pooler": columns.spatialPooler,
+  "dendrite-match": columns.dendriteMatch,
+  "hebb-oja": columns.hebbOja,
+  "adaptive-threshold": columns.adaptiveThreshold,
+  "ei-amplifier": columns.eiAmplifier,
+  "predictive-coding": columns.predictiveCoding,
+  "laminar-flow": columns.laminarFlow,
 };

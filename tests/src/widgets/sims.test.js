@@ -100,4 +100,47 @@ describe("widgets/sims (mushroom body)", () => {
     const mid = kc.points.find((p) => p.x >= 0.5 && p.x < 0.9);
     expect(mid.y < mid.x).toBe(true);
   });
+
+  it("spatial-pooler: boosting narrows the spread of column use", () => {
+    const [plain, boosted] = SIMS["spatial-pooler"]({}, {});
+    const spread = (s) => s.points[0].y - s.points.at(-1).y;
+    expect(spread(boosted) < spread(plain)).toBe(true);
+  });
+
+  it("dendrite-match: false matches fall and misses rise with the threshold", () => {
+    const [fm, miss] = SIMS["dendrite-match"]({}, {});
+    expect(fm.points[9].y < -10).toBe(true);
+    expect(miss.points[9].y < -1).toBe(true);
+    expect(fm.points[15].y < fm.points[5].y && miss.points[15].y > miss.points[5].y).toBe(true);
+  });
+
+  it("hebb-oja: plain Hebb grows without bound, Oja settles at |w| = 1 along the first component", () => {
+    const [hebb, ojaNorm, ojaAlign] = SIMS["hebb-oja"]({}, {});
+    expect(hebb.points.at(-1).y > 5).toBe(true);
+    expect(Math.abs(ojaNorm.points.at(-1).y - 1) < 0.05).toBe(true);
+    expect(ojaAlign.points.at(-1).y > 0.95).toBe(true);
+  });
+
+  it("adaptive-threshold: the rate rises much less after the step than with a fixed threshold", () => {
+    const [fixed, adaptive] = SIMS["adaptive-threshold"]({}, {});
+    const rise = (s) => s.points.at(-1).y - s.points[5].y;
+    expect(rise(adaptive) < rise(fixed) / 3).toBe(true);
+  });
+
+  it("ei-amplifier: settles at h / (1 − wEE + wEI·wIE)", () => {
+    const [E] = SIMS["ei-amplifier"]({}, { wEE: 1.5, wEI: 1, wIE: 1 });
+    expect(Math.abs(E.points.at(-1).y - 2) < 0.01).toBe(true);
+  });
+
+  it("predictive-coding: settles near 1.6 for the tutorial's numbers, nearer the prior when the input is noisy", () => {
+    const end = (v) => SIMS["predictive-coding"]({}, { sensoryVariance: v })[0].points.at(-1).y;
+    expect(Math.abs(end(1) - 1.6) < 0.05).toBe(true);
+    expect(end(5) > end(1) && end(1) > end(0.2)).toBe(true);
+  });
+
+  it("laminar-flow: L4e responds before L2/3e", () => {
+    const [l23, l4] = SIMS["laminar-flow"]({}, {});
+    const peak = (s) => s.points.reduce((a, p) => (p.y > a.y ? p : a)).x;
+    expect(peak(l4) < peak(l23)).toBe(true);
+  });
 });
