@@ -397,6 +397,15 @@ Guidance:
   needs `alt` text that says what the picture shows, not just its title, and
   the prose around it should still make sense without it.
   `content/pages/communication-protocols/vga.json` has four examples.
+- **Real images from elsewhere** (photographs, micrographs, historical
+  drawings) are welcome when they are openly licensed: public domain, CC0 or
+  CC BY / CC BY-SA, for example from Wikimedia Commons, whose API gives each
+  file's licence and author. Resize them (about 900 px wide is plenty), end the
+  caption with a credit such as "Image: Author, CC BY 4.0, via Wikimedia
+  Commons (resized).", and add a row to `CREDITS.md` in the same folder with
+  the licence, source link and what you changed.
+  `assets/figures/computational-cortical-columns/CREDITS.md` is the example, and
+  `tests/src/integration/cortical-columns-figures.test.js` checks it.
 - **Where to copy a template from:** start a new page by copying an existing one
   with the blocks you need. `content/pages/snn/index.json` is a good prose/list/
   callout template; `content/pages/snn/neuron-models.json` additionally shows a
