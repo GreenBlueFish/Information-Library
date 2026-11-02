@@ -68,6 +68,51 @@
       "source": "import numpy as np\n\ndef scalar_encode(value, vmin=0.0, vmax=100.0, n=400, w=21):\n    \"\"\"Contiguous HTM-style scalar encoder: returns the indices of the w active bits.\"\"\"\n    v = min(max(value, vmin), vmax)\n    start = int(round((v - vmin) / (vmax - vmin) * (n - w)))\n    return np.arange(start, start + w)\n\na, b = scalar_encode(20.0), scalar_encode(22.0)\nprint(len(np.intersect1d(a, b)))   # nearby values share most of their bits\n\ndef sdr_to_rates(active, n, on_hz=40.0, off_hz=1.0):\n    \"\"\"Drive a spiking layer: active bits fire at on_hz, the rest at a low background.\"\"\"\n    r = np.full(n, off_hz)\n    r[active] = on_hz\n    return r"
     },
     {
+      "type": "prose",
+      "text": "The plot shows what this encoder buys. It encodes 50 with a reference code and every other value in [0, 100], and plots how many active bits the two codes share. Because a value's w active bits are a contiguous run whose start moves with the value, the overlap falls off linearly with distance, a triangle whose half-width is w / (n − w) of the range: values closer than that share bits, values further apart share none. Widen w (or shrink n) and more distant values look similar; narrow it and the encoder becomes picky. That overlap is the only notion of similarity a spatial pooler downstream ever sees, so this is the knob that sets how coarsely your column generalises."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Scalar encoder: overlap between codes",
+        "params": [
+          {
+            "key": "bits",
+            "label": "Bits n",
+            "control": "range",
+            "min": 50,
+            "max": 1000,
+            "step": 50,
+            "default": 400
+          },
+          {
+            "key": "width",
+            "label": "Active bits w",
+            "control": "range",
+            "min": 3,
+            "max": 61,
+            "step": 2,
+            "default": 21
+          },
+          {
+            "key": "reference",
+            "label": "Reference value",
+            "control": "range",
+            "min": 0,
+            "max": 100,
+            "step": 5,
+            "default": 50
+          }
+        ],
+        "config": {
+          "sim": "scalar-encoder",
+          "xLabel": "value",
+          "yLabel": "shared active bits"
+        }
+      }
+    },
+    {
       "type": "heading",
       "level": 2,
       "text": "Choosing an encoder for your column"

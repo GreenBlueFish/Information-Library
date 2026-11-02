@@ -100,4 +100,77 @@ describe("widgets/sims (mushroom body)", () => {
     const mid = kc.points.find((p) => p.x >= 0.5 && p.x < 0.9);
     expect(mid.y < mid.x).toBe(true);
   });
+
+  it("spatial-pooler: boosting narrows the spread of column use", () => {
+    const [plain, boosted] = SIMS["spatial-pooler"]({}, {});
+    const spread = (s) => s.points[0].y - s.points.at(-1).y;
+    expect(spread(boosted) < spread(plain)).toBe(true);
+  });
+
+  it("dendrite-match: false matches fall and misses rise with the threshold", () => {
+    const [fm, miss] = SIMS["dendrite-match"]({}, {});
+    expect(fm.points[9].y < -10).toBe(true);
+    expect(miss.points[9].y < -1).toBe(true);
+    expect(fm.points[15].y < fm.points[5].y && miss.points[15].y > miss.points[5].y).toBe(true);
+  });
+
+  it("hebb-oja: plain Hebb grows without bound, Oja settles at |w| = 1 along the first component", () => {
+    const [hebb, ojaNorm, ojaAlign] = SIMS["hebb-oja"]({}, {});
+    expect(hebb.points.at(-1).y > 5).toBe(true);
+    expect(Math.abs(ojaNorm.points.at(-1).y - 1) < 0.05).toBe(true);
+    expect(ojaAlign.points.at(-1).y > 0.95).toBe(true);
+  });
+
+  it("adaptive-threshold: the rate rises much less after the step than with a fixed threshold", () => {
+    const [fixed, adaptive] = SIMS["adaptive-threshold"]({}, {});
+    const rise = (s) => s.points.at(-1).y - s.points[5].y;
+    expect(rise(adaptive) < rise(fixed) / 3).toBe(true);
+  });
+
+  it("ei-amplifier: settles at h / (1 − wEE + wEI·wIE)", () => {
+    const [E] = SIMS["ei-amplifier"]({}, { wEE: 1.5, wEI: 1, wIE: 1 });
+    expect(Math.abs(E.points.at(-1).y - 2) < 0.01).toBe(true);
+  });
+
+  it("predictive-coding: settles near 1.6 for the tutorial's numbers, nearer the prior when the input is noisy", () => {
+    const end = (v) => SIMS["predictive-coding"]({}, { sensoryVariance: v })[0].points.at(-1).y;
+    expect(Math.abs(end(1) - 1.6) < 0.05).toBe(true);
+    expect(end(5) > end(1) && end(1) > end(0.2)).toBe(true);
+  });
+
+  it("laminar-flow: L4e responds before L2/3e", () => {
+    const [l23, l4] = SIMS["laminar-flow"]({}, {});
+    const peak = (s) => s.points.reduce((a, p) => (p.y > a.y ? p : a)).x;
+    expect(peak(l4) < peak(l23)).toBe(true);
+  });
+
+  it("cuba-coba: conductance-based input saturates below the reversal potential, current-based does not", () => {
+    const [cuba, coba] = SIMS["cuba-coba"]({}, { inputs: 1000 });
+    expect(Math.max(...ys(cuba)) > 0).toBe(true);
+    expect(Math.max(...ys(coba)) < 0).toBe(true);
+  });
+
+  it("nmda-dendrite: NMDA turns a small response into a plateau past a few synapses", () => {
+    const [withNmda, ampa] = SIMS["nmda-dendrite"]({}, {});
+    expect(withNmda.points[1].y < 10 && withNmda.points[19].y > 40).toBe(true);
+    expect(Math.max(...ys(ampa)) < 10).toBe(true);
+  });
+
+  it("path-integration: landmarks keep the error from accumulating", () => {
+    const end = (landmark) => SIMS["path-integration"]({}, { landmark })[0].points.at(-1).y;
+    expect(end(0) > 10).toBe(true);
+    expect(end(20) < end(0)).toBe(true);
+  });
+
+  it("scalar-encoder: full overlap at the reference, none far away", () => {
+    const [o] = SIMS["scalar-encoder"]({}, {});
+    expect(o.points.find((p) => p.x === 50).y).toBe(21);
+    expect(o.points[0].y).toBe(0);
+  });
+
+  it("evidence-inference: with noisy sensing, evidence finds the object where elimination loses it", () => {
+    const [evidence, elimination] = SIMS["evidence-inference"]({}, { noise: 10 });
+    expect(evidence.points.at(-1).y > 90).toBe(true);
+    expect(elimination.points.at(-1).y < 50).toBe(true);
+  });
 });
