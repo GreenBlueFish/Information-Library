@@ -403,9 +403,14 @@ Guidance:
   file's licence and author. Resize them (about 900 px wide is plenty), end the
   caption with a credit such as "Image: Author, CC BY 4.0, via Wikimedia
   Commons (resized).", and add a row to `CREDITS.md` in the same folder with
-  the licence, source link and what you changed.
+  the licence, source link and what you changed. The caption's licence must
+  match the row's, and readers see the full credits too: add the same details
+  to the topic's Image Credits page
+  (`content/pages/computational-cortical-columns/image-credits/index.json`).
   `assets/figures/computational-cortical-columns/CREDITS.md` is the example, and
-  `tests/src/integration/cortical-columns-figures.test.js` checks it.
+  `tests/src/integration/cortical-columns-figures.test.js` checks all three.
+  Images are capped at `--figure-max-height` so a tall one and its caption
+  fit on one screen.
 - **Where to copy a template from:** start a new page by copying an existing one
   with the blocks you need. `content/pages/snn/index.json` is a good prose/list/
   callout template; `content/pages/snn/neuron-models.json` additionally shows a

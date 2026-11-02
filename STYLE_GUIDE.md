@@ -160,6 +160,7 @@ Long text is capped so it stays legible.
 | --- | --- | --- |
 | `--measure` | `70ch` | Ideal body / prose column width |
 | `--measure-wide` | `90ch` | Wide content (code blocks, plots, widgets) |
+| `--figure-max-height` | `70vh` | Tallest a figure image may be, so it and its caption fit on one screen |
 
 Prose, headings, lists, callouts, figure captions, the page intro, and errors are capped at
 `--measure`. Code blocks, figures, widgets, and the widget placeholder use `--measure-wide`.
@@ -366,7 +367,8 @@ left border in `--color-callout-border`, `--radius-sm`, padded `--space-4`/`--sp
 ### Figures (`.block--figure`)
 
 A `<figure>` capped at `--measure-wide`, laid out as a column with `--space-2`
-gaps. `.figure__image` fills the width (height auto) on a `--color-surface`
+gaps. `.figure__image` fills the width (height auto, at most `--figure-max-height`;
+a taller image is scaled down inside the card with `object-fit: contain`) on a `--color-surface`
 card with a `--color-border` border and `--radius-md`. `.figure__caption` is
 muted `--font-size-small` text capped at `--measure`.
 
