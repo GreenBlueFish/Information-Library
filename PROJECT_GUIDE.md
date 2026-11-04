@@ -71,7 +71,8 @@ Where content, code, CSS, and governance material live:
 │   │   ├── trie.js              # Token-level trie + shared normalize().
 │   │   ├── search-index.js      # buildIndex(terms) + longest-match query().
 │   │   ├── fuzzy.js             # Typo/plural fallback (bounded edit distance).
-│   │   └── lookup-ui.js         # Selection capture + inline definition panel.
+│   │   ├── matches.js           # Ranked matches for a selection (exact, then close terms).
+│   │   └── lookup-ui.js         # Selection capture + inline definition panel (↑/↓ through matches).
 │   └── widgets/
 │       ├── registry.js          # registerWidget(type, mountFn) + mountWidget(spec, container).
 │       ├── plot.js              # Shared plotting primitive (makePlot) used by widget types.
@@ -372,6 +373,15 @@ Guidance:
 - Add an `acronym` only when one exists; otherwise omit the field.
 - If you set `pageRef`, make sure it points at a route that actually resolves in
   `topics.json`.
+- Add adjective and verb forms the pages use as aliases ("thalamic" on
+  Thalamus, "depolarised" on Depolarization) so a highlighted word lands on
+  its term exactly. A word that is not a term still offers the terms that
+  contain it ("pyramidal" → Pyramidal Neuron, …), which the reader steps
+  through with ↑/↓ (`src/lookup/matches.js`).
+- Don't give a common English word (such as "memory" or "rate") as an alias of
+  one narrow term; the related-terms list already covers it.
+- An acronym that is also an English word (IT, ON) only resolves when typed in
+  capitals, so it does not fire on "it" or "on".
 
 ---
 

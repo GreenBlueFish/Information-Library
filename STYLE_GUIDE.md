@@ -154,15 +154,17 @@ Headings use `--font-weight-semibold`; the site title uses `--font-weight-bold`.
 
 ### Reading measure
 
-Long text is capped so it stays legible.
+Content fills the main column, so the page adapts to the width of the screen.
+Set a `ch` value on `--measure` (for example `70ch`) to cap line length instead.
 
 | Token | Value | Used for |
 | --- | --- | --- |
-| `--measure` | `70ch` | Ideal body / prose column width |
-| `--measure-wide` | `90ch` | Wide content (code blocks, plots, widgets) |
+| `--measure` | `100%` | Body / prose column width |
+| `--measure-wide` | `100%` | Wide content (code blocks, plots, widgets) |
+| `--measure-panel` | `70ch` | The floating lookup panel (never wider than 90vw) |
 | `--figure-max-height` | `70vh` | Tallest a figure image may be, so it and its caption fit on one screen |
 
-Prose, headings, lists, callouts, figure captions, the page intro, and errors are capped at
+Prose, headings, lists, callouts, figure captions, the page intro, and errors use
 `--measure`. Code blocks, figures, widgets, and the widget placeholder use `--measure-wide`.
 
 ---
@@ -231,7 +233,7 @@ Non color/type/spacing constants that are still centralized.
 
 | Token | Value | Used for |
 | --- | --- | --- |
-| `--layout-max-width` | `1120px` | Outer page container (`body`) |
+| `--layout-max-width` | `none` | Outer page container (`body`); `none` fills the window |
 | `--layout-content-width` | `var(--measure)` | Reading column alias |
 | `--nav-width` | `16rem` | Side navigation column (wide screens) |
 | `--card-min-width` | `15rem` | Home-card grid min track + control min width |

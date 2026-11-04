@@ -27,6 +27,10 @@
 //   8.5 — when the result is a fuzzy match, indicate it is an approximate match.
 //   #47 — when the term has several definitions, the panel shows one at a
 //         time with Previous / "n of N" / Next buttons to cycle through them.
+//   #matches — the panel shows the closest term first; when other terms are
+//         close too (see `matches.js`), ArrowDown / ArrowUp (or the ▼ / ▲
+//         buttons) step to the next and previous closest match, and Escape
+//         closes the panel.
 //   4.1 — normalize + query on a double-click or highlight (normalization is
 //         done inside `query`; this module passes the raw selected text).
 //   4.5 — a selection that normalizes to zero tokens shows no panel (`query`
@@ -35,7 +39,8 @@
 //         message that auto-dismisses (a minimal auto-dismiss lives here; the
 //         full error-handling pass is task 10.2).
 
-import { query } from "./search-index.js";
+import { findMatches, STOPWORDS } from "./matches.js";
+import { normalize } from "./trie.js";
 import { fillDefinitionCard } from "./definition-card.js";
 
 /**
@@ -55,6 +60,18 @@ const CLASS = {
   cycle: "lookup-panel__cycle",
   cycleButton: "lookup-panel__cycle-button",
   cycleCount: "lookup-panel__cycle-count",
+  matches: "lookup-panel__matches",
+  matchButton: "lookup-panel__match-button",
+  matchCount: "lookup-panel__match-count",
+  matchHint: "lookup-panel__match-hint",
+};
+
+/** What the panel says about a match that is not an exact one. */
+const KIND_LABEL = {
+  fuzzy: "Approximate match",
+  within: "Term in your selection",
+  contains: "Related term",
+  prefix: "Related term",
 };
 
 /** How long the "No definition found" message lingers before auto-dismiss. */
@@ -96,6 +113,10 @@ export function installLookup(index, rootEl) {
   let dismissTimer = 0;
   /** True while a pointer press started inside the panel (don't dismiss). */
   let pressInPanel = false;
+  /** The ranked matches for the current selection, and which one is shown. */
+  /** @type {import("./matches.js").Match[]} */
+  let matches = [];
+  let matchIndex = 0;
 
   /** Ensure the reusable panel exists and is attached; return it. */
   function ensurePanel() {
@@ -120,6 +141,8 @@ export function installLookup(index, rootEl) {
     if (panel && panel.isConnected) {
       panel.remove();
     }
+    matches = [];
+    matchIndex = 0;
   }
 
   /**
@@ -138,13 +161,18 @@ export function installLookup(index, rootEl) {
   }
 
   /**
-   * Fill the reusable panel with a resolved result (Requirements 8.1–8.3, 8.5).
-   * Always rebuilds the panel's children from scratch so the prior contents are
-   * fully replaced (Requirement 8.4). All text is set via `textContent`.
+   * Fill the reusable panel with match `i` of the current matches
+   * (Requirements 8.1–8.3, 8.5). Always rebuilds the panel's children from
+   * scratch so the prior contents are fully replaced (Requirement 8.4). All
+   * text is set via `textContent`.
    *
-   * @param {LookupResult} result
+   * @param {number} i Which match to show (clamped to the list).
    */
-  function renderResult(result) {
+  function renderMatch(i) {
+    if (matches.length === 0) return;
+    matchIndex = Math.max(0, Math.min(matches.length - 1, i));
+    const match = matches[matchIndex];
+
     const p = ensurePanel();
     p.classList.remove(CLASS.empty);
     p.replaceChildren();
@@ -153,18 +181,51 @@ export function installLookup(index, rootEl) {
     // link (8.2), plus a control to cycle through the term's other
     // definitions when it has more than one. Following the link dismisses
     // the panel.
-    const definitions =
-      Array.isArray(result.definitions) && result.definitions.length > 0
-        ? result.definitions
-        : [result];
-    fillDefinitionCard(doc, p, definitions, CLASS, () => hidePanel());
+    fillDefinitionCard(doc, p, match.definitions, CLASS, () => hidePanel());
 
-    // Approximate-match indicator for fuzzy results (8.5).
-    if (result.matchKind === "fuzzy") {
-      const fuzzy = doc.createElement("span");
-      fuzzy.className = CLASS.fuzzy;
-      fuzzy.textContent = "Approximate match";
-      p.appendChild(fuzzy);
+    // Say how a match other than an exact one relates to the selection (8.5).
+    const label = KIND_LABEL[match.matchKind];
+    if (label) {
+      const kind = doc.createElement("span");
+      kind.className = CLASS.fuzzy;
+      kind.textContent = label;
+      p.appendChild(kind);
+    }
+
+    // Step through the other close matches: ▲ / "Match n of N" / ▼.
+    if (matches.length > 1) {
+      const nav = doc.createElement("div");
+      nav.className = CLASS.matches;
+      nav.setAttribute("role", "group");
+      nav.setAttribute("aria-label", "Other matches");
+
+      const up = doc.createElement("button");
+      up.className = CLASS.matchButton;
+      up.setAttribute("type", "button");
+      up.setAttribute("aria-label", "Previous match (Up arrow)");
+      up.textContent = "▲";
+      if (matchIndex === 0) up.disabled = true;
+      up.addEventListener("click", () => renderMatch(matchIndex - 1));
+
+      const count = doc.createElement("span");
+      count.className = CLASS.matchCount;
+      count.setAttribute("aria-live", "polite");
+      count.textContent = `Match ${matchIndex + 1} of ${matches.length}`;
+
+      const down = doc.createElement("button");
+      down.className = CLASS.matchButton;
+      down.setAttribute("type", "button");
+      down.setAttribute("aria-label", "Next match (Down arrow)");
+      down.textContent = "▼";
+      if (matchIndex === matches.length - 1) down.disabled = true;
+      down.addEventListener("click", () => renderMatch(matchIndex + 1));
+
+      const hint = doc.createElement("span");
+      hint.className = CLASS.matchHint;
+      hint.textContent = "↑ ↓ keys";
+
+      nav.append(up, count, down, hint);
+      p.appendChild(nav);
     }
   }
 
@@ -215,10 +276,13 @@ export function installLookup(index, rootEl) {
     if (selection.rangeCount === 0) return;
     const rect = selection.getRangeAt(0).getBoundingClientRect();
 
-    /** @type {LookupResult|null} */
-    const result = query(index, text);
-    if (result) {
-      renderResult(result);
+    matches = findMatches(index, text);
+    if (matches.length > 0) {
+      renderMatch(0);
+    } else if (normalize(text).every((w) => STOPWORDS.has(w.replace(/[^\p{L}\p{N}']/gu, "")))) {
+      // Ordinary words such as "the" are not terms: show nothing at all.
+      hidePanel();
+      return;
     } else {
       renderEmpty();
     }
@@ -247,5 +311,24 @@ export function installLookup(index, rootEl) {
       // Defer so a double-click that re-selects still resolves first.
       hidePanel();
     }
+  });
+
+  // While the panel shows matches, the arrow keys step through them and
+  // Escape closes it. Keys typed into a form field are left alone.
+  doc.addEventListener("keydown", (event) => {
+    if (!panel || !panel.isConnected || matches.length === 0) return;
+    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    const tag = event.target && event.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (event.key === "Escape") {
+      hidePanel();
+      return;
+    }
+    let step = 0;
+    if (event.key === "ArrowDown") step = 1;
+    else if (event.key === "ArrowUp") step = -1;
+    if (step === 0 || matches.length < 2) return;
+    event.preventDefault();
+    renderMatch(matchIndex + step);
   });
 }
