@@ -1,0 +1,125 @@
+{
+  "title": "Noise Statistics and Types",
+  "intro": "Noise sets the smallest signal an analog circuit can handle. It is random, so we describe it by its power spectral density and add independent sources in power.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Describing noise"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Power spectral density (PSD): noise power per hertz, in V^2/Hz. Its square root, in V/sqrt(Hz), is the 'noise density' you see in data sheets (for example 5 nV/sqrt(Hz)).",
+        "Total rms noise: integrate the PSD over the bandwidth and take the square root.",
+        "Uncorrelated sources add in power: Vn,total^2 = Vn1^2 + Vn2^2. Correlated sources add in amplitude.",
+        "Signal-to-noise ratio: SNR = 10*log10(Psignal / Pnoise)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Noise analysis procedure: choose the output (or input) node, set all signal sources to zero, find the transfer function from each noise source to that node, multiply each PSD by the squared magnitude of its transfer function, and add."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Thermal noise"
+    },
+    {
+      "type": "prose",
+      "text": "Random motion of charge carriers in any resistor produces a voltage noise Vn^2 = 4*k*T*R per hertz (or equivalently a current noise 4*k*T/R). It is white, meaning flat to very high frequencies, and depends only on temperature and resistance. For a MOSFET the channel carries a thermal drain-current noise In^2 = 4*k*T*gamma*gm per hertz with gamma = 2/3 for long channels (higher, 1 or more, for short channels)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The kT/C result"
+    },
+    {
+      "type": "prose",
+      "text": "A resistor R charging a capacitor C produces a total noise voltage across the capacitor of exactly kT/C (in V^2), independent of R, because larger R gives more noise density but less bandwidth. This sets the minimum sampling capacitor in switched-capacitor circuits."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Flicker (1/f) noise"
+    },
+    {
+      "type": "prose",
+      "text": "Surface traps in the gate oxide add a low-frequency noise Vn^2 = K / (Cox*W*L*f). It rises as frequency falls, is larger in PMOS than NMOS in many processes, and falls with larger device area. The frequency at which flicker equals thermal noise is the 'corner frequency' fc, typically 10 kHz to 1 MHz."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Input-referred noise density of a MOSFET",
+        "params": [
+          {
+            "key": "gm",
+            "label": "gm (mS)",
+            "control": "range",
+            "min": 0.2,
+            "max": 10,
+            "step": 0.2,
+            "default": 2
+          },
+          {
+            "key": "gamma",
+            "label": "gamma",
+            "control": "range",
+            "min": 0.5,
+            "max": 1.2,
+            "step": 0.05,
+            "default": 0.67
+          },
+          {
+            "key": "corner",
+            "label": "1/f corner (Hz)",
+            "control": "range",
+            "min": 100,
+            "max": 1000000,
+            "step": 100,
+            "default": 10000
+          }
+        ],
+        "config": {
+          "sim": "noise-spectrum",
+          "xLabel": "log10 of frequency (Hz)",
+          "yLabel": "noise density (nV/sqrt(Hz))"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Below the corner frequency the density follows the 1/f slope; above, it flattens to the thermal floor. Raise gm to lower the floor, or make the transistor bigger (a lower corner) to push flicker noise under the signal band."
+    },
+    {
+      "type": "problem",
+      "title": "Resistor noise",
+      "text": "Find the noise density of a 1 kohm resistor at 300 K. (k = 1.38e-23 J/K.)",
+      "solution": [
+        "Vn^2 = 4*k*T*R = 4 * 1.38e-23 * 300 * 1000 = 1.66e-17 V^2/Hz.",
+        "Vn = sqrt(1.66e-17) = 4.07e-9 V/sqrt(Hz) = 4.07 nV/sqrt(Hz)."
+      ],
+      "answer": "About 4.1 nV/sqrt(Hz)."
+    },
+    {
+      "type": "problem",
+      "title": "kT/C",
+      "text": "Find the rms noise on a 1 pF capacitor at 300 K. By what factor must C grow to halve the noise voltage?",
+      "solution": [
+        "Vn = sqrt(k*T/C) = sqrt(4.14e-21 / 1e-12) = sqrt(4.14e-9) = 64 uV.",
+        "Noise power scales as 1/C, so to halve the voltage (quarter the power) C must grow 4 times, to 4 pF."
+      ],
+      "answer": "64 uV rms; need 4x the capacitance for half the noise."
+    },
+    {
+      "type": "problem",
+      "title": "Adding noise sources",
+      "text": "Two uncorrelated noise sources have densities 3 nV/sqrt(Hz) and 4 nV/sqrt(Hz). What is the combined density?",
+      "solution": [
+        "Add in power: sqrt(3^2 + 4^2) = sqrt(25) = 5 nV/sqrt(Hz)."
+      ],
+      "answer": "5 nV/sqrt(Hz)."
+    }
+  ]
+}

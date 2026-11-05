@@ -1,0 +1,130 @@
+{
+  "title": "Common-Source Stage",
+  "intro": "The common-source (CS) stage is the basic voltage amplifier: the input drives the gate, the output is taken at the drain.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Resistive load"
+    },
+    {
+      "type": "prose",
+      "text": "With a resistor RD to the supply, the large-signal output is Vout = VDD - RD*ID. In saturation Vout = VDD - (1/2)*mu_n*Cox*(W/L)*RD*(Vin - VTH)^2. The small-signal gain is the slope of this curve:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Av = -gm * (RD || ro)"
+    },
+    {
+      "type": "prose",
+      "text": "The negative sign means the stage inverts. As Vin rises Vout falls until the transistor leaves saturation (Vout < Vin - VTH) and enters triode, where the gain collapses. For an amplifier, bias it in the steep middle part, a little above threshold."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "CS stage large-signal transfer curve",
+        "params": [
+          {
+            "key": "vdd",
+            "label": "VDD (V)",
+            "control": "range",
+            "min": 1.0,
+            "max": 3.3,
+            "step": 0.1,
+            "default": 1.8
+          },
+          {
+            "key": "rd",
+            "label": "RD (kohm)",
+            "control": "range",
+            "min": 0.5,
+            "max": 10,
+            "step": 0.5,
+            "default": 2
+          },
+          {
+            "key": "vth",
+            "label": "VTH (V)",
+            "control": "range",
+            "min": 0.3,
+            "max": 0.7,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "k",
+            "label": "mu_n*Cox*W/L (mA/V^2)",
+            "control": "range",
+            "min": 0.5,
+            "max": 6,
+            "step": 0.5,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "cs-transfer",
+          "xLabel": "Vin (V)",
+          "yLabel": "Vout (V)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The steepest part of the Vout curve, between the knee at VTH and the triode boundary, is the amplifying region. Increase RD and the slope steepens (more gain) but the usable input range shrinks, a direct gain-swing trade-off."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Other loads"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Diode-connected load (gate tied to drain): the load looks like 1/gm2, so Av = -gm1 / gm2 = -sqrt((W/L)1 / (W/L)2) at equal currents. The gain is set by geometry, which makes it very linear, but small (typically 3 to 10). With body effect, gm2 is replaced by gm2 + gmb2 = gm2*(1 + eta).",
+        "Current-source load (a PMOS with fixed gate bias): Av = -gm1 * (ro1 || ro2). Gain is much higher (tens) because both resistances are large, but it needs a bias for the load gate, and the output DC level is sensitive.",
+        "Triode load: the PMOS in triode acts as a resistor, Ron = 1/[mu_p*Cox*(W/L)*(VDD - Vb - |VTHP|)]. The result is a gain similar to the resistive load but tunable and more compact."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Source degeneration"
+    },
+    {
+      "type": "prose",
+      "text": "Adding a resistance RS between source and ground makes the transistor's effective transconductance Gm = gm / (1 + gm*RS). The gain becomes about -RD*gm/(1 + gm*RS), approaching -RD/RS when gm*RS is large. This sacrifices gain for linearity: the gain depends on RD/RS, which are resistors, instead of on the transistor's nonlinear gm. Degeneration also raises the output resistance to about ro*(1 + gm*RS)."
+    },
+    {
+      "type": "problem",
+      "title": "Gain with and without ro",
+      "text": "gm = 1 mS, RD = 10 kohm, ro = 50 kohm. Find the CS gain with ro ignored and with ro included.",
+      "solution": [
+        "Ignoring ro: Av = -gm*RD = -10.",
+        "Including ro: RD || ro = 10k * 50k / 60k = 8.33 kohm, so Av = -1 mS * 8.33 kohm = -8.33."
+      ],
+      "answer": "-10 ignoring ro; -8.33 with ro."
+    },
+    {
+      "type": "problem",
+      "title": "Diode-connected load",
+      "text": "A CS stage uses a diode-connected NMOS load. M1 has (W/L)1 = 25 and M2 has (W/L)2 = 1, both NMOS carrying the same current. Find the gain ignoring body effect, then with eta = 0.2.",
+      "solution": [
+        "gm1 / gm2 = sqrt((W/L)1 / (W/L)2) = sqrt(25) = 5 at equal ID, so Av = -5.",
+        "With body effect the load conductance is gm2 + gmb2 = gm2 * (1 + eta), so Av = -5 / 1.2 = -4.17."
+      ],
+      "answer": "-5 without body effect, -4.17 with eta = 0.2."
+    },
+    {
+      "type": "problem",
+      "title": "Source degeneration",
+      "text": "gm = 2 mS, RD = 10 kohm, RS = 500 ohm (ro infinite). Find the gain, and the gain if RS is increased to 5 kohm.",
+      "solution": [
+        "Av = -gm*RD / (1 + gm*RS). With RS = 500 ohm: gm*RS = 1, Av = -20/2 = -10.",
+        "With RS = 5 kohm: gm*RS = 10, Av = -20/11 = -1.82, close to -RD/RS = -2."
+      ],
+      "answer": "-10 then -1.82 (limit -RD/RS = -2)."
+    }
+  ]
+}

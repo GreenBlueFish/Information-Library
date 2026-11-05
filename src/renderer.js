@@ -47,7 +47,7 @@ import { installHome } from "./home.js";
  * One ordered unit of page body content (design.md — Model 2: ContentBlock).
  *
  * @typedef {Object} ContentBlock
- * @property {"prose"|"heading"|"list"|"code"|"callout"|"figure"|"widget"} type The block
+ * @property {"prose"|"heading"|"list"|"code"|"callout"|"figure"|"widget"|"problem"} type The block
  *   kind, used by {@link renderBlock} to pick a per-type renderer.
  * @property {string} [text]   For prose/heading/callout.
  * @property {number} [level]  For heading (2..4).
@@ -762,6 +762,7 @@ const BLOCK_RENDERERS = {
   callout: renderCalloutBlock,
   figure: renderFigureBlock,
   widget: renderWidgetBlock,
+  problem: renderProblemBlock,
 };
 
 /**
@@ -929,6 +930,35 @@ function renderCalloutBlock(block, mountEl) {
   if (block && typeof block.text === "string") {
     container.appendChild(el("p", undefined, block.text));
   }
+  mountEl.appendChild(container);
+}
+
+/**
+ * Render a `problem` block: a practice question (`block.text`, with an optional
+ * `block.title`) followed by an optional hint and a solution, each hidden inside
+ * a native <details> element so the reader opens it only when ready. `hint` is a
+ * string; `solution` is a string or an array of strings (one paragraph each) and
+ * `answer` (optional) is a short final result shown in bold at the end. All text
+ * is written via `textContent`. A problem with no `solution` shows no reveal.
+ *
+ * @param {ContentBlock} block
+ * @param {HTMLElement} mountEl
+ * @returns {void}
+ */
+function renderProblemBlock(block, mountEl) {
+  const container = blockContainer("problem");
+  container.appendChild(el("p", "problem__label", typeof block?.title === "string" && block.title ? `Problem: ${block.title}` : "Problem"));
+  if (typeof block?.text === "string") container.appendChild(el("p", "problem__text", block.text));
+  const reveal = (summary, paragraphs, answer) => {
+    const d = el("details", "problem__reveal");
+    d.appendChild(el("summary", undefined, summary));
+    for (const t of paragraphs) if (typeof t === "string") d.appendChild(el("p", undefined, t));
+    if (typeof answer === "string" && answer) d.appendChild(el("p", "problem__answer", answer));
+    container.appendChild(d);
+  };
+  if (typeof block?.hint === "string" && block.hint) reveal("Show hint", [block.hint]);
+  const sol = Array.isArray(block?.solution) ? block.solution : typeof block?.solution === "string" ? [block.solution] : [];
+  if (sol.length) reveal("Show solution", sol, block.answer);
   mountEl.appendChild(container);
 }
 
