@@ -44,7 +44,10 @@ nothing is compiled or installed.
   where you are, so links and the back button work.
 - **Look up a term.** Highlight any word or phrase on a page to see an inline
   definition. Matching is case-insensitive and tolerates plurals and small
-  typos; when a term has its own page, the panel links to it.
+  typos; when a term has its own page, the panel links to it. If the first
+  definition is not the term you meant, press **↓** (or the ▼ button) for the
+  next closest match and **↑** to go back; **Esc** closes the panel. Ordinary
+  words such as "the" show no definition.
 - **Interactive lessons.** Some pages include widgets (e.g. a parameter plot)
   with controls you can adjust to see the result update live.
 
@@ -80,3 +83,11 @@ site. If you have Node.js:
 ```sh
 node tests/run.js
 ```
+
+---
+
+## License
+
+The code and the original content are under the [MIT License](LICENSE).
+Third-party images keep their own licenses; see
+`assets/figures/*/CREDITS.md`.
