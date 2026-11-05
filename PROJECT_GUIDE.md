@@ -104,6 +104,8 @@ Where content, code, CSS, and governance material live:
 │       │                        #   plasticity → HTM → Thousand Brains → other models →
 │       │                        #   building an SNN column → reading list (one folder per section).
 │       ├── communication-protocols/  # Overview (index.json) and its one subtopic, vga.json.
+│       ├── analog-design.json + analog-design/  # Analog CMOS design course (Razavi-based): one folder per chapter,
+│       │                        #   subtopic pages with problems (solutions hidden) and simulations from sims/analog.js.
 │       ├── calculus/            # Template topic.
 │       └── game-theory/         # Template topic.
 ├── STYLE_GUIDE.md               # Governance doc #1 — visual standards.
@@ -214,6 +216,7 @@ literally and never interpreted as HTML.
 | `callout` | `text`                         | A highlighted aside. |
 | `figure`  | `src`, `alt`, `caption`        | An image. `src` is a repo-relative path to a file under `assets/figures/` (no scheme, no leading `/`, no `..`; `.svg`, `.png`, `.jpg`, `.gif` or `.webp`). `alt` is **required** text describing what the image shows; `caption` is optional and shown under it as text. A figure with a missing `alt` or an unsafe `src` renders a placeholder instead. |
 | `widget`  | `widget` (a `Widget_Spec`, §3.4) | Delegated to the widget registry; see §7. |
+| `problem` | `title` (optional), `text`, `hint` (optional string), `solution` (string or string[], one paragraph each), `answer` (optional short final result) | A practice question. The hint and solution are hidden in native `<details>` reveals ("Show hint", "Show solution") so the reader opens them only when ready. Used by the Analog Design topic. |
 
 An unknown `type` renders a visible placeholder rather than breaking the page.
 

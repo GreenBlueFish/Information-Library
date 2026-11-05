@@ -1,0 +1,67 @@
+{
+  "title": "Frequency Compensation",
+  "intro": "Compensation reshapes the loop gain so that the phase margin is adequate.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Basic idea"
+    },
+    {
+      "type": "prose",
+      "text": "Place a dominant pole far below all others, so the gain falls through 0 dB at -90 degrees phase, before the second pole contributes much. The price is lower bandwidth. For a single-stage op amp the load capacitor does this job automatically; the bandwidth is gm1/(2*pi*CL)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Miller compensation of two-stage op amps"
+    },
+    {
+      "type": "prose",
+      "text": "A capacitor CC from the output of the second stage back to the first stage's output uses the Miller effect to put a large capacitance at the first stage's output, which pushes the first pole down. It also pushes the second pole up (this is called pole splitting):"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "p1  =  1 / [ gm6 * R1 * R2 * CC ]       (dominant)\np2  =  gm6 / CL                         (approximately)\nGBW =  gm1 / CC\nz   =  gm6 / CC                         (right half plane)"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The RHP zero adds phase lag; it is at gm6/CC, which is only a few times above GBW if gm6 is not much larger than gm1.",
+        "Put a resistor RZ in series with CC. With RZ = 1/gm6 the zero moves to infinity; with RZ larger it moves into the left half plane where it adds phase lead and can cancel p2.",
+        "The second pole at gm6/CL calls for gm6 well above gm1 (about 2 to 4 times) for 60 degrees phase margin."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Slewing in two-stage op amps"
+    },
+    {
+      "type": "prose",
+      "text": "In large-signal operation the first stage sources ISS into CC, so SR = ISS/CC. This limit is independent of the second stage unless the second stage cannot supply (CC + CL)*SR."
+    },
+    {
+      "type": "problem",
+      "title": "Compensating a two-stage amp",
+      "text": "gm1 = 1 mS and CC = 1 pF. Find GBW. The second stage has gm6 = 4 mS and CL = 2 pF. Estimate p2 and the phase margin (ignoring the zero).",
+      "solution": [
+        "GBW = gm1/(2*pi*CC) = 1e-3 / (2*pi * 1e-12) = 159 MHz.",
+        "p2 = gm6/(2*pi*CL) = 4e-3 / (2*pi * 2e-12) = 318 MHz, twice GBW.",
+        "PM = 90 - arctan(GBW/p2) = 90 - arctan(0.5) = 63 degrees."
+      ],
+      "answer": "GBW = 159 MHz, p2 = 318 MHz, PM about 63 degrees."
+    },
+    {
+      "type": "problem",
+      "title": "The RHP zero",
+      "text": "In the amp above, where is the RHP zero? Is it important?",
+      "solution": [
+        "z = gm6/(2*pi*CC) = 4e-3 / (2*pi * 1e-12) = 637 MHz, four times GBW.",
+        "A zero at 4x the unity-gain frequency adds arctan(1/4) = 14 degrees of phase lag, which would lower the phase margin to about 49 degrees; a nulling resistor RZ = 1/gm6 = 250 ohm removes it."
+      ],
+      "answer": "z = 637 MHz; costs about 14 degrees of phase unless nulled with RZ = 250 ohm."
+    }
+  ]
+}

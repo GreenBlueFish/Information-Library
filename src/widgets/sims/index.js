@@ -13,6 +13,7 @@ import * as coding from "./coding.js";
 import * as cortex from "./cortex.js";
 import * as foundations from "./foundations.js";
 import * as columns from "./columns.js";
+import * as analog from "./analog.js";
 
 export const SIMS = {
   lif: neurons.lif,
@@ -62,4 +63,16 @@ export const SIMS = {
   "path-integration": columns.pathIntegration,
   "scalar-encoder": columns.scalarEncoder,
   "evidence-inference": columns.evidenceInference,
+  "mos-iv": analog.mosIV,
+  "gm-from-id": analog.gmFromId,
+  "cs-transfer": analog.csTransfer,
+  "diff-pair": analog.diffPair,
+  "current-mirror": analog.currentMirror,
+  "cs-frequency": analog.csFrequency,
+  "noise-spectrum": analog.noiseSpectrum,
+  "feedback-gain": analog.feedbackGain,
+  "step-response": analog.stepResponse,
+  bandgap: analog.bandgap,
+  "sc-integrator": analog.scIntegrator,
+  "ring-oscillator": analog.ringOscillator,
 };

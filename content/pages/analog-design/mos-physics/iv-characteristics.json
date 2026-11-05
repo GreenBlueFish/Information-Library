@@ -1,0 +1,169 @@
+{
+  "title": "MOS I/V Characteristics",
+  "intro": "The drain current of a long-channel MOSFET follows a square law above threshold. Almost every first-order analog calculation uses these equations.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Overdrive and regions of operation"
+    },
+    {
+      "type": "prose",
+      "text": "Define the overdrive voltage Vov = VGS - VTH. Three regimes matter:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Cutoff: VGS < VTH, the channel is off (apart from leakage and subthreshold current).",
+        "Triode (linear): VGS > VTH and VDS < Vov. The channel reaches the drain and the device behaves like a voltage-controlled resistor.",
+        "Saturation: VGS > VTH and VDS >= Vov. The channel is pinched off at the drain end and the current stops depending (to first order) on VDS. This is where amplifiers are biased."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The equations"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Triode:      ID = mu_n*Cox*(W/L) * [ Vov*VDS - VDS^2/2 ]\nSaturation:  ID = (1/2)*mu_n*Cox*(W/L) * Vov^2 * (1 + lambda*VDS)\nSmall VDS:   Ron = 1 / [ mu_n*Cox*(W/L) * Vov ]"
+    },
+    {
+      "type": "prose",
+      "text": "The derivation integrates the channel charge per unit length, Qd(x) = W*Cox*(VGS - V(x) - VTH), times the carrier velocity along the channel: ID = W*Cox*(VGS - V(x) - VTH)*mu_n*dV/dx. Integrating from source (V = 0) to drain (V = VDS) over length L yields the triode expression; when VDS reaches Vov the charge at the drain goes to zero, the channel pinches off and the current saturates at the VDS = Vov value."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Transconductance"
+    },
+    {
+      "type": "prose",
+      "text": "Transconductance gm = dID/dVGS relates a small change in gate voltage to the change in drain current. In saturation there are three equivalent forms:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "gm = mu_n*Cox*(W/L)*Vov = sqrt( 2*mu_n*Cox*(W/L)*ID ) = 2*ID / Vov"
+    },
+    {
+      "type": "prose",
+      "text": "They tell different stories: at fixed overdrive gm grows with W/L; at fixed current gm grows only with the square root of W/L; and at fixed W/L, gm is proportional to Vov, while 2*ID/Vov says that to get high gm for little current you want a small overdrive (wide transistors). In the limit Vov tends to 0 the square law fails and weak inversion takes over (see Second-order effects)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "ID versus VDS output characteristics",
+        "params": [
+          {
+            "key": "vgs",
+            "label": "VGS (V)",
+            "control": "range",
+            "min": 0.6,
+            "max": 1.6,
+            "step": 0.05,
+            "default": 1.0
+          },
+          {
+            "key": "vth",
+            "label": "VTH (V)",
+            "control": "range",
+            "min": 0.3,
+            "max": 0.7,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "k",
+            "label": "mu_n*Cox*W/L (mA/V^2)",
+            "control": "range",
+            "min": 0.5,
+            "max": 6,
+            "step": 0.1,
+            "default": 2
+          },
+          {
+            "key": "lambda",
+            "label": "lambda (1/V)",
+            "control": "range",
+            "min": 0,
+            "max": 0.3,
+            "step": 0.01,
+            "default": 0.1
+          }
+        ],
+        "config": {
+          "sim": "mos-iv",
+          "xLabel": "VDS (V)",
+          "yLabel": "ID (mA)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Watch where each curve leaves the dashed parabola: that is VDS = Vov, the triode/saturation boundary. In saturation the curves are nearly flat; their slope is set by lambda. Raising VGS lifts the curve with a square-law spacing."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "gm against drain current",
+        "params": [
+          {
+            "key": "k",
+            "label": "mu_n*Cox*W/L (mA/V^2)",
+            "control": "range",
+            "min": 0.5,
+            "max": 8,
+            "step": 0.1,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "gm-from-id",
+          "xLabel": "ID (mA)",
+          "yLabel": "gm (mS)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "At a fixed W/L, gm only grows as the square root of ID, so doubling the current buys just 41 percent more gm. Doubling W/L instead raises gm by the same factor at fixed current, with no power cost, at the price of more capacitance."
+    },
+    {
+      "type": "problem",
+      "title": "A simple bias point",
+      "text": "An NMOS has mu_n*Cox = 200 uA/V^2, W/L = 10, VTH = 0.4 V and lambda = 0. For VGS = 0.8 V and VDS = 1 V find ID and gm. Then find ID for VGS = 0.8 V and VDS = 0.1 V.",
+      "solution": [
+        "Vov = 0.8 - 0.4 = 0.4 V, and VDS = 1 V > Vov so the device is saturated.",
+        "mu_n*Cox*W/L = 200 uA/V^2 * 10 = 2 mA/V^2. ID = 0.5 * 2 mA/V^2 * 0.4^2 = 0.16 mA = 160 uA.",
+        "gm = 2*ID/Vov = 2 * 160 uA / 0.4 V = 0.8 mS.",
+        "With VDS = 0.1 V < Vov the device is in triode: ID = 2 mA/V^2 * (0.4*0.1 - 0.1^2/2) = 2 mA * 0.035 = 70 uA."
+      ],
+      "answer": "ID = 160 uA, gm = 0.8 mS in saturation; ID = 70 uA at VDS = 0.1 V (triode).",
+      "hint": "Check whether VDS is larger than the overdrive voltage first."
+    },
+    {
+      "type": "problem",
+      "title": "Saturation or triode?",
+      "text": "A transistor has VG = 1.5 V, VS = 0 V, VD = 1.0 V, VTH = 0.5 V. Which region is it in? What if VD = 0.6 V?",
+      "solution": [
+        "Vov = 1.5 - 0 - 0.5 = 1.0 V. In saturation VDS must be at least Vov.",
+        "VD = 1.0 V gives VDS = 1.0 V, exactly Vov: the edge of saturation. VD = 0.6 V gives VDS = 0.6 V < 1.0 V: triode."
+      ],
+      "answer": "Edge of saturation at VD = 1.0 V; triode at VD = 0.6 V."
+    },
+    {
+      "type": "problem",
+      "title": "What does 2ID/Vov tell you?",
+      "text": "Two designs carry the same drain current ID = 100 uA. One uses Vov = 0.2 V, the other Vov = 0.4 V. Compare gm, and say what you pay for the higher one.",
+      "solution": [
+        "gm = 2*ID/Vov. First design: 2*100 uA / 0.2 V = 1 mS. Second: 0.5 mS.",
+        "The low-overdrive design has twice the gm for the same current, but needs W/L four times larger (since ID is proportional to (W/L)*Vov^2 at fixed ID, W/L scales as 1/Vov^2). It pays in area and capacitance, and loses voltage headroom margin to stay in saturation."
+      ],
+      "answer": "1 mS versus 0.5 mS; the higher gm costs 4x the width (area and capacitance)."
+    }
+  ]
+}
