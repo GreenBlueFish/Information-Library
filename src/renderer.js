@@ -34,6 +34,7 @@
 
 import { mountWidget } from "./widgets/registry.js";
 import { installHome } from "./home.js";
+import { appendRichText, texToMathML, TexError } from "./math.js";
 
 /**
  * @typedef {import("./router.js").TopicNode} TopicNode
@@ -47,7 +48,7 @@ import { installHome } from "./home.js";
  * One ordered unit of page body content (design.md — Model 2: ContentBlock).
  *
  * @typedef {Object} ContentBlock
- * @property {"prose"|"heading"|"list"|"code"|"callout"|"figure"|"widget"|"problem"} type The block
+ * @property {"prose"|"heading"|"list"|"code"|"callout"|"figure"|"widget"|"problem"|"math"} type The block
  *   kind, used by {@link renderBlock} to pick a per-type renderer.
  * @property {string} [text]   For prose/heading/callout.
  * @property {number} [level]  For heading (2..4).
@@ -56,7 +57,8 @@ import { installHome } from "./home.js";
  * @property {string} [source] For code (the snippet).
  * @property {string} [src]    For figure (repo-relative image path).
  * @property {string} [alt]    For figure (required text alternative).
- * @property {string} [caption] For figure (optional caption).
+ * @property {string} [caption] For figure and math (optional caption).
+ * @property {string} [tex]    For math (a TeX formula, without `$`).
  * @property {object} [widget] For widget blocks (a WidgetSpec).
  */
 
@@ -89,6 +91,21 @@ function el(tag, className, text) {
   const node = document.createElement(tag);
   if (className) node.className = className;
   if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+/**
+ * Like {@link el}, but `$...$` formulas in the text are drawn as MathML (see
+ * src/math.js). Plain text still goes in as text nodes, never HTML.
+ *
+ * @param {string} tag
+ * @param {string} [className]
+ * @param {string} text
+ * @returns {HTMLElement}
+ */
+function richEl(tag, className, text) {
+  const node = el(tag, className);
+  appendRichText(node, text);
   return node;
 }
 
@@ -620,7 +637,7 @@ function renderTopicPage(resolution, pageContent) {
   page.appendChild(el("h1", "page-title", title));
 
   if (pageContent && pageContent.intro) {
-    page.appendChild(el("p", "page-intro", pageContent.intro));
+    page.appendChild(richEl("p", "page-intro", pageContent.intro));
   }
 
   const blocks =
@@ -763,6 +780,7 @@ const BLOCK_RENDERERS = {
   figure: renderFigureBlock,
   widget: renderWidgetBlock,
   problem: renderProblemBlock,
+  math: renderMathBlock,
 };
 
 /**
@@ -825,7 +843,7 @@ function renderProseBlock(block, mountEl) {
   const container = blockContainer("prose");
   // Extension point (task 4.2): render block.text as a <p> via textContent.
   if (block && typeof block.text === "string") {
-    container.appendChild(el("p", undefined, block.text));
+    container.appendChild(richEl("p", undefined, block.text));
   }
   mountEl.appendChild(container);
 }
@@ -846,7 +864,7 @@ function renderHeadingBlock(block, mountEl) {
   const container = blockContainer("heading");
   if (block && typeof block.text === "string") {
     const level = clampHeadingLevel(block.level);
-    container.appendChild(el(`h${level}`, undefined, block.text));
+    container.appendChild(richEl(`h${level}`, undefined, block.text));
   }
   mountEl.appendChild(container);
 }
@@ -882,7 +900,7 @@ function renderListBlock(block, mountEl) {
   const items = block && Array.isArray(block.items) ? block.items : [];
   for (const item of items) {
     if (typeof item !== "string") continue;
-    list.appendChild(el("li", undefined, item));
+    list.appendChild(richEl("li", undefined, item));
   }
   container.appendChild(list);
   mountEl.appendChild(container);
@@ -928,7 +946,33 @@ function renderCodeBlock(block, mountEl) {
 function renderCalloutBlock(block, mountEl) {
   const container = blockContainer("callout");
   if (block && typeof block.text === "string") {
-    container.appendChild(el("p", undefined, block.text));
+    container.appendChild(richEl("p", undefined, block.text));
+  }
+  mountEl.appendChild(container);
+}
+
+/**
+ * Render a `math` block: one display formula from `block.tex` (TeX, without
+ * `$`), centered on its own line, with an optional `block.caption` under it.
+ * A formula that does not parse shows its source as a non-fatal error.
+ *
+ * @param {ContentBlock} block
+ * @param {HTMLElement} mountEl
+ * @returns {void}
+ */
+function renderMathBlock(block, mountEl) {
+  const container = blockContainer("math");
+  const tex = block && typeof block.tex === "string" ? block.tex : "";
+  try {
+    container.appendChild(texToMathML(document, tex, true));
+  } catch (err) {
+    if (!(err instanceof TexError)) throw err;
+    const pre = el("pre", "math-error", tex);
+    pre.setAttribute("title", err.message);
+    container.appendChild(pre);
+  }
+  if (typeof block?.caption === "string" && block.caption) {
+    container.appendChild(richEl("p", "math__caption", block.caption));
   }
   mountEl.appendChild(container);
 }
@@ -948,12 +992,12 @@ function renderCalloutBlock(block, mountEl) {
 function renderProblemBlock(block, mountEl) {
   const container = blockContainer("problem");
   container.appendChild(el("p", "problem__label", typeof block?.title === "string" && block.title ? `Problem: ${block.title}` : "Problem"));
-  if (typeof block?.text === "string") container.appendChild(el("p", "problem__text", block.text));
+  if (typeof block?.text === "string") container.appendChild(richEl("p", "problem__text", block.text));
   const reveal = (summary, paragraphs, answer) => {
     const d = el("details", "problem__reveal");
     d.appendChild(el("summary", undefined, summary));
-    for (const t of paragraphs) if (typeof t === "string") d.appendChild(el("p", undefined, t));
-    if (typeof answer === "string" && answer) d.appendChild(el("p", "problem__answer", answer));
+    for (const t of paragraphs) if (typeof t === "string") d.appendChild(richEl("p", undefined, t));
+    if (typeof answer === "string" && answer) d.appendChild(richEl("p", "problem__answer", answer));
     container.appendChild(d);
   };
   if (typeof block?.hint === "string" && block.hint) reveal("Show hint", [block.hint]);
@@ -997,7 +1041,7 @@ function renderFigureBlock(block, mountEl) {
   img.setAttribute("loading", "lazy");
   figure.appendChild(img);
   if (typeof block.caption === "string" && block.caption.length > 0) {
-    figure.appendChild(el("figcaption", "figure__caption", block.caption));
+    figure.appendChild(richEl("figcaption", "figure__caption", block.caption));
   }
   mountEl.appendChild(figure);
 }
