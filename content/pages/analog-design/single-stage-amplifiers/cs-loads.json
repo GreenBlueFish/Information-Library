@@ -1,0 +1,185 @@
+{
+  "title": "CS Stage with Transistor Loads",
+  "intro": "On chip the load resistor is usually a transistor. Each choice (diode-connected, current source, active, triode) gives a different balance of gain, linearity, swing and robustness (Razavi, Sections 3.3.2 to 3.3.5).",
+  "blocks": [
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/single-stage-amplifiers-cs-loads.svg",
+      "alt": "Five common-source stages side by side, each with NMOS input M1 at the bottom and load M2 at the top. (a) M2 is an NMOS with gate and drain tied to VDD. (b) M2 is a PMOS with its gate tied to its drain at the output. (c) M2 is a PMOS with its gate at a bias voltage Vb. (d) M2 is a PMOS whose gate is tied to M1's gate, both driven by Vin, forming a CMOS inverter. (e) M2 is a PMOS with its gate at a low bias voltage so it operates in triode.",
+      "caption": "Common-source stages with (a) diode-connected NMOS, (b) diode-connected PMOS, (c) current-source, (d) active and (e) triode loads."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The diode-connected transistor"
+    },
+    {
+      "type": "prose",
+      "text": "Tie a MOSFET's gate to its drain and it is always saturated (its drain can never be a threshold below its gate). Applying $v_X$ and measuring $i_X$ gives $i_X = g_m v_X + v_X/r_o$, so it behaves as a resistor; if its source is not at the bulk, body effect adds $g_{mb}$:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{diode} = \\frac{1}{g_m} \\parallel r_o \\approx \\frac{1}{g_m}, \\qquad R_{diode} = \\frac{1}{g_m + g_{mb}} \\parallel r_o \\approx \\frac{1}{g_m + g_{mb}} \\;\\text{(source not at bulk)}"
+    },
+    {
+      "type": "prose",
+      "text": "Body effect lowers the resistance: when the source moves, the threshold moves in the direction that helps the current change. The same $1/(g_m + g_{mb})$ is what you see looking into the source of any transistor whose drain is at AC ground (with $\\lambda = 0$ the drain connection does not matter). In large-signal terms a diode-connected device takes the square root of its current: its overdrive is $\\sqrt{2I_D/(\\mu C_{ox}W/L)}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Diode-connected load"
+    },
+    {
+      "type": "prose",
+      "text": "With an NMOS diode load (a), the load resistance is $1/(g_{m2} + g_{mb2})$ and, since both devices carry the same current,"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = -\\frac{g_{m1}}{g_{m2}}\\frac{1}{1+\\eta} = -\\sqrt{\\frac{(W/L)_1}{(W/L)_2}}\\;\\frac{1}{1+\\eta}"
+    },
+    {
+      "type": "prose",
+      "text": "The gain is a ratio of device sizes, nearly independent of bias, so the stage is quite linear. The large-signal equation shows why: equating the two square-law currents gives $\\sqrt{(W/L)_1}(V_{in} - V_{TH1}) = \\sqrt{(W/L)_2}(V_{DD} - V_{out} - V_{TH2})$, a straight line apart from the variation of $V_{TH2}$. M1 squares the input, M2 takes the square root, and the two cancel."
+    },
+    {
+      "type": "prose",
+      "text": "Below threshold the output sits near $V_{DD} - V_{TH2}$, not at $V_{DD}$: as M2's current falls toward zero its $V_{GS}$ only approaches $V_{TH}$, and the last bit of the climb (through subthreshold current) is so slow that in a switching circuit the output is assumed to stay there. Above $V_{in} = V_{out} + V_{TH1}$, M1 enters triode and the characteristic bends."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "PMOS diode load"
+    },
+    {
+      "type": "prose",
+      "text": "A PMOS diode (b) avoids body effect:"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = -\\sqrt{\\frac{\\mu_n (W/L)_1}{\\mu_p (W/L)_2}}, \\qquad \\frac{|V_{GS2} - V_{TH2}|}{V_{GS1} - V_{TH1}} = |A_v|"
+    },
+    {
+      "type": "prose",
+      "text": "The second relation (equal currents with $\\lambda = 0$) is the catch: a gain of 5 needs a load overdrive five times the input overdrive, and the output can never rise above $V_{DD} - |V_{TH2}|$. High gain needs a strong input device and a weak load, i.e. very unequal sizes (a gain of 5 with $\\mu_n \\approx 2\\mu_p$ needs $(W/L)_1 \\approx 12.5(W/L)_2$), and costs swing. There is no contradiction with $|A_v| = g_{m1}/g_{m2} \\propto 1/|V_{GS2} - V_{TH2}|$: that form holds sizes fixed, while the swing relation holds the gain fixed."
+    },
+    {
+      "type": "prose",
+      "text": "A useful trick: add a current source $I_S$ from $V_{DD}$ to the output that supplies part of M1's current, so M2 carries less. If $I_S = 0.75 I_1$, M2 carries $I_1/4$; then $|A_v| = \\sqrt{4\\mu_n(W/L)_1/[\\mu_p(W/L)_2]}$ and the overdrive ratio is only $|A_v|/4$. For a given overdrive, the gain is four times larger. (Differentiating the bias equation directly would give the wrong gain, because that equation only holds at one input voltage.) With short-channel devices include $r_o$: $A_v = -g_{m1}\\left(\\frac{1}{g_{m2}} \\parallel r_{o1} \\parallel r_{o2}\\right)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Current-source load"
+    },
+    {
+      "type": "prose",
+      "text": "For more gain the load should present a large small-signal resistance without a large DC drop, which a resistor cannot do (Ohm's law ties the two). A saturated PMOS with fixed gate bias (c) can:"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = -g_{m1}(r_{o1} \\parallel r_{o2})"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M2 only needs $|V_{DS2}| \\ge |V_{GS2} - V_{TH2}|$, which can be under 100 mV with a wide device, yet presents $r_{o2}$.",
+        "Longer devices give more gain: $g_m r_o = \\sqrt{2\\mu_n C_{ox}(W/L)I_D}/(\\lambda I_D)$ rises with $L$ because $\\lambda \\propto 1/L$ dominates. Lengthening M1 at fixed $W$ lowers $g_{m1}$ and raises its overdrive, so $W$ often grows too. Lengthening M2 at fixed $W$ raises $r_{o2}$ but also its minimum $|V_{DS}|$. Gain also falls as $I_D$ rises, since $g_m r_o \\propto 1/\\sqrt{I_D}$.",
+        "Swing: the output ranges from $V_{in} - V_{TH1}$ up to $V_{DD} - |V_{GS2} - V_{TH2}|$, slightly less than with a resistor (which can rise to $V_{DD}$), but the gain is far higher.",
+        "Two high-impedance current sources in series leave the output DC level undefined: a small mismatch between them moves it a long way. Such a stage must sit inside a feedback loop that fixes its operating point."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Active load (complementary CS stage)"
+    },
+    {
+      "type": "prose",
+      "text": "Drive M2's gate with the input too (d), and the circuit is a CMOS inverter biased in its high-gain middle region. A rising input both increases M1's current and decreases M2's, and the two effects add: the devices act in parallel."
+    },
+    {
+      "type": "math",
+      "tex": "A_v = -(g_{m1} + g_{m2})(r_{o1} \\parallel r_{o2})"
+    },
+    {
+      "type": "prose",
+      "text": "Same output resistance as the current-source load, more transconductance. Two serious problems limit its use: the bias current is set by $V_{GS1} + |V_{GS2}| = V_{DD}$, so it depends strongly on PVT, and the stage amplifies supply noise. With M2's gate held at a fixed bias relative to ground, the gain from $V_{DD}$ to the output is"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{v_{out}}{v_{dd}} = \\left(g_{m2} + \\frac{1}{r_{o2}}\\right)(r_{o1} \\parallel r_{o2})"
+    },
+    {
+      "type": "prose",
+      "text": "which is comparable to the signal gain itself. (Fixes are discussed under Current Mirrors and Biasing.)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Triode load"
+    },
+    {
+      "type": "prose",
+      "text": "A PMOS whose gate is pulled low enough (e) stays in deep triode over the whole output swing and acts as a resistor"
+    },
+    {
+      "type": "math",
+      "tex": "R_{on2} = \\frac{1}{\\mu_p C_{ox}(W/L)_2(V_{DD} - V_b - |V_{THP}|)}"
+    },
+    {
+      "type": "prose",
+      "text": "It uses less headroom than a diode load (the output can reach $V_{DD}$, against $V_{DD} - |V_{THP}|$), but its value depends on $\\mu_p C_{ox}$, $V_{THP}$ and an accurate $V_b$, all of which vary, so it is rarely used. Of the five loads, resistive, current-source and active loads see the widest use."
+    },
+    {
+      "type": "problem",
+      "title": "Diode-connected NMOS load",
+      "text": "A CS stage uses a diode-connected NMOS load. $(W/L)_1 = 25$ and $(W/L)_2 = 1$ at equal currents. Find the gain without body effect and with $\\eta = 0.2$.",
+      "solution": [
+        "$g_{m1}/g_{m2} = \\sqrt{25/1} = 5$, so $A_v = -5$.",
+        "With body effect the load conductance is $g_{m2}(1+\\eta)$, so $A_v = -5/1.2 \\approx -4.17$."
+      ],
+      "answer": "$-5$, then $-4.17$."
+    },
+    {
+      "type": "problem",
+      "title": "PMOS diode load and swing",
+      "text": "With $\\mu_n = 2\\mu_p$, $(W/L)_1 = 10$ and $(W/L)_2 = 5$, find the gain of a CS stage with a PMOS diode load. If M1's overdrive is 0.15 V and $|V_{TH2}| = 0.4\\text{ V}$, how far below $V_{DD}$ does the output sit?",
+      "solution": [
+        "$|A_v| = \\sqrt{2 \\cdot 10/5} = 2$.",
+        "M2's overdrive is $|A_v|$ times M1's: 0.3 V. So $|V_{GS2}| = 0.7\\text{ V}$ and the output sits 0.7 V below $V_{DD}$."
+      ],
+      "answer": "$|A_v| = 2$; the output sits at $V_{DD} - 0.7\\text{ V}$."
+    },
+    {
+      "type": "problem",
+      "title": "Current-source load",
+      "text": "$g_{m1} = 1\\text{ mS}$, $r_{o1} = 40\\text{ k}\\Omega$, $r_{o2} = 20\\text{ k}\\Omega$. Find the gain. Then $L_2$ is doubled at the same width and current; what is the new gain, and what is the cost?",
+      "solution": [
+        "$A_v = -1\\text{ mS} \\cdot (40\\text{ k}\\Omega \\parallel 20\\text{ k}\\Omega) = -13.3$.",
+        "Doubling $L_2$ halves $\\lambda_2$, so $r_{o2} = 40\\text{ k}\\Omega$ and $A_v = -20$. M2's $W/L$ halves, so its overdrive (and minimum $|V_{DS}|$) rises by $\\sqrt{2}$, eating swing, and its capacitance at the output doubles."
+      ],
+      "answer": "$-13.3$, then $-20$ at the cost of swing and capacitance."
+    },
+    {
+      "type": "problem",
+      "title": "Active load",
+      "text": "In a CMOS inverter amplifier $g_{m1} = 1\\text{ mS}$, $g_{m2} = 0.5\\text{ mS}$ and $r_{o1} = r_{o2} = 20\\text{ k}\\Omega$. Find the signal gain, and the gain from $V_{DD}$ to the output when M2's gate is held at a fixed voltage.",
+      "solution": [
+        "$A_v = -(1.5\\text{ mS})(10\\text{ k}\\Omega) = -15$.",
+        "Supply gain: $(0.5\\text{ mS} + 0.05\\text{ mS})(10\\text{ k}\\Omega) = 5.5$. Supply noise reaches the output at a third of the signal gain."
+      ],
+      "answer": "$-15$ for the signal; $5.5$ from the supply."
+    },
+    {
+      "type": "problem",
+      "title": "Triode load",
+      "text": "A PMOS triode load has $\\mu_p C_{ox} = 50\\,\\mu\\text{A/V}^2$, $W/L = 5$, $|V_{THP}| = 0.5\\text{ V}$, $V_{DD} = 1.8\\text{ V}$ and $V_b = 0.2\\text{ V}$. Find $R_{on2}$ and the gain if $g_{m1} = 2\\text{ mS}$ (ignore $r_o$).",
+      "solution": [
+        "$R_{on2} = \\frac{1}{250\\,\\mu\\text{A/V}^2 \\cdot (1.8 - 0.2 - 0.5)\\text{ V}} = \\frac{1}{275\\,\\mu\\text{S}} \\approx 3.64\\text{ k}\\Omega$.",
+        "$A_v = -2\\text{ mS} \\cdot 3.64\\text{ k}\\Omega \\approx -7.3$. A 50 mV error in $V_b$ changes $R_{on2}$ by about 5 percent."
+      ],
+      "answer": "$R_{on2} \\approx 3.64\\text{ k}\\Omega$, $A_v \\approx -7.3$."
+    }
+  ]
+}

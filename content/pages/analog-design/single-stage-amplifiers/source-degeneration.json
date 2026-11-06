@@ -1,0 +1,135 @@
+{
+  "title": "Source Degeneration",
+  "intro": "A resistor in the source of a CS device trades gain for linearity and raises the output resistance. The analysis also yields the most useful shortcut in the chapter, $A_v = -G_m R_{out}$ (Razavi, Section 3.3.6).",
+  "blocks": [
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/single-stage-amplifiers-degenerated-cs.svg",
+      "alt": "Common-source stage: NMOS M1 with gate driven by Vin, drain connected through RD to VDD with the output Vout taken at the drain, and a resistor RS from the source to ground.",
+      "caption": "CS stage with source degeneration."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Equivalent transconductance"
+    },
+    {
+      "type": "prose",
+      "text": "When $V_{in}$ rises, the drain current and the drop across $R_S$ rise too, so only part of the input change reaches $V_{GS}$. Define the stage's transconductance $G_m = \\partial I_D/\\partial V_{in}$. With $V_{GS} = V_{in} - I_D R_S$ and $\\lambda = \\gamma = 0$:"
+    },
+    {
+      "type": "math",
+      "tex": "G_m = \\frac{g_m}{1 + g_m R_S}, \\qquad A_v = -G_m R_D = -\\frac{g_m R_D}{1 + g_m R_S} = -\\frac{R_D}{\\frac{1}{g_m} + R_S}"
+    },
+    {
+      "type": "prose",
+      "text": "For $R_S \\gg 1/g_m$, $G_m \\approx 1/R_S$: almost all of the input change appears across the resistor and $\\Delta I_D \\approx \\Delta V_{in}/R_S$, so the current is a linearized function of the input. The price is lower gain (and, as shown under Noise, more noise)."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/single-stage-amplifiers-degeneration-gm.svg",
+      "alt": "Plot of transconductance in millisiemens against input voltage from 0.3 to 1.5 volts. A dashed line, the plain transistor's gm, rises linearly from zero at 0.4 volts to above 3 mS. The solid curve with 1 kilohm degeneration starts the same way but bends over and flattens toward a dotted horizontal line at 1 mS, the value of 1 over RS.",
+      "caption": "Gm with and without degeneration. Near threshold the two agree; at high overdrive Gm saturates at 1/RS, which makes the gain nearly constant."
+    },
+    {
+      "type": "prose",
+      "text": "In large-signal terms: near threshold $1/g_m \\gg R_S$ and the stage behaves as if undegenerated; as the overdrive grows $g_m R_S$ takes over and $G_m$ approaches $1/R_S$. The gain therefore starts at about $-g_m R_D$, becomes $-g_m R_D/(1 + g_m R_S)$ and levels off near $-R_D/R_S$, until the drain drops low enough ($R_D I_D > V_{DD} - V_{in} + V_{TH}$) to push M1 into triode."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Gain by inspection"
+    },
+    {
+      "type": "prose",
+      "text": "The last form of the gain reads naturally: $|A_v|$ equals the resistance seen at the drain divided by the resistance in the source path, where the source path is $1/g_m$ (looking into the source) plus whatever explicit resistance is there. For example, a diode-connected device M2 in the source of M1 gives $A_v = -R_D/(1/g_{m1} + 1/g_{m2})$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Output resistance"
+    },
+    {
+      "type": "prose",
+      "text": "Apply $v_X$ to the drain (without $R_D$) and include body effect. The current $i_X$ flows through $R_S$, so $v_{gs} = v_{bs} = -i_X R_S$; the current through $r_o$ is $i_X + (g_m + g_{mb})R_S i_X$. Adding the drops across $r_o$ and $R_S$:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{out} = [1 + (g_m + g_{mb})R_S]r_o + R_S = [1 + (g_m + g_{mb})r_o]R_S + r_o"
+    },
+    {
+      "type": "prose",
+      "text": "Two views of the same result: $r_o$ boosted by $1 + (g_m + g_{mb})R_S$ and added to $R_S$, or $R_S$ boosted by about the intrinsic gain and added to $r_o$. Physically, raising the drain pushes more current through $R_S$, which lowers $V_{GS}$ (and raises $V_{TH}$) and opposes the current increase. A third derivation: the source of M1 sees $1/(g_m + g_{mb})$ upward, which in parallel with $R_S$ forms a divider with $r_o$, so only a small fraction of the drain change reaches the source. The stage's total output resistance is $R_{out} \\parallel R_D$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The general gain and the gain lemma"
+    },
+    {
+      "type": "prose",
+      "text": "With $\\lambda$ and $\\gamma$ included, the degenerated device's transconductance and the full gain are"
+    },
+    {
+      "type": "math",
+      "tex": "G_m = \\frac{g_m r_o}{R_S + [1 + (g_m + g_{mb})R_S]r_o}"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = \\frac{-g_m r_o R_D}{R_D + R_S + r_o + (g_m + g_{mb})R_S r_o}"
+    },
+    {
+      "type": "prose",
+      "text": "The gain factors into exactly that $G_m$ times the parallel combination of $R_D$ with the $R_{out}$ above. This is no coincidence. Any linear circuit's output looks like a Norton equivalent, a current source $G_m v_{in}$ in parallel with $R_{out}$, so"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = -G_m R_{out}",
+      "caption": "Gain lemma: $G_m$ from the output current with the output shorted to AC ground; $R_{out}$ with the input set to zero"
+    },
+    {
+      "type": "prose",
+      "text": "It is often far easier to find $G_m$ and $R_{out}$ by inspection than to solve the whole circuit. Example: bias a degenerated device with an ideal current source as the load. Then $R_{out}$ is the boosted expression above and $G_m$ is its reciprocal times $g_m r_o$, so $A_v = -g_m r_o$, independent of $R_S$. Intuitively, an ideal current source allows no signal current through $R_S$, so $R_S$ carries no signal voltage and might as well be absent."
+    },
+    {
+      "type": "problem",
+      "title": "Degeneration trades gain for linearity",
+      "text": "$g_m = 2\\text{ mS}$, $R_D = 10\\text{ k}\\Omega$ ($r_o$ infinite). Find the gain for $R_S = 500\\,\\Omega$ and for $R_S = 5\\text{ k}\\Omega$.",
+      "solution": [
+        "$R_S = 500\\,\\Omega$: $g_m R_S = 1$, so $A_v = -20/2 = -10$.",
+        "$R_S = 5\\text{ k}\\Omega$: $g_m R_S = 10$, so $A_v = -20/11 \\approx -1.82$, close to $-R_D/R_S = -2$."
+      ],
+      "answer": "$-10$, then $-1.82$ (limit $-2$)."
+    },
+    {
+      "type": "problem",
+      "title": "Gm and Rout with everything included",
+      "text": "$g_m = 2\\text{ mS}$, $g_{mb} = 0.4\\text{ mS}$, $r_o = 20\\text{ k}\\Omega$, $R_S = 1\\text{ k}\\Omega$, $R_D = 10\\text{ k}\\Omega$. Find $G_m$, $R_{out}$ (excluding $R_D$) and the gain.",
+      "solution": [
+        "$(g_m + g_{mb})R_S = 2.4$. $G_m = \\frac{40}{1\\text{ k}\\Omega + 3.4 \\cdot 20\\text{ k}\\Omega} = \\frac{40}{69\\text{ k}\\Omega} \\approx 0.58\\text{ mS}$ (the simple formula gives 0.67 mS).",
+        "$R_{out} = 3.4 \\cdot 20\\text{ k}\\Omega + 1\\text{ k}\\Omega = 69\\text{ k}\\Omega$.",
+        "$A_v = -G_m(R_{out} \\parallel R_D) = -0.58\\text{ mS} \\cdot 8.73\\text{ k}\\Omega \\approx -5.06$. The full formula agrees: $-400\\text{ k}\\Omega/(10 + 1 + 20 + 48)\\text{ k}\\Omega = -5.06$."
+      ],
+      "answer": "$G_m \\approx 0.58\\text{ mS}$, $R_{out} = 69\\text{ k}\\Omega$, $A_v \\approx -5.06$."
+    },
+    {
+      "type": "problem",
+      "title": "A diode in the source",
+      "text": "M1 ($g_{m1} = 2\\text{ mS}$) has a diode-connected M2 ($g_{m2} = 1\\text{ mS}$) in its source and $R_D = 10\\text{ k}\\Omega$ in its drain. Ignoring $\\lambda$ and $\\gamma$, find the gain.",
+      "solution": [
+        "Source path: $1/g_{m1} + 1/g_{m2} = 0.5 + 1 = 1.5\\text{ k}\\Omega$. $A_v = -10/1.5 \\approx -6.67$."
+      ],
+      "answer": "$A_v \\approx -6.67$."
+    },
+    {
+      "type": "problem",
+      "title": "Degeneration with a current-source load",
+      "text": "A degenerated device with $g_m r_o = 40$ and $R_S = 2\\text{ k}\\Omega$ drives an ideal current-source load. Find the gain. What changes if $R_S$ is doubled?",
+      "solution": [
+        "By the lemma, $A_v = -G_m R_{out} = -g_m r_o = -40$.",
+        "Nothing: the ideal source forces zero signal current through $R_S$, so its value does not matter."
+      ],
+      "answer": "$-40$ in both cases."
+    }
+  ]
+}

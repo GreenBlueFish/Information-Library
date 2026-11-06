@@ -1,30 +1,133 @@
 {
   "title": "Common-Gate Stage",
-  "intro": "In the common-gate (CG) stage the signal enters at the source and exits at the drain, with the gate held at a DC bias.",
+  "intro": "In the common-gate (CG) stage the input drives the source, the output is taken at the drain and the gate is held at a DC bias. It has low input resistance, a non-inverting gain, and is the top half of every cascode (Razavi, Section 3.5).",
   "blocks": [
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Av = gm*RD   (non-inverting; with RS: gm*RD / (1 + gm*RS))\nRin = 1/gm   (higher with a load: about 1/gm + RD/(gm*ro) )\nRout = RD || [ro*(1 + gm*RS) + RS]"
+      "type": "figure",
+      "src": "assets/figures/analog-design/single-stage-amplifiers-cg-stage.svg",
+      "alt": "Common-gate stage: NMOS M1 with gate at a bias voltage Vb, drain connected to VDD through RD with the output Vout at the drain, and source connected to a current source I1 to ground. The input Vin is coupled to the source through capacitor C1.",
+      "caption": "A CG stage biased by a current source, with the input capacitively coupled. The input can also drive the source directly, in which case the bias current flows through the signal source."
     },
     {
-      "type": "list",
-      "items": [
-        "The input resistance 1/gm is low, so a CG stage is a good current buffer: it loads a current source with a small impedance and passes the current to RD.",
-        "Gain is the same size as the CS gain, but the signal does not invert.",
-        "Body effect actually helps: gm is replaced by gm + gmb in the gain expression, increasing it by a factor (1 + eta).",
-        "CG is the top half of the cascode and is also used for matching a source impedance, as in an RF low-noise amplifier."
-      ]
+      "type": "heading",
+      "level": 2,
+      "text": "Large-signal behaviour and gain"
+    },
+    {
+      "type": "prose",
+      "text": "With the input driving the source directly, sweep $V_{in}$ down from a high value. For $V_{in} \\ge V_b - V_{TH}$, M1 is off and $V_{out} = V_{DD}$. Below that, in saturation,"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = V_{DD} - \\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L}(V_b - V_{in} - V_{TH})^2 R_D"
+    },
+    {
+      "type": "prose",
+      "text": "until $V_{out}$ falls to $V_b - V_{TH}$ and M1 enters triode. Since $\\partial V_{TH}/\\partial V_{in} = \\eta$, the small-signal gain is"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = g_m(1 + \\eta)R_D = (g_m + g_{mb})R_D"
+    },
+    {
+      "type": "prose",
+      "text": "It is positive, and body effect helps: raising the source raises the threshold, which reduces the current further. For a given current and supply, the gain can be raised by widening M1 (toward subthreshold, where $g_m \\to I_D/(\\xi V_T)$) or by enlarging $R_D$ and its DC drop; with a current-source bias, $V_{out}$ cannot go below $V_{GS} - V_{TH} + V_{I1}$, where $V_{I1}$ is the minimum voltage the bias source needs. By choice of $V_b$ and $R_D$ the device can be kept saturated for the whole input range ($V_{DD} - R_D I_D > V_b - V_{TH}$ at the largest current), or, impractically, kept in triode throughout ($V_b > V_{DD} + V_{TH}$)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Input resistance"
+    },
+    {
+      "type": "prose",
+      "text": "With $\\lambda = 0$ the source sees $1/(g_m + g_{mb})$, the same as a follower's output. That low value is the point of the stage: it can terminate a transmission line or accept a current signal. Including $r_o$ changes the picture:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{in} = \\frac{R_D + r_o}{1 + (g_m + g_{mb})r_o} \\approx \\frac{1}{g_m + g_{mb}} + \\frac{R_D}{(g_m + g_{mb})r_o}"
+    },
+    {
+      "type": "prose",
+      "text": "The drain resistance appears at the source divided by the intrinsic gain, which is not much in short-channel devices. With $R_D = 0$ this reduces to the follower result $\\frac{1}{g_m + g_{mb}} \\parallel r_o$. With an ideal current-source load, $R_{in} \\to \\infty$: the device current cannot change, so moving the source draws no current. The input resistance is low only if the drain load is low."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Example: terminating a line"
+    },
+    {
+      "type": "prose",
+      "text": "A CS device M1 sends its signal current down a $50\\,\\Omega$ line. Ending the line in a $50\\,\\Omega$ resistor gives $A_v = -g_{m1} \\cdot 50\\,\\Omega$. Ending it instead at the source of a CG device M2 sized so $1/(g_{m2} + g_{mb2}) = 50\\,\\Omega$ still terminates the line without reflections, but the signal current now flows on to a drain resistor $R_D$ that can be much larger than $50\\,\\Omega$: same $-g_{m1}R_D$ form, much higher gain. Keeping M2's capacitance small calls for a small device at a large current, which costs power and $V_{GS}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "General gain and output resistance"
+    },
+    {
+      "type": "prose",
+      "text": "With a source resistance $R_S$ driving the input and $r_o$ included:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{v_{out}}{v_{in}} = \\frac{(g_m + g_{mb})r_o + 1}{r_o + (g_m + g_{mb})r_o R_S + R_S + R_D}\\,R_D"
+    },
+    {
+      "type": "prose",
+      "text": "This resembles the degenerated CS gain, slightly larger because of body effect. With a current-source load ($R_D \\to \\infty$) it becomes $A_v = (g_m + g_{mb})r_o + 1$, independent of $R_S$: the source then sees an infinite resistance, so the source node simply follows $v_{in}$. Results can be reused by inspection; for instance, a follower M1 driving the source of a CG device M2 is replaced by its Thevenin equivalent ($v_{in}$ times the follower gain, behind $r_{o1} \\parallel \\frac{1}{g_{m1}} \\parallel \\frac{1}{g_{mb1}}$) and plugged into the formula above."
+    },
+    {
+      "type": "prose",
+      "text": "Looking back into the drain, the circuit is a device degenerated by $R_S$:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{out} = \\left\\{[1 + (g_m + g_{mb})r_o]R_S + r_o\\right\\} \\parallel R_D"
+    },
+    {
+      "type": "prose",
+      "text": "When the input is a current source $I_{in}$ with its own output resistance $R_P$, replace it by a Thevenin source $I_{in}R_P$ behind $R_P$ and use the same two formulas. This is the CG stage as a current buffer: it takes current at a low impedance and delivers it at a high one."
     },
     {
       "type": "problem",
       "title": "Input resistance and gain",
-      "text": "gm = 2 mS, gmb = 0, RD = 5 kohm, source driven by a signal source of resistance RS = 500 ohm. Find the voltage gain Vout/Vin (including RS as a divider) and the input resistance.",
+      "text": "$g_m = 2\\text{ mS}$, $g_{mb} = 0$, $R_D = 5\\text{ k}\\Omega$, and the source is driven by a signal source with $R_S = 500\\,\\Omega$ ($\\lambda = 0$). Find the overall gain and the input resistance.",
       "solution": [
-        "Rin = 1/gm = 500 ohm. The source resistance RS = 500 ohm and Rin form a divider with ratio Rin/(Rin+RS) = 0.5.",
-        "The gain from the stage input to output is gm*RD = 10, so the gain from the source is 0.5 * 10 = 5. The same answer comes from gm*RD/(1 + gm*RS) = 10/2 = 5."
+        "$R_{in} = 1/g_m = 500\\,\\Omega$, which forms a divider of 0.5 with $R_S$.",
+        "The stage gain is $g_m R_D = 10$, so overall $5$. The formula $g_m R_D/(1 + g_m R_S) = 10/2 = 5$ agrees."
       ],
-      "answer": "Rin = 500 ohm, overall gain = 5."
+      "answer": "$R_{in} = 500\\,\\Omega$, overall gain 5."
+    },
+    {
+      "type": "problem",
+      "title": "Input resistance with a real drain load",
+      "text": "$g_m = 2\\text{ mS}$, $g_{mb} = 0$, $r_o = 10\\text{ k}\\Omega$, $R_D = 20\\text{ k}\\Omega$. Find $R_{in}$. What would it be with an ideal current-source load?",
+      "solution": [
+        "$R_{in} = \\frac{20 + 10}{1 + 20}\\text{ k}\\Omega \\approx 1.43\\text{ k}\\Omega$, almost three times $1/g_m$.",
+        "With an ideal current-source load it is infinite."
+      ],
+      "answer": "About $1.43\\text{ k}\\Omega$; infinite with an ideal current source."
+    },
+    {
+      "type": "problem",
+      "title": "Sizing a 50-ohm termination",
+      "text": "A CG device with $\\eta = 0.2$ must present $50\\,\\Omega$ at its source. What $g_m$ is needed, and what current if it runs at 0.2 V overdrive?",
+      "solution": [
+        "$g_m(1 + \\eta) = 20\\text{ mS}$, so $g_m \\approx 16.7\\text{ mS}$.",
+        "$I_D = g_m V_{ov}/2 = 16.7\\text{ mS} \\cdot 0.1\\text{ V} \\approx 1.67\\text{ mA}$."
+      ],
+      "answer": "$g_m \\approx 16.7\\text{ mS}$, $I_D \\approx 1.67\\text{ mA}$."
+    },
+    {
+      "type": "problem",
+      "title": "Gain and output resistance",
+      "text": "$g_m = 2\\text{ mS}$, $g_{mb} = 0.4\\text{ mS}$, $r_o = 20\\text{ k}\\Omega$, $R_S = 500\\,\\Omega$, $R_D = 10\\text{ k}\\Omega$. Find the gain and $R_{out}$. Then find the gain with an ideal current-source load.",
+      "solution": [
+        "$(g_m + g_{mb})r_o = 48$. Gain $= \\frac{49 \\cdot 10\\text{ k}\\Omega}{20 + 24 + 0.5 + 10\\text{ k}\\Omega} = \\frac{490}{54.5} \\approx 9.0$ (the simple $g_m R_D/(1 + g_m R_S)$ gives 10).",
+        "$R_{out} = (49 \\cdot 0.5 + 20)\\text{ k}\\Omega \\parallel 10\\text{ k}\\Omega = 44.5 \\parallel 10 \\approx 8.2\\text{ k}\\Omega$.",
+        "Current-source load: $A_v = 48 + 1 = 49$."
+      ],
+      "answer": "Gain $\\approx 9.0$, $R_{out} \\approx 8.2\\text{ k}\\Omega$; 49 with a current-source load."
     }
   ]
 }
