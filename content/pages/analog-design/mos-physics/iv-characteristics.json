@@ -1,23 +1,88 @@
 {
   "title": "MOS I/V Characteristics",
-  "intro": "The drain current of a long-channel MOSFET follows a square law above threshold. Almost every first-order analog calculation uses these equations.",
+  "intro": "The drain current of a long-channel MOSFET follows a square law above threshold. This page derives it, defines the regions of operation and introduces transconductance (Razavi, Section 2.2).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Overdrive and regions of operation"
+      "text": "Threshold voltage"
     },
     {
       "type": "prose",
-      "text": "Define the overdrive voltage Vov = VGS - VTH. Three regimes matter:"
+      "text": "Raise the gate of an NMOS from zero with source, drain and bulk grounded. First the positive gate repels holes from the surface, leaving a depletion region of fixed negative ions; no current can flow because there are no mobile carriers. The gate oxide and the depletion region act like two capacitors in series dividing the gate voltage. As $V_G$ rises the surface potential rises until electrons from the source flood in and form a thin inversion layer (the channel) joining source and drain. Beyond that point extra gate charge is mirrored almost entirely by more channel electrons, while the depletion charge stays roughly constant."
     },
     {
-      "type": "list",
-      "items": [
-        "Cutoff: VGS < VTH, the channel is off (apart from leakage and subthreshold current).",
-        "Triode (linear): VGS > VTH and VDS < Vov. The channel reaches the drain and the device behaves like a voltage-controlled resistor.",
-        "Saturation: VGS > VTH and VDS >= Vov. The channel is pinched off at the drain end and the current stops depending (to first order) on VDS. This is where amplifiers are biased."
-      ]
+      "type": "prose",
+      "text": "Turn-on is gradual, so $V_{TH}$ needs a definition. The physics definition is the gate voltage at which the surface is as strongly n-type as the bulk is p-type, giving"
+    },
+    {
+      "type": "math",
+      "tex": "V_{TH} = \\Phi_{MS} + 2\\Phi_F + \\frac{Q_{dep}}{C_{ox}}, \\qquad \\Phi_F = \\frac{kT}{q}\\ln\\frac{N_{sub}}{n_i}, \\qquad Q_{dep} = \\sqrt{4 q \\epsilon_{si} |\\Phi_F| N_{sub}}"
+    },
+    {
+      "type": "prose",
+      "text": "Here $\\Phi_{MS}$ is the gate-substrate work-function difference, $N_{sub}$ the substrate doping and $C_{ox}$ the oxide capacitance per unit area ($\\epsilon_{ox}/t_{ox}$; about $17\\text{ fF/}\\mu\\text{m}^2$ for $t_{ox} = 2\\text{ nm}$, scaling inversely with thickness). The natural value is rarely what circuits want, so fabs adjust it with a threshold-adjust implant near the surface: a thin p+ layer raises $V_{TH}$. For a PMOS everything is mirrored: a sufficiently negative $V_{GS}$ forms a hole channel and $V_{TH}$ is negative. For the rest of the chapter assume the device switches on abruptly at $V_{GS} = V_{TH}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Deriving the I/V curve"
+    },
+    {
+      "type": "prose",
+      "text": "Two facts give the whole characteristic. First, a current is charge density times velocity: if a bar carries $Q_d$ coulombs per metre moving at $v$ metres per second, $I = Q_d v$. Second, above threshold the channel charge per unit length is set by the gate voltage in excess of threshold. With the drain at $V_{DS}$ the channel potential $V(x)$ rises from 0 at the source to $V_{DS}$ at the drain, so the local charge is"
+    },
+    {
+      "type": "math",
+      "tex": "Q_d(x) = W C_{ox}\\left[V_{GS} - V(x) - V_{TH}\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "Electron velocity is $\\mu_n E = \\mu_n\\, dV/dx$, so $I_D = W C_{ox}[V_{GS} - V(x) - V_{TH}]\\mu_n\\, dV/dx$. Since $I_D$ is the same everywhere along the channel, integrate $x$ from 0 to $L$ and $V$ from 0 to $V_{DS}$:"
+    },
+    {
+      "type": "math",
+      "tex": "I_D = \\mu_n C_{ox}\\frac{W}{L}\\left[(V_{GS}-V_{TH})V_{DS} - \\frac{1}{2}V_{DS}^2\\right]",
+      "caption": "Triode region"
+    },
+    {
+      "type": "prose",
+      "text": "Each curve is a parabola in $V_{DS}$ with its peak at $V_{DS} = V_{GS} - V_{TH}$. The quantity $V_{GS} - V_{TH}$ is the overdrive voltage $V_{ov}$; the region $V_{DS} \\le V_{ov}$ is the triode (linear) region. The integration assumed $\\mu_n$ and $V_{TH}$ do not vary along the channel, which short-channel devices violate (see Short-Channel Effects and Device Models)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Deep triode: a voltage-controlled resistor"
+    },
+    {
+      "type": "prose",
+      "text": "For $V_{DS} \\ll 2(V_{GS} - V_{TH})$ the squared term is negligible, the current is linear in $V_{DS}$, and the channel is a resistor whose value the gate sets:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{on} = \\frac{1}{\\mu_n C_{ox}\\frac{W}{L}(V_{GS}-V_{TH})}"
+    },
+    {
+      "type": "prose",
+      "text": "Unlike a bipolar transistor, a MOSFET can be fully on while carrying no current at all ($V_{DS} = 0$). Gate-controlled resistors are used for tuning (for example adjusting an oscillator frequency) and, as switches, throughout sampled-data circuits."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Saturation and pinch-off"
+    },
+    {
+      "type": "prose",
+      "text": "When $V_{DS}$ exceeds $V_{ov}$ the charge density $Q_d(x)$ reaches zero before the drain: the channel is pinched off. Electrons reaching the pinch-off point are swept across the depletion region to the drain by its strong field, and the current stops growing. Repeating the integral only up to the pinch-off point $L'$, where the channel voltage is $V_{GS} - V_{TH}$, gives"
+    },
+    {
+      "type": "math",
+      "tex": "I_D = \\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L'}(V_{GS}-V_{TH})^2, \\qquad V_{GS} = \\sqrt{\\frac{2I_D}{\\mu_n C_{ox} W/L}} + V_{TH}",
+      "caption": "Saturation (square law); with $L' \\approx L$ the current is independent of $V_{DS}$"
+    },
+    {
+      "type": "prose",
+      "text": "The minimum $V_{DS}$ for saturation, $V_{D,sat} = V_{GS} - V_{TH}$, is voltage the circuit must leave across the device; every overdrive chosen costs that much of the signal headroom. A saturated device with fixed $V_{GS}$ is a current source between drain and source. For a PMOS the equations carry a minus sign (current defined into the drain while holes flow out), with $V_{GS}$, $V_{DS}$ and $V_{TH}$ all negative when it is on; hole mobility is roughly half of electron mobility, so a PMOS of equal size carries about half the current."
     },
     {
       "type": "figure",
@@ -27,17 +92,23 @@
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "The equations"
+      "level": 3,
+      "text": "Regions of operation"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Triode:      ID = mu_n*Cox*(W/L) * [ Vov*VDS - VDS^2/2 ]\nSaturation:  ID = (1/2)*mu_n*Cox*(W/L) * Vov^2 * (1 + lambda*VDS)\nSmall VDS:   Ron = 1 / [ mu_n*Cox*(W/L) * Vov ]"
+      "type": "figure",
+      "src": "assets/figures/analog-design/mos-physics-regions-plane.svg",
+      "alt": "A plane with VGS on the horizontal axis and VDS on the vertical axis. A dashed vertical line at VTH separates the off region on the left. From VTH a solid diagonal line VDS = VGS minus VTH rises to the right. The region above the diagonal is labelled saturation, the region below it triode.",
+      "caption": "Regions on the VGS-VDS plane. For a fixed VDS, increasing VGS eventually moves the device from saturation into triode."
     },
     {
-      "type": "prose",
-      "text": "The derivation integrates the channel charge per unit length, Qd(x) = W*Cox*(VGS - V(x) - VTH), times the carrier velocity along the channel: ID = W*Cox*(VGS - V(x) - VTH)*mu_n*dV/dx. Integrating from source (V = 0) to drain (V = VDS) over length L yields the triode expression; when VDS reaches Vov the charge at the drain goes to zero, the channel pinches off and the current saturates at the VDS = Vov value."
+      "type": "list",
+      "items": [
+        "Cutoff: $V_{GS} < V_{TH}$ (only subthreshold leakage flows).",
+        "Triode: $V_{GS} > V_{TH}$ and $V_{DS} < V_{GS} - V_{TH}$.",
+        "Saturation: $V_{GS} > V_{TH}$ and $V_{DS} \\ge V_{GS} - V_{TH}$. Amplifiers bias their devices here.",
+        "A shortcut that needs no source voltage: an NMOS is saturated when its gate is less than one threshold above its drain ($V_G - V_D < V_{TH}$), because then the gate cannot invert the channel at the drain end. A PMOS is saturated when $V_D - V_G < |V_{TH}|$. You must still know which terminal is the drain."
+      ]
     },
     {
       "type": "heading",
@@ -46,16 +117,19 @@
     },
     {
       "type": "prose",
-      "text": "Transconductance gm = dID/dVGS relates a small change in gate voltage to the change in drain current. In saturation there are three equivalent forms:"
+      "text": "Amplifiers care about how a change of gate voltage changes the current. The transconductance, defined in saturation at constant $V_{DS}$, has three equivalent forms:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "gm = mu_n*Cox*(W/L)*Vov = sqrt( 2*mu_n*Cox*(W/L)*ID ) = 2*ID / Vov"
+      "type": "math",
+      "tex": "g_m = \\frac{\\partial I_D}{\\partial V_{GS}} = \\mu_n C_{ox}\\frac{W}{L}(V_{GS}-V_{TH}) = \\sqrt{2\\mu_n C_{ox}\\frac{W}{L}I_D} = \\frac{2 I_D}{V_{GS}-V_{TH}}"
     },
     {
       "type": "prose",
-      "text": "They tell different stories: at fixed overdrive gm grows with W/L; at fixed current gm grows only with the square root of W/L; and at fixed W/L, gm is proportional to Vov, while 2*ID/Vov says that to get high gm for little current you want a small overdrive (wide transistors). In the limit Vov tends to 0 the square law fails and weak inversion takes over (see Second-order effects)."
+      "text": "Each form answers a different question. At fixed $W/L$, $g_m$ grows linearly with overdrive and as $\\sqrt{I_D}$; at fixed current, $g_m$ falls as the overdrive rises, so high $g_m$ for little current calls for a small overdrive and a wide device. The square-root form suggests $g_m$ can grow without limit by widening the device at fixed current; it cannot, because the overdrive eventually approaches zero and the device enters subthreshold (see Second-Order Effects). Note that saturation $g_m$ equals $1/R_{on}$ of the same device in deep triode at the same overdrive. For a PMOS, $g_m = \\sqrt{2\\mu_p C_{ox}(W/L)|I_D|}$ with the same magnitudes."
+    },
+    {
+      "type": "prose",
+      "text": "In triode the transconductance is $\\partial I_D/\\partial V_{GS} = \\mu_n C_{ox}(W/L)V_{DS}$, which shrinks as $V_{DS}$ falls. That is the main reason amplifying devices are kept in saturation."
     },
     {
       "type": "widget",
@@ -109,7 +183,7 @@
     },
     {
       "type": "prose",
-      "text": "Watch where each curve leaves the dashed parabola: that is VDS = Vov, the triode/saturation boundary. In saturation the curves are nearly flat; their slope is set by lambda. Raising VGS lifts the curve with a square-law spacing."
+      "text": "Watch where each curve leaves the dashed parabola: that is $V_{DS} = V_{ov}$, the triode/saturation boundary. In saturation the curves are nearly flat; their slope is set by $\\lambda$. Raising $V_{GS}$ lifts the curve with square-law spacing."
     },
     {
       "type": "widget",
@@ -136,40 +210,61 @@
     },
     {
       "type": "prose",
-      "text": "At a fixed W/L, gm only grows as the square root of ID, so doubling the current buys just 41 percent more gm. Doubling W/L instead raises gm by the same factor at fixed current, with no power cost, at the price of more capacitance."
+      "text": "At a fixed $W/L$, $g_m$ grows only as the square root of $I_D$, so doubling the current buys just 41 percent more $g_m$. Doubling $W/L$ instead raises $g_m$ by the same factor at fixed current with no power cost, at the price of more capacitance."
     },
     {
       "type": "problem",
       "title": "A simple bias point",
-      "text": "An NMOS has mu_n*Cox = 200 uA/V^2, W/L = 10, VTH = 0.4 V and lambda = 0. For VGS = 0.8 V and VDS = 1 V find ID and gm. Then find ID for VGS = 0.8 V and VDS = 0.1 V.",
+      "text": "An NMOS has $\\mu_n C_{ox} = 200\\,\\mu\\text{A/V}^2$, $W/L = 10$, $V_{TH} = 0.4\\text{ V}$ and $\\lambda = 0$. For $V_{GS} = 0.8\\text{ V}$ and $V_{DS} = 1\\text{ V}$ find $I_D$ and $g_m$. Then find $I_D$ for $V_{GS} = 0.8\\text{ V}$ and $V_{DS} = 0.1\\text{ V}$.",
+      "hint": "Check whether the drain-source voltage exceeds the overdrive first.",
       "solution": [
-        "Vov = 0.8 - 0.4 = 0.4 V, and VDS = 1 V > Vov so the device is saturated.",
-        "mu_n*Cox*W/L = 200 uA/V^2 * 10 = 2 mA/V^2. ID = 0.5 * 2 mA/V^2 * 0.4^2 = 0.16 mA = 160 uA.",
-        "gm = 2*ID/Vov = 2 * 160 uA / 0.4 V = 0.8 mS.",
-        "With VDS = 0.1 V < Vov the device is in triode: ID = 2 mA/V^2 * (0.4*0.1 - 0.1^2/2) = 2 mA * 0.035 = 70 uA."
+        "$V_{ov} = 0.4\\text{ V}$ and $V_{DS} = 1\\text{ V} > V_{ov}$, so the device is saturated.",
+        "$\\mu_n C_{ox} W/L = 2\\text{ mA/V}^2$, so $I_D = \\frac{1}{2} \\cdot 2\\text{ mA/V}^2 \\cdot (0.4\\text{ V})^2 = 160\\,\\mu\\text{A}$.",
+        "$g_m = 2I_D/V_{ov} = 320\\,\\mu\\text{A}/0.4\\text{ V} = 0.8\\text{ mS}$.",
+        "With $V_{DS} = 0.1\\text{ V} < V_{ov}$ the device is in triode: $I_D = 2\\text{ mA/V}^2 \\cdot (0.4 \\cdot 0.1 - 0.1^2/2)\\text{ V}^2 = 2\\text{ mA/V}^2 \\cdot 0.035\\text{ V}^2 = 70\\,\\mu\\text{A}$."
       ],
-      "answer": "ID = 160 uA, gm = 0.8 mS in saturation; ID = 70 uA at VDS = 0.1 V (triode).",
-      "hint": "Check whether VDS is larger than the overdrive voltage first."
+      "answer": "$I_D = 160\\,\\mu\\text{A}$, $g_m = 0.8\\text{ mS}$ in saturation; $70\\,\\mu\\text{A}$ at $V_{DS} = 0.1\\text{ V}$ (triode)."
     },
     {
       "type": "problem",
       "title": "Saturation or triode?",
-      "text": "A transistor has VG = 1.5 V, VS = 0 V, VD = 1.0 V, VTH = 0.5 V. Which region is it in? What if VD = 0.6 V?",
+      "text": "A transistor has $V_G = 1.5\\text{ V}$, $V_S = 0$, $V_D = 1.0\\text{ V}$, $V_{TH} = 0.5\\text{ V}$. Which region is it in? What if $V_D = 0.6\\text{ V}$?",
       "solution": [
-        "Vov = 1.5 - 0 - 0.5 = 1.0 V. In saturation VDS must be at least Vov.",
-        "VD = 1.0 V gives VDS = 1.0 V, exactly Vov: the edge of saturation. VD = 0.6 V gives VDS = 0.6 V < 1.0 V: triode."
+        "$V_{ov} = 1.5 - 0 - 0.5 = 1.0\\text{ V}$, and saturation needs $V_{DS} \\ge V_{ov}$.",
+        "$V_D = 1.0\\text{ V}$ gives $V_{DS} = V_{ov}$: the edge of saturation (equivalently $V_G - V_D = 0.5\\text{ V} = V_{TH}$). $V_D = 0.6\\text{ V}$ gives $V_{DS} < V_{ov}$: triode."
       ],
-      "answer": "Edge of saturation at VD = 1.0 V; triode at VD = 0.6 V."
+      "answer": "Edge of saturation at $V_D = 1.0\\text{ V}$; triode at $V_D = 0.6\\text{ V}$."
     },
     {
       "type": "problem",
-      "title": "What does 2ID/Vov tell you?",
-      "text": "Two designs carry the same drain current ID = 100 uA. One uses Vov = 0.2 V, the other Vov = 0.4 V. Compare gm, and say what you pay for the higher one.",
+      "title": "What the 2ID/Vov form tells you",
+      "text": "Two designs carry the same $I_D = 100\\,\\mu\\text{A}$. One uses $V_{ov} = 0.2\\text{ V}$, the other $V_{ov} = 0.4\\text{ V}$. Compare $g_m$, and say what you pay for the higher one.",
       "solution": [
-        "gm = 2*ID/Vov. First design: 2*100 uA / 0.2 V = 1 mS. Second: 0.5 mS.",
-        "The low-overdrive design has twice the gm for the same current, but needs W/L four times larger (since ID is proportional to (W/L)*Vov^2 at fixed ID, W/L scales as 1/Vov^2). It pays in area and capacitance, and loses voltage headroom margin to stay in saturation."
+        "$g_m = 2I_D/V_{ov}$: $1\\text{ mS}$ for the first design, $0.5\\text{ mS}$ for the second.",
+        "At fixed current $W/L \\propto 1/V_{ov}^2$, so the low-overdrive design needs a $W/L$ four times larger: more area and more capacitance. (It does gain headroom, since it needs less $V_{D,sat}$.)"
       ],
-      "answer": "1 mS versus 0.5 mS; the higher gm costs 4x the width (area and capacitance)."
+      "answer": "1 mS versus 0.5 mS; the higher $g_m$ costs four times the $W/L$."
+    },
+    {
+      "type": "problem",
+      "title": "A PMOS bias point",
+      "text": "A PMOS with $\\mu_p C_{ox} = 80\\,\\mu\\text{A/V}^2$, $W/L = 25$ and $|V_{TH}| = 0.45\\text{ V}$ has its source at 1.2 V, gate at 0.5 V and drain at 0.6 V. Find its region, $|I_D|$ and $g_m$.",
+      "solution": [
+        "$V_{SG} = 0.7\\text{ V}$, so the overdrive is $0.7 - 0.45 = 0.25\\text{ V}$. $V_{SD} = 0.6\\text{ V} > 0.25\\text{ V}$: saturated. (Check with the shortcut: $V_D - V_G = 0.1\\text{ V} < |V_{TH}|$.)",
+        "$|I_D| = \\frac{1}{2} \\cdot 80\\,\\mu\\text{A/V}^2 \\cdot 25 \\cdot (0.25\\text{ V})^2 = 62.5\\,\\mu\\text{A}$.",
+        "$g_m = 2|I_D|/|V_{ov}| = 125\\,\\mu\\text{A}/0.25\\text{ V} = 0.5\\text{ mS}$."
+      ],
+      "answer": "Saturation; $|I_D| = 62.5\\,\\mu\\text{A}$, $g_m = 0.5\\text{ mS}$."
+    },
+    {
+      "type": "problem",
+      "title": "Transconductance in triode",
+      "text": "A device has $\\mu_n C_{ox} W/L = 2\\text{ mA/V}^2$, $V_{GS} = 0.9\\text{ V}$ and $V_{TH} = 0.4\\text{ V}$. Find $g_m$ in saturation and at $V_{DS} = 0.2\\text{ V}$.",
+      "solution": [
+        "Saturation: $g_m = 2\\text{ mA/V}^2 \\cdot 0.5\\text{ V} = 1\\text{ mS}$.",
+        "At $V_{DS} = 0.2\\text{ V} < 0.5\\text{ V}$ the device is in triode and $g_m = \\mu_n C_{ox}(W/L)V_{DS} = 0.4\\text{ mS}$, less than half."
+      ],
+      "answer": "1 mS in saturation, 0.4 mS in triode."
     }
   ]
 }

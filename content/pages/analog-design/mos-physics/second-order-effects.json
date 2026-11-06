@@ -1,6 +1,6 @@
 {
   "title": "Second-Order Effects",
-  "intro": "The square law is only a first approximation. A handful of corrections explain most of the surprises in real circuits.",
+  "intro": "The square law assumes the bulk sits at the source, the channel length is fixed, and the device switches off abruptly at threshold. None of these is quite true, and the corrections matter in nearly every analog circuit (Razavi, Section 2.3).",
   "blocks": [
     {
       "type": "heading",
@@ -9,16 +9,23 @@
     },
     {
       "type": "prose",
-      "text": "When the source voltage rises above the bulk (VSB > 0), the depletion region under the channel grows and more gate voltage is needed to invert the channel, so VTH rises:"
+      "text": "Lower the bulk of an NMOS below its source (or, equivalently, raise the source above the bulk). The junctions stay reverse-biased, but the depletion region under the gate widens and holds more charge. The gate has to mirror that extra charge before it can form a channel, so the threshold rises:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "VTH = VTH0 + gamma * [ sqrt(2*PhiF + VSB) - sqrt(2*PhiF) ]"
+      "type": "math",
+      "tex": "V_{TH} = V_{TH0} + \\gamma\\left(\\sqrt{2\\Phi_F + V_{SB}} - \\sqrt{2\\Phi_F}\\right), \\qquad \\gamma = \\frac{\\sqrt{2 q \\epsilon_{si} N_{sub}}}{C_{ox}}"
     },
     {
       "type": "prose",
-      "text": "gamma (about 0.3 to 0.6 V^(1/2)) is the body-effect coefficient and 2*PhiF is about 0.7 to 0.9 V. The body acts like a second, weaker gate, adding a transconductance gmb = eta * gm with eta = gamma / (2*sqrt(2*PhiF + VSB)), typically 0.1 to 0.3. It matters most for source followers and any device whose source is not at the bulk potential."
+      "text": "$V_{TH0}$ is the threshold with $V_{SB} = 0$ and $\\gamma$, the body-effect coefficient, is typically 0.3 to 0.4 $\\text{V}^{1/2}$; $2\\Phi_F$ is around 0.7 to 0.9 V. The bulk need not move for this to happen: any device whose source moves with the signal sees it. In a source follower (input on the gate, output on the source, fixed current), the output rising raises $V_{SB}$ and $V_{TH}$, so $V_{GS}$ must grow and the output no longer tracks the input one for one. Body effect is usually a nuisance."
+    },
+    {
+      "type": "prose",
+      "text": "It also works the other way: a negative $V_{SB}$ (bulk above source) lowers $V_{TH}$ below $V_{TH0}$. Low-voltage designs sometimes exploit this. It is easy for a PMOS in its own n-well, hard for NMOS devices that share the substrate."
+    },
+    {
+      "type": "prose",
+      "text": "In small-signal terms the bulk acts as a weaker second gate, with transconductance $g_{mb} = \\eta g_m$; the details are on the MOS Device Models page."
     },
     {
       "type": "heading",
@@ -27,7 +34,21 @@
     },
     {
       "type": "prose",
-      "text": "As VDS rises above Vov the pinch-off point moves toward the source, shortening the effective channel and raising the current: ID = (1/2)*mu_n*Cox*(W/L)*Vov^2*(1 + lambda*VDS). lambda is roughly inversely proportional to L, so long devices have flatter output curves and higher output resistance ro = 1 / (lambda*ID), at the cost of speed and area."
+      "text": "In saturation the pinch-off point moves toward the source as $V_{DS}$ rises, so the effective length $L' = L - \\Delta L$ shrinks and the current grows. Assuming $\\Delta L/L = \\lambda V_{DS}$ to first order:"
+    },
+    {
+      "type": "math",
+      "tex": "I_D \\approx \\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L}(V_{GS}-V_{TH})^2(1+\\lambda V_{DS})"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The saturated characteristic now has a slope, $\\partial I_D/\\partial V_{DS} \\approx \\lambda I_D$: the device is a non-ideal current source with output resistance $r_o \\approx 1/(\\lambda I_D)$.",
+        "$\\lambda$ is a relative change in length, so it scales roughly as $1/L$. At a fixed overdrive, doubling $L$ halves both $\\lambda$ and $I_D$, dividing the slope by four. If $W$ is also doubled to restore the current, the slope is halved: for a given current and overdrive, $r_o$ is proportional to $L$.",
+        "There is no channel-length modulation in triode: the channel reaches the drain and is not pinched off. The simple equations therefore disagree by a factor $1 + \\lambda V_{DS}$ at the triode/saturation boundary; better models remove the discontinuity.",
+        "With $\\lambda$ included, $g_m = \\mu_n C_{ox}(W/L)V_{ov}(1+\\lambda V_{DS}) = \\sqrt{2\\mu_n C_{ox}(W/L)I_D(1+\\lambda V_{DS})}$, while $g_m = 2I_D/V_{ov}$ is unchanged.",
+        "In short-channel devices $\\Delta L/L$ is not linear in $V_{DS}$, so the saturated slope varies. The bias current is always set by the overdrive, never by $V_{DS}$; the $V_{DS}$ dependence is treated as an error."
+      ]
     },
     {
       "type": "heading",
@@ -36,7 +57,38 @@
     },
     {
       "type": "prose",
-      "text": "Below threshold the current does not drop to zero but decays exponentially: ID is proportional to exp(VGS / (zeta*VT)), where VT = kT/q is about 26 mV at room temperature and zeta is about 1.2 to 1.5. This corresponds to roughly 70 to 90 mV of gate voltage per decade of current (zeta*VT*ln 10). In this regime gm = ID / (zeta*VT), the highest gm per unit current the device can offer."
+      "text": "Below threshold a weak inversion layer still exists and the current falls exponentially rather than vanishing. For $V_{DS}$ above about 100 mV,"
+    },
+    {
+      "type": "math",
+      "tex": "I_D = I_0 \\exp\\frac{V_{GS}}{\\xi V_T}, \\qquad V_T = \\frac{kT}{q} \\approx 26\\text{ mV}",
+      "caption": "Weak inversion; $I_0 \\propto W/L$ and the nonideality factor $\\xi > 1$"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/mos-physics-subthreshold.svg",
+      "alt": "Drain current on a logarithmic axis from 1e-10 to 1e-3 amperes against gate-source voltage from 0 to 0.8 volts. The solid curve is a straight line at low voltage (exponential behaviour) that bends over above the threshold voltage of 0.4 volts. A dashed straight line extends the exponential part; a dashed curve shows the square law above threshold. A small triangle marks one decade of current per roughly 90 millivolts.",
+      "caption": "Weak inversion: on a log scale the current is a straight line below threshold. The square law only fits above it."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Slope: the gate voltage per decade of current is $\\xi V_T \\ln 10$, about 80 mV at room temperature for typical $\\xi$. Turning a device off by pulling $V_{GS}$ from $V_{TH}$ to 0 therefore only reduces the current by $10^{V_{TH}/80\\text{ mV}}$; with a low threshold for low-voltage operation, millions of nominally off devices leak a substantial total current.",
+        "Defining $V_{TH}$: since the current never stops, one practical definition is the intercept of the extrapolated weak- and strong-inversion lines on the log plot.",
+        "Transconductance: $g_m = I_D/(\\xi V_T)$. This is the most a MOSFET can give per unit current, still below a bipolar transistor's $I_C/V_T$. It answers the paradox of $\\sqrt{2\\mu_n C_{ox}(W/L)I_D}$: widening the device at fixed current pushes it into weak inversion, where $g_m$ saturates at $I_D/(\\xi V_T)$.",
+        "Boundary: equating $I_D/(\\xi V_T)$ with $2I_D/V_{ov}$ gives the overdrive at which the two models give the same $g_m$, $V_{ov} = 2\\xi V_T$, about 80 mV for $\\xi = 1.5$.",
+        "For a given current and $W/L$, compute $V_{GS}$ from both the square law and the exponential law and take the lower one; as $W$ grows at fixed $I_D$ the device moves from strong to weak inversion.",
+        "The price: weak inversion needs very wide devices or tiny currents, so the circuit is slow."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Voltage limits"
+    },
+    {
+      "type": "prose",
+      "text": "Large terminal voltages damage the device. Excess gate-source voltage breaks down the thin oxide permanently. In short-channel devices a large drain-source voltage can widen the drain depletion region until it meets the source's, giving a large uncontrolled current (punchthrough). Even below these limits, sustained stress can permanently shift the characteristics, which is why nanometer processes specify maximum $V_{GS}$, $V_{DS}$ and $V_{DG}$ (around 1 V in a 40-nm process)."
     },
     {
       "type": "heading",
@@ -46,45 +98,76 @@
     {
       "type": "list",
       "items": [
-        "Velocity saturation and mobility degradation make ID grow linearly rather than quadratically with Vov: the 'square law' becomes closer to a 'linear law' at high overdrive.",
-        "Drain-induced barrier lowering (DIBL) makes VTH fall as VDS rises, reducing ro.",
-        "Hot-carrier effects and gate leakage set limits on the supply voltage and add noise."
+        "Velocity saturation and mobility degradation make the current grow more slowly than the square of the overdrive, closer to linearly at large overdrive.",
+        "Drain-induced barrier lowering (DIBL) lowers $V_{TH}$ as $V_{DS}$ rises, which further reduces $r_o$.",
+        "Hot-carrier effects and gate leakage limit the supply voltage and add noise. These are treated in Short-Channel Effects and Device Models."
       ]
     },
     {
       "type": "callout",
-      "text": "Practical rule: use the square law to get an initial sizing, then rely on simulation with foundry models to finish the design. The first-order equations are for insight, not for final numbers."
+      "text": "Use the square law for initial sizing and intuition, then finish with simulation using the foundry models. The first-order equations are for insight, not final numbers."
     },
     {
       "type": "problem",
-      "title": "Body effect on VTH",
-      "text": "VTH0 = 0.4 V, gamma = 0.4 V^(1/2), 2*PhiF = 0.8 V. Find VTH when VSB = 0.8 V.",
+      "title": "Body effect on the threshold",
+      "text": "$V_{TH0} = 0.4\\text{ V}$, $\\gamma = 0.4\\text{ V}^{1/2}$, $2\\Phi_F = 0.8\\text{ V}$. Find $V_{TH}$ when $V_{SB} = 0.8\\text{ V}$.",
+      "hint": "Substitute directly.",
       "solution": [
-        "sqrt(0.8 + 0.8) = 1.265 and sqrt(0.8) = 0.894, a difference of 0.371.",
-        "VTH = 0.4 + 0.4 * 0.371 = 0.548 V."
+        "$\\sqrt{0.8 + 0.8} = 1.265$ and $\\sqrt{0.8} = 0.894$; the difference is 0.371.",
+        "$V_{TH} = 0.4 + 0.4 \\times 0.371 = 0.548\\text{ V}$."
       ],
-      "answer": "VTH = 0.548 V, 148 mV above VTH0.",
-      "hint": "Plug straight into the VTH expression."
+      "answer": "$V_{TH} = 0.548\\text{ V}$, 148 mV above $V_{TH0}$."
+    },
+    {
+      "type": "problem",
+      "title": "Turning a device off through its bulk",
+      "text": "An NMOS has its gate at 1.0 V and source at 0 V, with $V_{TH0} = 0.35\\text{ V}$, $\\gamma = 0.45\\text{ V}^{1/2}$ and $2\\Phi_F = 0.8\\text{ V}$. How far below ground must the bulk go to switch it off?",
+      "solution": [
+        "It turns off when $V_{TH}$ reaches $V_{GS} = 1.0\\text{ V}$: $0.45(\\sqrt{0.8 + V_{SB}} - 0.894) = 0.65$.",
+        "So $\\sqrt{0.8 + V_{SB}} = 1.444 + 0.894 = 2.339$, giving $0.8 + V_{SB} = 5.47$ and $V_{SB} \\approx 4.67\\text{ V}$."
+      ],
+      "answer": "The bulk must fall to about $-4.67\\text{ V}$; the body is a weak gate."
     },
     {
       "type": "problem",
       "title": "Output resistance",
-      "text": "A transistor carries ID = 200 uA with lambda = 0.1 V^-1. Find ro. What happens to ro if L is doubled at the same current (lambda scales as 1/L)?",
+      "text": "A transistor carries $I_D = 200\\,\\mu\\text{A}$ with $\\lambda = 0.1\\text{ V}^{-1}$. Find $r_o$. What happens if $L$ is doubled at the same current and overdrive (W doubled too)?",
       "solution": [
-        "ro = 1/(lambda*ID) = 1 / (0.1 * 200 uA) = 50 kohm.",
-        "Doubling L halves lambda to 0.05 V^-1, so ro = 100 kohm."
+        "$r_o = 1/(\\lambda I_D) = 1/(0.1 \\cdot 200\\,\\mu\\text{A}) = 50\\text{ k}\\Omega$.",
+        "Doubling $L$ halves $\\lambda$ to $0.05\\text{ V}^{-1}$; at the same current $r_o = 100\\text{ k}\\Omega$."
       ],
-      "answer": "ro = 50 kohm; doubling L gives 100 kohm."
+      "answer": "$r_o = 50\\text{ k}\\Omega$, then $100\\text{ k}\\Omega$."
     },
     {
       "type": "problem",
-      "title": "Weak inversion gm",
-      "text": "In weak inversion with zeta = 1.4 and VT = 26 mV, what is gm for ID = 10 uA? Compare to 2*ID/Vov with Vov = 0.2 V.",
+      "title": "Doubling L, two ways",
+      "text": "A saturated device carries $100\\,\\mu\\text{A}$ with $\\lambda = 0.1\\text{ V}^{-1}$. (a) $L$ is doubled with $W$ and $V_{ov}$ unchanged. (b) $L$ and $W$ are both doubled. Find $\\partial I_D/\\partial V_{DS}$ in each case.",
       "solution": [
-        "gm = ID / (zeta*VT) = 10 uA / (1.4 * 26 mV) = 0.275 mS.",
-        "Strong inversion at the same current: 2*10 uA / 0.2 V = 0.1 mS. So weak inversion gives about 2.7 times more gm for the same current, but needs a very large W/L."
+        "Originally $\\partial I_D/\\partial V_{DS} = \\lambda I_D = 10\\,\\mu\\text{A/V}$.",
+        "(a) $W/L$ halves, so $I_D = 50\\,\\mu\\text{A}$, and $\\lambda = 0.05\\text{ V}^{-1}$: slope $= 2.5\\,\\mu\\text{A/V}$, a factor of four lower.",
+        "(b) $I_D$ stays $100\\,\\mu\\text{A}$ and $\\lambda = 0.05\\text{ V}^{-1}$: slope $= 5\\,\\mu\\text{A/V}$, a factor of two lower."
+      ],
+      "answer": "(a) $2.5\\,\\mu\\text{A/V}$; (b) $5\\,\\mu\\text{A/V}$."
+    },
+    {
+      "type": "problem",
+      "title": "Weak-inversion transconductance",
+      "text": "In weak inversion with $\\xi = 1.4$ and $V_T = 26\\text{ mV}$, what is $g_m$ for $I_D = 10\\,\\mu\\text{A}$? Compare with $2I_D/V_{ov}$ at $V_{ov} = 0.2\\text{ V}$.",
+      "solution": [
+        "$g_m = I_D/(\\xi V_T) = 10\\,\\mu\\text{A}/36.4\\text{ mV} \\approx 0.275\\text{ mS}$.",
+        "Strong inversion at the same current: $20\\,\\mu\\text{A}/0.2\\text{ V} = 0.1\\text{ mS}$. Weak inversion gives about 2.7 times more $g_m$ per unit current, but needs a very large $W/L$ and is slow."
       ],
       "answer": "0.275 mS versus 0.1 mS."
+    },
+    {
+      "type": "problem",
+      "title": "Leakage of a big chip",
+      "text": "Each transistor of a chip carries $1\\,\\mu\\text{A}$ at $V_{GS} = V_{TH} = 0.35\\text{ V}$ and its subthreshold slope is 80 mV/decade. Estimate the total off-current of 500 million such devices at $V_{GS} = 0$.",
+      "solution": [
+        "Dropping $V_{GS}$ by 0.35 V reduces the current by $10^{0.35/0.08} = 10^{4.375} \\approx 2.4 \\times 10^4$, to about 42 pA per device.",
+        "500 million devices: $5 \\times 10^8 \\times 42\\text{ pA} \\approx 21\\text{ mA}$, drawn while the chip is supposedly idle."
+      ],
+      "answer": "About 21 mA."
     }
   ]
 }
