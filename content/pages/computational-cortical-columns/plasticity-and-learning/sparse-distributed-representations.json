@@ -21,13 +21,27 @@
       "text": "Capacity"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Number of distinct SDRs with n bits and w active:\n\nC(n, w) = n! / (w! (n − w)!)\n\nn = 2048, w = 2   →  2,096,128\nn = 2048, w = 40  →  about 2.4 × 10⁸⁴\n\nExpected overlap of two random SDRs: w² / n   (2048, 40 → about 0.78 bits)"
+      "type": "prose",
+      "text": "Number of distinct SDRs with $n$ bits and $w$ active:"
+    },
+{
+      "type": "math",
+      "tex": "C(n, w) = \\frac{n!}{w!\\,(n - w)!}"
+    },
+{
+      "type": "list",
+      "items": [
+        "$n = 2048$, $w = 2$: 2,096,128",
+        "$n = 2048$, $w = 40$: about $2.4 \\times 10^{84}$"
+      ]
+    },
+{
+      "type": "prose",
+      "text": "Expected overlap of two random SDRs: $\\frac{w^2}{n}$ ($n = 2048$, $w = 40$: about 0.78 bits)."
     },
     {
       "type": "prose",
-      "text": "Capacity is astronomically large even at 2% sparsity, so capacity is never the binding constraint for a column model. Raw capacity is maximised at w = n/2, but that is not the property that matters. What matters is how reliably we can tell a noisy version of a stored pattern from an unrelated one, and how many patterns we can store and compare at once."
+      "text": "Capacity is astronomically large even at 2% sparsity, so capacity is never the binding constraint for a column model. Raw capacity is maximised at $w = n/2$, but that is not the property that matters. What matters is how reliably we can tell a noisy version of a stored pattern from an unrelated one, and how many patterns we can store and compare at once."
     },
     {
       "type": "heading",
@@ -36,16 +50,40 @@
     },
     {
       "type": "prose",
-      "text": "Define the overlap of two SDRs x and y as the number of bits active in both, overlap(x, y) = |x ∧ y|. Say x matches y if overlap(x, y) ≥ θ. A threshold below w buys noise tolerance: a stored pattern still matches when up to w − θ of its bits are wrong. The risk is a false match, an unrelated random SDR that happens to reach θ. Ahmad and Hawkins count these exactly:"
-    },
-    {
-      "type": "code",
-      "lang": "text",
-      "source": "Overlap set: number of w-bit SDRs that overlap a given x (w bits on) in exactly b bits\n\n|Ω_x(n, w, b)| = C(w, b) · C(n − w, w − b)\n\nProbability that a random SDR falsely matches x:\n\nP(false match) = Σ_{b = θ}^{w} C(w, b) · C(n − w, w − b) / C(n, w)\n\nExamples (n = 2048, w = 40):\n  θ = 20 → about 2.5 × 10⁻²⁶\n  θ = 12 → about 2.0 × 10⁻¹²\n  θ = 8  → about 5.0 × 10⁻⁷\n  θ = 5  → about 8.8 × 10⁻⁴"
+      "text": "Define the overlap of two SDRs x and y as the number of bits active in both, $\\mathrm{overlap}(x, y) = |x \\wedge y|$. Say $x$ matches $y$ if $\\mathrm{overlap}(x, y) \\ge \\theta$. A threshold below w buys noise tolerance: a stored pattern still matches when up to $w - \\theta$ of its bits are wrong. The risk is a false match, an unrelated random SDR that happens to reach $\\theta$. Ahmad and Hawkins count these exactly:"
     },
     {
       "type": "prose",
-      "text": "So with n = 2048 and w = 40 you can set θ = 20 and tolerate half of the active bits being wrong while false matches remain essentially impossible. The terms grow very large, so compute them in log space (sums of log-gamma values) rather than with exact integers in a tight loop."
+      "text": "Overlap set: number of $w$-bit SDRs that overlap a given $x$ ($w$ bits on) in exactly $b$ bits:"
+    },
+{
+      "type": "math",
+      "tex": "|\\Omega_x(n, w, b)| = C(w, b)\\, C(n - w,\\, w - b)"
+    },
+{
+      "type": "prose",
+      "text": "Probability that a random SDR falsely matches $x$:"
+    },
+{
+      "type": "math",
+      "tex": "P(\\text{false match}) = \\frac{\\sum_{b = \\theta}^{w} C(w, b)\\, C(n - w,\\, w - b)}{C(n, w)}"
+    },
+{
+      "type": "prose",
+      "text": "Examples ($n = 2048$, $w = 40$):"
+    },
+{
+      "type": "list",
+      "items": [
+        "$\\theta = 20$: about $2.5 \\times 10^{-26}$",
+        "$\\theta = 12$: about $2.0 \\times 10^{-12}$",
+        "$\\theta = 8$: about $5.0 \\times 10^{-7}$",
+        "$\\theta = 5$: about $8.8 \\times 10^{-4}$"
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So with $n = 2048$ and $w = 40$ you can set $\\theta = 20$ and tolerate half of the active bits being wrong while false matches remain essentially impossible. The terms grow very large, so compute them in log space (sums of log-gamma values) rather than with exact integers in a tight loop."
     },
     {
       "type": "widget",
@@ -110,11 +148,11 @@
     {
       "type": "list",
       "items": [
-        "Keep the defaults: n = 2048, w = 40, θ = 20, 30% noise. Noise moves 12 of the 40 active bits, so the noisy copy still shares 28 bits with the original, comfortably above θ = 20, and is recognised. The false-match probability for a random SDR is around 10⁻²⁶: noise tolerance and selectivity together.",
-        "Increase noise to 50%: the overlap drops to 20, just at threshold. Go to 60% and the noisy copy no longer matches. Now lower θ to 10: it matches again, and the false-match probability rises to about 10⁻⁹, still negligible. With sparse codes you have a wide safe range of θ.",
-        "Try a dense code: n = 256, w = 128 (50% active). Two random patterns now share about 64 bits on average, and with 30% noise the noisy copy shares about 90. The usable band for θ is squeezed between 64 and 90; at θ = 80 the false-match probability is around 5 × 10⁻⁵, many orders of magnitude worse than the sparse default, and every comparison has to read 128 active bits. With n = 64, w = 32, θ = 22 it is a few in a thousand.",
-        "Keep w = 40, θ = 20 and shrink n from 2048 to 256. The false-match probability rises from about 10⁻²⁶ to about 10⁻⁸: sparsity (w/n) and size together set robustness.",
-        "Set w very small (2–5). Capacity collapses and a single moved bit can destroy a match, because θ cannot be much below w. Very sparse codes are fragile; HTM's choice of about 40 active bits is large enough for robust thresholds and small enough to stay sparse."
+        "Keep the defaults: $n = 2048$, $w = 40$, $\\theta = 20$, 30% noise. Noise moves 12 of the 40 active bits, so the noisy copy still shares 28 bits with the original, comfortably above $\\theta = 20$, and is recognised. The false-match probability for a random SDR is around $10^{-26}$: noise tolerance and selectivity together.",
+        "Increase noise to 50%: the overlap drops to 20, just at threshold. Go to 60% and the noisy copy no longer matches. Now lower $\\theta$ to 10: it matches again, and the false-match probability rises to about $10^{-9}$, still negligible. With sparse codes you have a wide safe range of $\\theta$.",
+        "Try a dense code: $n = 256$, $w = 128$ (50% active). Two random patterns now share about 64 bits on average, and with 30% noise the noisy copy shares about 90. The usable band for $\\theta$ is squeezed between 64 and 90; at $\\theta = 80$ the false-match probability is around $5 \\times 10^{-5}$, many orders of magnitude worse than the sparse default, and every comparison has to read 128 active bits. With $n = 64$, $w = 32$, $\\theta = 22$ it is a few in a thousand.",
+        "Keep $w = 40$, $\\theta = 20$ and shrink n from 2048 to 256. The false-match probability rises from about $10^{-26}$ to about $10^{-8}$: sparsity ($w/n$) and size together set robustness.",
+        "Set w very small (2–5). Capacity collapses and a single moved bit can destroy a match, because $\\theta$ cannot be much below w. Very sparse codes are fragile; HTM's choice of about 40 active bits is large enough for robust thresholds and small enough to stay sparse."
       ]
     },
     {
@@ -124,12 +162,26 @@
     },
     {
       "type": "prose",
-      "text": "A dendritic segment does not need synapses to all w active bits of a pattern. If it connects to s of them (s < w) and fires when at least θ of those are active, false matches remain rare. The same counting argument applies, with the segment's s synapses playing the role of x:"
+      "text": "A dendritic segment does not need synapses to all w active bits of a pattern. If it connects to s of them ($s < w$) and fires when at least $\\theta$ of those are active, false matches remain rare. The same counting argument applies, with the segment's s synapses playing the role of x:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "P(false match | s synapses, threshold θ) = Σ_{b = θ}^{s} C(s, b) · C(n − s, w − b) / C(n, w)\n\nn = 2048, w = 40:\n  s = 20, θ = 10 → about 4 × 10⁻¹³\n  s = 20, θ = 12 → about 6 × 10⁻¹⁷"
+      "type": "prose",
+      "text": "Probability of a false match with $s$ synapses and threshold $\\theta$:"
+    },
+{
+      "type": "math",
+      "tex": "P(\\text{false match}) = \\frac{\\sum_{b = \\theta}^{s} C(s, b)\\, C(n - s,\\, w - b)}{C(n, w)}"
+    },
+{
+      "type": "prose",
+      "text": "For $n = 2048$, $w = 40$:"
+    },
+{
+      "type": "list",
+      "items": [
+        "$s = 20$, $\\theta = 10$: about $4 \\times 10^{-13}$",
+        "$s = 20$, $\\theta = 12$: about $6 \\times 10^{-17}$"
+      ]
     },
     {
       "type": "prose",
@@ -145,13 +197,45 @@
       "text": "Because SDRs are sparse, you can OR several of them into a single vector and still test membership: a stored pattern is fully contained in the union, and an unrelated pattern rarely is. HTM temporal memory uses this to represent several predictions at once (the predictive cells for every possible next element), and Thousand Brains models use unions to represent sets of candidate objects or locations before inference narrows them down (see section 5). The limit is that each added pattern turns on more bits:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "After OR-ing M random SDRs (n, w), the fraction of bits on is\n\np = 1 − (1 − w/n)^M\n\nn = 2048, w = 40:\n  M = 10  → p ≈ 0.18      M = 20 → p ≈ 0.33      M = 50 → p ≈ 0.63\n\nP(an unrelated SDR has all w bits inside the union) ≈ p^w\n  M = 10 → ~10⁻³⁰   M = 20 → ~10⁻²⁰   M = 50 → ~10⁻⁸   M = 100 → ~2 × 10⁻³\n\nWith a noise-tolerant threshold θ = 20 (instead of all 40 bits):\n  M = 10 → ~4 × 10⁻⁶   M = 20 → ~2 × 10⁻²   M = 50 → ~0.96"
+      "type": "prose",
+      "text": "After OR-ing $M$ random SDRs $(n, w)$, the fraction of bits on is"
+    },
+{
+      "type": "math",
+      "tex": "p = 1 - \\left( 1 - \\frac{w}{n} \\right)^M"
+    },
+{
+      "type": "prose",
+      "text": "For $n = 2048$, $w = 40$: $M = 10$ gives $p \\approx 0.18$; $M = 20$ gives $p \\approx 0.33$; $M = 50$ gives $p \\approx 0.63$."
+    },
+{
+      "type": "prose",
+      "text": "The probability that an unrelated SDR has all $w$ bits inside the union is about $p^w$:"
+    },
+{
+      "type": "list",
+      "items": [
+        "$M = 10$: about $10^{-30}$",
+        "$M = 20$: about $10^{-20}$",
+        "$M = 50$: about $10^{-8}$",
+        "$M = 100$: about $2 \\times 10^{-3}$"
+      ]
+    },
+{
+      "type": "prose",
+      "text": "With a noise-tolerant threshold $\\theta = 20$ (instead of all 40 bits):"
+    },
+{
+      "type": "list",
+      "items": [
+        "$M = 10$: about $4 \\times 10^{-6}$",
+        "$M = 20$: about $2 \\times 10^{-2}$",
+        "$M = 50$: about 0.96"
+      ]
     },
     {
       "type": "prose",
-      "text": "Unions are reliable for exact membership up to a few tens of patterns at these sizes, but noise tolerance and unions compete: the lower your θ, the fewer patterns you can safely union. A union of 50 patterns with θ = 20 matches almost anything. In practice, keep unions small (tens of patterns), keep θ near w when testing against unions, or make the vectors larger and sparser."
+      "text": "Unions are reliable for exact membership up to a few tens of patterns at these sizes, but noise tolerance and unions compete: the lower your $\\theta$, the fewer patterns you can safely union. A union of 50 patterns with $\\theta = 20$ matches almost anything. In practice, keep unions small (tens of patterns), keep $\\theta$ near w when testing against unions, or make the vectors larger and sparser."
     },
     {
       "type": "heading",
@@ -161,10 +245,10 @@
     {
       "type": "list",
       "items": [
-        "Robustness: with w ≈ 40 the false-match probability stays negligible even with θ around w/2, so codes tolerate heavy noise. This needs w in the tens, which pushes n into the thousands to stay sparse.",
+        "Robustness: with $w \\approx 40$ the false-match probability stays negligible even with $\\theta$ around $w/2$, so codes tolerate heavy noise. This needs w in the tens, which pushes n into the thousands to stay sparse.",
         "Subsampling: sparse patterns can be recognised by small dendritic segments, matching the observation that pyramidal neurons have thousands of synapses spread over many branches.",
         "Unions: a code at 2% density can union a few tens of patterns before the union saturates; a code at 20% saturates after a handful.",
-        "Learning with competition: k-WTA with k = 40 of 2048 minicolumns gives an exact, controllable sparsity (Cui, Ahmad and Hawkins 2017).",
+        "Learning with competition: k-WTA with $k = 40$ of 2048 minicolumns gives an exact, controllable sparsity (Cui, Ahmad and Hawkins 2017).",
         "Energy: spikes are metabolically expensive. Attwell and Laughlin (2001) and Lennie (2003) estimated that cortex can afford only a small fraction of neurons to be strongly active at once (Lennie suggested on the order of 1% or less), which favours sparse codes. These are estimates with large uncertainties.",
         "The 2% figure is an engineering choice consistent with these arguments, not a measured constant of cortex."
       ]
@@ -186,10 +270,10 @@
     {
       "type": "list",
       "items": [
-        "Use n ≈ 1000–4000 and w ≈ 20–60 (1–4% density) for layer outputs that other layers must match against; check the false-match probability for your n, w and θ with the formula above.",
+        "Use $n \\approx 1000\\text{–}4000$ and $w \\approx 20\\text{–}60$ (1–4% density) for layer outputs that other layers must match against; check the false-match probability for your n, w and $\\theta$ with the formula above.",
         "Enforce sparsity with k-WTA or strong inhibition plus homeostasis; let w be a parameter rather than an emergent property.",
         "Make encoders produce SDRs whose overlap reflects semantic similarity (nearby scalar values share bits); random hashing gives SDRs but no similarity structure (Purdy 2016 discusses encoder design).",
-        "For hardware: SDRs compress well as lists of active indices (40 indices of 11 bits each for n = 2048), and overlap is an AND plus popcount, cheap on FPGAs.",
+        "For hardware: SDRs compress well as lists of active indices (40 indices of 11 bits each for $n = 2048$), and overlap is an AND plus popcount, cheap on FPGAs.",
         "Spiking SDRs need a time window: decide whether a bit is \"on\" if the cell spiked within, say, one gamma cycle (10–25 ms) or one input presentation."
       ]
     },

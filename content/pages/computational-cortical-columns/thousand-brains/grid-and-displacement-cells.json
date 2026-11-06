@@ -43,12 +43,49 @@
     },
     {
       "type": "prose",
-      "text": "Each module m can be summarised by a phase φₘ — where the animal is within one period of that module's lattice. In one dimension with period λₘ the phase is the position modulo the period; in two dimensions it is a point on a torus (a rhombus with opposite edges glued). Path integration just adds the scaled, rotated displacement to every module's phase."
+      "text": "Each module m can be summarised by a phase $\\varphi_m$ — where the animal is within one period of that module's lattice. In one dimension with period $\\lambda_m$ the phase is the position modulo the period; in two dimensions it is a point on a torus (a rhombus with opposite edges glued). Path integration just adds the scaled, rotated displacement to every module's phase."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "1D:  φₘ = (x / λₘ) mod 1                         one phase per module m = 1..M\n2D:  φₘ = (Aₘ Rₘ x) mod 1   ∈ [0,1)²               Rₘ = module orientation, Aₘ = 1/λₘ (with hex basis)\nPath integration (every module, every step):\n     φₘ ← (φₘ + Aₘ Rₘ Δx) mod 1\nPopulation code: each module has n cells tiling its torus; cells whose preferred phase is\nnear φₘ fire (a bump of ~1–4 cells per module). The location SDR is the union over modules.\nCapacity (Fiete, Burak & Brookings 2008): with integer periods λₘ the code is unique up to\n     L ≈ lcm(λ₁ … λ_M)  (≈ ∏ λₘ for co-prime periods), i.e. exponential in M,\nwhile the number of cells grows only linearly in M."
+      "type": "prose",
+      "text": "One dimension:"
+    },
+{
+      "type": "math",
+      "tex": "\\varphi_m = \\left( \\frac{x}{\\lambda_m} \\right) \\;\\mathrm{mod}\\; 1",
+      "caption": "one phase per module $m = 1, \\dots, M$"
+    },
+{
+      "type": "prose",
+      "text": "Two dimensions:"
+    },
+{
+      "type": "math",
+      "tex": "\\varphi_m = (A_m R_m x) \\;\\mathrm{mod}\\; 1 \\;\\in\\; [0, 1)^2",
+      "caption": "$R_m$ = module orientation, $A_m = 1/\\lambda_m$ (with hex basis)"
+    },
+{
+      "type": "prose",
+      "text": "Path integration (every module, every step):"
+    },
+{
+      "type": "math",
+      "tex": "\\varphi_m \\leftarrow (\\varphi_m + A_m R_m \\Delta x) \\;\\mathrm{mod}\\; 1"
+    },
+{
+      "type": "prose",
+      "text": "Population code: each module has $n$ cells tiling its torus; cells whose preferred phase is near $\\varphi_m$ fire (a bump of ~1–4 cells per module). The location SDR is the union over modules."
+    },
+{
+      "type": "prose",
+      "text": "Capacity (Fiete, Burak & Brookings 2008): with integer periods $\\lambda_m$ the code is unique up to"
+    },
+{
+      "type": "math",
+      "tex": "L \\approx \\mathrm{lcm}(\\lambda_1, \\dots, \\lambda_M) \\quad \\left( \\approx \\prod_m \\lambda_m \\text{ for co-prime periods} \\right)"
+    },
+{
+      "type": "prose",
+      "text": "which is exponential in $M$, while the number of cells grows only linearly in $M$."
     },
     {
       "type": "prose",
@@ -104,9 +141,24 @@
       "text": "Hawkins, Lewis et al. (2019) add a second proposal. If grid cells encode locations, then a population could encode the displacement between two locations — 'the handle is this far and in this direction from the rim' — independently of where the pair sits. Module-wise, a displacement is simply a phase difference, so it is the same for every pair of locations separated by the same vector:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Dₘ(A→B) = (φₘ(B) − φₘ(A)) mod 1      for each module m\nUses proposed in the 2019 framework:\n  composition: object X = sub-object Y at displacement D from sub-object Z (e.g. a logo on a mug)\n  behaviour:   a displacement to a target location is the movement to make\nProposed home: layer 5 (output to subcortical motor centres) — hypothetical."
+      "type": "math",
+      "tex": "D_m(A \\to B) = \\left( \\varphi_m(B) - \\varphi_m(A) \\right) \\;\\mathrm{mod}\\; 1",
+      "caption": "for each module $m$"
+    },
+{
+      "type": "prose",
+      "text": "Uses proposed in the 2019 framework:"
+    },
+{
+      "type": "list",
+      "items": [
+        "composition: object X = sub-object Y at displacement D from sub-object Z (e.g. a logo on a mug)",
+        "behaviour: a displacement to a target location is the movement to make"
+      ]
+    },
+{
+      "type": "prose",
+      "text": "Proposed home: layer 5 (output to subcortical motor centres) — hypothetical."
     },
     {
       "type": "prose",
@@ -123,7 +175,7 @@
     },
     {
       "type": "prose",
-      "text": "Option 1, algorithmic phase plus bump readout. Keep φₘ as a float pair per module, update it in software from the motor command, and emit spikes from the n cells whose preferred phases are closest. In a vector-based simulator this costs almost nothing and gives you correct unions: represent a union as a binary vector per module and implement the shift as a roll (a permutation) of that vector."
+      "text": "Option 1, algorithmic phase plus bump readout. Keep $\\varphi_m$ as a float pair per module, update it in software from the motor command, and emit spikes from the n cells whose preferred phases are closest. In a vector-based simulator this costs almost nothing and gives you correct unions: represent a union as a binary vector per module and implement the shift as a roll (a permutation) of that vector."
     },
     {
       "type": "code",
@@ -135,9 +187,26 @@
       "text": "Option 2, a continuous attractor network (CAN). The standard mechanistic model (Fuhs & Touretzky 2006; McNaughton et al. 2006; Burak & Fiete 2009) is a 2D sheet of neurons with centre-surround recurrent connectivity that supports a stable activity bump (or a lattice of bumps). Each neuron has a preferred direction; its outgoing weights are shifted slightly in that direction, and its feedforward drive is modulated by velocity along that direction, so movement pushes the bump across the sheet."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Burak & Fiete (2009) rate form (spiking versions behave similarly):\n  τ dsᵢ/dt + sᵢ = f( Σⱼ Wᵢⱼ sⱼ + Bᵢ ),      τ ≈ 10 ms, f = rectification\n  Wᵢⱼ = W₀(xᵢ − xⱼ − l·ê_θⱼ)                 W₀(x) = a·exp(−γ|x|²) − exp(−β|x|²)\n  Bᵢ  = A (1 + α ê_θᵢ · v)                    v = velocity, α sets grid scale\nPreferred directions θ in {N, E, S, W}; periodic boundaries give a clean torus."
+      "type": "prose",
+      "text": "Burak & Fiete (2009) rate form (spiking versions behave similarly):"
+    },
+{
+      "type": "math",
+      "tex": "\\tau \\frac{ds_i}{dt} + s_i = f\\left( \\sum_j W_{ij}\\, s_j + B_i \\right)",
+      "caption": "$\\tau \\approx 10\\text{ ms}$, $f$ = rectification"
+    },
+{
+      "type": "math",
+      "tex": "W_{ij} = W_0\\left( x_i - x_j - l\\, \\hat{e}_{\\theta_j} \\right), \\qquad W_0(x) = a \\exp(-\\gamma |x|^2) - \\exp(-\\beta |x|^2)"
+    },
+{
+      "type": "math",
+      "tex": "B_i = A \\left( 1 + \\alpha\\, \\hat{e}_{\\theta_i} \\cdot v \\right)",
+      "caption": "$v$ = velocity, $\\alpha$ sets grid scale"
+    },
+{
+      "type": "prose",
+      "text": "Preferred directions $\\theta \\in \\lbrace N, E, S, W \\rbrace$; periodic boundaries give a clean torus."
     },
     {
       "type": "prose",

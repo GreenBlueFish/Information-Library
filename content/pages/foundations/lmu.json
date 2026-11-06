@@ -4,7 +4,7 @@
   "blocks": [
     {
       "type": "prose",
-      "text": "Anything that predicts sequences needs a memory of the recent past. In a cortical column this is the job of temporal context. In machine learning it is the job of the LSTM's gated cell state. Both are learned, fragile and hard to analyse. The LMU starts from a different question: what is the optimal way for a d-dimensional continuous-time linear system to remember the last θ seconds of a signal? The answer can be derived in closed form, and it turns out to be a projection of the input's history onto Legendre polynomials."
+      "text": "Anything that predicts sequences needs a memory of the recent past. In a cortical column this is the job of temporal context. In machine learning it is the job of the LSTM's gated cell state. Both are learned, fragile and hard to analyse. The LMU starts from a different question: what is the optimal way for a $d$-dimensional continuous-time linear system to remember the last $\\theta$ seconds of a signal? The answer can be derived in closed form, and it turns out to be a projection of the input's history onto Legendre polynomials."
     },
     {
       "type": "heading",
@@ -13,16 +13,24 @@
     },
     {
       "type": "prose",
-      "text": "A pure delay, y(t) = u(t − θ), would be the perfect memory: from it you could read any moment in the window. Its transfer function e^(−θs) is infinite-dimensional and cannot be built from a finite set of neurons or state variables. The LDN approximates it with the [d−1/d] Padé approximant, the best rational approximation of order d around s = 0. Rewritten in a convenient basis, it is the linear system"
+      "text": "A pure delay, $y(t) = u(t - \\theta)$, would be the perfect memory: from it you could read any moment in the window. Its transfer function $e^{-\\theta s}$ is infinite-dimensional and cannot be built from a finite set of neurons or state variables. The LDN approximates it with the $[d-1/d]$ Padé approximant, the best rational approximation of order $d$ around $s = 0$. Rewritten in a convenient basis, it is the linear system"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "θ dm/dt = A m(t) + B u(t)\n\nA_ij = (2i + 1) · { −1           if i < j\n                  { (−1)^(i−j+1)  if i ≥ j\nB_i  = (2i + 1) · (−1)^i            for i, j = 0 … d−1"
+      "type": "math",
+      "tex": "\\theta \\frac{dm}{dt} = A\\,m(t) + B\\,u(t)"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$A_{ij} = (2i + 1) \\cdot (-1)$ if $i < j$",
+        "$A_{ij} = (2i + 1) \\cdot (-1)^{i-j+1}$ if $i \\ge j$",
+        "$B_i = (2i + 1) \\cdot (-1)^i$",
+        "for $i, j = 0, \\dots, d-1$"
+      ]
     },
     {
       "type": "prose",
-      "text": "The state m(t) has a striking meaning. It holds the coefficients of the input's last θ seconds, expanded in shifted Legendre polynomials P̃_i. To read the input as it was θ' seconds ago, for any 0 ≤ θ' ≤ θ, take a weighted sum: u(t − θ') ≈ Σ_i P̃_i(θ'/θ) m_i(t). At θ' = θ every P̃_i equals 1, so the full delay is just the sum of the state. One fixed system therefore gives a whole continuum of delays and, by linear readouts, any linear functional of the window, such as averages, derivatives or filtered versions."
+      "text": "The state $m(t)$ has a striking meaning. It holds the coefficients of the input's last $\\theta$ seconds, expanded in shifted Legendre polynomials $\\tilde{P}_i$. To read the input as it was $\\theta'$ seconds ago, for any $0 \\le \\theta' \\le \\theta$, take a weighted sum: $u(t - \\theta') \\approx \\sum_i \\tilde{P}_i(\\theta'/\\theta)\\, m_i(t)$. At $\\theta' = \\theta$ every $\\tilde{P}_i$ equals 1, so the full delay is just the sum of the state. One fixed system therefore gives a whole continuum of delays and, by linear readouts, any linear functional of the window, such as averages, derivatives or filtered versions."
     },
     {
       "type": "widget",
@@ -58,7 +66,7 @@
     },
     {
       "type": "prose",
-      "text": "The input is a mix of 1 Hz and 2.3 Hz sinusoids. The widget integrates the LDN with fourth-order Runge-Kutta and plots the decoded delay against the true delayed input. Things to try: at order 1 the 'memory' is just a low-pass filter and the reconstruction is badly wrong. By order 4 to 6 it is close. Lengthen θ at a fixed order and accuracy falls, because the same d coefficients now have to cover more of the signal. Order relative to θ times signal bandwidth is what matters: roughly, d must grow with the number of oscillations the window has to hold."
+      "text": "The input is a mix of 1 Hz and 2.3 Hz sinusoids. The widget integrates the LDN with fourth-order Runge-Kutta and plots the decoded delay against the true delayed input. Things to try: at order 1 the 'memory' is just a low-pass filter and the reconstruction is badly wrong. By order 4 to 6 it is close. Lengthen $\\theta$ at a fixed order and accuracy falls, because the same d coefficients now have to cover more of the signal. Order relative to $\\theta$ times signal bandwidth is what matters: roughly, d must grow with the number of oscillations the window has to hold."
     },
     {
       "type": "heading",
@@ -70,13 +78,21 @@
       "text": "The LMU cell wraps the LDN in a learned network. At each step a hidden state h and the input x are linearly combined into a scalar (or small vector) u that is written into the memory. The LDN updates m, discretised exactly with zero-order hold so that A and B become fixed matrices Ā and B̄. A nonlinear layer then computes the new h from x, the previous h and m:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "u_t = e_x·x_t + e_h·h_(t−1) + e_m·m_(t−1)\nm_t = Ā m_(t−1) + B̄ u_t            # fixed, not trained\nh_t = tanh(W_x x_t + W_h h_(t−1) + W_m m_t)"
+      "type": "math",
+      "tex": "u_t = e_x \\cdot x_t + e_h \\cdot h_{t-1} + e_m \\cdot m_{t-1}"
+    },
+    {
+      "type": "math",
+      "tex": "m_t = \\bar{A}\\, m_{t-1} + \\bar{B}\\, u_t",
+      "caption": "fixed, not trained"
+    },
+    {
+      "type": "math",
+      "tex": "h_t = \\tanh(W_x x_t + W_h h_{t-1} + W_m m_t)"
     },
     {
       "type": "prose",
-      "text": "Only the encoders e and the weights W are learned. Ā and B̄ are fixed by θ and d. Because the memory part is linear and well-conditioned, gradients pass through it without vanishing, and the memory's span is set by θ rather than having to be discovered by training. In the 2019 paper the LMU solved permuted sequential MNIST at 97.2% and handled delay tasks over 100,000 time steps, where LSTMs fail. Because the memory part is linear, the whole recurrence over a sequence can also be computed in parallel as a convolution, which later work used to train LMUs as fast as feed-forward networks."
+      "text": "Only the encoders $e$ and the weights $W$ are learned. $\\bar{A}$ and $\\bar{B}$ are fixed by $\\theta$ and $d$. Because the memory part is linear and well-conditioned, gradients pass through it without vanishing, and the memory's span is set by $\\theta$ rather than having to be discovered by training. In the 2019 paper the LMU solved permuted sequential MNIST at 97.2% and handled delay tasks over 100,000 time steps, where LSTMs fail. Because the memory part is linear, the whole recurrence over a sequence can also be computed in parallel as a convolution, which later work used to train LMUs as fast as feed-forward networks."
     },
     {
       "type": "heading",
@@ -85,7 +101,7 @@
     },
     {
       "type": "prose",
-      "text": "The LDN was first derived as a spiking network. Using the dynamics principle of the Neural Engineering Framework, a population representing the d-dimensional m with a recurrent connection τA/θ + I implements the delay, and the 'delay network' paper analyses how spiking noise and synaptic filtering limit accuracy. Implemented this way, a few hundred LIF neurons can hold a fraction of a second of a time-varying signal. The same paper relates the network's heterogeneous temporal responses to 'time cells' recorded in rodent hippocampus and cortex."
+      "text": "The LDN was first derived as a spiking network. Using the dynamics principle of the Neural Engineering Framework, a population representing the $d$-dimensional $m$ with a recurrent connection $\\tau A/\\theta + I$ implements the delay, and the 'delay network' paper analyses how spiking noise and synaptic filtering limit accuracy. Implemented this way, a few hundred LIF neurons can hold a fraction of a second of a time-varying signal. The same paper relates the network's heterogeneous temporal responses to 'time cells' recorded in rodent hippocampus and cortex."
     },
     {
       "type": "code",
@@ -100,7 +116,7 @@
     {
       "type": "list",
       "items": [
-        "A column that predicts the next sensation from a movement needs the recent sequence of sensations and movements. An LDN is a principled, compact store for it, with a known capacity (d) and window (θ).",
+        "A column that predicts the next sensation from a movement needs the recent sequence of sensations and movements. An LDN is a principled, compact store for it, with a known capacity ($d$) and window ($\\theta$).",
         "HTM's temporal memory represents context through which cell in a minicolumn fires. The LDN represents it as continuous coefficients. Comparing the two on the same sequence task is a cheap, informative experiment.",
         "The Legendre coefficients behave like a bank of time cells. Feeding them to a layer that learns associations, for example by NEF transformations learned with PES, gives a column a ready-made 'what happened just before' input."
       ]
