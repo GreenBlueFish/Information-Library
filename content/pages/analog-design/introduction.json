@@ -1,6 +1,6 @@
 {
   "title": "Introduction to Analog Design",
-  "intro": "Almost every system that touches the real world needs analog circuits at its edge: they sense, amplify, filter and convert signals that no digital gate can handle directly.",
+  "intro": "Almost every system that touches the real world needs analog circuits at its edge: they sense, amplify, filter and convert signals before any digital gate can use them. This page follows Razavi, Chapter 1.",
   "blocks": [
     {
       "type": "heading",
@@ -9,15 +9,57 @@
     },
     {
       "type": "prose",
-      "text": "The world is analog: light, sound, temperature, radio waves and chemical concentrations are continuous quantities. A sensor turns one into a small voltage or current, and that signal has to be amplified, filtered and digitised before any digital logic can use it. The more of the system lives in digital, the more it depends on a thin, careful layer of analog at the boundaries."
+      "text": "Most of what a phone, camera or medical implant does happens in digital logic, yet each of them starts and ends with analog circuits. The physical world delivers continuous quantities (light, sound, radio waves, nerve potentials), and something has to sense them, lift them out of the noise and hand them to a converter. That front end decides how small a signal the product can detect and how much battery it burns doing so."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Sensing and processing"
+    },
+    {
+      "type": "prose",
+      "text": "A tempting shortcut is to put an analog-to-digital converter (ADC) straight at the antenna and do everything else in software. For a cell-phone receiver this does not work: a converter fast and precise enough to resolve the tiny wanted signal next to much larger interferers would consume far more power than today's whole receiver, and designing that converter is itself an analog problem. The sensing interface stays analog."
+    },
+    {
+      "type": "prose",
+      "text": "Biomedical sensing makes the same point with tighter limits. A neuron firing produces a pulse of a few millivolts lasting a few hundred microseconds. A neural recorder with tens of electrodes must amplify, digitize and transmit each channel wirelessly, while dissipating little enough power to run for days on a small battery and to avoid heating the tissue. The amplifiers, converters and radio transmitter (all analog) dominate that power budget."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "When digital signals become analog"
+    },
+    {
+      "type": "prose",
+      "text": "A bit stream sent over a long cable or board trace arrives as an analog waveform: the channel has finite bandwidth, so high frequencies are attenuated and the edges smear into each other. The receiver needs an equalizer, a circuit whose gain rises with frequency roughly as the inverse of the channel's loss, so the cascade looks flat again."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/introduction-equalizer.svg",
+      "alt": "Plot of gain in decibels against frequency on a log axis from 1 MHz to 10 GHz. A red curve, the cable response, stays near 0 dB at low frequency and falls to about minus 28 dB at 10 GHz. A blue curve, the equalizer, mirrors it upward to about plus 28 dB. A dashed black line at 0 dB shows their product is flat.",
+      "caption": "Equalization: the equalizer's gain is the mirror image (in dB) of the cable's loss, so cable plus equalizer is flat."
+    },
+    {
+      "type": "prose",
+      "text": "The equalization could also be done digitally after an ADC. Which is better is an engineering judgement: at low data rates digitizing first is usually cheaper, at tens of Gb/s an analog equalizer wins. The crossover speed depends on the problem and has moved upward over the years, but there is always a region above it where the analog solution is the efficient one."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Demand and challenges"
+    },
+    {
+      "type": "prose",
+      "text": "Measured by what appears at the major circuits conferences, a large share of current chip design work requires analog knowledge, even though an analog block may have thousands of transistors where a processor has billions. The difficulty is not size but the number of things that must be right at once:"
     },
     {
       "type": "list",
       "items": [
-        "Sensing and processing: microphones, image sensors, accelerometers and radio antennas deliver microvolt to millivolt signals buried in noise.",
-        "Digital signals become analog: a fast bit stream on a long wire or backplane is really an analog waveform with finite rise time, ringing and noise. High-speed links therefore need equalisers, clock recovery and careful receivers.",
-        "Analog design is in demand: it is hard to automate, does not scale as easily as logic, and every new interface standard needs new analog front ends.",
-        "The challenge: analog circuits trade off many quantities at once, and no single metric can be optimised alone."
+        "Transistor imperfections: scaling makes devices faster but worsens their analog properties. The maximum gain one transistor can give, its intrinsic gain $g_m r_o$, falls with each technology generation, and a device's behaviour depends on what is laid out around it.",
+        "Falling supply voltages: CMOS supplies have dropped from about 12 V in the 1970s to around 0.9 V. Many classic circuits no longer fit in the available headroom, so new low-voltage topologies keep being needed.",
+        "Power: battery life in portable devices and heat removal in large systems both push for lower power. Scaling lowers digital power almost automatically; for analog circuits the effect is much less direct.",
+        "Complexity: analog blocks can contain tens of thousands of transistors and need long simulations at both transistor level (SPICE) and system level (MATLAB-style models).",
+        "PVT variations: device parameters change with fabrication process, supply voltage and temperature. A design must meet its specifications across the whole specified range, e.g. a supply from 0.95 V to 1 V and a temperature from 0 to 80 °C."
       ]
     },
     {
@@ -27,7 +69,13 @@
     },
     {
       "type": "prose",
-      "text": "Almost every analog block is judged on the same set of competing specifications: gain, bandwidth, power dissipation, supply voltage, linearity, noise, maximum voltage swing and input/output impedance. Improving one usually costs another. This 'analog design octagon' is the mental model that the rest of this topic keeps returning to."
+      "text": "An amplifier is judged on gain, speed, power dissipation, supply voltage, linearity, noise, maximum voltage swing and input/output impedance, and nearly every pair of these trades against each other. Raising gain by increasing a load resistor costs swing and speed; lowering noise costs power; a lower supply squeezes swing and linearity. Design is a multidimensional compromise, and the octagon is a reminder to ask what a change costs elsewhere."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/introduction-design-octagon.svg",
+      "alt": "An octagon whose eight corners are labelled gain, speed, power dissipation, supply voltage, linearity, noise, input/output impedance and voltage swings. Thin lines join every corner to every other corner.",
+      "caption": "The analog design octagon: eight specifications, each of which trades against the others."
     },
     {
       "type": "heading",
@@ -36,7 +84,11 @@
     },
     {
       "type": "prose",
-      "text": "Putting analog circuits on the same chip as digital ones lowers cost, shrinks size and power, and removes the capacitance and inductance of package pins and board traces that would otherwise limit speed. The price is that integrated components are imperfect: resistors and capacitors vary by 10 to 30 percent, there are no good inductors in plain CMOS, and the substrate couples noise between blocks."
+      "text": "Integrated circuits date from the late 1950s. The number of transistors per chip has doubled roughly every 18 months (Moore's observation), and minimum feature sizes fell from about 25 µm around 1960 to about 12 nm by 2015. Analog circuits ride on the same technology: integration gives complexity, speed and precision that discrete parts cannot reach, because package pins and board traces would add capacitance and inductance between every pair of devices. One consequence is that a modern analog circuit can no longer be prototyped with discrete components; its behaviour only exists on silicon and in simulation."
+    },
+    {
+      "type": "prose",
+      "text": "Integration has a price: on-chip resistors and capacitors have loose absolute tolerances (only their ratios are accurate), good inductors are hard to make, and the shared substrate couples noise from digital blocks into sensitive analog nodes."
     },
     {
       "type": "heading",
@@ -45,7 +97,11 @@
     },
     {
       "type": "prose",
-      "text": "CMOS (complementary metal-oxide-semiconductor) technology dominates because digital logic, memory and analog can share one process, and because scaling transistors down has made them cheaper and faster every generation. Bipolar and BiCMOS processes still offer higher gm per unit current and better matching, but the economics favour CMOS."
+      "text": "The field-effect transistor was patented by J. E. Lilienfeld in the early 1930s, before the bipolar transistor existed, but MOS processes only became practical in the early 1960s (n-type devices first), and complementary MOS, with both n- and p-type devices, arrived in the mid-1960s. CMOS took over digital logic because a CMOS gate draws power essentially only while switching and needs few devices, and because MOS transistors scaled down more easily than bipolar ones."
+    },
+    {
+      "type": "prose",
+      "text": "For analog work MOS devices were at first slower and noisier than bipolar transistors. Two things changed that. Scaling raised MOS intrinsic speed by orders of magnitude, eventually overtaking bipolar devices, and CMOS circuits run from lower supplies (around 1 V against roughly 2 V for bipolar), which lowers the power of large chips. Add the ability to put analog and digital on one cheap die, and CMOS became the default for analog design too."
     },
     {
       "type": "heading",
@@ -54,35 +110,65 @@
     },
     {
       "type": "prose",
-      "text": "Analog design moves between several levels, and a good designer can jump between them:"
+      "text": "A designer moves between levels depending on the question being asked:"
     },
     {
       "type": "list",
       "items": [
-        "System: what the product has to do (a receiver, a data converter).",
-        "Architecture: how the blocks connect (amplifier, filter, converter, PLL).",
-        "Circuit: the transistor-level schematic of each block.",
-        "Device: the physics of one transistor, including parasitics.",
-        "Layout and process: the geometry and fabrication that realise the circuit."
+        "Device: electric fields and charge transport inside one transistor.",
+        "Circuit: how a group of transistors interact through their I/V characteristics.",
+        "Architecture: how building blocks such as amplifiers, filters, converters and clock recovery work together.",
+        "System: the performance of the whole product (for example a receiver) in terms of its subsystems."
       ]
     },
     {
       "type": "prose",
-      "text": "This topic climbs that ladder: device physics first, then single-stage amplifiers, then multi-stage circuits and feedback, and finally larger blocks (references, oscillators, PLLs) and the realities of layout."
+      "text": "Optimizing a chip needs all of them, and in industry the device physicists and the system designers have to talk to each other. This topic starts at the device level (Basic MOS Device Physics) and builds upward through single-stage amplifiers, differential pairs, current mirrors, frequency response, noise and feedback to op amps, references, oscillators and PLLs, with process and layout at the end."
     },
     {
       "type": "callout",
-      "text": "How to study this topic: read the page, play with the simulation, then try each problem before you open its hidden solution. Equations are written in plain text: gm is transconductance, ro output resistance, Vov overdrive voltage, || means parallel resistance."
+      "text": "How to study this topic: read the page, play with any simulation, then try each problem before opening its hidden solution. Formulas use the usual notation: $g_m$ is transconductance, $r_o$ output resistance, $V_{GS} - V_{TH}$ the overdrive voltage, and $R_1 \\parallel R_2$ two resistances in parallel."
     },
     {
       "type": "problem",
       "title": "Which spec would you trade?",
       "text": "A battery-powered ECG amplifier has to detect 1 mV signals. Name two octagon specifications you would deliberately relax to gain the others, and justify.",
       "solution": [
-        "Biomedical front ends care most about noise and power. Bandwidth is only about 100 Hz, so you can use very low bias currents (low power) and small bandwidth to integrate less noise. Speed and output swing can be relaxed: the signal is slow, and later stages handle larger swing.",
-        "In general you relax whichever specifications the application does not need, then spend the saved power or area on the ones that matter."
+        "Biomedical front ends care most about noise and power. The signal bandwidth is only about 100 Hz, so very low bias currents (low power) and a narrow bandwidth that integrates little noise are both affordable. Speed and output swing can be relaxed: the signal is slow, and later stages can provide the larger swing.",
+        "In general, relax whichever specifications the application does not need, then spend the saved power or area on the ones that matter."
       ],
       "answer": "Relax speed (bandwidth) and swing; spend on noise and power."
+    },
+    {
+      "type": "problem",
+      "title": "Sizing an equalizer",
+      "text": "A cable's loss in dB grows as the square root of frequency and is 20 dB at 5 GHz. How much gain (in dB and as a ratio) must the equalizer provide at 5 GHz and at 1.25 GHz to flatten the response?",
+      "hint": "Convert dB to a voltage ratio with $10^{\\mathrm{dB}/20}$.",
+      "solution": [
+        "At 1.25 GHz the loss is $20 \\sqrt{1.25/5} = 20 \\cdot 0.5 = 10\\text{ dB}$.",
+        "The equalizer must supply the mirror image: 20 dB at 5 GHz, a voltage ratio of $10^{20/20} = 10$, and 10 dB at 1.25 GHz, a ratio of $10^{10/20} \\approx 3.16$."
+      ],
+      "answer": "20 dB (10 times) at 5 GHz; 10 dB (about 3.16 times) at 1.25 GHz."
+    },
+    {
+      "type": "problem",
+      "title": "Moore's law arithmetic",
+      "text": "If the number of transistors per chip doubles every 1.5 years, by what factor does it grow in 15 years? How many years does a factor of one million take?",
+      "solution": [
+        "15 years is 10 doublings, so the factor is $2^{10} = 1024$.",
+        "A factor of $10^6$ needs $\\log_2 10^6 \\approx 19.9$ doublings, about $19.9 \\times 1.5 \\approx 30$ years."
+      ],
+      "answer": "About 1000 times in 15 years; a million times in about 30 years."
+    },
+    {
+      "type": "problem",
+      "title": "Headroom on a falling supply",
+      "text": "A stack of transistors needs one threshold voltage of 0.4 V plus three overdrive voltages of 0.15 V each before the output can move. How much output swing is left at a nominal 1.0 V supply, and at the low PVT corner of 0.95 V?",
+      "solution": [
+        "The stack consumes $0.4 + 3 \\times 0.15 = 0.85\\text{ V}$.",
+        "At 1.0 V the output has $1.0 - 0.85 = 0.15\\text{ V}$ of room; at 0.95 V only 0.10 V. A 5 percent supply drop removes a third of the swing, which is why supply scaling hurts analog circuits so much."
+      ],
+      "answer": "0.15 V at 1.0 V, 0.10 V at 0.95 V."
     }
   ]
 }
