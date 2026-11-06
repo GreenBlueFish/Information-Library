@@ -1,15 +1,32 @@
 {
-  "title": "Current Mirrors",
-  "intro": "A current mirror copies a reference current to another branch. Mirrors are used for biasing and as active loads throughout analog circuits.",
+  "title": "Basic Current Mirrors",
+  "intro": "A current mirror copies a reference current to another branch. Mirrors bias almost every analog circuit and also serve as active loads.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Basic mirror"
+      "text": "Why not just set a gate voltage?"
     },
     {
       "type": "prose",
-      "text": "Two NMOS transistors share the same VGS: M1 is diode-connected and carries the reference current Iref. M2 has the same gate and source voltages, so ideally"
+      "text": "Biasing a transistor from a resistive divider fixes $V_{GS}$, but then"
+    },
+    {
+      "type": "math",
+      "tex": "I_{out} \\approx \\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L}\\left(\\frac{R_2}{R_1 + R_2}V_{DD} - V_{TH}\\right)^2"
+    },
+    {
+      "type": "prose",
+      "text": "depends on the supply, on $V_{TH}$ (which varies by 50 to 100 mV between wafers) and on mobility and $V_{TH}$ drift with temperature. The smaller the overdrive, the worse it gets, since the error is a fraction of $V_{ov}$ that is then squared. Even a perfectly defined $V_{GS}$ does not define the current. The fix is to generate one accurate reference current once (a bandgap-based circuit, see the bandgap chapter) and copy it everywhere."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The basic mirror"
+    },
+    {
+      "type": "prose",
+      "text": "If $I_D = f(V_{GS})$, a transistor carrying $I_{REF}$ with its gate tied to its drain (diode-connected) produces $V_{GS} = f^{-1}(I_{REF})$. Applying that voltage to a second, saturated transistor gives $f(f^{-1}(I_{REF}))$, a copy of the reference. Cause and effect matter: the $V_{GS}$ must be produced by $I_{REF}$, which only a diode-connected device carrying $I_{REF}$ does. A gate tied to an unrelated bias $V_b$ will not track the reference. Ignoring $\\lambda$:"
     },
     {
       "type": "figure",
@@ -18,22 +35,67 @@
       "caption": "A basic current mirror. Both gates see the same voltage, so the output current copies the reference."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Iout = Iref * (W/L)2 / (W/L)1"
+      "type": "math",
+      "tex": "I_{out} = \\frac{(W/L)_2}{(W/L)_1} I_{REF}"
     },
     {
       "type": "prose",
-      "text": "Errors come from channel-length modulation (VDS1 = VGS differs from VDS2 = Vout, giving Iout/Iref = [(W/L)2/(W/L)1] * (1 + lambda*VDS2)/(1 + lambda*VDS1)), from threshold and geometry mismatch, and from short-channel effects. Use long channels to reduce lambda."
+      "text": "The ratio of dimensions is well controlled, so the copy is nearly independent of process and temperature."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Chains and multiple outputs"
+    },
+    {
+      "type": "prose",
+      "text": "An NMOS mirror can feed a PMOS diode, whose mirror then sources current, giving $|I_{out}| = \\alpha\\beta I_{REF}$ with $\\alpha = (W/L)_2/(W/L)_1$ and $\\beta = (W/L)_4/(W/L)_3$. Products of ratios make large or very small currents easy, but each copy adds its own random mismatch, so long chains are avoided. A typical use is one reference setting the tail of a differential pair through an NMOS mirror and the load currents through a PMOS mirror."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/current-mirrors-and-biasing-mirror-chain.svg",
+      "alt": "A reference current IREF flows into diode-connected NMOS M1, whose gate drives NMOS M2. M2's drain is fed by diode-connected PMOS M3, whose gate drives PMOS M4; M4's drain is the output current.",
+      "caption": "Copying through an NMOS and then a PMOS mirror: $|I_{out}| = \\alpha\\beta I_{REF}$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Sizing"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use the same channel length for every device in a mirror. The effective length is $L_{eff} = L_{drawn} - 2L_D$, so doubling the drawn length does not double $L_{eff}$, and short-channel $V_{TH}$ also depends on L.",
+        "Scale currents by repeating a unit transistor rather than drawing a wider one: the poorly defined gate corners make the effective width of a single device scale imperfectly.",
+        "To produce a fraction of $I_{REF}$, build the diode-connected reference from several units (two units for $I_{REF}/2$ from a one-unit output).",
+        "To avoid huge unit counts, two units in series give an equivalent length of $2(L_{drawn} - 2L_D)$ and half the current; the lower device sits in triode, so this is not a cascode."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Mirrors process signals too"
+    },
+    {
+      "type": "prose",
+      "text": "A change $\\Delta I$ in the reference appears at the output scaled by the size ratio. For example, a CS transistor M1 feeding a diode-connected PMOS M2 that is mirrored by M3 into a load $R_L$ has a voltage gain of $g_{m1}R_L(W/L)_3/(W/L)_2$."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Cascode mirror"
+      "text": "Channel-length modulation error"
     },
     {
       "type": "prose",
-      "text": "Add a cascode device on top of each branch. The output resistance becomes about gm*ro^2 (versus ro), so the output current is almost independent of Vout. The cost is headroom: the minimum output voltage rises from Vov to VTH + 2*Vov. A 'wide-swing' cascode bias reduces this to about 2*Vov."
+      "text": "With $\\lambda$ included,"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{I_{D2}}{I_{D1}} = \\frac{(W/L)_2}{(W/L)_1}\\cdot\\frac{1 + \\lambda V_{DS2}}{1 + \\lambda V_{DS1}}"
+    },
+    {
+      "type": "prose",
+      "text": "$V_{DS1}$ equals $V_{GS}$, but $V_{DS2}$ is whatever the circuit being fed imposes, so the copy is only exact when $V_{DS2} = V_{GS}$. Short, minimum-length devices (chosen to keep width and capacitance small) make this worse; the cures are longer channels or the cascode mirrors on the next page."
     },
     {
       "type": "widget",
@@ -88,28 +150,48 @@
     },
     {
       "type": "prose",
-      "text": "Try raising lambda: the basic mirror's current climbs with Vout and rises above the ideal line, while the cascode mirror stays flat once it has its headroom. Lower Vov to see the cascode working at lower voltages."
+      "text": "Try raising $\\lambda$: the basic mirror's current climbs with $V_{out}$ above the ideal line, while the cascode mirror stays flat once it has its headroom. Lower $V_{ov}$ to see the cascode working at lower voltages. The cascode raises the output resistance from $r_o$ to about $g_m r_o^2$ at the cost of headroom; see Cascode Current Mirrors."
     },
     {
       "type": "problem",
       "title": "Mirror error from lambda",
-      "text": "Iref = 100 uA, ratio (W/L)2/(W/L)1 = 2, lambda = 0.1 V^-1, VGS = 0.7 V (so VDS1 = 0.7 V), Vout = 1.2 V. Find Iout.",
+      "text": "$I_{REF} = 100\\,\\mu\\text{A}$, ratio $(W/L)_2/(W/L)_1 = 2$, $\\lambda = 0.1\\text{ V}^{-1}$, $V_{GS} = 0.7\\text{ V}$ (so $V_{DS1} = 0.7\\text{ V}$), $V_{out} = 1.2\\text{ V}$. Find $I_{out}$.",
       "solution": [
-        "Ideal: 200 uA.",
-        "Correction (1 + lambda*VDS2)/(1 + lambda*VDS1) = (1 + 0.12)/(1 + 0.07) = 1.12/1.07 = 1.047.",
-        "Iout = 200 * 1.047 = 209 uA, a 4.7 percent error."
+        "Ideal: $200\\,\\mu\\text{A}$.",
+        "Correction $\\frac{1 + \\lambda V_{DS2}}{1 + \\lambda V_{DS1}} = \\frac{1.12}{1.07} = 1.047$.",
+        "$I_{out} = 200 \\cdot 1.047 = 209\\,\\mu\\text{A}$, a 4.7 percent error."
       ],
-      "answer": "About 209 uA (4.7 percent high)."
+      "answer": "About $209\\,\\mu\\text{A}$ (4.7 percent high)."
     },
     {
       "type": "problem",
       "title": "Cascode output resistance",
-      "text": "gm = 1 mS and ro = 50 kohm in both devices of a cascode mirror. Roughly how much does Iout change when Vout moves by 1 V in the basic and cascode mirror?",
+      "text": "$g_m = 1\\text{ mS}$ and $r_o = 50\\text{ k}\\Omega$ in both devices of a cascode mirror. Roughly how much does $I_{out}$ change when $V_{out}$ moves by 1 V in the basic and in the cascode mirror?",
       "solution": [
-        "Basic: Rout = ro = 50 kohm, so Delta-I = 1 V / 50 kohm = 20 uA.",
-        "Cascode: Rout is about (1 + gm*ro)*ro = 51 * 50 kohm = 2.55 Mohm, so Delta-I = 0.39 uA, over 50 times less."
+        "Basic: $R_{out} = r_o = 50\\text{ k}\\Omega$, so $\\Delta I = 1\\text{ V}/50\\text{ k}\\Omega = 20\\,\\mu\\text{A}$.",
+        "Cascode: $R_{out} \\approx (1 + g_m r_o)r_o = 51 \\cdot 50\\text{ k}\\Omega = 2.55\\text{ M}\\Omega$, so $\\Delta I = 0.39\\,\\mu\\text{A}$, about 50 times less."
       ],
-      "answer": "20 uA versus 0.39 uA."
+      "answer": "$20\\,\\mu\\text{A}$ versus $0.39\\,\\mu\\text{A}$."
+    },
+    {
+      "type": "problem",
+      "title": "Threshold sensitivity of a fixed gate voltage",
+      "text": "A transistor biased by a divider has a nominal overdrive of 0.25 V. Its $V_{TH}$ comes out 50 mV high. By how much does its current fall? What happens in a mirror?",
+      "solution": [
+        "The overdrive drops to 0.2 V, so $I_D$ scales by $(0.2/0.25)^2 = 0.64$: a 36 percent drop.",
+        "In a mirror the diode-connected device sets $V_{GS}$ from $I_{REF}$, so a common $V_{TH}$ shift moves $V_{GS}$ by the same 50 mV and the output current does not change (to first order)."
+      ],
+      "answer": "36 percent lower with a fixed gate voltage; essentially unchanged in a mirror."
+    },
+    {
+      "type": "problem",
+      "title": "Unit transistors",
+      "text": "From $I_{REF} = 50\\,\\mu\\text{A}$ you need outputs of $25\\,\\mu\\text{A}$ and $150\\,\\mu\\text{A}$, using only identical unit transistors. How many units go in the reference and each output?",
+      "solution": [
+        "The smallest output is $I_{REF}/2$, so each unit should carry $25\\,\\mu\\text{A}$: the diode-connected reference is two units in parallel.",
+        "The $25\\,\\mu\\text{A}$ output is one unit; the $150\\,\\mu\\text{A}$ output is six units in parallel."
+      ],
+      "answer": "Reference: 2 units; outputs: 1 unit and 6 units."
     }
   ]
 }
