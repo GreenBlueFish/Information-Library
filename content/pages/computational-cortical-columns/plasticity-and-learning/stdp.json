@@ -13,7 +13,7 @@
     },
     {
       "type": "prose",
-      "text": "The experimental basis: Markram, Lübke, Frotscher and Sakmann (1997) showed in layer 5 pyramidal cells in cortical slices that the order of pre- and postsynaptic spikes matters: postsynaptic spikes about 10 ms after the EPSP onset gave potentiation, postsynaptic spikes about 10 ms before it gave depression, and wider separations (around 100 ms) gave no change. Bi and Poo (1998) mapped the timing dependence in cultured hippocampal neurons: potentiation when the presynaptic spike led by up to about 20 ms, depression when it lagged by a similar interval, and changes fading out over a few tens of milliseconds. They also found that potentiation was smaller for synapses that were already strong, whereas depression showed no such dependence, which later motivated weight-dependent rules. Exponential fits often quoted from these data give τ+ ≈ 17 ms and τ− ≈ 34 ms, but the exact window varies strongly between preparations, synapse types and dendritic locations; in cortex it also depends on firing rate (Sjöström, Turrigiano and Nelson 2001)."
+      "text": "The experimental basis: Markram, Lübke, Frotscher and Sakmann (1997) showed in layer 5 pyramidal cells in cortical slices that the order of pre- and postsynaptic spikes matters: postsynaptic spikes about 10 ms after the EPSP onset gave potentiation, postsynaptic spikes about 10 ms before it gave depression, and wider separations (around 100 ms) gave no change. Bi and Poo (1998) mapped the timing dependence in cultured hippocampal neurons: potentiation when the presynaptic spike led by up to about 20 ms, depression when it lagged by a similar interval, and changes fading out over a few tens of milliseconds. They also found that potentiation was smaller for synapses that were already strong, whereas depression showed no such dependence, which later motivated weight-dependent rules. Exponential fits often quoted from these data give $\\tau_+ \\approx 17\\text{ ms}$ and $\\tau_- \\approx 34\\text{ ms}$, but the exact window varies strongly between preparations, synapse types and dendritic locations; in cortex it also depends on firing rate (Sjöström, Turrigiano and Nelson 2001)."
     },
     {
       "type": "heading",
@@ -21,13 +21,41 @@
       "text": "The pair-based rule"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Δt = t_post − t_pre\n\nΔw = +A+ · exp(−Δt / τ+)     if Δt > 0   (pre before post: LTP)\nΔw = −A− · exp(+Δt / τ−)     if Δt < 0   (post before pre: LTD)\n\nWeight dependence:\n  additive:        Δw as above, then clip w to [0, w_max]\n  multiplicative:  LTP scaled by (w_max − w), LTD scaled by w\n\nNet area of the window:  ∫ W(Δt) dΔt = A+·τ+ − A−·τ−"
+      "type": "math",
+      "tex": "\\Delta t = t_{post} - t_{pre}"
+    },
+{
+      "type": "math",
+      "tex": "\\Delta w = +A_+ \\exp(-\\Delta t / \\tau_+)",
+      "caption": "if $\\Delta t > 0$ (pre before post: LTP)"
+    },
+{
+      "type": "math",
+      "tex": "\\Delta w = -A_- \\exp(+\\Delta t / \\tau_-)",
+      "caption": "if $\\Delta t < 0$ (post before pre: LTD)"
+    },
+{
+      "type": "prose",
+      "text": "Weight dependence:"
+    },
+{
+      "type": "list",
+      "items": [
+        "Additive: $\\Delta w$ as above, then clip $w$ to $[0, w_{max}]$",
+        "Multiplicative: LTP scaled by $(w_{max} - w)$, LTD scaled by $w$"
+      ]
+    },
+{
+      "type": "prose",
+      "text": "Net area of the window:"
+    },
+{
+      "type": "math",
+      "tex": "\\int W(\\Delta t)\\, d\\Delta t = A_+ \\tau_+ - A_- \\tau_-"
     },
     {
       "type": "prose",
-      "text": "The sign of the window's net area matters more than its exact shape. For uncorrelated pre and post spike trains, every Δt is equally likely, so the average weight change is proportional to A+τ+ − A−τ−. Song, Miller and Abbott (2000) chose A−/A+ = 1.05 with equal time constants of 20 ms, giving a slightly depression-dominated window: random inputs lose strength, while inputs whose spikes are correlated with (and slightly lead) the postsynaptic spikes gain strength. Because the neuron's total input is limited, inputs compete to control its firing. With additive updates and hard bounds this competition is strong and the weights split into a bimodal distribution near 0 and near w_max. van Rossum, Bi and Turrigiano (2000) showed that making depression proportional to w (and potentiation roughly constant) gives a stable, unimodal weight distribution but much weaker competition. Gütig, Aharonov, Rotter and Sompolinsky (2003) interpolate between the two with a weight-dependence exponent μ."
+      "text": "The sign of the window's net area matters more than its exact shape. For uncorrelated pre and post spike trains, every $\\Delta t$ is equally likely, so the average weight change is proportional to $A_+\\tau_+ - A_-\\tau_-$. Song, Miller and Abbott (2000) chose $A_-/A_+ = 1.05$ with equal time constants of 20 ms, giving a slightly depression-dominated window: random inputs lose strength, while inputs whose spikes are correlated with (and slightly lead) the postsynaptic spikes gain strength. Because the neuron's total input is limited, inputs compete to control its firing. With additive updates and hard bounds this competition is strong and the weights split into a bimodal distribution near 0 and near $w_{max}$. van Rossum, Bi and Turrigiano (2000) showed that making depression proportional to $w$ (and potentiation roughly constant) gives a stable, unimodal weight distribution but much weaker competition. Gütig, Aharonov, Rotter and Sompolinsky (2003) interpolate between the two with a weight-dependence exponent $\\mu$."
     },
     {
       "type": "widget",
@@ -106,11 +134,11 @@
     {
       "type": "list",
       "items": [
-        "Keep the defaults (A+ = 0.01, A− = 0.0105, τ+ = τ− = 20 ms). A−τ− is 5% larger than A+τ+, so the window is slightly net-depressive, as in Song, Miller and Abbott (2000). Look at the curve: the two lobes look almost symmetric, yet uncorrelated firing would on average weaken the synapse.",
-        "Set Δt = +10 ms and compare the two weight rules over the 60 pairings starting from w0 = 0.5. Additive: each pairing adds about 0.01·e^−0.5 ≈ 0.006, so w climbs almost linearly to roughly 0.86. Multiplicative: the step shrinks as w approaches w_max, so w bends over and ends nearer 0.65.",
-        "Set Δt = −10 ms. Additive: w falls linearly to roughly 0.12. Multiplicative: depression is proportional to w, so it slows down as w falls and ends nearer 0.34. Additive rules drive weights to the bounds; multiplicative rules settle in the interior.",
-        "Make τ− longer than τ+ (e.g. τ− = 34 ms, close to the Bi and Poo fits) with equal amplitudes. The window's net area becomes strongly negative: this alone can make a neuron's inputs decay unless correlations are strong.",
-        "Push |Δt| past 3τ (60 ms or more). The weight barely moves, which is why only near-coincident spikes matter and why input encoding with millisecond-precise timing (or high rates) is needed for STDP to see structure."
+        "Keep the defaults ($A_+ = 0.01$, $A_- = 0.0105$, $\\tau_+ = \\tau_- = 20\\text{ ms}$). $A_-\\tau_-$ is 5% larger than $A_+\\tau_+$, so the window is slightly net-depressive, as in Song, Miller and Abbott (2000). Look at the curve: the two lobes look almost symmetric, yet uncorrelated firing would on average weaken the synapse.",
+        "Set $\\Delta t = +10\\text{ ms}$ and compare the two weight rules over the 60 pairings starting from $w_0 = 0.5$. Additive: each pairing adds about $0.01 \\cdot e^{-0.5} \\approx 0.006$, so $w$ climbs almost linearly to roughly 0.86. Multiplicative: the step shrinks as $w$ approaches $w_{max}$, so $w$ bends over and ends nearer 0.65.",
+        "Set $\\Delta t = -10\\text{ ms}$. Additive: $w$ falls linearly to roughly 0.12. Multiplicative: depression is proportional to $w$, so it slows down as $w$ falls and ends nearer 0.34. Additive rules drive weights to the bounds; multiplicative rules settle in the interior.",
+        "Make $\\tau_-$ longer than $\\tau_+$ (e.g. $\\tau_- = 34\\text{ ms}$, close to the Bi and Poo fits) with equal amplitudes. The window's net area becomes strongly negative: this alone can make a neuron's inputs decay unless correlations are strong.",
+        "Push $|\\Delta t|$ past $3\\tau$ (60 ms or more). The weight barely moves, which is why only near-coincident spikes matter and why input encoding with millisecond-precise timing (or high rates) is needed for STDP to see structure."
       ]
     },
     {
@@ -120,12 +148,28 @@
     },
     {
       "type": "prose",
-      "text": "Storing all spike times and summing over pairs is expensive. Instead, each synapse (or each neuron, since traces are shared across its synapses) keeps exponentially decaying traces: a presynaptic trace x that jumps at every presynaptic spike and decays with τ+, and a postsynaptic trace y that jumps at every postsynaptic spike and decays with τ−. At a postsynaptic spike, every synapse is potentiated by A+·x; at a presynaptic spike, the synapse is depressed by A−·y. This reproduces the exponential window exactly and costs O(1) per spike. It is how Brian2, NEST, Loihi and SpiNNaker implement STDP."
+      "text": "Storing all spike times and summing over pairs is expensive. Instead, each synapse (or each neuron, since traces are shared across its synapses) keeps exponentially decaying traces: a presynaptic trace $x$ that jumps at every presynaptic spike and decays with $\\tau_+$, and a postsynaptic trace $y$ that jumps at every postsynaptic spike and decays with $\\tau_-$. At a postsynaptic spike, every synapse is potentiated by $A_+ x$; at a presynaptic spike, the synapse is depressed by $A_- y$. This reproduces the exponential window exactly and costs $O(1)$ per spike. It is how Brian2, NEST, Loihi and SpiNNaker implement STDP."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "dx/dt = −x / τ+ ,   x ← x + 1 at each presynaptic spike    (all-to-all)\ndy/dt = −y / τ− ,   y ← y + 1 at each postsynaptic spike\n\nat post spike:  w ← w + A+ · x      (× (w_max − w) if multiplicative)\nat pre spike:   w ← w − A− · y      (× w if multiplicative)\n\nNearest-neighbour pairing: replace '+ 1' by '= 1' (trace is reset, not accumulated)"
+      "type": "math",
+      "tex": "\\frac{dx}{dt} = -\\frac{x}{\\tau_+}",
+      "caption": "$x \\leftarrow x + 1$ at each presynaptic spike (all-to-all)"
+    },
+{
+      "type": "math",
+      "tex": "\\frac{dy}{dt} = -\\frac{y}{\\tau_-}",
+      "caption": "$y \\leftarrow y + 1$ at each postsynaptic spike"
+    },
+{
+      "type": "list",
+      "items": [
+        "At a post spike: $w \\leftarrow w + A_+ x$ (times $(w_{max} - w)$ if multiplicative)",
+        "At a pre spike: $w \\leftarrow w - A_- y$ (times $w$ if multiplicative)"
+      ]
+    },
+{
+      "type": "prose",
+      "text": "Nearest-neighbour pairing: replace '+ 1' by '= 1' (the trace is reset, not accumulated)."
     },
     {
       "type": "prose",
@@ -160,8 +204,8 @@
         "Input: 784 Poisson spike trains, rate proportional to pixel intensity (maximum 63.75 Hz), each image shown for 350 ms followed by 150 ms of rest so that variables decay. If the excitatory layer fires fewer than 5 spikes, the image is shown again with the maximum rate raised by 32 Hz.",
         "Excitatory layer: N conductance-based LIF neurons (N from 100 to 6400) with a long membrane time constant (100 ms), all-to-all plastic connections from the input.",
         "Inhibition: each excitatory neuron drives one inhibitory neuron, which inhibits all other excitatory neurons. This is lateral inhibition implementing a soft winner-take-all: the first neuron to fire suppresses its competitors (see \"Inhibition and k-Winners-Take-All\").",
-        "Adaptive threshold: each excitatory neuron's threshold is v_thresh + θ, with θ increased by 0.05 mV at every spike and decaying with a very long time constant (10⁷ ms). Neurons that win often become harder to drive, so all neurons get a share of the input patterns (see \"Homeostatic Plasticity\").",
-        "Learning: a trace-based rule applied at postsynaptic spikes, Δw = η (x_pre − x_tar)(w_max − w)^μ, where x_tar is a target presynaptic trace value that lets rarely co-active inputs depress. The authors also compared other STDP variants and found similar performance.",
+        "Adaptive threshold: each excitatory neuron's threshold is $v_{thresh} + \\theta$, with $\\theta$ increased by 0.05 mV at every spike and decaying with a very long time constant ($10^7$ ms). Neurons that win often become harder to drive, so all neurons get a share of the input patterns (see \"Homeostatic Plasticity\").",
+        "Learning: a trace-based rule applied at postsynaptic spikes, $\\Delta w = \\eta\\,(x_{pre} - x_{tar})(w_{max} - w)^{\\mu}$, where $x_{tar}$ is a target presynaptic trace value that lets rarely co-active inputs depress. The authors also compared other STDP variants and found similar performance.",
         "Weight normalisation: the sum of incoming weights of each excitatory neuron is rescaled to a fixed value (78 in the paper) after each example, so neurons compete for a fixed synaptic budget.",
         "Readout: after training, each neuron is labelled with the digit class for which it responded most; a test image is classified by the class whose neurons fire most. The paper reports about 95% test accuracy with 6400 neurons and noticeably lower accuracy for small layers (roughly 83% with 100 neurons)."
       ]
@@ -178,11 +222,11 @@
     {
       "type": "list",
       "items": [
-        "Start with τ+ = τ− = 20 ms, A+ ≈ 0.005–0.01 of w_max and A−τ− about 5% larger than A+τ+, then tune the ratio while watching the weight histogram.",
+        "Start with $\\tau_+ = \\tau_- = 20\\text{ ms}$, $A_+ \\approx 0.005\\text{–}0.01$ of $w_{max}$ and $A_-\\tau_-$ about 5% larger than $A_+\\tau_+$, then tune the ratio while watching the weight histogram.",
         "Pick weight dependence deliberately: additive (with hard bounds) for strong selectivity and binary-looking receptive fields; multiplicative for stability and graded weights. Log the weight histogram every epoch; a pile-up at both bounds or a collapse to zero is the first sign of trouble.",
-        "Use event-driven trace updates and keep dt ≤ 0.5–1 ms; with dt = 1 ms and τ = 20 ms the exponential is still sampled finely enough, but same-step pre/post spikes become ambiguous, so decide whether they count as LTP, LTD or nothing.",
-        "Remember axonal and dendritic delays: the Δt that matters is at the synapse. Ignoring delays shifts the effective window.",
-        "On neuromorphic hardware the rule is usually expressed as sums of products of traces (Loihi's learning engine, SpiNNaker's plasticity framework). Pair-based and triplet rules fit; rules needing explicit spike-time lists generally do not. Quantised weights (e.g. 8 bits) and small A± interact badly: steps below one LSB vanish unless you use stochastic rounding."
+        "Use event-driven trace updates and keep $dt \\le 0.5\\text{–}1\\text{ ms}$; with $dt = 1\\text{ ms}$ and $\\tau = 20\\text{ ms}$ the exponential is still sampled finely enough, but same-step pre/post spikes become ambiguous, so decide whether they count as LTP, LTD or nothing.",
+        "Remember axonal and dendritic delays: the $\\Delta t$ that matters is at the synapse. Ignoring delays shifts the effective window.",
+        "On neuromorphic hardware the rule is usually expressed as sums of products of traces (Loihi's learning engine, SpiNNaker's plasticity framework). Pair-based and triplet rules fit; rules needing explicit spike-time lists generally do not. Quantised weights (e.g. 8 bits) and small $A_\\pm$ interact badly: steps below one LSB vanish unless you use stochastic rounding."
       ]
     },
     {

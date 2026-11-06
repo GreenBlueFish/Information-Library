@@ -25,13 +25,29 @@
       "text": "Turrigiano, Leslie, Desai, Rutherford and Nelson (1998) blocked activity in cultured cortical neurons with TTX for about two days and found that the amplitudes of miniature excitatory synaptic currents increased; raising activity by blocking inhibition (bicuculline) decreased them. Crucially, all synapses of a neuron appeared to scale by the same factor, which preserves the relative differences that Hebbian learning created while changing the total drive. Turrigiano (2008) reviews the mechanisms (AMPA receptor trafficking, sensing of activity via calcium). Biological scaling is slow: hours to days."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Multiplicative synaptic scaling (rate-based sketch)\n\nτ_scale · dw_i/dt = w_i · (r_target − r̄)        for all inputs i of the neuron\nτ_avg   · dr̄/dt   = −r̄ + r(t)                     (running estimate of the firing rate)\n\nr_target: set point, e.g. 1–5 Hz for a cortical excitatory model\nτ_avg ≪ τ_scale; both ≫ the duration of one input pattern"
+      "type": "prose",
+      "text": "Multiplicative synaptic scaling (rate-based sketch):"
+    },
+{
+      "type": "math",
+      "tex": "\\tau_{scale} \\frac{dw_i}{dt} = w_i\\,(r_{target} - \\bar{r})",
+      "caption": "for all inputs $i$ of the neuron"
+    },
+{
+      "type": "math",
+      "tex": "\\tau_{avg} \\frac{d\\bar{r}}{dt} = -\\bar{r} + r(t)",
+      "caption": "running estimate of the firing rate"
+    },
+{
+      "type": "list",
+      "items": [
+        "$r_{target}$: set point, e.g. 1–5 Hz for a cortical excitatory model",
+        "$\\tau_{avg} \\ll \\tau_{scale}$; both $\\gg$ the duration of one input pattern"
+      ]
     },
     {
       "type": "prose",
-      "text": "A close engineering relative is explicit weight normalisation: after every example (or every few), rescale each neuron's incoming weights so that Σ_i w_i equals a constant. Diehl and Cook (2015) do this; Lazar, Pipa and Triesch (2009) use it in the SORN model. It is instantaneous rather than slow and is not a rate controller, but it gives each neuron a fixed synaptic budget, which turns Hebbian growth into competition among a neuron's inputs. It is cheap on a CPU or GPU; on neuromorphic hardware a per-neuron sum and division may be costly or unavailable, so check before relying on it."
+      "text": "A close engineering relative is explicit weight normalisation: after every example (or every few), rescale each neuron's incoming weights so that $\\sum_i w_i$ equals a constant. Diehl and Cook (2015) do this; Lazar, Pipa and Triesch (2009) use it in the SORN model. It is instantaneous rather than slow and is not a rate controller, but it gives each neuron a fixed synaptic budget, which turns Hebbian growth into competition among a neuron's inputs. It is cheap on a CPU or GPU; on neuromorphic hardware a per-neuron sum and division may be costly or unavailable, so check before relying on it."
     },
     {
       "type": "heading",
@@ -40,20 +56,31 @@
     },
     {
       "type": "prose",
-      "text": "Instead of rescaling synapses, raise the firing threshold of neurons that fire a lot. In Diehl and Cook (2015) each excitatory neuron's effective threshold is v_thresh + θ, where θ jumps by a small amount at every spike and decays very slowly:"
-    },
-    {
-      "type": "code",
-      "lang": "text",
-      "source": "Adaptive threshold (Diehl & Cook 2015 style)\n\nspike condition:  v > v_thresh + θ\nat each spike:    θ ← θ + Δθ            (Δθ = 0.05 mV in the paper)\nbetween spikes:   τ_θ · dθ/dt = −θ      (τ_θ = 10⁷ ms, about 2.8 hours of simulated time)\n\nθ ends up roughly proportional to the neuron's long-run spike count"
+      "text": "Instead of rescaling synapses, raise the firing threshold of neurons that fire a lot. In Diehl and Cook (2015) each excitatory neuron's effective threshold is $v_{thresh} + \\theta$, where $\\theta$ jumps by a small amount at every spike and decays very slowly:"
     },
     {
       "type": "prose",
-      "text": "Over training, neurons that win often accumulate a large θ and lose subsequent competitions, so others get a chance to fire and to learn different patterns. In a k-WTA or lateral-inhibition layer this produces roughly equal usage of all neurons. Diehl and Cook freeze θ during testing, so the response to a test digit does not depend on the previous test digits. Do not confuse this with spike-frequency adaptation (an adaptation current or threshold with a time constant of tens to hundreds of milliseconds, as in AdEx models): that shapes the response within a single stimulus, while the homeostatic θ acts across thousands of stimuli. Both can be present in the same model."
+      "text": "Adaptive threshold (Diehl & Cook 2015 style):"
+    },
+{
+      "type": "list",
+      "items": [
+        "Spike condition: $v > v_{thresh} + \\theta$",
+        "At each spike: $\\theta \\leftarrow \\theta + \\Delta\\theta$ ($\\Delta\\theta = 0.05\\text{ mV}$ in the paper)",
+        "Between spikes: $\\tau_\\theta \\frac{d\\theta}{dt} = -\\theta$ ($\\tau_\\theta = 10^7\\text{ ms}$, about 2.8 hours of simulated time)"
+      ]
+    },
+{
+      "type": "prose",
+      "text": "$\\theta$ ends up roughly proportional to the neuron's long-run spike count."
     },
     {
       "type": "prose",
-      "text": "The plot shows the mechanism on one noisy leaky integrate-and-fire neuron (τm = 20 ms, threshold 1, reset 0). For the first 10 s its drive is 1.1, just above threshold; then the drive steps up. With a fixed threshold the rate simply jumps with the drive. With the adaptive threshold every spike adds Δθ and θ decays with time constant τθ; at equilibrium θ ≈ Δθ · rate · τθ, so a neuron that fires more carries a larger θ, which pulls its rate back down. The rate still rises after the step, but by much less, and it settles within a few τθ. The time constant here is seconds rather than the paper's hours so the settling fits on the plot; a larger Δθ or τθ holds the rate lower and steadier."
+      "text": "Over training, neurons that win often accumulate a large $\\theta$ and lose subsequent competitions, so others get a chance to fire and to learn different patterns. In a k-WTA or lateral-inhibition layer this produces roughly equal usage of all neurons. Diehl and Cook freeze $\\theta$ during testing, so the response to a test digit does not depend on the previous test digits. Do not confuse this with spike-frequency adaptation (an adaptation current or threshold with a time constant of tens to hundreds of milliseconds, as in AdEx models): that shapes the response within a single stimulus, while the homeostatic $\\theta$ acts across thousands of stimuli. Both can be present in the same model."
+    },
+    {
+      "type": "prose",
+      "text": "The plot shows the mechanism on one noisy leaky integrate-and-fire neuron ($\\tau_m = 20\\text{ ms}$, threshold 1, reset 0). For the first 10 s its drive is 1.1, just above threshold; then the drive steps up. With a fixed threshold the rate simply jumps with the drive. With the adaptive threshold every spike adds $\\Delta \\theta$ and $\\theta$ decays with time constant $\\tau_\\theta$; at equilibrium $\\theta \\approx \\Delta\\theta \\cdot \\text{rate} \\cdot \\tau_\\theta$, so a neuron that fires more carries a larger $\\theta$, which pulls its rate back down. The rate still rises after the step, but by much less, and it settles within a few $\\tau_\\theta$. The time constant here is seconds rather than the paper's hours so the settling fits on the plot; a larger $\\Delta \\theta$ or $\\tau_\\theta$ holds the rate lower and steadier."
     },
     {
       "type": "widget",
@@ -115,13 +142,26 @@
       "text": "The HTM spatial pooler (Cui, Ahmad and Hawkins 2017; see \"Spatial Pooler\" in section 4) selects the top k minicolumns by input overlap. Without help, a few columns with good initial connections would win almost all inputs. Boosting multiplies each column's overlap by a factor that depends on how often it has recently been active:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "HTM boosting (Cui, Ahmad & Hawkins 2017)\n\nā_i(t) = (T − 1)/T · ā_i(t − 1) + 1/T · a_i(t)     (moving-average activity, \"active duty cycle\")\nb_i     = exp(−β · (ā_i − s))                       (s: target activity, i.e. the target sparsity such as 0.02,\n                                                     or the mean duty cycle of the neighbourhood with local inhibition;\n                                                     β: boost strength)\nboosted overlap_i = b_i · overlap_i  →  then pick the top-k columns\n\nColumns active less than the target get b_i > 1; over-active columns get b_i < 1."
+      "type": "prose",
+      "text": "HTM boosting (Cui, Ahmad & Hawkins 2017):"
+    },
+{
+      "type": "math",
+      "tex": "\\bar{a}_i(t) = \\frac{T - 1}{T}\\, \\bar{a}_i(t - 1) + \\frac{1}{T}\\, a_i(t)",
+      "caption": "moving-average activity, \"active duty cycle\""
+    },
+{
+      "type": "math",
+      "tex": "b_i = \\exp\\left( -\\beta\\, (\\bar{a}_i - s) \\right)",
+      "caption": "$s$ is the target activity, i.e. the target sparsity such as 0.02, or the mean duty cycle of the neighbourhood with local inhibition; $\\beta$ is the boost strength"
+    },
+{
+      "type": "prose",
+      "text": "The boosted overlap is $b_i \\cdot \\mathrm{overlap}_i$, and then the top-$k$ columns are picked. Columns active less than the target get $b_i > 1$; over-active columns get $b_i < 1$."
     },
     {
       "type": "prose",
-      "text": "Boosting is the k-WTA counterpart of the adaptive threshold: it handicaps winners and helps losers, so all columns participate and the representation uses its capacity (Cui et al. report that boosting increases the entropy, i.e. the evenness, of column usage). Earlier NuPIC implementations additionally raised all permanences of columns whose overlap rarely exceeded a minimum, to rescue columns that are never even candidates. A practical caution: boosting keeps changing which columns respond to a fixed input, so the downstream layer sees a moving target; many implementations reduce β or switch boosting off once usage has equalised."
+      "text": "Boosting is the k-WTA counterpart of the adaptive threshold: it handicaps winners and helps losers, so all columns participate and the representation uses its capacity (Cui et al. report that boosting increases the entropy, i.e. the evenness, of column usage). Earlier NuPIC implementations additionally raised all permanences of columns whose overlap rarely exceeded a minimum, to rescue columns that are never even candidates. A practical caution: boosting keeps changing which columns respond to a fixed input, so the downstream layer sees a moving target; many implementations reduce $\\beta$ or switch boosting off once usage has equalised."
     },
     {
       "type": "heading",
@@ -144,11 +184,11 @@
     {
       "type": "list",
       "items": [
-        "For a WTA/k-WTA layer trained with STDP: use an adaptive threshold (Δθ ≈ 0.05 mV for a ~13 mV gap between rest and threshold, τ_θ comparable to or longer than the whole training run) plus per-neuron weight normalisation. That is the Diehl and Cook recipe and a robust baseline.",
-        "For an HTM-style spatial pooler: use exponential boosting with a target density equal to k/N (for example 2%), a duty-cycle window of about 1000 steps, and a moderate boost strength; monitor the histogram of column usage.",
+        "For a WTA/k-WTA layer trained with STDP: use an adaptive threshold ($\\Delta \\theta \\approx 0.05\\text{ mV}$ for a ~13 mV gap between rest and threshold, $\\tau_\\theta$ comparable to or longer than the whole training run) plus per-neuron weight normalisation. That is the Diehl and Cook recipe and a robust baseline.",
+        "For an HTM-style spatial pooler: use exponential boosting with a target density equal to $k/N$ (for example 2%), a duty-cycle window of about 1000 steps, and a moderate boost strength; monitor the histogram of column usage.",
         "For a recurrent E/I column: combine synaptic scaling or normalisation on E→E synapses with inhibitory plasticity, and keep the homeostatic time constant at least 10–100 times longer than the pattern presentation time.",
         "Log per-neuron firing rates (or win counts) over training. A healthy layer has a narrow distribution around the target; a long tail of silent neurons or a few dominant ones is the signature of missing or mis-tuned homeostasis.",
-        "Decide what happens at test time. Freezing θ, boosts and normalisation for evaluation is standard; leaving them on makes results depend on test order."
+        "Decide what happens at test time. Freezing $\\theta$, boosts and normalisation for evaluation is standard; leaving them on makes results depend on test order."
       ]
     },
     {
@@ -159,7 +199,7 @@
     {
       "type": "list",
       "items": [
-        "Oscillations: a controller with gain too high or delay too long overshoots, producing slow oscillations in rate and threshold. Reduce the gain or lengthen τ.",
+        "Oscillations: a controller with gain too high or delay too long overshoots, producing slow oscillations in rate and threshold. Reduce the gain or lengthen $\\tau$.",
         "Homeostasis can hide bugs: a broken learning rule may look healthy in rate plots because homeostasis holds the rates at target. Always also inspect the learned weights or receptive fields.",
         "Additive vs multiplicative matters here too: multiplicative scaling preserves learned ratios; additive offsets do not.",
         "Biological set points are not fixed numbers: cortical excitatory neurons span a wide, roughly lognormal range of rates. Forcing every model neuron to the same target is a convenience, not a fact about cortex."

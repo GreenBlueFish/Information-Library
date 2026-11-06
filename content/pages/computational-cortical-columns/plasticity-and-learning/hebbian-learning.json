@@ -26,16 +26,36 @@
     },
     {
       "type": "prose",
-      "text": "Use a rate neuron with output y = wᵀx (x is the input rate vector, w the weights). The plain Hebbian rule is"
+      "text": "Use a rate neuron with output $y = w^{T}x$ ($x$ is the input rate vector, $w$ the weights). The plain Hebbian rule is"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Δw = η · y · x            (η: learning rate)\n\nAveraged over inputs with correlation matrix Q = ⟨x xᵀ⟩:\nτ_w · dw/dt = Q w\n\nSolution: w(t) = Σ_i c_i · exp(λ_i t / τ_w) · e_i\n(λ_i, e_i = eigenvalues / eigenvectors of Q)"
+      "type": "math",
+      "tex": "\\Delta w = \\eta\\, y\\, x",
+      "caption": "$\\eta$ is the learning rate"
+    },
+{
+      "type": "prose",
+      "text": "Averaged over inputs with correlation matrix $Q = \\langle x x^T \\rangle$:"
+    },
+{
+      "type": "math",
+      "tex": "\\tau_w \\frac{dw}{dt} = Q w"
+    },
+{
+      "type": "prose",
+      "text": "Solution:"
+    },
+{
+      "type": "math",
+      "tex": "w(t) = \\sum_i c_i \\exp\\left( \\frac{\\lambda_i t}{\\tau_w} \\right) e_i"
+    },
+{
+      "type": "prose",
+      "text": "Here $\\lambda_i$ and $e_i$ are the eigenvalues and eigenvectors of $Q$."
     },
     {
       "type": "prose",
-      "text": "Because Q is positive semi-definite, every component with λ_i > 0 grows exponentially, and the fastest-growing one is the principal eigenvector e_1. So plain Hebb does find something meaningful (the direction of largest input correlation) but the weight norm diverges. With purely positive rates, every weight also tends to grow together, so the neuron eventually responds to everything. This is a positive-feedback loop: stronger weights cause more firing, which causes stronger weights. Dayan and Abbott (2001, chapter 8) give the full analysis; Miller and MacKay (1994) showed that how you constrain the growth (multiplicatively or subtractively) changes what is learned, not just how fast."
+      "text": "Because $Q$ is positive semi-definite, every component with $\\lambda_i > 0$ grows exponentially, and the fastest-growing one is the principal eigenvector $e_1$. So plain Hebb does find something meaningful (the direction of largest input correlation) but the weight norm diverges. With purely positive rates, every weight also tends to grow together, so the neuron eventually responds to everything. This is a positive-feedback loop: stronger weights cause more firing, which causes stronger weights. Dayan and Abbott (2001, chapter 8) give the full analysis; Miller and MacKay (1994) showed that how you constrain the growth (multiplicatively or subtractively) changes what is learned, not just how fast."
     },
     {
       "type": "heading",
@@ -43,17 +63,24 @@
       "text": "Oja's rule: built-in normalisation"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Oja (1982) adds a decay term proportional to y²:\n\nΔw = η · y · (x − y · w)\n\nFixed point: w → ±e_1 with ‖w‖ = 1\n(the neuron extracts the first principal component of its input)"
+      "type": "prose",
+      "text": "Oja (1982) adds a decay term proportional to $y^2$:"
+    },
+{
+      "type": "math",
+      "tex": "\\Delta w = \\eta\\, y\\,(x - y\\, w)"
+    },
+{
+      "type": "prose",
+      "text": "Fixed point: $w \\to \\pm e_1$ with $\\Vert w \\Vert = 1$ (the neuron extracts the first principal component of its input)."
     },
     {
       "type": "prose",
-      "text": "The term −η y² w is a local, multiplicative weight decay that kicks in only when the neuron is active. It is a first-order approximation of \"apply Hebb, then renormalise ‖w‖ to 1\". Sanger's (1989) generalised Hebbian algorithm extends this to several neurons extracting successive principal components. For a column builder the lesson is that normalisation is not an afterthought: it decides what the neuron converges to."
+      "text": "The term $-\\eta y^2 w$ is a local, multiplicative weight decay that kicks in only when the neuron is active. It is a first-order approximation of \"apply Hebb, then renormalise $\\Vert w \\Vert$ to 1\". Sanger's (1989) generalised Hebbian algorithm extends this to several neurons extracting successive principal components. For a column builder the lesson is that normalisation is not an afterthought: it decides what the neuron converges to."
     },
     {
       "type": "prose",
-      "text": "Try both rules on the same input stream. Two inputs with unit variance and an adjustable correlation feed one linear neuron y = w·x; each step draws a new input and applies plain Hebb, Δw = η y x, to one copy of the weights and Oja's rule, Δw = η y (x − y w), to another. Plain Hebb's weight length is plotted as log10 |w|, so steady exponential growth shows as a straight rising line; its slope is set by the largest eigenvalue of the input correlation matrix (1 + correlation here). Oja's |w| settles at 1, and the cosine between w and the first principal component (the diagonal direction for positively correlated inputs) goes to 1: the neuron has found the direction of largest variance. Set the correlation to 0 and Oja's weights wander, because then no direction is preferred."
+      "text": "Try both rules on the same input stream. Two inputs with unit variance and an adjustable correlation feed one linear neuron $y = w \\cdot x$; each step draws a new input and applies plain Hebb, $\\Delta w = \\eta\\, y\\, x$, to one copy of the weights and Oja's rule, $\\Delta w = \\eta\\, y\\,(x - y\\,w)$, to another. Plain Hebb's weight length is plotted as $\\log_{10} |w|$, so steady exponential growth shows as a straight rising line; its slope is set by the largest eigenvalue of the input correlation matrix (1 + correlation here). Oja's |w| settles at 1, and the cosine between w and the first principal component (the diagonal direction for positively correlated inputs) goes to 1: the neuron has found the direction of largest variance. Set the correlation to 0 and Oja's weights wander, because then no direction is preferred."
     },
     {
       "type": "widget",
@@ -94,7 +121,7 @@
     },
     {
       "type": "prose",
-      "text": "Subtracting averages, Δw = η (y − ⟨y⟩)(x − ⟨x⟩), makes the rule sensitive to co-variation rather than raw co-activity and allows depression when one side is below its mean (Sejnowski 1977 introduced covariance-style learning). Without further constraints it is still unstable, but it explains why a learning rule needs both potentiation and depression."
+      "text": "Subtracting averages, $\\Delta w = \\eta\\,(y - \\langle y \\rangle)(x - \\langle x \\rangle)$, makes the rule sensitive to co-variation rather than raw co-activity and allows depression when one side is below its mean (Sejnowski 1977 introduced covariance-style learning). Without further constraints it is still unstable, but it explains why a learning rule needs both potentiation and depression."
     },
     {
       "type": "heading",
@@ -103,12 +130,20 @@
     },
     {
       "type": "prose",
-      "text": "Bienenstock, Cooper and Munro (1982) proposed that potentiation or depression depends on whether the postsynaptic rate is above or below a modification threshold θ_M, and that θ_M itself slides with the recent average of y²:"
+      "text": "Bienenstock, Cooper and Munro (1982) proposed that potentiation or depression depends on whether the postsynaptic rate is above or below a modification threshold $\\theta_M$, and that $\\theta_M$ itself slides with the recent average of $y^2$:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Δw = η · x · y · (y − θ_M)\nτ_θ · dθ_M/dt = −θ_M + ⟨y²⟩    (θ_M tracks a running average, faster than τ_w)\n\nHigh recent activity → θ_M rises → more inputs fall into the LTD region"
+      "type": "math",
+      "tex": "\\Delta w = \\eta\\, x\\, y\\,(y - \\theta_M)"
+    },
+{
+      "type": "math",
+      "tex": "\\tau_\\theta \\frac{d\\theta_M}{dt} = -\\theta_M + \\langle y^2 \\rangle",
+      "caption": "$\\theta_M$ tracks a running average, faster than $\\tau_w$"
+    },
+{
+      "type": "prose",
+      "text": "High recent activity: $\\theta_M$ rises, so more inputs fall into the LTD region."
     },
     {
       "type": "prose",
@@ -121,7 +156,7 @@
     },
     {
       "type": "prose",
-      "text": "Rumelhart and Zipser (1985) showed that if only the winner of a group of neurons learns, and its weights move toward the current input (Δw = η (x − w) for the winner only), the group partitions the input space into clusters. This is the rate-based ancestor of the Diehl and Cook (2015) spiking network and of the HTM spatial pooler: Hebbian learning provides the \"move toward what activated me\" step, and lateral inhibition provides the competition so that different neurons learn different patterns. Földiák (1990) added anti-Hebbian lateral connections that decorrelate outputs and produce sparse codes without a hard winner selection."
+      "text": "Rumelhart and Zipser (1985) showed that if only the winner of a group of neurons learns, and its weights move toward the current input ($\\Delta w = \\eta\\,(x - w)$ for the winner only), the group partitions the input space into clusters. This is the rate-based ancestor of the Diehl and Cook (2015) spiking network and of the HTM spatial pooler: Hebbian learning provides the \"move toward what activated me\" step, and lateral inhibition provides the competition so that different neurons learn different patterns. Földiák (1990) added anti-Hebbian lateral connections that decorrelate outputs and produce sparse codes without a hard winner selection."
     },
     {
       "type": "heading",
@@ -135,7 +170,7 @@
         "Competition is what makes neurons specialise. Without lateral inhibition every neuron in a layer converges to the same dominant pattern (the leading eigenvector). See \"Inhibition and k-Winners-Take-All\".",
         "Rate rules map onto spike rules. Pair-based STDP with Poisson inputs reduces, on average, to a Hebbian rate rule with an extra term set by the net area of the STDP window; the triplet rule of Pfister and Gerstner (2006) reduces to a BCM-like rule. So the instability analysis above transfers directly to your spiking model.",
         "HTM-style permanence learning is Hebbian too: active synapses on a winning column or a correctly predicting segment are incremented, inactive ones are decremented (see \"Spatial Pooler\" and \"Temporal Memory\" in section 4). The decrement plays the role of the depression term.",
-        "Typical learning rates are small: per-event weight changes of 0.1–1% of the maximum weight (e.g. η ≈ 10⁻³ to 10⁻²) so that each weight integrates evidence over hundreds of presentations."
+        "Typical learning rates are small: per-event weight changes of 0.1–1% of the maximum weight (e.g. $\\eta \\approx 10^{-3}$ to $10^{-2}$) so that each weight integrates evidence over hundreds of presentations."
       ]
     },
     {

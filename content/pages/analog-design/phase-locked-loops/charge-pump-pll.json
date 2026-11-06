@@ -1,0 +1,151 @@
+{
+  "title": "Charge-Pump PLLs",
+  "intro": "Adding frequency detection and a charge pump fixes the type I loop's narrow acquisition range and its static phase error, at the cost of a stability problem that a single resistor solves (Razavi, Section 16.2).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Lock acquisition"
+    },
+    {
+      "type": "prose",
+      "text": "When the loop starts far from lock the PD sees two different frequencies and its output averages to nearly nothing. A type I loop acquires lock only if the frequency difference is roughly within $\\omega_{LPF}$, which shrinks as the filter is made quieter. Since the VCO's free-running frequency can be far off over process and temperature, modern PLLs add frequency detection: a frequency-feedback path pulls the VCO near the input, then the phase loop takes over. This widens the acquisition range to the VCO's tuning range."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Phase/frequency detector"
+    },
+    {
+      "type": "prose",
+      "text": "For periodic inputs one sequential circuit can do both jobs. Two flip-flops with their D inputs tied high are clocked by the reference A and the feedback B; an AND gate resets both when both outputs are high. A rising edge on A sets $Q_A$ (UP) until the next edge on B, and vice versa. If A leads, $Q_A$ pulses with width proportional to the phase difference; if A is faster, $Q_A$ pulses and $Q_B$ stays mostly low. So the sign of $\\overline{Q_A} - \\overline{Q_B}$ always says which way to steer, even when the frequencies differ."
+    },
+    {
+      "type": "prose",
+      "text": "The characteristic $\\overline{Q_A} - \\overline{Q_B}$ is linear over $\\pm 2\\pi$ (not $\\pm\\pi$ as for an XOR). Even at zero phase error both outputs go high together briefly before the reset propagates, roughly five gate delays (through the AND gate and the flip-flops' internal latches)."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pll-pfd-charge-pump.svg",
+      "alt": "Two D flip-flops with D tied to logic one, clocked by A and B. Their Q outputs, UP and DN, feed an AND gate whose output resets both flip-flops. UP closes switch S1 connecting current source I1 from VDD to the output node; DN closes S2 connecting the node to current source I2 to ground. The node drives a series resistor RP and capacitor CP to ground, a capacitor C2 to ground, and the VCO control input.",
+      "caption": "PFD, charge pump and loop filter."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Charge pump"
+    },
+    {
+      "type": "prose",
+      "text": "A charge pump is two switched current sources: UP connects $I_1$ into the filter, DN connects $I_2$ out of it, nominally equal $I_P$. Into a plain capacitor $C_P$, a constant phase error makes UP pulse every cycle, so $V_{cont}$ ramps forever: the PFD/CP/capacitor combination has infinite DC gain. That is the point: in lock $V_{cont}$ is finite, so the phase error must be exactly zero (apart from mismatches)."
+    },
+    {
+      "type": "prose",
+      "text": "Its transfer function: a phase step $\\phi_0$ gives pulses $\\phi_0 T_{in}/2\\pi$ wide each period, raising $V_{cont}$ by $(I_P/C_P)\\phi_0T_{in}/2\\pi$ per period. Treating the staircase as a ramp (valid when the loop is slow compared with the reference) and differentiating the step response:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{\\Delta\\phi}(s) = \\frac{I_P}{2\\pi C_P}\\cdot\\frac{1}{s}, \\qquad \\frac{I_{out}}{\\Delta\\phi} = \\frac{I_P}{2\\pi}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The type II loop and its zero"
+    },
+    {
+      "type": "prose",
+      "text": "With the VCO's $K_{VCO}/s$, the loop gain has two poles at the origin (type II): $\\frac{I_P K_{VCO}}{2\\pi C_P s^2}$. The closed loop then has poles on the $j\\omega$ axis and oscillates: two ideal integrators give a flat −180°. A resistor $R_P$ in series with $C_P$ adds a zero:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{cont}}{\\Delta\\phi}(s) = \\frac{I_P}{2\\pi}\\left(R_P + \\frac{1}{C_P s}\\right)"
+    },
+    {
+      "type": "math",
+      "tex": "H(s) = \\frac{\\frac{I_PK_{VCO}}{2\\pi C_P}(R_PC_Ps + 1)}{s^2 + \\frac{I_P}{2\\pi}K_{VCO}R_P s + \\frac{I_PK_{VCO}}{2\\pi C_P}}"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_n = \\sqrt{\\frac{I_PK_{VCO}}{2\\pi C_P}}, \\qquad \\zeta = \\frac{R_P}{2}\\sqrt{\\frac{I_PC_PK_{VCO}}{2\\pi}}, \\qquad \\frac{1}{\\zeta\\omega_n} = \\frac{4\\pi}{R_PI_PK_{VCO}}"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pll-type2-bode.svg",
+      "alt": "Top: loop-gain magnitude falling at 40 dB per decade at low frequency and 20 dB per decade above the zero; a dashed line continues at 40 dB per decade. Bottom: phase starting at minus 180 degrees and rising toward minus 90 degrees above the zero.",
+      "caption": "Type II loop gain with the stabilizing zero."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Stability behaviour"
+    },
+    {
+      "type": "prose",
+      "text": "Unlike the type I loop, more loop gain makes a type II loop more stable: lowering $I_PK_{VCO}$ moves the crossover toward the origin, where the phase is near −180°. On the root locus, both poles start at the origin and move on a circle centred at $-1/(R_PC_P)$ with radius $1/(R_PC_P)$, meeting the real axis at $-2/(R_PC_P)$ when $\\zeta = 1$; then one heads to $-1/(R_PC_P)$ and the other to $-\\infty$. (Reading −180° off the Bode plot at very low frequency and predicting oscillation is a mistake: the phase is slightly above −180° there, and Nyquist shows two integrators plus a zero do not oscillate.)"
+    },
+    {
+      "type": "prose",
+      "text": "The continuous-time model breaks down when $R_P$ gets very large: the discrete nature of the charge pump makes the loop less stable again, so simulations set the real bounds. A common rule keeps the loop bandwidth around a tenth of the reference frequency or below."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Ripple and the second capacitor"
+    },
+    {
+      "type": "prose",
+      "text": "Every pump pulse drives $I_P$ through $R_P$, so $V_{cont}$ jumps by $I_PR_P$ for the pulse duration; mismatch and switch charge injection cause such jumps even in lock. A capacitor $C_2$ across the $R_P$-$C_P$ branch smooths them. The loop becomes third order, but with $C_2$ about $C_P/5$ to $C_P/10$ the response barely changes."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "With a divider"
+    },
+    {
+      "type": "prose",
+      "text": "A divide-by-$M$ in the feedback path makes the VCO and divider look like one VCO with gain $K_{VCO}/M$, so replace $K_{VCO}$ by $K_{VCO}/M$ in $\\omega_n$, $\\zeta$ and $1/(\\zeta\\omega_n) = 4\\pi M/(R_PI_PK_{VCO})$: division hurts both stability and settling unless $I_P$ is raised to match."
+    },
+    {
+      "type": "problem",
+      "title": "Charge per cycle",
+      "text": "A charge pump with $I_P = 100\\ \\mu\\text{A}$ drives $C_P = 10\\text{ pF}$ directly. The reference is 10 MHz and the feedback lags by 0.1 rad. How much does $V_{cont}$ rise per reference cycle?",
+      "solution": [
+        "Pulse width $= 0.1 \\times 100\\text{ ns}/2\\pi = 1.59\\text{ ns}$.",
+        "$\\Delta V = (I_P/C_P)\\times 1.59\\text{ ns} = 10^7\\text{ V/s} \\times 1.59\\text{ ns} = 15.9\\text{ mV}$, every cycle, until the error is removed."
+      ],
+      "answer": "About 16 mV per cycle."
+    },
+    {
+      "type": "problem",
+      "title": "Designing a loop filter",
+      "text": "A 2.5 GHz synthesizer uses a 25 MHz reference ($M = 100$), $K_{VCO} = 2\\pi \\times 1\\text{ GHz/V}$, $I_P = 200\\ \\mu\\text{A}$ and $C_P = 50\\text{ pF}$. Find $\\omega_n$, the $R_P$ for $\\zeta = 1$, the zero frequency and a value for $C_2$.",
+      "solution": [
+        "$\\omega_n = \\sqrt{I_PK_{VCO}/(2\\pi C_PM)} = \\sqrt{(2\\times10^{-4})(6.28\\times10^9)/(6.28 \\cdot 5\\times10^{-11}\\cdot 100)} = \\sqrt{4\\times10^{13}} = 6.32\\times10^6\\text{ rad/s}$ (1.0 MHz, a 25th of the reference).",
+        "$\\zeta = \\frac{R_P}{2}\\sqrt{I_PC_PK_{VCO}/(2\\pi M)}$; the root is $\\sqrt{10^{-7}} = 3.16\\times10^{-4}$, so $R_P = 2/3.16\\times10^{-4} = 6.3\\text{ k}\\Omega$.",
+        "Zero at $1/(R_PC_P) = 3.16\\times10^6\\text{ rad/s}$; $C_2 \\approx C_P/10 = 5\\text{ pF}$.",
+        "Check: at $\\zeta = 1$ both poles sit at $-2/(R_PC_P) = -6.32\\times10^6$, equal to $-\\omega_n$, and $1/(\\zeta\\omega_n) = 158\\text{ ns}$."
+      ],
+      "answer": "$\\omega_n = 6.3\\times10^6$ rad/s, $R_P \\approx 6.3\\text{ k}\\Omega$, zero at $3.2\\times10^6$ rad/s, $C_2 \\approx 5\\text{ pF}$."
+    },
+    {
+      "type": "problem",
+      "title": "Loop dynamics",
+      "text": "$I_P = 100\\ \\mu\\text{A}$, $K_{VCO} = 2\\pi \\times 500\\text{ MHz/V} = 3.14\\times10^9$ rad/s/V, $N = 100$, $C_1 = 10\\text{ pF}$. Find $\\omega_n$ and $f_n$.",
+      "solution": [
+        "$\\omega_n = \\sqrt{I_PK_{VCO}/(2\\pi NC_1)} = \\sqrt{10^{-4}\\cdot 3.14\\times10^9/(6.283 \\cdot 100 \\cdot 10^{-11})} = \\sqrt{5\\times10^{13}} = 7.07\\times10^6\\text{ rad/s}$.",
+        "$f_n = 1.13\\text{ MHz}$, about a tenth of a 10 MHz reference, at the edge of the usual limit."
+      ],
+      "answer": "$\\omega_n = 7.07\\times10^6$ rad/s ($f_n \\approx 1.1$ MHz)."
+    },
+    {
+      "type": "problem",
+      "title": "Ripple step",
+      "text": "In the previous design ($I_P = 200\\ \\mu\\text{A}$, $R_P = 6.3\\text{ k}\\Omega$), how big is the jump on $V_{cont}$ during a pump pulse without $C_2$, and how much does it move the VCO?",
+      "solution": [
+        "$I_PR_P = 200\\ \\mu\\text{A} \\times 6.3\\text{ k}\\Omega = 1.26\\text{ V}$, enormous.",
+        "With $K_{VCO} = 1$ GHz/V the VCO would jump by over a gigahertz during each pulse. Hence $C_2$, which absorbs the pulse charge and turns the jump into a small step."
+      ],
+      "answer": "About 1.3 V, which is why $C_2$ is needed."
+    }
+  ]
+}

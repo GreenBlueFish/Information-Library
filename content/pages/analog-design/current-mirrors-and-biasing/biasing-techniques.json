@@ -1,6 +1,6 @@
 {
   "title": "Biasing Techniques",
-  "intro": "An amplifier only works if every transistor is in saturation at the right current. Good biasing makes that independent of process, supply and temperature.",
+  "intro": "An amplifier works only if every transistor carries its intended current and has enough terminal voltage to stay saturated. The current fixes $g_m$ and $r_o$; the voltages fix headroom and swing. This page covers common-source stages; the next covers CG, follower and differential stages.",
   "blocks": [
     {
       "type": "heading",
@@ -10,36 +10,130 @@
     {
       "type": "list",
       "items": [
-        "Bias with currents rather than voltages where possible: mirrors from a precise reference give a current set by the reference, not by device parameters.",
-        "A resistive divider fixes a gate voltage, but the current then depends on VTH and mobility.",
-        "Source degeneration stabilises current: a resistor in the source makes ID depend weakly on VTH.",
-        "AC-couple the signal so the bias network does not load the source."
+        "Bias with currents copied from a reference, not with fixed voltages: a mirror's output follows the reference, while a fixed gate voltage gives a current that depends on $V_{TH}$, mobility and the supply.",
+        "Keep the bias network from loading or fighting the signal: isolate it with a large resistance and couple the signal through a capacitor where needed.",
+        "Spend little power on bias: a bias branch current of a tenth to a fifth of the main device's current is typical.",
+        "Never leave a gate node floating: it needs a DC path to a defined voltage."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Examples"
+      "text": "Simple CS stage"
+    },
+    {
+      "type": "prose",
+      "text": "A bias voltage $V_B$ tied directly to the gate would fight the input. Instead couple $V_{in}$ through $C_B$ and feed $V_B$ through a large $R_B$, so node X has $V_B$ at DC and $V_{in}$ at signal frequencies. $C_B$ and $R_B$ form a high-pass filter, so $1/(2\\pi R_B C_B)$ must lie below the lowest signal frequency. $V_B$ itself should come from a diode-connected device carrying $I_B$, making M1 a mirror of $M_B$."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/current-mirrors-and-biasing-cs-bias.svg",
+      "alt": "Common-source stage M1 with drain resistor RD. The input Vin connects through capacitor CB to the gate node X. A resistor RB connects X to node VB, which is the gate and drain of diode-connected MB fed by current source IB.",
+      "caption": "CS stage biased by a mirror through $R_B$, with AC-coupled input: $I_{D1} = I_B (W/L)_1/(W/L)_B$."
     },
     {
       "type": "list",
       "items": [
-        "CS stage: gate tied to a divider (R1, R2) or to a mirror via a large resistor so the signal does not leak into the bias.",
-        "CG stage: the gate bias must be a stable AC ground (large capacitor); the source gets a current source.",
-        "Source follower: biased through a mirror that sets the follower's current.",
-        "Differential pair: tail current source from a mirror; the common-mode level is set by the previous stage or by feedback."
+        "For low signal frequencies (audio, for example) $R_B$ and $C_B$ grow large and take a lot of area.",
+        "$C_B$ brings its own parasitic capacitance into the signal path, which limits how large it can be even when area is free."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A transistor as the large resistor"
+    },
+    {
+      "type": "prose",
+      "text": "When $R_B C_B$ must be large, replace $R_B$ by a long, narrow MOSFET $M_R$ in deep triode with a small overdrive. To keep its overdrive defined across PVT, set its gate-source voltage with a diode-connected device $M_C$ whose $(W/L)_C$ is large, so $V_{GS,C}$ is just above $V_{TH}$. In strong inversion with a long-channel model:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{on,R} = \\frac{(W/L)_C}{(W/L)_R}\\cdot\\frac{1}{g_{m,C}}",
+      "caption": "Make $(W/L)_C$ large and $(W/L)_R$ small."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Direct coupling"
+    },
+    {
+      "type": "prose",
+      "text": "Driving M1's gate from the previous stage's drain removes the capacitor, but then the first stage's bias errors set M1's bias, and in a cascade PVT shifts are amplified exactly like signals. Direct coupling is acceptable when each stage has a low gain (2 or 3); for more stages or higher gains, negative feedback is needed to pin the bias."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "CS stage with a current-source load"
+    },
+    {
+      "type": "prose",
+      "text": "If both M1 and its PMOS load M2 are mirrored from references, two high-impedance current sources are in series, and any difference between the copied currents drives the output to whichever rail lets them agree, possibly forcing M1 or M2 into triode. The fix is to make M2 diode-connected at DC through a large $R_G$ from the output to its gate, with $C_G$ grounding the gate at signal frequencies. M2 then simply carries whatever M1 sets:"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = -g_{m1}(r_{o1} \\parallel r_{o2} \\parallel R_G)",
+      "caption": "Choose $R_G \\gg r_{o1} \\parallel r_{o2}$ and $1/(2\\pi R_G C_G)$ below the lowest signal frequency."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/current-mirrors-and-biasing-cs-self-biased-load.svg",
+      "alt": "CS stage with NMOS M1 and PMOS load M2. The output node connects through resistor RG to node N at M2's gate, and capacitor CG connects N to ground.",
+      "caption": "Self-biased current-source load: diode-connected at DC, a current source at signal frequencies."
+    },
+    {
+      "type": "prose",
+      "text": "The output now idles at $V_{DD} - |V_{GS2}|$, which may not centre the swing. Drawing a small constant current $I_G$ out of $R_G$ keeps $V_N$ low enough for M2's $V_{GS}$ while raising the output to $V_{out} = V_N + I_G R_G$. Choosing $I_G R_G$ to equalise the room above and below centres the swing. Alternatively, size M2 for $|V_{GS2}| \\approx V_{DD}/2$ with no $I_G$; the $I_G$ version is often preferred because a larger PMOS overdrive (at the same current) lowers its noise."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Complementary CS stage"
+    },
+    {
+      "type": "prose",
+      "text": "An NMOS and a PMOS driven by the same input satisfy $V_{GS1} + |V_{GS2}| = V_{DD}$, so their current is very PVT-sensitive and the two devices also fight. A large feedback resistor $R_F$ from the output to the joined gates diode-connects both at DC (no DC current flows in $R_F$), so they settle at a common current. To set that current precisely, add a current source $I_1$ in M2's source, bypassed by $C_1$ with $1/(C_1\\omega_{min}) \\ll 1/g_{m2}$ so M2 sees no degeneration in band (at the cost of some headroom). Because the gate bias now tracks the output, the input must be capacitively coupled. With large enough $R_F$, $C_1$ and input capacitor, the in-band gain is $(g_{m1} + g_{m2})(r_{o1} \\parallel r_{o2})$."
     },
     {
       "type": "problem",
       "title": "Divider bias",
-      "text": "VDD = 1.8 V. A divider R1 = 100 kohm (top) and R2 = 200 kohm (bottom) feeds the gate of an NMOS with source at ground. If k = 2 mA/V^2 and VTH = 0.5 V, find ID.",
+      "text": "$V_{DD} = 1.8\\text{ V}$. A divider $R_1 = 100\\text{ k}\\Omega$ (top) and $R_2 = 200\\text{ k}\\Omega$ (bottom) feeds the gate of an NMOS with its source at ground. If $\\mu_n C_{ox}W/L = 2\\text{ mA/V}^2$ and $V_{TH} = 0.5\\text{ V}$, find $I_D$.",
+      "solution": [
+        "$V_G = 1.8 \\cdot \\frac{200}{300} = 1.2\\text{ V}$, so $V_{ov} = 0.7\\text{ V}$.",
+        "$I_D = \\frac{1}{2} \\cdot 2\\text{ mA/V}^2 \\cdot 0.7^2 = 0.49\\text{ mA}$.",
+        "A 50 mV rise in $V_{TH}$ moves $V_{ov}$ to 0.65 V and $I_D$ to 0.42 mA, 14 percent lower. A mirror from a stable reference does much better."
+      ],
+      "answer": "$I_D = 0.49\\text{ mA}$, sensitive to $V_{TH}$."
+    },
+    {
+      "type": "problem",
+      "title": "Sizing the coupling network",
+      "text": "A CS stage is biased through $R_B = 100\\text{ k}\\Omega$ and must pass signals down to 1 MHz. What is the minimum $C_B$?",
+      "solution": [
+        "$C_B \\ge \\frac{1}{2\\pi R_B f_{min}} = \\frac{1}{2\\pi \\cdot 10^5 \\cdot 10^6} = 1.6\\text{ pF}$.",
+        "In practice choose several times more, so the corner sits well below 1 MHz and the in-band attenuation is negligible."
+      ],
+      "answer": "At least 1.6 pF."
+    },
+    {
+      "type": "problem",
+      "title": "MOS resistor value",
+      "text": "In the MOS-resistor bias network, $(W/L)_C = 20$, $(W/L)_R = 0.5$ and $g_{m,C} = 0.5\\text{ mS}$. Find the on-resistance of $M_R$.",
+      "solution": [
+        "$R_{on,R} = \\frac{20}{0.5} \\cdot \\frac{1}{0.5\\text{ mS}} = 40 \\cdot 2\\text{ k}\\Omega = 80\\text{ k}\\Omega$."
+      ],
+      "answer": "About 80 kΩ."
+    },
+    {
+      "type": "problem",
+      "title": "Centring the swing with IG",
+      "text": "A self-biased CS stage with a current-source load runs from $V_{DD} = 1.2\\text{ V}$. $|V_{GS2}| = 0.8\\text{ V}$ with $|V_{TH2}| = 0.5\\text{ V}$, and M1 needs 0.2 V of $V_{DS}$. (a) Without $I_G$, what peak-to-peak swing is possible? (b) What $I_G R_G$ centres the swing, and what swing results?",
       "solution": [
         "VG = 1.8 * 200/(100 + 200) = 1.2 V. Vov = 0.7 V.",
         "ID = 0.5 * 2 mA/V^2 * 0.7^2 = 0.49 mA.",
         "Notice the fractional change in ID is about 2*dVTH/Vov: a 50 mV VTH shift moves Vov to 0.65 V and ID to 0.42 mA, 14 percent lower. A mirror from a stable reference does much better."
       ],
-      "answer": "ID = 0.49 mA, sensitive to VTH."
+      "answer": "(a) 0.4 V; (b) shift by 0.15 V for 0.7 V peak-to-peak."
     }
   ]
 }

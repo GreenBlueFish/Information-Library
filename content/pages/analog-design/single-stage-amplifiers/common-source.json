@@ -1,15 +1,69 @@
 {
   "title": "Common-Source Stage",
-  "intro": "The common-source (CS) stage is the basic voltage amplifier: the input drives the gate, the output is taken at the drain.",
+  "intro": "The common-source (CS) stage is the basic voltage amplifier: the input drives the gate and the output is taken at the drain. This page covers the resistor-loaded stage in detail (Razavi, Section 3.3.1); other loads and degeneration have their own pages.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Resistive load"
+      "text": "Large-signal behaviour"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/common-source-stage.svg",
+      "alt": "Schematic of a common-source amplifier. An NMOS transistor M1 has its source grounded, its gate driven by the input Vin and its drain connected through a resistor RD to the supply VDD. The output Vout is taken at the drain.",
+      "caption": "A common-source stage with a resistor load."
     },
     {
       "type": "prose",
-      "text": "With a resistor RD to the supply, the large-signal output is Vout = VDD - RD*ID. In saturation Vout = VDD - (1/2)*mu_n*Cox*(W/L)*RD*(Vin - VTH)^2. The small-signal gain is the slope of this curve:"
+      "text": "Sweep $V_{in}$ upward. Below $V_{TH}$, M1 is off and $V_{out} = V_{DD}$. Just above threshold M1 must be saturated (its drain is far above its gate), so"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = V_{DD} - R_D\\,\\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L}(V_{in} - V_{TH})^2"
+    },
+    {
+      "type": "prose",
+      "text": "As $V_{out}$ falls it eventually drops one threshold below the gate, $V_{out} = V_{in} - V_{TH}$ (point A), and M1 enters triode. At point A the equation above holds with $V_{out} = V_{in1} - V_{TH}$, which can be solved for $V_{in1}$. Further on, the triode equation applies, and deep in triode M1 is just $R_{on}$ in a divider:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = V_{DD}\\frac{R_{on}}{R_{on} + R_D} = \\frac{V_{DD}}{1 + \\mu_n C_{ox}\\frac{W}{L}R_D(V_{in} - V_{TH})}"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/single-stage-amplifiers-cs-transfer.svg",
+      "alt": "Two plots against input voltage from 0 to 1.8 volts. Top: output voltage stays at 1.8 volts until the input reaches 0.5 volts, then falls along a parabola to point A near 1.23 volts input and 0.73 volts output, marked as the edge of triode, then decays slowly toward about 0.3 volts. Bottom: the small-signal gain magnitude is zero below 0.5 volts, rises linearly to a peak of about 2.9 at point A, then drops quickly in triode.",
+      "caption": "Transfer curve and gain of a CS stage. The gain is largest just before M1 leaves saturation, and the stage is biased to the left of point A."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Small-signal gain"
+    },
+    {
+      "type": "prose",
+      "text": "In saturation the slope of the transfer curve is"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = \\frac{\\partial V_{out}}{\\partial V_{in}} = -R_D\\,\\mu_n C_{ox}\\frac{W}{L}(V_{in} - V_{TH}) = -g_m R_D"
+    },
+    {
+      "type": "prose",
+      "text": "The same result follows from the small-signal model: an input change produces a drain current $g_m v_{in}$, which flows through $R_D$. Because $g_m$ itself depends on $V_{in}$, the gain changes with signal level when the swing is large: that is nonlinearity. A recurring design idea follows: make the gain depend as little as possible on signal-dependent quantities like $g_m$."
+    },
+    {
+      "type": "prose",
+      "text": "Driven hard enough to swing between cutoff and triode, the device's $g_m$ (and so the incremental gain) varies periodically with the signal: near zero when the input is low, largest at the saturation edge, small again in triode."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Maximizing the gain"
+    },
+    {
+      "type": "prose",
+      "text": "Write $g_m = \\sqrt{2\\mu_n C_{ox}(W/L)I_D}$ and $R_D = V_{RD}/I_D$, where $V_{RD}$ is the DC drop across $R_D$:"
     },
     {
       "type": "figure",
@@ -24,7 +78,7 @@
     },
     {
       "type": "prose",
-      "text": "The negative sign means the stage inverts. As Vin rises Vout falls until the transistor leaves saturation (Vout < Vin - VTH) and enters triode, where the gain collapses. For an amplifier, bias it in the steep middle part, a little above threshold."
+      "text": "Any terminal that controls the channel can be the input: driving the bulk with the gate at a fixed bias gives $A_v = -g_{mb}R_D$ (with $\\lambda = 0$), a smaller gain because $g_{mb} < g_m$."
     },
     {
       "type": "widget",
@@ -78,59 +132,58 @@
     },
     {
       "type": "prose",
-      "text": "The steepest part of the Vout curve, between the knee at VTH and the triode boundary, is the amplifying region. Increase RD and the slope steepens (more gain) but the usable input range shrinks, a direct gain-swing trade-off."
+      "text": "The steepest part of the curve, between threshold and the triode edge, is the amplifying region. Increase $R_D$ and the slope steepens (more gain) but the usable input range shrinks: the gain-swing trade-off in one picture."
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "Other loads"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Diode-connected load (gate tied to drain): the load looks like 1/gm2, so Av = -gm1 / gm2 = -sqrt((W/L)1 / (W/L)2) at equal currents. The gain is set by geometry, which makes it very linear, but small (typically 3 to 10). With body effect, gm2 is replaced by gm2 + gmb2 = gm2*(1 + eta).",
-        "Current-source load (a PMOS with fixed gate bias): Av = -gm1 * (ro1 || ro2). Gain is much higher (tens) because both resistances are large, but it needs a bias for the load gate, and the output DC level is sensitive.",
-        "Triode load: the PMOS in triode acts as a resistor, Ron = 1/[mu_p*Cox*(W/L)*(VDD - Vb - |VTHP|)]. The result is a gain similar to the resistive load but tunable and more compact."
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Source degeneration"
+      "level": 3,
+      "text": "Other versions"
     },
     {
       "type": "prose",
-      "text": "Adding a resistance RS between source and ground makes the transistor's effective transconductance Gm = gm / (1 + gm*RS). The gain becomes about -RD*gm/(1 + gm*RS), approaching -RD/RS when gm*RS is large. This sacrifices gain for linearity: the gain depends on RD/RS, which are resistors, instead of on the transistor's nonlinear gm. Degeneration also raises the output resistance to about ro*(1 + gm*RS)."
+      "text": "Resistors are often imprecise or large on chip, so the load is usually a transistor: diode-connected, current-source, active (complementary) or triode loads, each on the CS Stage with Transistor Loads page. Adding a resistor in the source gives the degenerated stage on the Source Degeneration page."
     },
     {
       "type": "problem",
       "title": "Gain with and without ro",
-      "text": "gm = 1 mS, RD = 10 kohm, ro = 50 kohm. Find the CS gain with ro ignored and with ro included.",
+      "text": "$g_m = 1\\text{ mS}$, $R_D = 10\\text{ k}\\Omega$, $r_o = 50\\text{ k}\\Omega$. Find the CS gain with $r_o$ ignored and with it included.",
       "solution": [
-        "Ignoring ro: Av = -gm*RD = -10.",
-        "Including ro: RD || ro = 10k * 50k / 60k = 8.33 kohm, so Av = -1 mS * 8.33 kohm = -8.33."
+        "Ignoring $r_o$: $A_v = -g_m R_D = -10$.",
+        "Including it: $R_D \\parallel r_o = 8.33\\text{ k}\\Omega$, so $A_v = -8.33$."
       ],
-      "answer": "-10 ignoring ro; -8.33 with ro."
+      "answer": "$-10$ ignoring $r_o$; $-8.33$ with it."
     },
     {
       "type": "problem",
-      "title": "Diode-connected load",
-      "text": "A CS stage uses a diode-connected NMOS load. M1 has (W/L)1 = 25 and M2 has (W/L)2 = 1, both NMOS carrying the same current. Find the gain ignoring body effect, then with eta = 0.2.",
+      "title": "The edge of triode",
+      "text": "A CS stage has $V_{DD} = 1.8\\text{ V}$, $R_D = 2\\text{ k}\\Omega$, $\\mu_n C_{ox}W/L = 2\\text{ mA/V}^2$, $V_{TH} = 0.5\\text{ V}$ and $\\lambda = 0$. Find the input voltage at which M1 enters triode, the output there, and the small-signal gain at that point.",
+      "hint": "Set $V_{out} = V_{in} - V_{TH}$ in the saturation equation.",
       "solution": [
-        "gm1 / gm2 = sqrt((W/L)1 / (W/L)2) = sqrt(25) = 5 at equal ID, so Av = -5.",
-        "With body effect the load conductance is gm2 + gmb2 = gm2 * (1 + eta), so Av = -5 / 1.2 = -4.17."
+        "At the edge $V_{out} = V_{in} - V_{TH} = V_{ov}$, so $V_{ov} = 1.8 - 2\\text{ k}\\Omega \\cdot 1\\text{ mA/V}^2 \\cdot V_{ov}^2$, i.e. $2V_{ov}^2 + V_{ov} - 1.8 = 0$.",
+        "$V_{ov} = \\frac{-1 + \\sqrt{1 + 14.4}}{4} \\approx 0.731\\text{ V}$, so $V_{in1} \\approx 1.23\\text{ V}$ and $V_{out} \\approx 0.73\\text{ V}$.",
+        "$|A_v| = \\mu_n C_{ox}(W/L)V_{ov}R_D = 2\\text{ mA/V}^2 \\cdot 0.731\\text{ V} \\cdot 2\\text{ k}\\Omega \\approx 2.9$."
       ],
-      "answer": "-5 without body effect, -4.17 with eta = 0.2."
+      "answer": "$V_{in1} \\approx 1.23\\text{ V}$, $V_{out} \\approx 0.73\\text{ V}$, $|A_v| \\approx 2.9$ (the peak in the figure)."
     },
     {
       "type": "problem",
-      "title": "Source degeneration",
-      "text": "gm = 2 mS, RD = 10 kohm, RS = 500 ohm (ro infinite). Find the gain, and the gain if RS is increased to 5 kohm.",
+      "title": "Deep in triode",
+      "text": "For the same stage, estimate $V_{out}$ at $V_{in} = 1.8\\text{ V}$ with the $R_{on}$ approximation, then check with the full triode equation.",
       "solution": [
-        "Av = -gm*RD / (1 + gm*RS). With RS = 500 ohm: gm*RS = 1, Av = -20/2 = -10.",
-        "With RS = 5 kohm: gm*RS = 10, Av = -20/11 = -1.82, close to -RD/RS = -2."
+        "$R_{on} = 1/(2\\text{ mA/V}^2 \\cdot 1.3\\text{ V}) \\approx 385\\,\\Omega$, so $V_{out} \\approx 1.8 \\cdot \\frac{385}{2385} \\approx 0.29\\text{ V}$.",
+        "Full triode: $V_{out} = 1.8 - 4(1.3V_{out} - V_{out}^2/2)$, i.e. $2V_{out}^2 - 6.2V_{out} + 1.8 = 0$, giving $V_{out} \\approx 0.32\\text{ V}$. The $R_{on}$ estimate is about 10 percent low because $V_{out}$ is only about 8 times smaller than $2V_{ov} = 2.6\\text{ V}$, so the squared term is not negligible."
       ],
-      "answer": "-10 then -1.82 (limit -RD/RS = -2)."
+      "answer": "About 0.29 V approximately, 0.32 V exactly."
+    },
+    {
+      "type": "problem",
+      "title": "Trading current for gain",
+      "text": "A CS stage has $\\mu_n C_{ox}W/L = 1\\text{ mA/V}^2$ and 0.6 V across $R_D$ at $I_D = 100\\,\\mu\\text{A}$. Find the gain. Keeping $V_{RD}$ fixed, what happens if $I_D$ is halved?",
+      "solution": [
+        "$g_m = \\sqrt{2 \\cdot 1\\text{ mA/V}^2 \\cdot 100\\,\\mu\\text{A}} = 0.447\\text{ mS}$ and $R_D = 6\\text{ k}\\Omega$, so $|A_v| = 2.68$.",
+        "Halving $I_D$ multiplies $|A_v|$ by $\\sqrt{2}$, to 3.79, but $R_D$ doubles to $12\\text{ k}\\Omega$, so the output pole moves down by about half."
+      ],
+      "answer": "2.68, rising to 3.79 at half the current (with a slower output node)."
     }
   ]
 }

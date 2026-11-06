@@ -5,20 +5,67 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "General considerations"
+      "text": "Why amplify, and what matters"
     },
     {
       "type": "prose",
-      "text": "An amplifier is evaluated by its gain, bandwidth, input and output impedance, noise, linearity and output swing. Single-stage amplifiers are the building blocks, and the properties below are what each stage offers:"
+      "text": "A signal is amplified because it is too small to drive a load, to rise above the noise of the next stage, or to reach logic levels. A phone shows the variety: a low-noise amplifier (LNA) right after the antenna, more gain stages down the receive chain (all while strong unwanted signals arrive alongside the weak wanted one), and a power amplifier that drives the antenna on the transmit side and takes most of the battery's energy."
+    },
+    {
+      "type": "prose",
+      "text": "An ideal amplifier is linear, $y(t) = \\alpha_0 + \\alpha_1 x(t)$, where $\\alpha_0$ is the bias point and $\\alpha_1$ the gain. Real circuits bend as the signal moves the bias point, which is modelled by a polynomial:"
+    },
+    {
+      "type": "math",
+      "tex": "y(t) \\approx \\alpha_0 + \\alpha_1 x(t) + \\alpha_2 x^2(t) + \\cdots + \\alpha_n x^n(t)"
+    },
+    {
+      "type": "prose",
+      "text": "Besides gain and speed, power, supply voltage, linearity, noise, swing and input/output impedance all matter, and they trade against each other (the analog design octagon). Each stage needs two analyses: biasing, so every device has the right current and $V_{DS}$ (treated in Current Mirrors and Biasing), and the large- and small-signal response around that bias point, which is this chapter."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/introduction-design-octagon.svg",
+      "alt": "An octagon whose eight corners are labelled gain, speed, power dissipation, supply voltage, linearity, noise, input/output impedance and voltage swings, with thin lines joining every pair of corners.",
+      "caption": "The analog design octagon. Every stage in this chapter is a different compromise between these eight."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The stages and their variants"
     },
     {
       "type": "list",
       "items": [
-        "Common source: voltage gain -gm*(RD||ro), high input and output impedance, the most used stage.",
-        "Source follower: gain below one, high input and low output impedance (buffer).",
-        "Common gate: low input impedance, non-inverting, current buffer.",
-        "Cascode: very high output impedance and gain, limited swing."
+        "Common source (the workhorse): resistive, diode-connected, current-source, active (complementary) and triode loads; with source degeneration.",
+        "Source follower (voltage buffer): biased by a resistor or a current source.",
+        "Common gate (current buffer, low input resistance): resistive or current-source load.",
+        "Cascode (high output resistance): telescopic or folded."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading a circuit by inspection"
+    },
+    {
+      "type": "prose",
+      "text": "Three resistances, derived on the subpages, let you write the gain of most circuits without drawing a small-signal model. With $\\lambda = \\gamma = 0$ the source looks like $1/g_m$; in general:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Looking into the gate: infinite at low frequency.",
+        "Looking into the drain, with $R_S$ from source to ground: $[1 + (g_m + g_{mb})r_o]R_S + r_o$. The transistor multiplies its source resistance by roughly its intrinsic gain.",
+        "Looking into the source, with $R_D$ from drain to an AC ground: $\\frac{R_D + r_o}{1 + (g_m + g_{mb})r_o} \\approx \\frac{1}{g_m + g_{mb}} + \\frac{R_D}{(g_m + g_{mb})r_o}$. The transistor divides its drain resistance by roughly its intrinsic gain.",
+        "Gain of a stage: $A_v = -G_m R_{out}$, with $G_m$ the short-circuit transconductance and $R_{out}$ the output resistance (proved on the Source Degeneration page). For a CS-like stage, $|A_v|$ is the resistance seen at the drain divided by the resistance in the source path, $\\frac{1}{g_m} + R_S$."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/single-stage-amplifiers-impedance-rules.svg",
+      "alt": "Two circuits. Left: transistor M1 with gate at AC ground and resistor RS from source to ground; an arrow labelled R up points at the drain terminal. Right: transistor M1 with gate at a bias voltage Vb and resistor RD from drain to VDD; an arrow labelled R down points at the source terminal.",
+      "caption": "Impedance transformation: a MOSFET scales source resistance up when seen from the drain, and drain resistance down when seen from the source."
     },
     {
       "type": "heading",
@@ -27,20 +74,42 @@
     },
     {
       "type": "prose",
-      "text": "Ask what impedance the stage must see on each side. A voltage amplifier with a high-impedance source needs a gate input (CS or follower). A current source driving a load wants a high Rout (cascode). A low-impedance source needs a low Rin (CG)."
+      "text": "Ask what each side of the stage connects to. A high-impedance source that must not be loaded needs a gate input (CS or follower). A low-impedance or current-mode source wants a low input resistance (CG). Driving a heavy load at unity gain calls for a follower; maximizing gain calls for the highest output resistance (cascode). Most larger circuits are combinations of these."
     },
     {
-      "type": "callout",
-      "text": "Quick table: CS gives voltage gain; SF gives impedance transformation; CG gives current buffering; cascode gives output impedance. Everything else is a combination of these."
+      "type": "heading",
+      "level": 3,
+      "text": "Choice of device models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Break the circuit into familiar stages.",
+        "Start with the simplest model, a current source $g_m v_{gs}$, for every saturated device. Add $r_o$ only where a drain sees a high impedance (for example another drain).",
+        "In a second pass, add body effect for devices whose source is not at AC ground.",
+        "For bias calculations, ignore $\\lambda$ and $\\gamma$ at first and add them once the basic operating point makes sense.",
+        "Then simulate: short-channel devices cannot be predicted accurately by hand, but without the hand analysis you cannot judge whether the simulation is right."
+      ]
     },
     {
       "type": "problem",
       "title": "Pick the stage",
-      "text": "You need to drive a 50 ohm load from a high-impedance sensor with a voltage gain of about 1 and little loading of the sensor. Which stage (or stages) fits?",
+      "text": "You need to drive a $50\\,\\Omega$ load from a high-impedance sensor with a voltage gain of about 1 and little loading of the sensor. Which stage fits, and what does it cost?",
       "solution": [
-        "A source follower: its gate presents a high input impedance to the sensor, and its output impedance 1/(gm+gmb) is low. To drive 50 ohm directly you would need gm of about 20 mS, which takes a large current, so in practice a follower is the last stage with a large device and bias current."
+        "A source follower: its gate does not load the sensor and its output resistance is about $1/(g_m + g_{mb})$.",
+        "To make that small next to $50\\,\\Omega$ needs $g_m$ well above 20 mS, i.e. a large device and a large bias current. Even then the gain is only about 0.5 when $1/g_m = R_L$; for a given current a CS stage with the load as its drain resistor would give more gain (see the Source Follower page)."
       ],
-      "answer": "A source follower (buffer)."
+      "answer": "A source follower (buffer), at the price of a large bias current."
+    },
+    {
+      "type": "problem",
+      "title": "Two resistances by inspection",
+      "text": "A transistor has $g_m = 2\\text{ mS}$, $g_{mb} = 0$ and $r_o = 20\\text{ k}\\Omega$. (a) With $1\\text{ k}\\Omega$ from source to ground, what resistance is seen at the drain? (b) With $10\\text{ k}\\Omega$ from drain to $V_{DD}$, what is seen at the source?",
+      "solution": [
+        "(a) $[1 + g_m r_o]R_S + r_o = (1 + 40)(1\\text{ k}\\Omega) + 20\\text{ k}\\Omega = 61\\text{ k}\\Omega$.",
+        "(b) $\\frac{R_D + r_o}{1 + g_m r_o} = \\frac{30\\text{ k}\\Omega}{41} \\approx 732\\,\\Omega$, somewhat above $1/g_m = 500\\,\\Omega$."
+      ],
+      "answer": "(a) $61\\text{ k}\\Omega$; (b) about $732\\,\\Omega$."
     }
   ]
 }

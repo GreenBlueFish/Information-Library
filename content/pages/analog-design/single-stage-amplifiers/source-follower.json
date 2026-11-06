@@ -1,10 +1,62 @@
 {
   "title": "Source Follower",
-  "intro": "The source follower (common-drain stage) buffers a signal: it presents a high impedance to the source and a low impedance to the load.",
+  "intro": "The source follower (common-drain stage) is a voltage buffer: high input resistance, moderate output resistance, gain a little below one. It also costs headroom and linearity (Razavi, Section 3.4).",
   "blocks": [
     {
+      "type": "figure",
+      "src": "assets/figures/analog-design/source-follower.svg",
+      "alt": "Schematic of a source follower. An NMOS transistor M1 has its drain connected to the supply VDD and its gate driven by the input Vin. The output Vout is taken at the source, which is also connected to a current source to ground.",
+      "caption": "A source follower with a current-source load."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Large-signal behaviour and gain"
+    },
+    {
       "type": "prose",
-      "text": "The input drives the gate and the output is taken at the source, with a load RL or a current source. The output follows the input, a threshold-ish voltage lower."
+      "text": "With a resistor $R_S$ from source to ground, M1 is off for $V_{in} < V_{TH}$; above that it turns on in saturation and the output follows the input one $V_{GS}$ lower. With $\\lambda = 0$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L}(V_{in} - V_{TH} - V_{out})^2 R_S = V_{out}"
+    },
+    {
+      "type": "prose",
+      "text": "Differentiating (remembering $\\partial V_{TH}/\\partial V_{in} = \\eta\\,\\partial V_{out}/\\partial V_{in}$), or using the small-signal model with $v_{bs} = -v_{out}$:"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = \\frac{g_m R_S}{1 + (g_m + g_{mb})R_S}"
+    },
+    {
+      "type": "prose",
+      "text": "The gain starts at zero near threshold and climbs toward $g_m/(g_m + g_{mb}) = 1/(1+\\eta)$. $\\eta$ falls slowly as $V_{out}$ rises, but within usual source-bulk voltages it stays above about 0.2, so even with $R_S \\to \\infty$ the gain stays clearly below one. M1 stays saturated as long as $V_{in} \\le V_{DD} + V_{TH}$."
+    },
+    {
+      "type": "prose",
+      "text": "With a resistor, the current changes with the input DC level (say doubling from 0.7 V to 1 V input), so $V_{GS}$ changes too and the output does not track faithfully. A current source (an NMOS in saturation) fixes the current. If that source is ideal and $\\lambda = \\gamma = 0$, the gain is exactly one: the current cannot change, so $V_{GS}$ cannot change, so every input change appears at the output. Body effect still moves $V_{TH}$, which is why the iteration in the problems below is needed to find the DC output."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Output resistance"
+    },
+    {
+      "type": "prose",
+      "text": "Drive the output with $v_X$ (input at AC ground): $i_X = (g_m + g_{mb})v_X$, so"
+    },
+    {
+      "type": "math",
+      "tex": "R_{out} = \\frac{1}{g_m + g_{mb}} = \\frac{1}{g_m} \\parallel \\frac{1}{g_{mb}}"
+    },
+    {
+      "type": "prose",
+      "text": "Body effect lowers it: pulling the source down raises $V_{GS}$ and also lowers $V_{TH}$, so the current changes more. Because $v_{bs} = -v_{out}$, the $g_{mb}v_{bs}$ source is controlled by its own terminal voltage and is just a resistor $1/g_{mb}$ from output to ground (valid only for followers). That picture explains the gain limit too: the intrinsic follower is a source $v_{in}$ behind $1/g_m$ driving $1/g_{mb}$, a divider of $g_m/(g_m + g_{mb})$. In general, with every resistance at the output lumped together,"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = \\frac{R_{eq}}{R_{eq} + \\frac{1}{g_m}}, \\qquad R_{eq} = \\frac{1}{g_{mb}} \\parallel r_{o1} \\parallel r_{o2} \\parallel R_L"
     },
     {
       "type": "figure",
@@ -27,23 +79,65 @@
       ]
     },
     {
+      "type": "figure",
+      "src": "assets/figures/analog-design/single-stage-amplifiers-sf-cascade.svg",
+      "alt": "A common-source stage with NMOS M1, its drain at node X fed by a current source I1 from VDD, drives the gate of an NMOS source follower M2 whose drain is at VDD. M2's source is the output Vout and is biased by an NMOS current source M3 with gate at Vb.",
+      "caption": "A CS stage followed by a follower. The follower's level shift raises the lowest allowed voltage at X by about VGS2."
+    },
+    {
+      "type": "prose",
+      "text": "So followers are avoided unless needed. A legitimate use is level shifting: a follower in front of an input device can bring a signal near $V_{DD}$ down far enough to keep the next stage saturated (the condition becomes a relation between the $V_{GS}$ values of the devices involved)."
+    },
+    {
       "type": "problem",
       "title": "Gain with body effect",
-      "text": "gm = 2 mS, gmb = 0.4 mS, RL = 2 kohm. Find Av and Rout.",
+      "text": "$g_m = 2\\text{ mS}$, $g_{mb} = 0.4\\text{ mS}$, $R_S = 2\\text{ k}\\Omega$. Find $A_v$ and $R_{out}$.",
       "solution": [
-        "gm*RL = 4. Av = 4 / (1 + 2.4 mS * 2 kohm) = 4 / (1 + 4.8) = 0.69.",
-        "Rout = 1/(gm + gmb) = 1 / 2.4 mS = 417 ohm."
+        "$A_v = \\frac{4}{1 + 2.4\\text{ mS} \\cdot 2\\text{ k}\\Omega} = \\frac{4}{5.8} \\approx 0.69$.",
+        "$R_{out} = 1/(2.4\\text{ mS}) \\approx 417\\,\\Omega$ (in parallel with $R_S$ for the stage: about $345\\,\\Omega$)."
       ],
-      "answer": "Av = 0.69, Rout = 417 ohm."
+      "answer": "$A_v \\approx 0.69$, $R_{out} \\approx 417\\,\\Omega$ looking into the source."
+    },
+    {
+      "type": "problem",
+      "title": "DC output with body effect",
+      "text": "A follower biased by an ideal $500\\,\\mu\\text{A}$ source has $\\mu_n C_{ox} = 100\\,\\mu\\text{A/V}^2$, $W/L = 50$, $V_{TH0} = 0.45\\text{ V}$, $\\gamma = 0.4\\text{ V}^{1/2}$, $2\\Phi_F = 0.8\\text{ V}$, bulk at ground and $V_{in} = 1.5\\text{ V}$. Find $V_{out}$.",
+      "hint": "Iterate: $V_{TH}$ depends on $V_{out}$.",
+      "solution": [
+        "Overdrive: $\\sqrt{2 \\cdot 500\\,\\mu\\text{A}/(5\\text{ mA/V}^2)} = 0.447\\text{ V}$, independent of $V_{TH}$.",
+        "First guess with $V_{TH} = 0.45$: $V_{out} = 1.5 - 0.45 - 0.447 = 0.603\\text{ V}$. Then $V_{TH} = 0.45 + 0.4(\\sqrt{1.403} - 0.894) = 0.566\\text{ V}$ and $V_{out} = 0.487\\text{ V}$.",
+        "Repeating: $V_{TH} = 0.546$, $V_{out} = 0.507$; then $0.549$ and $0.504$. It converges to $V_{out} \\approx 0.50\\text{ V}$ with $V_{TH} \\approx 0.55\\text{ V}$."
+      ],
+      "answer": "$V_{out} \\approx 0.50\\text{ V}$ (about 100 mV lower than without body effect)."
+    },
+    {
+      "type": "problem",
+      "title": "Gain with everything at the output",
+      "text": "A follower has $g_m = 2\\text{ mS}$, $g_{mb} = 0.3\\text{ mS}$, $r_{o1} = r_{o2} = 20\\text{ k}\\Omega$ and drives $R_L = 1\\text{ k}\\Omega$. Find the gain.",
+      "solution": [
+        "$1/R_{eq} = 0.3 + 0.05 + 0.05 + 1 = 1.4\\text{ mS}$, so $R_{eq} \\approx 714\\,\\Omega$.",
+        "$A_v = \\frac{714}{714 + 500} \\approx 0.59$."
+      ],
+      "answer": "$A_v \\approx 0.59$."
+    },
+    {
+      "type": "problem",
+      "title": "Headroom cost",
+      "text": "A CS stage's output X drives a follower M2 biased by M3. $V_{GS2} = 0.7\\text{ V}$ and M3 and M1 both have 0.2 V overdrive. Compare the lowest allowed voltage at X with and without the follower.",
+      "solution": [
+        "Without the follower, X can fall to M1's overdrive, 0.2 V.",
+        "With it, X must keep M3 saturated through M2: $V_X \\ge V_{GS2} + V_{ov3} = 0.9\\text{ V}$. The swing at X shrinks by 0.7 V."
+      ],
+      "answer": "0.2 V without, 0.9 V with the follower."
     },
     {
       "type": "problem",
       "title": "Why the gain stays below one",
-      "text": "Explain in one sentence why a source follower can never have a gain above one.",
+      "text": "Explain in one or two sentences why a source follower's gain cannot exceed one.",
       "solution": [
-        "The gate-source voltage that drives the current is Vin - Vout, and Vout = gm*RL*(Vin - Vout) at the source: solving gives Vout/Vin = gm*RL/(1 + gm*RL) < 1. Any rise in Vout reduces the gate-source drive."
+        "The current is driven by $v_{gs} = v_{in} - v_{out}$, and the output is that current times a resistance: $v_{out} = g_m R_S(v_{in} - v_{out})$, so $v_{out}/v_{in} = g_m R_S/(1 + g_m R_S) < 1$. Any rise in the output reduces its own drive: the stage has full negative feedback."
       ],
-      "answer": "The device's own vgs shrinks as the output rises; it is negative feedback."
+      "answer": "The device's own gate-source drive shrinks as the output rises."
     }
   ]
 }

@@ -46,16 +46,45 @@
     },
     {
       "type": "prose",
-      "text": "An HTM neuron is binary in its output and discrete in time. It has one proximal zone that connects to the feedforward input and determines whether the cell can become active, plus a set of distal segments (each a list of synapses onto other cells in the layer) and optionally apical segments (synapses onto feedback cells). Every synapse has a scalar permanence p in [0, 1] and is connected if p ≥ θ_conn; the effective weight is 1 if connected and 0 otherwise. Learning changes permanences, so a synapse can be 'on the way to forming' without yet having any effect, which models structural plasticity (the growth and retraction of spines) rather than graded weight change."
-    },
-    {
-      "type": "code",
-      "lang": "text",
-      "source": "For a distal segment d of cell i at time t, with A(t) the set of active cells:\n  connected(d)   = { synapses s on d with permanence p_s ≥ θ_conn }\n  activity(d,t)  = | { s ∈ connected(d) : presyn(s) ∈ A(t) } |\n  d is ACTIVE    if activity(d,t) ≥ θ_seg       (an NMDA-spike-like event)\n  d is MATCHING  if |{ s on d : presyn(s) ∈ A(t) }| ≥ θ_min   (counts unconnected synapses too)\n\nCell state at time t+1:\n  PREDICTIVE(i) = OR over segments d of i : d is ACTIVE at t\n  ACTIVE(i)     = cell's minicolumn wins feedforward competition AND\n                  (PREDICTIVE(i) OR no cell in the minicolumn was predictive)\n\nTypical values (Numenta temporal memory, hedged; vary by release and application):\n  θ_conn ≈ 0.5   θ_seg ≈ 10–16   θ_min ≈ 8–10   synapses per segment ≈ 20–40 sampled"
+      "text": "An HTM neuron is binary in its output and discrete in time. It has one proximal zone that connects to the feedforward input and determines whether the cell can become active, plus a set of distal segments (each a list of synapses onto other cells in the layer) and optionally apical segments (synapses onto feedback cells). Every synapse has a scalar permanence $p$ in $[0, 1]$ and is connected if $p \\ge \\theta_{conn}$; the effective weight is 1 if connected and 0 otherwise. Learning changes permanences, so a synapse can be 'on the way to forming' without yet having any effect, which models structural plasticity (the growth and retraction of spines) rather than graded weight change."
     },
     {
       "type": "prose",
-      "text": "Mathematically a segment is a threshold unit over a sparse binary vector, and the cell is an OR over its segments. This is why HTM leans on the properties of sparse distributed representations (see 'Sparse Distributed Representations' in section 3): if the layer activity has w active cells out of n, and a segment samples s of the active cells of a remembered pattern with threshold θ_seg, the chance that a random unrelated pattern crosses threshold is astronomically small for realistic numbers, while a noisy version of the remembered pattern still crosses it. Ahmad & Hawkins (2015, 2016) derive these error rates; you can explore them in the SDR overlap widget in section 3."
+      "text": "For a distal segment $d$ of cell $i$ at time $t$, with $A(t)$ the set of active cells:"
+    },
+{
+      "type": "math",
+      "tex": "\\mathrm{connected}(d) = \\lbrace s \\text{ on } d : p_s \\ge \\theta_{conn} \\rbrace"
+    },
+{
+      "type": "math",
+      "tex": "\\mathrm{activity}(d,t) = \\left| \\lbrace s \\in \\mathrm{connected}(d) : \\mathrm{presyn}(s) \\in A(t) \\rbrace \\right|"
+    },
+{
+      "type": "list",
+      "items": [
+        "$d$ is ACTIVE if $\\mathrm{activity}(d,t) \\ge \\theta_{seg}$ (an NMDA-spike-like event).",
+        "$d$ is MATCHING if $\\left| \\lbrace s \\text{ on } d : \\mathrm{presyn}(s) \\in A(t) \\rbrace \\right| \\ge \\theta_{min}$ (counts unconnected synapses too)."
+      ]
+    },
+{
+      "type": "prose",
+      "text": "Cell state at time $t+1$:"
+    },
+{
+      "type": "list",
+      "items": [
+        "$\\mathrm{PREDICTIVE}(i)$ = OR over segments $d$ of $i$: $d$ is ACTIVE at $t$.",
+        "$\\mathrm{ACTIVE}(i)$ = the cell's minicolumn wins the feedforward competition AND ($\\mathrm{PREDICTIVE}(i)$ OR no cell in the minicolumn was predictive)."
+      ]
+    },
+{
+      "type": "prose",
+      "text": "Typical values (Numenta temporal memory, hedged; vary by release and application): $\\theta_{conn} \\approx 0.5$, $\\theta_{seg} \\approx 10\\text{–}16$, $\\theta_{min} \\approx 8\\text{–}10$, synapses per segment ≈ 20–40 sampled."
+    },
+    {
+      "type": "prose",
+      "text": "Mathematically a segment is a threshold unit over a sparse binary vector, and the cell is an OR over its segments. This is why HTM leans on the properties of sparse distributed representations (see 'Sparse Distributed Representations' in section 3): if the layer activity has $w$ active cells out of $n$, and a segment samples $s$ of the active cells of a remembered pattern with threshold $\\theta_{seg}$, the chance that a random unrelated pattern crosses threshold is astronomically small for realistic numbers, while a noisy version of the remembered pattern still crosses it. Ahmad & Hawkins (2015, 2016) derive these error rates; you can explore them in the SDR overlap widget in section 3."
     },
     {
       "type": "heading",
@@ -68,7 +97,7 @@
     },
     {
       "type": "prose",
-      "text": "The plot below does the arithmetic behind that claim (Ahmad & Hawkins 2016). A segment holds s synapses onto cells of one remembered pattern and fires when at least θ of them are active. Two things can go wrong. A false match: a random pattern of a active cells out of n hits θ or more of the s synapses by chance; that probability is a hypergeometric tail. A miss: the remembered pattern comes back with a share of its cells replaced by noise, so each synapse still finds an active cell with probability 1 − noise, and fewer than θ are hit; that is a binomial tail. Both are plotted as log10 probabilities against θ (−30 stands for 'smaller than 10⁻³⁰'). With the defaults (n = 2048, a = 40, s = 20, 30% noise) a threshold of 10 puts the chance of a false match near 10⁻¹² while the noisy pattern is still recognised about 98% of the time. The specificity comes from sparsity: try a = 200 (10% activity) and the false-match chance at the same threshold rises by about seven orders of magnitude."
+      "text": "The plot below does the arithmetic behind that claim (Ahmad & Hawkins 2016). A segment holds $s$ synapses onto cells of one remembered pattern and fires when at least $\\theta$ of them are active. Two things can go wrong. A false match: a random pattern of $a$ active cells out of $n$ hits $\\theta$ or more of the $s$ synapses by chance; that probability is a hypergeometric tail. A miss: the remembered pattern comes back with a share of its cells replaced by noise, so each synapse still finds an active cell with probability 1 − noise, and fewer than $\\theta$ are hit; that is a binomial tail. Both are plotted as $\\log_{10}$ probabilities against $\\theta$ ($-30$ stands for 'smaller than $10^{-30}$'). With the defaults ($n = 2048$, $a = 40$, $s = 20$, 30% noise) a threshold of 10 puts the chance of a false match near $10^{-12}$ while the noisy pattern is still recognised about 98% of the time. The specificity comes from sparsity: try $a = 200$ (10% activity) and the false-match chance at the same threshold rises by about seven orders of magnitude."
     },
     {
       "type": "widget",
@@ -145,7 +174,7 @@
     {
       "type": "list",
       "items": [
-        "Soma: an LIF or AdEx compartment with proximal synapses (AMPA-like, τ ≈ 2–5 ms) as its main drive.",
+        "Soma: an LIF or AdEx compartment with proximal synapses (AMPA-like, $\\tau \\approx 2\\text{–}5\\text{ ms}$) as its main drive.",
         "Distal segment: a separate nonlinear subunit. Sum the conductances of the segment's connected synapses; if the summed input crosses a segment threshold (equivalent to roughly 10–20 coincident inputs within a few milliseconds), trigger a plateau: inject a depolarising current into the soma for 50–200 ms (NMDA-like), sized to depolarise the soma by a few millivolts without firing it. Implementing the plateau as a state variable with its own decay keeps it cheap on hardware.",
         "Predictive state = the soma sitting closer to threshold during the plateau. When the proximal input arrives, depolarised cells reach threshold a few milliseconds earlier than their undepolarised neighbours.",
         "Inhibition inside each minicolumn: a fast inhibitory population (basket-cell-like, short delay of about 1–2 ms) that the first spikes in the minicolumn activate and that suppresses the remaining cells. This is what turns 'fired earlier' into 'only the predicted cells fired'. If no cell was depolarised, all cells reach threshold at nearly the same time, inhibition arrives too late, and the minicolumn bursts.",

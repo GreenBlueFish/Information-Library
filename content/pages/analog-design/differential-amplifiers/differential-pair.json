@@ -5,20 +5,11 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Why differential?"
+      "text": "Why a tail current source"
     },
     {
       "type": "prose",
-      "text": "A differential circuit processes the difference Vin1 - Vin2 and ignores a signal common to both inputs. That rejects supply noise, substrate coupling and common-mode interference, doubles the usable swing, gives better linearity (even-order distortion cancels) and biases more simply. For these reasons most modern analog circuits are differential."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Qualitative behaviour"
-    },
-    {
-      "type": "prose",
-      "text": "Let the two gates be Vin1 and Vin2, the sources join at a node driven by a tail current ISS. If Vin1 is much greater than Vin2 the first transistor carries all of ISS. At equal inputs each carries ISS/2. In between the current steers smoothly from one side to the other."
+      "text": "A differential input $V_{in1} - V_{in2}$ could be applied to two independent CS stages, but then the bias currents, the transconductance and the output CM level all move with the input CM level. The source-coupled pair (also called a long-tailed pair) ties the sources together and feeds them from a current source $I_{SS}$, so $I_{D1} + I_{D2} = I_{SS}$ no matter where the input CM sits. At equal inputs each side carries $I_{SS}/2$ and the output CM level is $V_{DD} - R_D I_{SS}/2$."
     },
     {
       "type": "figure",
@@ -29,12 +20,94 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Quantitative analysis"
+      "text": "Qualitative behaviour"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "ID1 - ID2 = (1/2)*mu_n*Cox*(W/L) * Vid * sqrt( 4*ISS/(mu_n*Cox*(W/L)) - Vid^2 )     for |Vid| <= sqrt(2*ISS/(mu_n*Cox*W/L))\nFull switching at |Vid| = sqrt(2) * Vov(balanced)\nSmall signal: Iout = Gm*Vid with Gm = gm = sqrt( mu_n*Cox*(W/L)*ISS )"
+      "type": "list",
+      "items": [
+        "$V_{in1} \\ll V_{in2}$: M1 is off, M2 carries $I_{SS}$, so $V_{out1} = V_{DD}$ and $V_{out2} = V_{DD} - R_D I_{SS}$.",
+        "$V_{in1} = V_{in2}$ (equilibrium): each side carries $I_{SS}/2$ and both outputs sit at the CM level.",
+        "$V_{in1} \\gg V_{in2}$: the roles swap and M1 takes the whole tail current.",
+        "The output limits $V_{DD}$ and $V_{DD} - R_D I_{SS}$ do not depend on the input CM level, and the slope (the gain) is largest at equilibrium and falls towards zero as one side turns off."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-pair.svg",
+      "alt": "Schematic of a differential pair. Two NMOS transistors M1 and M2 have their sources joined and connected to a tail current source ISS to ground. Each drain connects to the supply VDD through its own resistor RD. The two gates are the differential inputs and the two drains are the differential outputs.",
+      "caption": "The basic differential pair. The tail current ISS is steered between the two branches in proportion to the input difference."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Input common-mode range"
+    },
+    {
+      "type": "prose",
+      "text": "Tie both gates to $V_{in,CM}$ and implement the tail with transistor M3. Below $V_{TH}$ nothing conducts. As $V_{in,CM}$ rises, M1 and M2 act as one source follower that lifts node P until M3 has enough $V_{DS}$ to saturate; only then is the tail current constant. At the top, the input devices enter triode once their gates exceed their drains by $V_{TH}$:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{GS1} + (V_{GS3} - V_{TH3}) \\le V_{in,CM} \\le \\min\\left[V_{DD} - R_D \\frac{I_{SS}}{2} + V_{TH},\\; V_{DD}\\right]"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-amplifiers-pair-nmos-tail.svg",
+      "alt": "Differential pair with resistor loads RD, inputs both labelled V in CM, sources joined at node P, and an NMOS transistor M3 with gate bias Vb as the tail current source.",
+      "caption": "Differential pair with an NMOS tail. M3 must stay saturated (lower limit of the CM range); M1 and M2 must stay saturated (upper limit)."
+    },
+    {
+      "type": "prose",
+      "text": "Plotted against $V_{in,CM}$, the differential gain rises once the inputs pass $V_{TH}$, stays flat while M3 is saturated, and falls again when the input pair enters triode."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Output swing"
+    },
+    {
+      "type": "prose",
+      "text": "With high gain, the input swing is small and each output can move between $V_{DD}$ and about $V_{in,CM} - V_{TH}$ before its transistor leaves saturation. A low input CM level therefore buys output swing, but it cannot go below $V_{GS1} + (V_{GS3} - V_{TH3})$. At that choice one output swings $V_{DD} - (V_{GS1} - V_{TH1}) - (V_{GS3} - V_{TH3})$ peak-to-peak, so the pair gives up two overdrives where a CS stage gives up one; the differential swing is $2V_{DD}$ minus four overdrives. When the gain is low (as in nanometer pairs, often below 5), the input swing $V_0$ also counts: the lowest safe output becomes $V_{in,CM} + V_0 - V_{TH}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Large-signal analysis"
+    },
+    {
+      "type": "prose",
+      "text": "Assume square-law devices in saturation, $\\lambda = 0$ and $R_{D1} = R_{D2} = R_D$, so $V_{out1} - V_{out2} = -R_D(I_{D1} - I_{D2})$. Both gates reach node P through their own $V_{GS}$, so $V_{in1} - V_{in2} = V_{GS1} - V_{GS2}$. Write each $V_{GS}$ as $V_{TH} + \\sqrt{2I_D/(\\mu_n C_{ox} W/L)}$, square once, use $I_{D1} + I_{D2} = I_{SS}$, square again using $4I_{D1}I_{D2} = I_{SS}^2 - (I_{D1} - I_{D2})^2$, and the result is"
+    },
+    {
+      "type": "math",
+      "tex": "I_{D1} - I_{D2} = \\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L}\\,\\Delta V_{in}\\sqrt{\\frac{4 I_{SS}}{\\mu_n C_{ox} W/L} - \\Delta V_{in}^2}",
+      "caption": "Valid while both devices conduct; $\\Delta V_{in} = V_{in1} - V_{in2}$."
+    },
+    {
+      "type": "prose",
+      "text": "The difference current is an odd function of $\\Delta V_{in}$ even though each drain current is a square law. Its slope is the pair's transconductance:"
+    },
+    {
+      "type": "math",
+      "tex": "G_m = \\frac{\\partial \\Delta I_D}{\\partial \\Delta V_{in}} = \\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L}\\,\\frac{\\frac{4 I_{SS}}{\\mu_n C_{ox} W/L} - 2\\Delta V_{in}^2}{\\sqrt{\\frac{4 I_{SS}}{\\mu_n C_{ox} W/L} - \\Delta V_{in}^2}}"
+    },
+    {
+      "type": "prose",
+      "text": "At $\\Delta V_{in} = 0$ this peaks at $G_m = \\sqrt{\\mu_n C_{ox}(W/L) I_{SS}}$, which equals the $g_m$ of each transistor at $I_{SS}/2$, so $|A_v| = g_m R_D$. The formula seems to predict a zero crossing at $\\Delta V_{in} = \\sqrt{4I_{SS}/(\\mu_n C_{ox} W/L)}$, but that lies outside its validity: one transistor turns off first, when it carries no current and the other carries $I_{SS}$ with overdrive $\\Delta V_{in}$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta V_{in1} = \\sqrt{\\frac{2 I_{SS}}{\\mu_n C_{ox} W/L}} = \\sqrt{2}\\,(V_{GS} - V_{TH})_{eq}"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-amplifiers-large-signal.svg",
+      "alt": "Two plots against input difference from minus 1 to plus 1 volt. Top: ID1 rises and ID2 falls along S-shaped curves between 0 and 1 mA, flattening at plus and minus 0.71 V. Bottom: transconductance curves; for k = 4 mA per volt squared a broad dome peaking at 2 mS and reaching zero at 0.71 V; for k = 16 a taller narrower dome peaking at 4 mS and reaching zero at 0.35 V.",
+      "caption": "Computed square-law characteristics for a 1 mA tail; k is the device's process transconductance times W/L. Quadrupling W/L doubles the peak Gm but halves the input range."
+    },
+    {
+      "type": "prose",
+      "text": "So the input range a pair can handle is $\\sqrt{2}$ times its equilibrium overdrive. Making the pair more linear means a larger overdrive: either a smaller W/L (less $g_m$, less gain) or a larger $I_{SS}$ (more power). Real nanometer devices show roughly the same $\\sqrt{2}$ ratio if 'off' is taken as one side carrying 90 percent of the tail."
     },
     {
       "type": "widget",
@@ -70,44 +143,111 @@
     },
     {
       "type": "prose",
-      "text": "Near Vid = 0 the difference current is a straight line with slope gm; it bends over and clips at ISS where one transistor takes everything. A larger W/L reduces the input range needed to switch fully, so the linear range shrinks as you widen the devices."
+      "text": "Near $\\Delta V_{in} = 0$ the difference current is a straight line with slope $g_m$; it bends over and clips at $I_{SS}$ where one transistor takes everything. Raising $W/L$ shrinks the input range; raising $I_{SS}$ widens both the range and the current swing."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Differential gain and the half-circuit"
-    },
-    {
-      "type": "prose",
-      "text": "With resistor loads RD and a differential output, the gain is Av = -gm*RD (with ro, -gm*(RD||ro)). Because the node at the common source is a virtual AC ground for a symmetric differential input, you can analyse one half of the circuit as a CS stage: this 'half-circuit' trick is the workhorse of differential analysis."
+      "text": "Small-signal analysis"
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "Degenerated pair"
+      "text": "Method I: superposition"
     },
     {
       "type": "prose",
-      "text": "A resistor RS in each source (or a single 2RS) cuts the effective transconductance to gm/(1 + gm*RS), widens the linear input range and lowers gain, just like single-ended degeneration."
+      "text": "Ground $V_{in2}$ and drive only $V_{in1}$. Seen from M1, the source of M2 is a resistance $1/g_{m2}$, so M1 is a degenerated CS stage; seen from M2, M1 is a source follower with Thevenin resistance $1/g_{m1}$ driving M2 as a common-gate stage:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_X}{V_{in1}} = \\frac{-R_D}{\\frac{1}{g_{m1}} + \\frac{1}{g_{m2}}}, \\qquad \\frac{V_Y}{V_{in1}} = \\frac{R_D}{\\frac{1}{g_{m1}} + \\frac{1}{g_{m2}}}"
+    },
+    {
+      "type": "prose",
+      "text": "With $g_{m1} = g_{m2} = g_m$, $V_X - V_Y = -g_m R_D V_{in1}$. By symmetry $V_{in2}$ gives $+g_m R_D V_{in2}$, so $(V_X - V_Y)/(V_{in1} - V_{in2}) = -g_m R_D$ however the input is applied. Taking only one output (single-ended) halves the gain. For the same total current the pair's $G_m$ is $1/\\sqrt{2}$ of a single transistor of the same size biased at $I_{SS}$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Method II: the half circuit"
+    },
+    {
+      "type": "prose",
+      "text": "If a symmetric pair receives a truly differential input ($+\\Delta V$ on one gate and $-\\Delta V$ on the other) and stays linear, node P does not move: the tail current cannot change, so the current gained by one side equals the current lost by the other, which forces equal and opposite changes in the two $V_{GS}$ that exactly absorb the input. P is a virtual ground and each side can be analysed alone as a CS stage. This holds even with a non-ideal tail, since each half looks like an equal Thevenin resistance driven by opposite voltages."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-amplifiers-half-circuit.svg",
+      "alt": "Left: a resistively loaded differential pair with inputs plus vin over 2 and minus vin over 2 and a tail current source; node P is marked as not moving. Right: the half circuit, a common-source stage with load RD, input plus vin over 2, and its source grounded, labelled P equals AC ground.",
+      "caption": "With a differential input the tail node is an AC ground, so each side reduces to a CS stage."
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_X - V_Y}{V_{in1} - V_{in2}} = -g_m (R_D \\parallel r_o)",
+      "caption": "Channel-length modulation included at no extra effort, which Method I would make tedious."
+    },
+    {
+      "type": "prose",
+      "text": "An arbitrary pair of inputs splits into a differential part and a common part, which are handled separately and superposed: the differential part through the half circuit, the common part through the common-mode analysis on the next pages."
+    },
+    {
+      "type": "math",
+      "tex": "V_{in1} = \\frac{V_{in1} - V_{in2}}{2} + \\frac{V_{in1} + V_{in2}}{2}, \\qquad V_{in2} = \\frac{V_{in2} - V_{in1}}{2} + \\frac{V_{in1} + V_{in2}}{2}"
+    },
+    {
+      "type": "prose",
+      "text": "With an ideal tail and perfect symmetry the CM part moves nothing: each side still carries exactly $I_{SS}/2$, so both outputs stay at $V_{DD} - R_D I_{SS}/2$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Unequal devices"
+    },
+    {
+      "type": "prose",
+      "text": "If M2 is accidentally twice as wide as M1 and the gates sit at the same DC level, then $V_{GS1} = V_{GS2}$ gives $I_{D2} = 2I_{D1} = 2I_{SS}/3$ and $g_{m2} = 2g_{m1}$. Method I still applies: $|A_v| = 2R_D/(1/g_{m1} + 1/(2g_{m1})) = \\frac{4}{3}g_{m1}R_D$, lower than a matched pair at the same $I_{SS}$, and the characteristic is shifted sideways: the pair now has an offset."
     },
     {
       "type": "problem",
       "title": "Gain and switching range",
-      "text": "ISS = 1 mA, mu_n*Cox*W/L = 4 mA/V^2, RD = 5 kohm per side. Find gm, the differential gain, and the Vid that steers all the current.",
+      "text": "$I_{SS} = 1\\text{ mA}$, $\\mu_n C_{ox} W/L = 4\\text{ mA/V}^2$, $R_D = 5\\text{ k}\\Omega$ per side. Find $g_m$, the differential gain, and the $\\Delta V_{in}$ that steers all the current.",
+      "hint": "With equal inputs each side carries $I_{SS}/2$.",
       "solution": [
-        "Balanced: ID = 0.5 mA, Vov = sqrt(2*ID/k) = sqrt(1/4) = 0.5 V, so gm = 2*ID/Vov = 2 mS (check: sqrt(k*ISS) = sqrt(4)=2 mS).",
-        "Differential gain: -gm*RD = -2 mS * 5 kohm = -10.",
-        "Full switching: Vid = sqrt(2*ISS/k) = sqrt(0.5) = 0.707 V = sqrt(2)*Vov."
+        "Balanced: $I_D = 0.5\\text{ mA}$, $V_{ov} = \\sqrt{2 I_D/k} = \\sqrt{1/4} = 0.5\\text{ V}$, so $g_m = 2 I_D / V_{ov} = 2\\text{ mS}$ (check: $\\sqrt{k I_{SS}} = \\sqrt{4} = 2\\text{ mS}$).",
+        "Differential gain: $-g_m R_D = -2\\text{ mS} \\cdot 5\\text{ k}\\Omega = -10$.",
+        "Full switching: $\\Delta V_{in1} = \\sqrt{2 I_{SS}/k} = \\sqrt{0.5} = 0.707\\text{ V} = \\sqrt{2}\\,V_{ov}$."
       ],
-      "answer": "gm = 2 mS, Av = -10, full switching at |Vid| = 0.707 V.",
-      "hint": "With equal inputs each side carries ISS/2."
+      "answer": "$g_m = 2\\text{ mS}$, $A_v = -10$, full switching at $|\\Delta V_{in}| = 0.707\\text{ V}$."
     },
     {
       "type": "problem",
-      "title": "Why is the half-circuit valid?",
+      "title": "Gain lost to a DC imbalance",
+      "text": "The same pair ($k = 4\\text{ mA/V}^2$, $I_{SS} = 1\\text{ mA}$) receives inputs whose DC levels differ by 0.2 V. Find the two drain currents and the small-signal $G_m$ at this operating point.",
+      "solution": [
+        "$\\Delta I_D = \\frac{1}{2} \\cdot 4 \\cdot 0.2 \\cdot \\sqrt{4 \\cdot 1/4 - 0.04} = 0.4\\sqrt{0.96} = 0.392\\text{ mA}$, so $I_{D1} = (1 + 0.392)/2 = 0.696\\text{ mA}$ and $I_{D2} = 0.304\\text{ mA}$.",
+        "$G_m = \\frac{1}{2} \\cdot 4 \\cdot \\frac{1 - 2(0.04)}{\\sqrt{1 - 0.04}} = 2 \\cdot \\frac{0.92}{0.980} = 1.88\\text{ mS}$.",
+        "That is 6 percent below the 2 mS at equilibrium: the imbalance biases the pair away from the top of its $G_m$ curve."
+      ],
+      "answer": "$I_{D1} = 0.70\\text{ mA}$, $I_{D2} = 0.30\\text{ mA}$, $G_m = 1.88\\text{ mS}$ (6 percent low)."
+    },
+    {
+      "type": "problem",
+      "title": "Input common-mode range",
+      "text": "A pair with $R_D = 3\\text{ k}\\Omega$ and $I_{SS} = 0.4\\text{ mA}$ runs from $V_{DD} = 1.8\\text{ V}$. At equilibrium $V_{GS1} = 0.6\\text{ V}$ with $V_{TH} = 0.4\\text{ V}$, and the tail transistor needs 0.25 V of $V_{DS}$. Find the allowed input CM range and, at the lowest CM level, how far each output may swing.",
+      "solution": [
+        "Lower limit: $V_{GS1} + V_{DS3,min} = 0.6 + 0.25 = 0.85\\text{ V}$.",
+        "Upper limit: $V_{DD} - R_D I_{SS}/2 + V_{TH} = 1.8 - 0.6 + 0.4 = 1.6\\text{ V}$ (below $V_{DD}$, so it applies).",
+        "At $V_{in,CM} = 0.85\\text{ V}$ an output may fall to about $0.85 - 0.4 = 0.45\\text{ V}$ and rise to $V_{DD} = 1.8\\text{ V}$; it idles at $1.8 - 0.6 = 1.2\\text{ V}$, so a symmetric swing is limited by the downward room to about $\\pm 0.6\\text{ V}$."
+      ],
+      "answer": "$0.85\\text{ V} \\le V_{in,CM} \\le 1.6\\text{ V}$; each output between about 0.45 V and 1.8 V."
+    },
+    {
+      "type": "problem",
+      "title": "Why is the half circuit valid?",
       "text": "State the symmetry argument that lets you treat the common-source node as AC ground.",
       "solution": [
-        "For a purely differential input +v/2 and -v/2 and perfectly matched devices, the current increase in one transistor equals the decrease in the other, so the total current ISS (and hence the voltage at the common source) is unchanged. A node that does not move for a differential signal is a virtual ground."
+        "For a purely differential input $+v/2$ and $-v/2$ and perfectly matched devices, the current increase in one transistor equals the decrease in the other, so the total current $I_{SS}$, and hence the voltage at the common source, is unchanged. A node that does not move for a differential signal is a virtual ground."
       ],
       "answer": "Equal and opposite currents cancel, so the tail node does not move."
     }

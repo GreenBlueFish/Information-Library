@@ -1,0 +1,115 @@
+{
+  "title": "DLLs and PLL Applications",
+  "intro": "Delay-locked loops, and the jobs that make PLLs worth more than a piece of wire: frequency multiplication and synthesis, skew removal and jitter cleanup (Razavi, Sections 16.4 and 16.5).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Delay-locked loops"
+    },
+    {
+      "type": "prose",
+      "text": "To make four clock phases exactly 1 ns apart you could lock a two-stage differential ring to 250 MHz. Alternatively, send the clock through four voltage-controlled delay stages and servo their delay until the last tap lines up with the input: the line then delays by exactly one period and each tap is $T_{in}/4$ later than the previous one."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pll-dll.svg",
+      "alt": "Clock input passes through four delay cells in a row with taps CK1 to CK4. A PD/CP/LPF block compares the input clock with CK4 and drives a control line common to all four cells.",
+      "caption": "A delay-locked loop."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Less noise than a PLL: a corrupted edge leaves the end of a delay line, whereas an oscillator recirculates it.",
+        "Easier dynamics: the delay line changes its delay at once, $\\Phi_{out}/V_{cont} = K_{VCDL}$ with no integrator, so the loop has the order of its filter.",
+        "Close to all-pass for input phase: slow input wander is tracked, fast wander passes straight through the line, so the gain is near one at both ends, with a possible dip or peak in between.",
+        "Cannot synthesize a new frequency.",
+        "False lock: if the line's delay range spans more than one period, it may lock at $2T_{in}$ instead of $T_{in}$; extra circuitry prevents this. Stage and load mismatch spread the tap spacing, so devices must be large and laid out carefully."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequency multiplication"
+    },
+    {
+      "type": "prose",
+      "text": "Just as an amplifier gains $M$ by feeding back $1/M$ of its output, a PLL multiplies frequency by feeding back $f_{out}/M$ through a counter. In lock $f_{out}/M = f_{in}$:"
+    },
+    {
+      "type": "math",
+      "tex": "f_{out} = M f_{in}, \\qquad H(s) \\to M \\text{ as } s \\to 0"
+    },
+    {
+      "type": "prose",
+      "text": "Unlike the voltage amplifier, the multiplication is exact. The VCO plus divider act as one VCO of gain $K_{VCO}/M$ and intercept $\\omega_0/M$, which is why $M$ appears in $\\omega_n$ and $\\zeta$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Frequency synthesis"
+    },
+    {
+      "type": "prose",
+      "text": "Make $M$ programmable from a channel-select word and the output steps in increments of $f_{REF}$, with the relative accuracy of the reference (usually a crystal oscillator). This is how radios generate carriers with ppm accuracy and fine channel spacing. Noise, spurs, settling, range and power are the ongoing design challenges."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Skew reduction"
+    },
+    {
+      "type": "prose",
+      "text": "A clock entering a large chip passes a big buffer before it is distributed, and arrives late relative to data. Put the buffer inside a PLL (or DLL) loop and compare the buffered clock with the input: the infinite loop gain divides the buffer delay down to zero, just as a voltage offset inside a high-gain loop is suppressed ($V_{out} = (AV_{in} + V_M)/(1 + A) \\to V_{in}$). The VCO output itself is not aligned, but it is not used. Without the need to multiply, a DLL is preferred because it is quieter."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Jitter reduction and clock recovery"
+    },
+    {
+      "type": "prose",
+      "text": "Because the closed loop is low-pass for input phase, a PLL with a 10 MHz bandwidth on a 1 GHz input acts as a 20 MHz-wide band-pass filter around 1 GHz for jitter. Data corrupted by crosstalk, package parasitics and noise is retimed by a flip-flop clocked by a clean clock; when no separate clock is sent (an optical link, say), a clock-recovery PLL with a narrow bandwidth extracts it from the data itself."
+    },
+    {
+      "type": "problem",
+      "title": "Frequency synthesis",
+      "text": "$f_{ref} = 10\\text{ MHz}$ and $N = 240$. Find $f_{out}$. What $N$ gives 2.45 GHz?",
+      "solution": [
+        "$f_{out} = Nf_{ref} = 240 \\times 10\\text{ MHz} = 2.4\\text{ GHz}$.",
+        "$N = 2450/10 = 245$."
+      ],
+      "answer": "2.4 GHz; $N = 245$."
+    },
+    {
+      "type": "problem",
+      "title": "Channel plan",
+      "text": "A synthesizer must cover 2.400 to 2.480 GHz in 1 MHz steps. Choose $f_{REF}$ and the range of $M$. What limits the loop bandwidth?",
+      "solution": [
+        "$f_{REF}$ = step = 1 MHz; $M$ from 2400 to 2480.",
+        "The loop bandwidth must stay well below 1 MHz (about 100 kHz) for stability and spur suppression, which also makes settling slow: the price of fine steps with an integer divider."
+      ],
+      "answer": "1 MHz reference, $M = 2400 \\dots 2480$; bandwidth around 100 kHz."
+    },
+    {
+      "type": "problem",
+      "title": "DLL tap spacing",
+      "text": "An eight-stage DLL runs at 500 MHz. What is the tap spacing, and what happens if it falsely locks to two periods?",
+      "solution": [
+        "$T_{in} = 2\\text{ ns}$; spacing $2\\text{ ns}/8 = 250\\text{ ps}$.",
+        "Locked to $2T_{in}$: 500 ps spacing, so taps $k$ and $k+4$ coincide and the phases are useless as eight distinct phases."
+      ],
+      "answer": "250 ps; false lock doubles it to 500 ps."
+    },
+    {
+      "type": "problem",
+      "title": "Keeping dynamics with a divider",
+      "text": "A loop was designed with $M = 1$. A divider of $M = 100$ is added. If nothing else changes, how do $\\omega_n$ and $\\zeta$ change, and what pump current restores them?",
+      "solution": [
+        "Both scale as $\\sqrt{K_{VCO}/M}$, so each falls by $\\sqrt{100} = 10$.",
+        "Raising $I_P$ by 100 restores both, since they scale as $\\sqrt{I_PK_{VCO}/M}$."
+      ],
+      "answer": "Each falls 10x; raise $I_P$ 100x (or $K_{VCO}$)."
+    }
+  ]
+}

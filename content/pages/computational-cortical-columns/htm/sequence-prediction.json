@@ -104,13 +104,20 @@
       "text": "The raw anomaly score at time t is the fraction of currently active columns that were not predicted at t−1:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "  s_t = 1 − |π(t−1) ∩ a(t)| / |a(t)|\n\n  a(t)    = set of active minicolumns at t (from the spatial pooler)\n  π(t−1)  = set of minicolumns containing at least one predictive cell at t−1\n  s_t = 0 : everything was predicted;  s_t = 1 : nothing was predicted (full burst)"
+      "type": "math",
+      "tex": "s_t = 1 - \\frac{|\\pi(t-1) \\cap a(t)|}{|a(t)|}"
+    },
+{
+      "type": "list",
+      "items": [
+        "$a(t)$ = set of active minicolumns at $t$ (from the spatial pooler)",
+        "$\\pi(t-1)$ = set of minicolumns containing at least one predictive cell at $t-1$",
+        "$s_t = 0$: everything was predicted; $s_t = 1$: nothing was predicted (full burst)"
+      ]
     },
     {
       "type": "prose",
-      "text": "Two properties follow. First, a union of predictions does not raise the score: predicting C and F and seeing C gives s = 0. Second, the score is noisy: streams with inherent unpredictability (e.g. random fluctuations around a daily pattern) produce many non-zero scores even when nothing unusual happens, so thresholding s_t directly gives many false alarms."
+      "text": "Two properties follow. First, a union of predictions does not raise the score: predicting C and F and seeing C gives $s = 0$. Second, the score is noisy: streams with inherent unpredictability (e.g. random fluctuations around a daily pattern) produce many non-zero scores even when nothing unusual happens, so thresholding $s_t$ directly gives many false alarms."
     },
     {
       "type": "heading",
@@ -119,12 +126,19 @@
     },
     {
       "type": "prose",
-      "text": "Ahmad, Lavin, Purdy & Agha (2017) therefore turn the raw score into an anomaly likelihood: a measure of how unusual the recent anomaly scores are relative to this stream's own history. Keep a long window of recent raw scores (several thousand records), model them as a normal distribution with mean μ_t and standard deviation σ_t, compute a short-term moving average μ̃_t over the last few scores (about ten), and ask how far into the tail that average lies:"
+      "text": "Ahmad, Lavin, Purdy & Agha (2017) therefore turn the raw score into an anomaly likelihood: a measure of how unusual the recent anomaly scores are relative to this stream's own history. Keep a long window of recent raw scores (several thousand records), model them as a normal distribution with mean $\\mu_t$ and standard deviation $\\sigma_t$, compute a short-term moving average $\\tilde{\\mu}_t$ over the last few scores (about ten), and ask how far into the tail that average lies:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "  L_t = 1 − Q( (μ̃_t − μ_t) / σ_t )\n\n  Q(z) = Gaussian tail probability, P(Z > z)\n  report an anomaly when L_t ≥ 1 − ε   (ε very small, e.g. 1e−5 in the paper)\n  windows in Numenta's implementation: long ≈ thousands of records, short ≈ 10 (hedged)"
+      "type": "math",
+      "tex": "L_t = 1 - Q\\left( \\frac{\\tilde{\\mu}_t - \\mu_t}{\\sigma_t} \\right)"
+    },
+{
+      "type": "list",
+      "items": [
+        "$Q(z)$ = Gaussian tail probability, $P(Z > z)$",
+        "report an anomaly when $L_t \\ge 1 - \\varepsilon$ ($\\varepsilon$ very small, e.g. $10^{-5}$ in the paper)",
+        "windows in Numenta's implementation: long ≈ thousands of records, short ≈ 10 (hedged)"
+      ]
     },
     {
       "type": "prose",

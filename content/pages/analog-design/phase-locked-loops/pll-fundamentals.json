@@ -1,24 +1,41 @@
 {
-  "title": "PLL Fundamentals",
-  "intro": "A phase-locked loop forces the phase of an oscillator to follow a reference.",
+  "title": "Phase Detectors and the Simple PLL",
+  "intro": "The phase detector, the basic phase-locked loop built from a PD, a low-pass filter and a VCO, and how it behaves when locked (Razavi, Sections 16.1.1 and 16.1.2).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Blocks"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Phase detector (PD) or phase/frequency detector (PFD): outputs a signal proportional to the phase difference.",
-        "Low-pass filter (LPF).",
-        "VCO: integrates the control voltage into phase.",
-        "Optional divider by N in the feedback path."
-      ]
+      "text": "Phase detector"
     },
     {
       "type": "prose",
-      "text": "In lock the VCO frequency is exactly N times the reference frequency and the phase error is constant (zero for a charge-pump PLL)."
+      "text": "A phase detector produces an output whose average is proportional to the phase difference between its two inputs. The slope is the PD gain $K_{PD}$, in V/rad:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V}_{out} = K_{PD}\\,\\Delta\\phi"
+    },
+    {
+      "type": "prose",
+      "text": "An XOR gate is the classic example. Its output pulses are as wide as the misalignment between the inputs, on both rising and falling edges. If the output swings $V_0$, each extra radian of phase difference widens two pulses per period, so"
+    },
+    {
+      "type": "math",
+      "tex": "K_{PD} = \\frac{V_0}{\\pi}"
+    },
+    {
+      "type": "prose",
+      "text": "independent of frequency. The characteristic is a triangle: it rises to $V_0$ at $\\Delta\\phi = \\pi$ and falls back to zero at $2\\pi$, so it has regions of positive and negative gain and zero gain at the peaks."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pll-xor-characteristic.svg",
+      "alt": "A triangular wave: average output rises linearly from zero at zero phase difference to V0 at pi, falls to zero at 2 pi, and repeats; it is symmetric for negative phase.",
+      "caption": "XOR phase detector characteristic."
+    },
+    {
+      "type": "prose",
+      "text": "A D flip-flop clocked by one input and sampling the other is a bang-bang phase detector: its average output jumps from $-V_1$ to $+V_1$ as $\\Delta\\phi$ crosses zero (very high gain there, zero elsewhere). It is not a frequency detector: with unequal input frequencies its average output is zero either way."
     },
     {
       "type": "figure",
@@ -29,53 +46,93 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Charge-pump PLL"
+      "text": "The simple PLL"
     },
     {
       "type": "prose",
-      "text": "A PFD drives a charge pump that sources or sinks current Ip into a filter (R in series with C). The filter plus the VCO integrator give two integrators, so the phase error settles to zero. The loop behaves like a second-order system:"
+      "text": "To align a VCO's edges with a reference you must change its frequency temporarily and let the phase accumulate, then return the frequency when the edges line up. A PD in a loop with the VCO does this automatically. The PD output carries both the wanted DC term and large high-frequency components, and the VCO control must stay quiet, so a low-pass filter sits in between."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "w_n = sqrt( Ip * K_VCO / (2*pi * N * C1) )          zeta = (R1 / 2) * sqrt( Ip * K_VCO * C1 / (2*pi * N) )\nOutput frequency  f_out = N * f_ref"
+      "type": "figure",
+      "src": "assets/figures/analog-design/pll-simple-loop.svg",
+      "alt": "Block diagram: Vin enters a phase detector, whose output goes through a low-pass filter to a VCO; the VCO output is the loop output and returns to the second input of the phase detector.",
+      "caption": "The simple PLL."
     },
     {
-      "type": "list",
-      "items": [
-        "Loop bandwidth should be well below the reference frequency (a tenth or less) for stability and low ripple.",
-        "Larger bandwidth tracks and suppresses the VCO noise; smaller bandwidth filters the reference noise.",
-        "Non-ideal effects: charge-pump mismatch gives static phase offset, ripple on the control line gives reference spurs, and delays in the PFD cause a dead zone."
-      ]
+      "type": "prose",
+      "text": "Define lock as a phase difference $\\phi_{out} - \\phi_{in}$ that does not change with time. Differentiating gives the key property:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{d\\phi_{out}}{dt} = \\frac{d\\phi_{in}}{dt} \\;\\Rightarrow\\; \\omega_{out} = \\omega_{in}"
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "Delay-locked loops and applications"
+      "text": "Static phase error"
     },
     {
       "type": "prose",
-      "text": "A DLL aligns delayed copies of a clock rather than an oscillator, so it has no phase accumulation and is unconditionally stable (first-order), used in memory interfaces. PLLs are used in clock synthesis, clock-data recovery and frequency synthesis in radios."
+      "text": "In lock at input frequency $\\omega_1$, the VCO needs $V_{cont} = (\\omega_1 - \\omega_0)/K_{VCO}$, and the PD (with a filter of unity DC gain) can only produce it from a phase error:"
+    },
+    {
+      "type": "math",
+      "tex": "\\phi_0 = \\frac{\\omega_1 - \\omega_0}{K_{PD}K_{VCO}}"
+    },
+    {
+      "type": "prose",
+      "text": "So the phase error changes with input frequency, and making it small needs a large $K_{PD}K_{VCO}$, often called the loop gain although it has units of 1/s. If the input frequency demands a control voltage the PD can only reach at the peak of its characteristic, where its gain is zero, the loop cannot hold lock."
+    },
+    {
+      "type": "prose",
+      "text": "The small pulses left on the filter output in lock are ripple; they modulate the VCO and produce sidebands."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Small transients in lock"
+    },
+    {
+      "type": "prose",
+      "text": "Phase step at the input: the filter output cannot jump, so the VCO keeps its frequency at first; the growing phase error widens the PD pulses, $V_{cont}$ rises, the VCO speeds up until it has gained exactly the extra phase ($\\int \\Delta\\omega_{out}dt = \\phi_1$), and then returns to its original frequency. Afterwards the control voltage, phase error and frequency are all as before."
+    },
+    {
+      "type": "prose",
+      "text": "Frequency step: the VCO must end at the new frequency, so the control voltage and the phase error both change permanently, by $\\Delta\\omega/K_{VCO}$ and $\\Delta\\omega/(K_{PD}K_{VCO})$. A slowly varying input frequency is simply tracked."
+    },
+    {
+      "type": "prose",
+      "text": "For the loop to settle, frequency and phase must both settle; a ringing $V_{cont}$ can pass its final value while the phase is still wrong, and vice versa. $V_{cont}$ is the convenient thing to watch in simulation, since phase and frequency are hard to probe directly."
     },
     {
       "type": "problem",
-      "title": "Frequency synthesis",
-      "text": "f_ref = 10 MHz and N = 240. Find f_out. What N gives 2.45 GHz?",
+      "title": "XOR detector",
+      "text": "An XOR phase detector swings $V_0 = 1.2\\text{ V}$. Find $K_{PD}$ and the average output at $\\Delta\\phi = \\pi/4$.",
       "solution": [
-        "f_out = N * f_ref = 240 * 10 MHz = 2.4 GHz.",
-        "N = 2450 / 10 = 245."
+        "$K_{PD} = V_0/\\pi = 0.382\\text{ V/rad}$.",
+        "$\\overline{V} = 0.382 \\times \\pi/4 = 0.30\\text{ V}$ (a quarter of $V_0$)."
       ],
-      "answer": "2.4 GHz; N = 245."
+      "answer": "0.382 V/rad; 0.30 V."
     },
     {
       "type": "problem",
-      "title": "Loop dynamics",
-      "text": "Ip = 100 uA, K_VCO = 2*pi * 500 MHz/V = 3.14e9 rad/s/V, N = 100, C1 = 10 pF. Find w_n and f_n.",
+      "title": "Locked phase error",
+      "text": "A simple PLL has $\\omega_0 = 2\\pi \\times 900\\text{ MHz}$, $K_{VCO} = 2\\pi \\times 100\\text{ MHz/V}$, $K_{PD} = 0.5\\text{ V/rad}$ and a filter with unity DC gain. It locks to 950 MHz. Find the control voltage and the phase error.",
       "solution": [
-        "w_n = sqrt(Ip * K_VCO / (2*pi * N * C1)) = sqrt(1e-4 * 3.14e9 / (6.283 * 100 * 1e-11)) = sqrt(3.14e5 / 6.283e-9) = sqrt(5e13) = 7.07e6 rad/s.",
-        "f_n = 7.07e6 / (2*pi) = 1.13 MHz, about a tenth of a 10 MHz reference, at the edge of the usual limit."
+        "$V_{cont} = (950 - 900)\\text{ MHz}/100\\text{ MHz/V} = 0.5\\text{ V}$.",
+        "$\\phi_0 = V_{cont}/K_{PD} = 1\\text{ rad}$ (57°). Equivalently $\\Delta\\omega/(K_{PD}K_{VCO}) = 2\\pi \\cdot 5\\times10^7/(0.5 \\cdot 2\\pi\\cdot 10^8) = 1$."
       ],
-      "answer": "w_n = 7.07e6 rad/s (f_n = 1.1 MHz)."
+      "answer": "0.5 V; 1 rad."
+    },
+    {
+      "type": "problem",
+      "title": "Lock range of an XOR loop",
+      "text": "With the XOR detector of the first problem ($V_0 = 1.2$ V, characteristic from 0 to $V_0$ over $0 \\le \\Delta\\phi \\le \\pi$), a unity-gain filter, and the VCO of the second problem, what input frequencies can the loop hold?",
+      "solution": [
+        "The control voltage can only be between 0 and 1.2 V, so $f_{out}$ ranges over $900$ to $900 + 100 \\times 1.2 = 1020\\text{ MHz}$.",
+        "Near the ends the PD gain falls to zero (phase error near 0 or $\\pi$), so in practice the usable range is somewhat narrower."
+      ],
+      "answer": "Roughly 900 to 1020 MHz."
     }
   ]
 }

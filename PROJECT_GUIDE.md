@@ -217,6 +217,31 @@ literally and never interpreted as HTML.
 | `figure`  | `src`, `alt`, `caption`        | An image. `src` is a repo-relative path to a file under `assets/figures/` (no scheme, no leading `/`, no `..`; `.svg`, `.png`, `.jpg`, `.gif` or `.webp`). `alt` is **required** text describing what the image shows; `caption` is optional and shown under it as text. A figure with a missing `alt` or an unsafe `src` renders a placeholder instead. |
 | `widget`  | `widget` (a `Widget_Spec`, §3.4) | Delegated to the widget registry; see §7. |
 | `problem` | `title` (optional), `text`, `hint` (optional string), `solution` (string or string[], one paragraph each), `answer` (optional short final result) | A practice question. The hint and solution are hidden in native `<details>` reveals ("Show hint", "Show solution") so the reader opens them only when ready. Used by the Analog Design topic. |
+| `math`    | `tex`, `caption` (optional)    | A display formula on its own line: `tex` is TeX without `$` (see **Formulas** below). |
+
+#### Formulas
+
+Text in `prose`, `heading`, `list` items, `callout`, `problem` (text, hint,
+solution, answer), figure and math captions, the page `intro`, and glossary
+definitions may hold formulas in TeX: `$...$` inline, `$$...$$` for a display
+formula inside a paragraph. `src/math.js` turns them into native MathML (real
+subscripts, stacked fractions, roots) with no library. Write a literal dollar
+sign as `\$`. `code` blocks are never touched.
+
+- Subscripts and superscripts: `V_{GS}`, `g_m`, `r_o^2`, `e^{-t/\tau}`. A
+  run of letters in a script (`V_{GS}`, `C_{ox}`) is drawn upright as a label.
+- Fractions and roots: `\frac{g_m}{C_L}`, `\sqrt{LC}`, `\sqrt[3]{x}`.
+- Greek and symbols: `\mu`, `\omega`, `\Delta`, `\approx`, `\le`, `\cdot`,
+  `\times`, `\propto`, `\to`, `\infty`, `\parallel` (for `R_1 \parallel R_2`).
+- Functions: `\exp`, `\ln`, `\log`, `\sin`, `\max`, `\lim`; operators `\sum`,
+  `\int`, `\prod` with limits; `\left( ... \right)` for tall brackets.
+- Words and units: `\text{ mV}`, `\mathrm{GBW}`; spaces `\,` `\;` `\quad`.
+- Accents: `\hat{x}`, `\bar{x}`, `\tilde{x}`, `\dot{x}`, `\vec{x}`.
+
+Anything else (an unknown command, `\\` line breaks, unbalanced braces) shows
+as red source text on the page, and `tests/src/math.test.js` fails, naming the
+page. Put plain numbers with units in text ("50 uA" is fine as prose), but
+write anything with a subscript, fraction or Greek letter as a formula.
 
 An unknown `type` renders a visible placeholder rather than breaking the page.
 

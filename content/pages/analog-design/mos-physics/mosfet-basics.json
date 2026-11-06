@@ -1,15 +1,15 @@
 {
   "title": "The MOSFET as a Device",
-  "intro": "A MOS transistor is a four-terminal device whose gate voltage controls a conducting channel between source and drain.",
+  "intro": "A MOS transistor is a four-terminal device whose gate voltage controls a conducting channel between source and drain. This page covers its structure, terminals and symbols (Razavi, Section 2.1).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "MOSFET as a switch"
+      "text": "The MOSFET as a switch"
     },
     {
       "type": "prose",
-      "text": "At the simplest level an NMOS transistor conducts between drain and source when its gate is sufficiently above its source. The gate draws no DC current because it is separated from the channel by a thin oxide, so the gate acts as a pure voltage input."
+      "text": "In the simplest view an NMOS connects its source and drain when the gate is high and isolates them when it is low. Even that view raises the questions this chapter answers: at what gate voltage does it turn on (the threshold), what is the resistance between source and drain when it is on, does that resistance depend on the terminal voltages, is it even linear, and what limits how fast the device responds?"
     },
     {
       "type": "heading",
@@ -17,17 +17,36 @@
       "text": "Structure"
     },
     {
+      "type": "prose",
+      "text": "An NMOS is built on a p-type substrate (also called the bulk or body). Two heavily doped n+ regions form the source and drain; between them a thin layer of silicon dioxide insulates the gate, a conductive piece of polysilicon (or, in recent nodes, metal). All the useful action happens in the silicon just under the oxide. The gate draws no DC current, so it is a pure voltage input."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nmos-cross-section.svg",
+      "alt": "Cross-section of an n-channel MOSFET. A p-type substrate holds two n+ regions, the source on the left and the drain on the right. Between them, above the substrate, sit a thin gate oxide layer and a polysilicon gate. A dashed line under the oxide marks the channel that forms when the gate voltage exceeds the threshold. Leads are labelled source, gate, drain and body, and the gate length is marked as the channel length L.",
+      "caption": "An NMOS transistor in cross-section. A positive gate voltage pulls electrons to the surface under the oxide and joins the two n+ regions with a channel."
+    },
+    {
       "type": "list",
       "items": [
-        "Source and drain: heavily doped regions (n+ for NMOS) in the substrate (p-type). The source is by definition the terminal at the lower voltage for NMOS (higher for PMOS).",
-        "Gate: a conductor (polysilicon or metal) over a thin gate oxide of capacitance Cox per unit area.",
-        "W and L: the channel width and length. The ratio W/L is the designer's main knob.",
-        "Bulk (body or substrate): usually tied to the lowest supply for NMOS and the highest for PMOS."
+        "Length $L$ is the gate dimension along the source-to-drain path; width $W$ is perpendicular to it. The ratio $W/L$ (the aspect ratio) is the designer's main knob.",
+        "The source and drain diffusions spread sideways under the gate during fabrication by $L_D$ on each side, so the electrical channel is shorter than drawn: $L_{eff} = L_{drawn} - 2L_D$. Equations use $L_{eff}$, written simply $L$.",
+        "Shrinking $L_{eff}$ and the oxide thickness $t_{ox}$ is the main goal of each technology generation; at the time of Razavi's 2nd edition these were around 10 nm and 1.5 nm (15 Å).",
+        "The device is symmetric. The source is defined as the terminal that supplies the carriers (electrons for NMOS) and the drain as the one that collects them, so for an NMOS the source is whichever terminal is at the lower voltage. If the voltages swap, so do the names."
       ]
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "The bulk, wells and the fourth terminal"
+    },
+    {
       "type": "prose",
-      "text": "When the gate is raised far enough, electrons gather under the oxide and form an inversion layer that connects source to drain. The gate voltage at which this starts is the threshold voltage VTH."
+      "text": "The substrate potential changes the device's behaviour, so the MOSFET really has four terminals. The source/drain-to-substrate junctions must stay reverse-biased, so the p-substrate of all NMOS devices is tied (through a p+ contact) to the most negative supply, usually ground."
+    },
+    {
+      "type": "prose",
+      "text": "PMOS devices need an n-type body, so in a standard CMOS process they sit in an n-well, a local n-type region in the p-substrate. The n-well is normally tied to the most positive supply. There is an asymmetry worth remembering: all NMOS devices share one substrate, but each PMOS can have its own n-well at its own potential (for example tied to its source to remove body effect). Some processes also offer a deep n-well that encloses a p-well with an NMOS inside, giving that NMOS a private bulk at the cost of considerable area for spacing rules."
     },
     {
       "type": "figure",
@@ -37,8 +56,14 @@
     },
     {
       "type": "heading",
-      "level": 3,
-      "text": "Symbols and conventions"
+      "level": 2,
+      "text": "Symbols"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/mos-physics-symbols.svg",
+      "alt": "Four transistor symbols side by side. An NMOS and a PMOS each drawn with gate, drain, source and an extra bulk lead marked B, then an NMOS and a PMOS with only gate, drain and source. Each symbol has an arrow on its source lead: pointing out of the NMOS and into the PMOS. On the PMOS symbols the source is on top.",
+      "caption": "MOS symbols. The four-terminal versions show the bulk B explicitly; the three-terminal versions assume NMOS bulk at ground and PMOS bulk at VDD."
     },
     {
       "type": "prose",
@@ -47,13 +72,34 @@
     {
       "type": "problem",
       "title": "Switch resistance",
-      "text": "An NMOS switch has mu_n*Cox = 200 uA/V^2, W/L = 20, VTH = 0.4 V and its gate is at 1.2 V. It passes a signal near 0 V. What is its on-resistance for small VDS?",
+      "text": "An NMOS switch has $\\mu_n C_{ox} = 200\\,\\mu\\text{A/V}^2$, $W/L = 20$, $V_{TH} = 0.4\\text{ V}$ and its gate is at 1.2 V. It passes a signal near 0 V. What is its on-resistance for small $V_{DS}$?",
+      "hint": "In deep triode the current is linear in the drain-source voltage.",
       "solution": [
-        "For small VDS the device is in the triode region, ID is about mu_n*Cox*(W/L)*(VGS - VTH)*VDS, so Ron = 1 / [mu_n*Cox*(W/L)*(VGS - VTH)].",
-        "mu_n*Cox*(W/L) = 200 uA/V^2 * 20 = 4 mA/V^2. VGS - VTH = 1.2 - 0.4 = 0.8 V. So Ron = 1 / (4 mA/V^2 * 0.8 V) = 312 ohm."
+        "For small $V_{DS}$ the device is in deep triode and behaves as $R_{on} = \\frac{1}{\\mu_n C_{ox}(W/L)(V_{GS} - V_{TH})}$ (derived on the I/V page).",
+        "$\\mu_n C_{ox} W/L = 4\\text{ mA/V}^2$ and $V_{GS} - V_{TH} = 0.8\\text{ V}$, so $R_{on} = 1/(3.2\\text{ mS}) \\approx 312\\,\\Omega$."
       ],
-      "answer": "Ron is about 312 ohm.",
-      "hint": "Triode region: current is linear in VDS for small VDS."
+      "answer": "$R_{on} \\approx 312\\,\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Which end is the source?",
+      "text": "An NMOS with $V_{TH} = 0.4\\text{ V}$ has its gate at 1.5 V, terminal A at 0.9 V and terminal B at 0.3 V. Which terminal is the source, and is the device on? Later terminal A falls to 0.1 V while B stays at 0.3 V. What changes?",
+      "solution": [
+        "For an NMOS the source is the lower-voltage terminal: B at 0.3 V. $V_{GS} = 1.5 - 0.3 = 1.2\\text{ V} > V_{TH}$, so the device is on and current flows from A to B.",
+        "With A at 0.1 V, A is now the lower terminal and becomes the source: $V_{GS} = 1.4\\text{ V}$, current flows from B to A. The physical device has not changed, only the roles of its two diffusions."
+      ],
+      "answer": "B is the source at first (on, current A to B); afterwards A is the source and the current reverses."
+    },
+    {
+      "type": "problem",
+      "title": "On-resistance against gate voltage",
+      "text": "An NMOS with $\\mu_n C_{ox} = 100\\,\\mu\\text{A/V}^2$, $W/L = 10$ and $V_{TH} = 0.35\\text{ V}$ has both its source and drain held at 0.5 V by an external circuit, with no current flowing. For what gate voltages is it on, and what is $R_{on}$ at $V_G = 1.2\\text{ V}$ and at 1.8 V?",
+      "hint": "The source is at 0.5 V, not ground.",
+      "solution": [
+        "With no current, $V_{DS} = 0$, so whenever it is on it is in deep triode. It turns on when $V_G > 0.5 + 0.35 = 0.85\\text{ V}$.",
+        "$R_{on} = \\frac{1}{\\mu_n C_{ox}(W/L)(V_G - 0.5 - V_{TH})}$. At 1.2 V: $1/(1\\text{ mA/V}^2 \\cdot 0.35\\text{ V}) \\approx 2.86\\text{ k}\\Omega$. At 1.8 V: $1/(1\\text{ mA/V}^2 \\cdot 0.95\\text{ V}) \\approx 1.05\\text{ k}\\Omega$."
+      ],
+      "answer": "On for $V_G > 0.85\\text{ V}$; $R_{on} \\approx 2.86\\text{ k}\\Omega$ at 1.2 V and $1.05\\text{ k}\\Omega$ at 1.8 V."
     }
   ]
 }

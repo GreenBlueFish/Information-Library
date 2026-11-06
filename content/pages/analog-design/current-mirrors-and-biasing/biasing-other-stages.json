@@ -1,0 +1,101 @@
+{
+  "title": "Biasing CG, Follower and Differential Stages",
+  "intro": "Common-gate stages need a DC path at the source that does not swallow the signal, followers are easy to bias with a current source, and differential pairs need a well-chosen input common-mode level.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Common-gate stage"
+    },
+    {
+      "type": "prose",
+      "text": "The input arrives at the source, so the source needs an element that passes the bias current: a resistor, a current source or an inductor. With a resistor $R_S$ and the gate fed from a diode $M_B$ through $R_B$, M1 and $M_B$ form a mirror if their gate-source voltages match: scale $(W/L)_1/(W/L)_B$ to the desired current ratio (typically 5 to 10) and set $R_B/R_S = I_{D1}/I_B$ in the same ratio."
+    },
+    {
+      "type": "prose",
+      "text": "The resistor causes trouble at low supply. With a source impedance $R_1$ driving the input, $R_S$ shunts the signal (body effect included, $\\lambda$ neglected):"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_X}{V_{in}} = \\frac{\\frac{1}{g_{m1} + g_{mb1}} \\parallel R_S}{\\left(\\frac{1}{g_{m1} + g_{mb1}} \\parallel R_S\\right) + R_1}"
+    },
+    {
+      "type": "prose",
+      "text": "Avoiding the loss needs $R_S \\gg 1/(g_{m1} + g_{mb1})$, but the stage's gain is $(g_{m1} + g_{mb1})R_D$, so $R_S$ ends up comparable to $R_D$ and drops a comparable DC voltage, leaving less for $R_D$ and limiting the gain. A current source M2 instead offers a high impedance with only $V_{DS,sat}$ of drop. Its copy of $I_B$ is slightly off because $V_{DS2} < V_{DS,B}$; a low-voltage cascode mirror removes that error."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/current-mirrors-and-biasing-cg-bias.svg",
+      "alt": "Common-gate stage M1 with gate at Vb and drain resistor RD to VDD giving Vout. Its source node X receives Vin through capacitor Cin and is biased by NMOS current source M2, which mirrors diode-connected MB fed by IB.",
+      "caption": "CG stage with its source biased by a current mirror and the input AC-coupled."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Source follower"
+    },
+    {
+      "type": "prose",
+      "text": "A follower is biased by a current source, usually a mirror. If the channel-length-modulation error between $I_B$ and the copy matters, a resistor in series with $M_B$'s drain can equalise the two $V_{DS}$ values (the trick from the cascode-mirror page). Since the follower's current is set by the current source, not by its gate voltage, the gate can be driven directly by the previous stage. If the input DC level varies a lot, AC-couple it and bias the gate through a large resistor, for example from $V_{DD}$; the gate can then swing up to about one $V_{TH}$ above $V_{DD}$ before the device enters triode."
+    },
+    {
+      "type": "prose",
+      "text": "Example: a follower buffering a CS stage. Direct coupling forces the CS drain (the follower's gate) to sit at least $V_{GS,follower} + V_{DS,min}$ of the current source above ground, which leaves little drop for the CS stage's $R_D$ and caps its gain. With a coupling capacitor and separate gate bias, the CS stage's operating point can be chosen for maximum gain."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Differential pair"
+    },
+    {
+      "type": "prose",
+      "text": "Besides the tail current, the gates need a DC level. To maximise gain and swing, pick the lowest input CM level that keeps the tail saturated, $V_{in,CM} = V_{GS1,2} + V_{DS3,min}$. The drains can then go as low as $V_{ov1,2} + V_{DS3,min}$, two overdrives above ground, which allows the largest $R_D$."
+    },
+    {
+      "type": "prose",
+      "text": "Since the pair's currents hardly depend on its gate voltage, cascaded pairs can be directly coupled. But there is a conflict: the first stage's outputs should idle near two overdrives above ground for maximum gain, yet the second stage needs an input CM of a full $V_{GS}$ plus the tail's $V_{DS,min}$. Meeting the second stage's requirement throws away part of the first stage's gain or swing, which is why capacitive coupling between pairs is sometimes used."
+    },
+    {
+      "type": "problem",
+      "title": "Resistor versus current source at a CG input",
+      "text": "A CG stage with $g_{m1} + g_{mb1} = 5\\text{ mS}$ is driven from $R_1 = 200\\text{ }\\Omega$. Compare the input attenuation $V_X/V_{in}$ with $R_S = 2\\text{ k}\\Omega$ and with a current source of output resistance 20 kΩ. If the bias current is 0.5 mA, what DC drop does $R_S$ cost?",
+      "solution": [
+        "$1/(g_m + g_{mb}) = 200\\text{ }\\Omega$. With $R_S$: $200 \\parallel 2000 = 182\\text{ }\\Omega$, so $V_X/V_{in} = 182/382 = 0.476$.",
+        "With the current source: $200 \\parallel 20\\text{ k} = 198\\text{ }\\Omega$, so $198/398 = 0.498$, essentially the ideal 0.5.",
+        "$R_S$ drops $0.5\\text{ mA} \\cdot 2\\text{ k}\\Omega = 1\\text{ V}$; the current source needs only its $V_{DS,sat}$, a couple of hundred millivolts."
+      ],
+      "answer": "0.476 versus 0.498; $R_S$ costs 1 V of headroom."
+    },
+    {
+      "type": "problem",
+      "title": "Mirror-biased CG with a source resistor",
+      "text": "A CG stage should carry 1 mA with a 0.1 mA bias branch and $R_S = 400\\text{ }\\Omega$. What device ratio and $R_B$ make $V_{GS1} = V_{GS,B}$?",
+      "solution": [
+        "The current ratio is 10, so $(W/L)_1/(W/L)_B = 10$.",
+        "The resistors scale inversely to the currents: $R_B/R_S = 10$, so $R_B = 4\\text{ k}\\Omega$. Both resistors then drop 0.4 V and the two gate-source voltages match."
+      ],
+      "answer": "$(W/L)_1/(W/L)_B = 10$, $R_B = 4\\text{ k}\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Cascading two pairs directly",
+      "text": "Both pairs in a cascade have $V_{TH} = 0.4\\text{ V}$, $V_{ov} = 0.2\\text{ V}$, and tails needing 0.2 V. What is the lowest input CM of each pair, how low could the first pair's outputs idle, and what is wasted by direct coupling?",
+      "solution": [
+        "Lowest input CM: $V_{GS} + V_{DS,tail} = 0.6 + 0.2 = 0.8\\text{ V}$.",
+        "The first pair's drains could idle as low as $V_{ov} + V_{DS,tail} = 0.4\\text{ V}$ (two overdrives) for maximum $R_D$.",
+        "Direct coupling forces those drains up to 0.8 V to bias the second pair, so 0.4 V that could have been dropped across $R_D$ (gain) is wasted."
+      ],
+      "answer": "0.8 V; 0.4 V; 0.4 V of first-stage headroom lost."
+    },
+    {
+      "type": "problem",
+      "title": "AC-coupled follower swing",
+      "text": "A follower's gate is biased at $V_{DD} = 1.8\\text{ V}$ through a large resistor; $V_{TH} = 0.4\\text{ V}$, $V_{GS} = 0.6\\text{ V}$, and its current source needs 0.2 V. How far may the gate swing up and down?",
+      "solution": [
+        "Up: the drain is at $V_{DD}$, so the device stays saturated until the gate exceeds $V_{DD} + V_{TH}$: 0.4 V of upward swing.",
+        "Down: the output (gate minus 0.6 V) must stay above 0.2 V, so the gate may fall to 0.8 V: 1.0 V of downward swing."
+      ],
+      "answer": "About +0.4 V and −1.0 V around 1.8 V."
+    }
+  ]
+}

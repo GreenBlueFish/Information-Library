@@ -1,24 +1,30 @@
 {
   "title": "Common-Mode Response",
-  "intro": "Real differential pairs are not perfectly balanced, and the tail source is not an ideal current source. Both turn common-mode signals into errors.",
+  "intro": "Real differential pairs are not perfectly symmetric and their tail is not an ideal current source. Both let a change in the input common-mode level leak to the output.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Common-mode gain"
+      "text": "Symmetric pair, finite tail resistance"
     },
     {
       "type": "prose",
-      "text": "If Vin1 = Vin2 = Vcm and the tail source has output resistance RSS, then by symmetry each side behaves like a half-circuit with 2*RSS in its source:"
+      "text": "Let the tail have output resistance $R_{SS}$ and drive both gates with $V_{in,CM}$. By symmetry X and Y move together, so they can be shorted, and M1 and M2, now sharing all terminals, merge into one device with twice the width, twice the current and $2g_m$. The circuit is a degenerated CS stage with load $R_D/2$:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "ACM = -RD / ( 1/gm + 2*RSS )   (about -RD/(2*RSS) for gm*RSS >> 1)"
+      "type": "math",
+      "tex": "A_{v,CM} = \\frac{V_{out}}{V_{in,CM}} = -\\frac{R_D/2}{\\frac{1}{2g_m} + R_{SS}}",
+      "caption": "$\\lambda = \\gamma = 0$; $g_m$ is that of one transistor."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-amplifiers-cm-equivalent.svg",
+      "alt": "Left: differential pair with both gates at V in CM and a tail resistor RSS. Right: equivalent circuit, a single transistor M1 plus M2 with transconductance 2gm, load RD over 2, and source resistor RSS.",
+      "caption": "With a common-mode input the symmetric pair folds into one double-width transistor."
     },
     {
       "type": "prose",
-      "text": "A large tail resistance (a long-channel device or a cascode current source) reduces ACM. The common-mode input range is limited at the low end by the tail source staying saturated (Vcm >= VGS + Vov,tail) and at the high end by the input devices (Vcm <= VDD - RD*ISS/2 + VTH)."
+      "text": "In a symmetric circuit this CM gain does not corrupt the differential output, but it moves the bias point: the output CM level shifts, which eats into headroom and can push the input devices towards triode. In nanometer processes the tail's output resistance is low, so a CM change at the first stage shifts its output CM, which shifts the next stage, and so on."
     },
     {
       "type": "heading",
@@ -27,36 +33,113 @@
     },
     {
       "type": "prose",
-      "text": "The most damaging effect is that a pure common-mode input produces a differential output when the two sides differ (gm1 != gm2 or RD1 != RD2). If gm differs by Delta-gm:"
+      "text": "The serious problem appears when the two halves differ. With load mismatch $R_{D2} = R_D + \\Delta R_D$, the merged input devices act as a source follower that raises P by $\\frac{R_{SS}}{R_{SS} + 1/(2g_m)}\\Delta V_{in,CM}$, so each drain current rises by the same $\\frac{g_m}{1 + 2g_m R_{SS}}\\Delta V_{in,CM}$, but the two outputs move by different amounts:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "A(CM->DM) = Delta-gm * RD / ( 1 + (gm1 + gm2)*RSS )\nCMRR = ADM / A(CM->DM) = gm*(1 + 2*gm*RSS) / Delta-gm"
+      "type": "math",
+      "tex": "\\Delta V_X - \\Delta V_Y = \\frac{g_m\\,\\Delta R_D}{1 + 2 g_m R_{SS}}\\,\\Delta V_{in,CM}"
+    },
+    {
+      "type": "prose",
+      "text": "A CM disturbance now produces a differential error that is indistinguishable from signal. Input-transistor mismatch (size and $V_{TH}$) is usually a larger source than resistor mismatch. With transconductances $g_{m1} \\ne g_{m2}$, node P follows the input as $V_P = \\frac{(g_{m1} + g_{m2})R_{SS}}{1 + (g_{m1} + g_{m2})R_{SS}}V_{in,CM}$, the drain currents are $g_{m1,2}(V_{in,CM} - V_P)$, and the differential output gives the conversion gain"
+    },
+    {
+      "type": "math",
+      "tex": "A_{CM-DM} = -\\frac{\\Delta g_m R_D}{1 + (g_{m1} + g_{m2}) R_{SS}}, \\qquad \\Delta g_m = g_{m1} - g_{m2}"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Frequency dependence"
+    },
+    {
+      "type": "prose",
+      "text": "The tail node always carries capacitance (the tail device's own drain capacitance plus the source-bulk junctions of M1 and M2). Replacing $R_{SS}$ by the impedance of that capacitance $C_P$ shows that even a perfect current source cannot stop CM-to-DM conversion at high frequency:"
+    },
+    {
+      "type": "math",
+      "tex": "|A_{CM-DM}| = \\frac{\\Delta g_m R_D}{\\sqrt{1 + (g_{m1} + g_{m2})^2 / (C_P \\omega)^2}}"
+    },
+    {
+      "type": "prose",
+      "text": "A typical case is supply noise reaching the drains of a first stage and from there the gates of a second pair: the error grows with the noise frequency."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Common-mode rejection ratio"
+    },
+    {
+      "type": "prose",
+      "text": "To compare circuits fairly, the unwanted CM-to-DM gain is normalised to the wanted differential gain:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{CMRR} = \\left|\\frac{A_{DM}}{A_{CM-DM}}\\right|"
+    },
+    {
+      "type": "prose",
+      "text": "Taking only a $g_m$ mismatch, the differential gain with mismatched devices and the resulting CMRR are"
+    },
+    {
+      "type": "math",
+      "tex": "|A_{DM}| = \\frac{R_D}{2}\\cdot\\frac{g_{m1} + g_{m2} + 4 g_{m1} g_{m2} R_{SS}}{1 + (g_{m1} + g_{m2}) R_{SS}}, \\qquad \\mathrm{CMRR} = \\frac{g_{m1} + g_{m2} + 4 g_{m1} g_{m2} R_{SS}}{2\\Delta g_m}"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{CMRR} \\approx \\frac{g_m}{\\Delta g_m}(1 + 2 g_m R_{SS}) \\approx \\frac{2 g_m^2 R_{SS}}{\\Delta g_m}",
+      "caption": "$g_m$ is the mean of $g_{m1}$ and $g_{m2}$; the last form holds when $2g_m R_{SS} \\gg 1$."
     },
     {
       "type": "callout",
-      "text": "CMRR (common-mode rejection ratio) tells how well the pair rejects interference: it is limited by the device mismatch and the tail impedance, so layout matching and a high-impedance tail both matter."
+      "text": "CMRR is set by matching and tail impedance together. Better layout matching and a higher-impedance tail (longer or cascoded) both help, and the tail capacitance limits CMRR at high frequency no matter how good the DC tail is."
+    },
+    {
+      "type": "prose",
+      "text": "An ideal tail does not guarantee infinite CMRR either: a CM change moves node P and hence $V_{BS}$ of both input devices, and if their body-effect transconductances differ ($g_{mb1} \\ne g_{mb2}$) the drain currents change by different amounts."
     },
     {
       "type": "problem",
       "title": "CMRR estimate",
-      "text": "gm = 2 mS, RSS = 20 kohm, and a 1 percent mismatch Delta-gm/gm. Find the CMRR in dB.",
+      "text": "$g_m = 2\\text{ mS}$, $R_{SS} = 20\\text{ k}\\Omega$, and a 1 percent mismatch $\\Delta g_m/g_m$. Find the CMRR in dB.",
       "solution": [
-        "1 + 2*gm*RSS = 1 + 2 * 2 mS * 20 kohm = 81.",
-        "CMRR = 81 / 0.01 = 8100, i.e. 20*log10(8100) = 78 dB."
+        "$1 + 2g_m R_{SS} = 1 + 2 \\cdot 2\\text{ mS} \\cdot 20\\text{ k}\\Omega = 81$.",
+        "$\\mathrm{CMRR} = 81/0.01 = 8100$, i.e. $20\\log_{10}(8100) = 78\\text{ dB}$."
       ],
-      "answer": "About 8100 or 78 dB."
+      "answer": "About 8100, or 78 dB."
     },
     {
       "type": "problem",
       "title": "Effect of the tail",
-      "text": "If RSS is raised from 20 kohm to 200 kohm with the same gm and mismatch, what is the new CMRR?",
+      "text": "If $R_{SS}$ is raised from 20 kΩ to 200 kΩ with the same $g_m$ and mismatch, what is the new CMRR?",
       "solution": [
-        "1 + 2*gm*RSS = 1 + 800 = 801. CMRR = 801 / 0.01 = 80100, or 98 dB.",
-        "A tenfold bigger tail resistance gives about a tenfold better CMRR, 20 dB more."
+        "$1 + 2g_m R_{SS} = 1 + 800 = 801$, so $\\mathrm{CMRR} = 801/0.01 = 80100$, or 98 dB.",
+        "A tenfold larger tail resistance gives about a tenfold better CMRR, 20 dB more."
       ],
       "answer": "About 98 dB (20 dB better)."
+    },
+    {
+      "type": "problem",
+      "title": "Common-mode shift with a resistor tail",
+      "text": "A pair uses a resistor tail that drops 0.4 V at 0.8 mA. $\\mu_n C_{ox} W/L = 5\\text{ mA/V}^2$, $V_{TH} = 0.45\\text{ V}$, $V_{DD} = 1.8\\text{ V}$. (a) What input CM level is needed? (b) Choose $R_D$ for a differential gain of 4 and find how far the inputs are from triode. (c) What happens if the input CM rises by 50 mV?",
+      "hint": "Use the merged-transistor equivalent for the CM change.",
+      "solution": [
+        "(a) Each side carries 0.4 mA, so $V_{ov} = \\sqrt{2 \\cdot 0.4/5} = 0.4\\text{ V}$, $V_{GS} = 0.85\\text{ V}$ and $V_{in,CM} = 0.85 + 0.4 = 1.25\\text{ V}$. The tail resistor is $R_{SS} = 0.4/0.8\\text{ mA} = 500\\text{ }\\Omega$.",
+        "(b) $g_m = 2I_D/V_{ov} = 2\\text{ mS}$, so $R_D = 4/g_m = 2\\text{ k}\\Omega$. The outputs sit at $1.8 - 0.4\\text{ mA} \\cdot 2\\text{ k}\\Omega = 1.0\\text{ V}$; triode starts when the drain falls to $V_{in,CM} - V_{TH} = 0.8\\text{ V}$, a margin of 0.2 V.",
+        "(c) The outputs fall by $50\\text{ mV} \\cdot \\frac{R_D/2}{R_{SS} + 1/(2g_m)} = 50 \\cdot \\frac{1000}{750} = 66.7\\text{ mV}$, while the gate rises 50 mV. The margin shrinks to $0.2 - 0.05 - 0.067 = 0.083\\text{ V}$."
+      ],
+      "answer": "(a) 1.25 V; (b) 2 kΩ with 0.2 V margin; (c) margin drops to about 83 mV."
+    },
+    {
+      "type": "problem",
+      "title": "Conversion at high frequency",
+      "text": "A pair with an ideal tail has $g_{m1} + g_{m2} = 4\\text{ mS}$, $\\Delta g_m = 0.04\\text{ mS}$ (1 percent), $R_D = 5\\text{ k}\\Omega$ and 200 fF at the tail node. Find $|A_{CM-DM}|$ at 100 MHz and 1 GHz.",
+      "hint": "$\\Delta g_m R_D = 0.2$ is the conversion gain with no tail at all.",
+      "solution": [
+        "At 100 MHz, $C_P\\omega = 200\\text{ fF} \\cdot 2\\pi \\cdot 10^8 = 0.126\\text{ mS}$, so $(g_{m1} + g_{m2})/(C_P\\omega) = 31.8$ and $|A_{CM-DM}| = 0.2/\\sqrt{1 + 31.8^2} = 0.0063$.",
+        "At 1 GHz the ratio is 3.18, giving $0.2/\\sqrt{1 + 10.1} = 0.060$, about ten times worse."
+      ],
+      "answer": "About 0.006 at 100 MHz and 0.06 at 1 GHz."
     }
   ]
 }

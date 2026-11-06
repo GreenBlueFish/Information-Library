@@ -13,7 +13,7 @@
     },
     {
       "type": "prose",
-      "text": "Eugene Izhikevich (2003) captured this with two variables. The fast variable v is the membrane potential, and its quadratic term makes the upswing of the spike self-accelerating (unlike LIF, there is a genuine spike-initiation dynamic). The slow variable u is a recovery variable that lumps together potassium activation and sodium inactivation: it is pulled towards b·v at rate a, and kicked up by d after every spike. Four numbers (a, b, c, d) select the firing type. The result is roughly as cheap as LIF but reproduces most cortical firing patterns."
+      "text": "Eugene Izhikevich (2003) captured this with two variables. The fast variable v is the membrane potential, and its quadratic term makes the upswing of the spike self-accelerating (unlike LIF, there is a genuine spike-initiation dynamic). The slow variable u is a recovery variable that lumps together potassium activation and sodium inactivation: it is pulled towards $b v$ at rate $a$, and kicked up by $d$ after every spike. Four numbers (a, b, c, d) select the firing type. The result is roughly as cheap as LIF but reproduces most cortical firing patterns."
     },
     {
       "type": "heading",
@@ -21,13 +21,33 @@
       "text": "The equations"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "dv/dt = 0.04·v² + 5·v + 140 − u + I\ndu/dt = a · (b·v − u)\n\nif v ≥ 30 mV:   v ← c,   u ← u + d\n\nv in mV, t in ms; I is a dimensionless input (in effect mV/ms, membrane capacitance and resistance absorbed)\na  time scale of u (small a = slow recovery)        typical 0.02\nb  sensitivity of u to sub-threshold v              typical 0.2\nc  after-spike reset of v (mV)                      typical −65\nd  after-spike increment of u                       typical 2–8"
+      "type": "math",
+      "tex": "\\frac{dv}{dt} = 0.04 v^2 + 5 v + 140 - u + I"
+    },
+{
+      "type": "math",
+      "tex": "\\frac{du}{dt} = a\\,(b v - u)"
+    },
+{
+      "type": "prose",
+      "text": "If $v \\ge 30\\text{ mV}$: $v \\leftarrow c$ and $u \\leftarrow u + d$."
+    },
+{
+      "type": "prose",
+      "text": "$v$ in mV, $t$ in ms; $I$ is a dimensionless input (in effect mV/ms, membrane capacitance and resistance absorbed)."
+    },
+{
+      "type": "list",
+      "items": [
+        "$a$: time scale of $u$ (small $a$ = slow recovery); typical 0.02",
+        "$b$: sensitivity of $u$ to sub-threshold $v$; typical 0.2",
+        "$c$: after-spike reset of $v$ (mV); typical −65",
+        "$d$: after-spike increment of $u$; typical 2–8"
+      ]
     },
     {
       "type": "prose",
-      "text": "Note what the 30 mV value is: it is the spike peak at which the model is cut off and reset, not a threshold. The effective threshold is emergent: with the regular-spiking parameters and no input, the model has a stable resting point at −70 mV and an unstable threshold point at about −50 mV, and both shift as u changes (with b = 0.25 the rest is nearer −64 mV). Because the constant input I has no explicit units, the canonical numbers only make sense together with the 1 ms network time step and the input scaling of the original code; for the regular-spiking parameters the two fixed points merge, and tonic firing starts, at a constant I of about 4."
+      "text": "Note what the 30 mV value is: it is the spike peak at which the model is cut off and reset, not a threshold. The effective threshold is emergent: with the regular-spiking parameters and no input, the model has a stable resting point at −70 mV and an unstable threshold point at about −50 mV, and both shift as u changes (with $b = 0.25$ the rest is nearer $-64\\text{ mV}$). Because the constant input I has no explicit units, the canonical numbers only make sense together with the 1 ms network time step and the input scaling of the original code; for the regular-spiking parameters the two fixed points merge, and tonic firing starts, at a constant I of about 4."
     },
     {
       "type": "heading",
@@ -54,7 +74,7 @@
     },
     {
       "type": "prose",
-      "text": "The original MATLAB network in the 2003 paper uses a 1 ms time step but updates v in two half-steps of 0.5 ms each, 'for numerical stability', and updates u once. Because the quadratic term makes v blow up quickly near the peak, a plain 1 ms Euler step on v can overshoot badly; the two half-steps are a cheap fix. The snippet below follows that scheme, including the random heterogeneity trick from the paper: excitatory cells interpolate between RS (r = 0) and CH (r = 1) via r², inhibitory cells between FS and LTS."
+      "text": "The original MATLAB network in the 2003 paper uses a 1 ms time step but updates v in two half-steps of 0.5 ms each, 'for numerical stability', and updates u once. Because the quadratic term makes v blow up quickly near the peak, a plain 1 ms Euler step on v can overshoot badly; the two half-steps are a cheap fix. The snippet below follows that scheme, including the random heterogeneity trick from the paper: excitatory cells interpolate between RS ($r = 0$) and CH ($r = 1$) via $r^2$, inhibitory cells between FS and LTS."
     },
     {
       "type": "code",
@@ -67,7 +87,7 @@
     },
     {
       "type": "prose",
-      "text": "The plot runs exactly that network in your browser: 800 excitatory cells (regular spiking shading into chattering through the random r²), 200 inhibitory cells (fast spiking shading into low-threshold spiking), all-to-all random weights, noisy thalamic input, 1 ms steps with two half-steps for v, one second of simulated time. Instead of a raster it plots the number of spikes per millisecond in each population. Look for the waxing and waning population bursts: rhythms the network produces from its connectivity and noise alone. Scale the excitatory weights down and the rhythm dissolves into sparse irregular firing; scale them up and the bursts grow larger and more synchronous, until near twice the weights the whole excitatory population fires in seizure-like volleys. Change the noise and see how much of the activity is driven by the thalamic input."
+      "text": "The plot runs exactly that network in your browser: 800 excitatory cells (regular spiking shading into chattering through the random $r^2$), 200 inhibitory cells (fast spiking shading into low-threshold spiking), all-to-all random weights, noisy thalamic input, 1 ms steps with two half-steps for v, one second of simulated time. Instead of a raster it plots the number of spikes per millisecond in each population. Look for the waxing and waning population bursts: rhythms the network produces from its connectivity and noise alone. Scale the excitatory weights down and the rhythm dissolves into sparse irregular firing; scale them up and the bursts grow larger and more synchronous, until near twice the weights the whole excitatory population fires in seizure-like volleys. Change the noise and see how much of the activity is driven by the thalamic input."
     },
     {
       "type": "widget",
@@ -119,9 +139,9 @@
       "type": "list",
       "items": [
         "Use Izhikevich neurons when the dynamics you study depend on firing type: bursting layer-5 output cells, adapting regular-spiking excitatory cells versus non-adapting FS interneurons, rebound in thalamic cells, or oscillations that depend on these differences.",
-        "Use LIF (possibly with adaptation) when the question is about connectivity, learning rules or representations (SDRs, k-WTA, STDP) rather than single-cell dynamics. LIF has interpretable parameters (τm, θ, R) and an analytic f–I curve; the Izhikevich parameters are phenomenological.",
+        "Use LIF (possibly with adaptation) when the question is about connectivity, learning rules or representations (SDRs, k-WTA, STDP) rather than single-cell dynamics. LIF has interpretable parameters ($\\tau_m$, $\\theta$, R) and an analytic f–I curve; the Izhikevich parameters are phenomenological.",
         "A reasonable default for a layered column: RS for excitatory cells in layers 2/3, 4 and 6, a mix of RS and IB for layer 5, FS for parvalbumin-like interneurons, LTS for somatostatin-like interneurons. Document this as a modelling choice, not a biological fact.",
-        "If you later want to fit real recordings, the AdEx model (Brette & Gerstner 2005) or Izhikevich's later form C·dv/dt = k(v − v_r)(v − v_t) − u + I (Izhikevich 2007) have parameters in physical units, which makes fitting easier."
+        "If you later want to fit real recordings, the AdEx model (Brette & Gerstner 2005) or Izhikevich's later form $C \\frac{dv}{dt} = k(v - v_r)(v - v_t) - u + I$ (Izhikevich 2007) have parameters in physical units, which makes fitting easier."
       ]
     },
     {
@@ -133,7 +153,7 @@
       "type": "list",
       "items": [
         "Integration error: the quadratic term is stiff near spike onset. A 1 ms Euler step on v without the half-step trick produces wrong spike times and can produce NaNs. If you change dt, re-check the f–I curve.",
-        "Units: I is not in nA. Do not plug synaptic currents calibrated for a LIF neuron with R = 10 MΩ into the Izhikevich equation unchanged; rescale until single-cell f–I curves look right.",
+        "Units: I is not in nA. Do not plug synaptic currents calibrated for a LIF neuron with $R = 10\\text{ M}\\Omega$ into the Izhikevich equation unchanged; rescale until single-cell f–I curves look right.",
         "The spike peak is clipped: v reaching 30 mV is a cutoff, not a physiological peak. If you record v and compute averages (e.g. LFP proxies), the clipped spike shapes will bias them.",
         "Grid-locked spikes: with a 1 ms step, spikes land on a 1 ms grid. STDP windows of 10–20 ms tolerate that, but sub-millisecond coincidence detection does not.",
         "The original network uses instantaneous synapses (input added in the same step) and dense random connectivity; that is a dynamics demo, not a cortical column. Add delays, sparse connectivity and synaptic kinetics before drawing conclusions (see \"Synapse Models\")."

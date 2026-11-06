@@ -11,6 +11,8 @@
 // definition, a "Previous" / "n of N" / "Next" control. Cycling wraps around
 // and updates the same nodes in place, so a focused button keeps focus. All
 // text is set with `textContent`, never parsed as HTML.
+import { appendRichText } from "../math.js";
+
 
 /**
  * @typedef {import("./search-index.js").Definition} Definition
@@ -98,7 +100,8 @@ export function fillDefinitionCard(doc, container, definitions, classes, onFollo
       termEl.appendChild(acr);
     }
 
-    defEl.textContent = d.definition;
+    defEl.textContent = "";
+    appendRichText(defEl, d.definition);
 
     // The link is present only for a definition with a page, between the
     // definition and the cycle control.

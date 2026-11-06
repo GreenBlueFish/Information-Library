@@ -1,0 +1,119 @@
+{
+  "title": "PLL Nonidealities and Jitter",
+  "intro": "Imperfections of the PFD and charge pump that disturb the control voltage in lock, and how a PLL passes or rejects jitter (Razavi, Section 16.3).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Dead zone and why reset pulses help"
+    },
+    {
+      "type": "prose",
+      "text": "Imagine a PFD that produced no pulses at all at zero phase error. For a tiny error it would produce pulses so narrow that, with finite rise and fall times, they never reach a logic level and never turn on the pump switches. Below some error $\\phi_0$ the pump does nothing, the loop gain is zero, and the VCO phase drifts freely inside $\\pm\\phi_0$: a dead zone, seen as jitter on the output."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pll-dead-zone.svg",
+      "alt": "Charge pump average current against phase error: zero over a band from minus phi0 to plus phi0, then rising linearly on each side; a dashed straight line through the origin shows the ideal.",
+      "caption": "A dead zone around zero phase error."
+    },
+    {
+      "type": "prose",
+      "text": "The PFD's coincident reset pulses fix this: at zero error both UP and DOWN are on for $T_P \\approx 5$ gate delays, long enough to switch the pump fully, so any small extra error simply makes one pulse slightly longer and the net current changes in proportion."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Charge-pump mismatches"
+    },
+    {
+      "type": "prose",
+      "text": "A transistor-level pump uses current sources M1 (NMOS) and M2 (PMOS) with switches M3, M4; UP must be inverted to drive the PMOS switch."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Skew between UP and DOWN: if one switch turns on before the other, the net current briefly jumps to $\\pm I_P$ every cycle. A transmission gate in the non-inverted path equalizes the delays.",
+        "Current mismatch: if $I_1 \\ne I_2$, the overlap pulse leaves net charge each cycle. The loop responds by settling at a phase error that makes the net charge per cycle zero: a static phase offset, still with periodic ripple. Low $r_o$ in short-channel devices makes the mismatch depend on $V_{cont}$, and switch charge injection and feedthrough add to both.",
+        "Charge sharing: while the switches are off, node X (above the NMOS source) is pulled to ground and node Y to $V_{DD}$. When they close, these capacitances share charge with $C_P$, and since X and Y move by different amounts (depending on $V_{cont}$), $V_{cont}$ jumps. Bootstrapping fixes it: a unity-gain buffer holds X and Y at $V_{cont}$ through extra switches whenever the main switches are open."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For a DOWN current larger than UP by $\\Delta I$ and overlap $T_P$, zero net charge requires UP to start earlier by $\\Delta t$ with $I_P\\Delta t = \\Delta I\\,T_P$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta\\phi = 2\\pi\\frac{\\Delta t}{T_{in}} = 2\\pi\\,\\frac{\\Delta I}{I_P}\\,\\frac{T_P}{T_{in}}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Jitter"
+    },
+    {
+      "type": "prose",
+      "text": "A jittery waveform has zero crossings displaced from where a perfect period would put them; equivalently its excess phase $\\phi_n(t)$ wanders: $x(t) = A\\cos[\\omega t + \\phi_n(t)]$. How fast it wanders matters as much as how far. Two sources matter in a PLL:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Input jitter: the closed-loop $H(s)$ is low-pass, so slow input jitter passes to the output and fast jitter is filtered.",
+        "VCO jitter: with the input clean, the transfer from VCO phase noise to the output is high-pass:"
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\Phi_{out}}{\\Phi_{VCO}}(s) = \\frac{s^2}{s^2 + 2\\zeta\\omega_n s + \\omega_n^2}"
+    },
+    {
+      "type": "prose",
+      "text": "Slow VCO drift (temperature, for instance) produces a slowly growing phase error that the loop corrects; fast VCO noise is not caught before it appears. The loop bandwidth is chosen according to which source is worse: a clean reference and a noisy VCO (rings) want a wide loop; a jittery input with a good VCO wants a narrow one."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pll-jitter-transfer.svg",
+      "alt": "Two curves against log jitter frequency: the input-to-output transfer is flat at 0 dB with a small peak near omega n and then falls; the VCO-to-output transfer rises at 40 dB per decade at low frequency and becomes flat at 0 dB above omega n.",
+      "caption": "Jitter transfer in a type II PLL with $\\zeta = 0.707$."
+    },
+    {
+      "type": "problem",
+      "title": "Static phase offset",
+      "text": "A PLL at 100 MHz has $I_P = 100\\ \\mu\\text{A}$, a 5% up/down mismatch, and reset pulses of 150 ps. Find the static phase offset.",
+      "solution": [
+        "$\\Delta t = T_P\\Delta I/I_P = 150\\text{ ps} \\times 0.05 = 7.5\\text{ ps}$.",
+        "$\\Delta\\phi = 2\\pi \\times 7.5\\text{ ps}/10\\text{ ns} = 4.7\\text{ mrad}$ (0.27°)."
+      ],
+      "answer": "7.5 ps, about 0.27°."
+    },
+    {
+      "type": "problem",
+      "title": "Size of a dead zone",
+      "text": "A pump needs pulses at least 50 ps wide to switch, and the PFD has no reset overlap. For a 1 GHz reference, what is the dead zone?",
+      "solution": [
+        "$\\phi_0 = 2\\pi \\times 50\\text{ ps}/1\\text{ ns} = 0.31\\text{ rad}$ (18°): the VCO phase can wander that far uncorrected."
+      ],
+      "answer": "About ±18°."
+    },
+    {
+      "type": "problem",
+      "title": "Jitter filtering numbers",
+      "text": "A type II PLL has $\\zeta = 1$. By how much is VCO phase noise at $\\omega_n/10$ suppressed, and input jitter at $10\\omega_n$ attenuated?",
+      "solution": [
+        "VCO path at $\\omega = 0.1\\omega_n$: $|s^2/(s^2 + 2s\\omega_n + \\omega_n^2)| = 0.01/|0.99 + j0.2| = 0.0099$, about −40 dB.",
+        "Input path, $H = (2\\zeta\\omega_n s + \\omega_n^2)/(\\dots)$, at $10\\omega_n$: $|1 + j20|/|{-99} + j20| = 20.0/101 = 0.198$, about −14 dB (only 20 dB/dec roll-off because of the zero)."
+      ],
+      "answer": "VCO noise −40 dB; input jitter −14 dB."
+    },
+    {
+      "type": "problem",
+      "title": "Charge sharing",
+      "text": "Why does charge sharing disturb $V_{cont}$ even with perfectly matched currents and zero phase error, and why does bootstrapping cure it?",
+      "solution": [
+        "With the switches open, the current sources drag their drain nodes to the rails. On closing, each node jumps to $V_{cont}$, but by unequal amounts (one is far from $V_{cont}$, one close), so the difference in charge comes from $C_P$.",
+        "If a buffer keeps both nodes at $V_{cont}$ while the switches are open, nothing moves when they close, so no charge is exchanged."
+      ],
+      "answer": "Unequal jumps of the drain nodes; bootstrapping pre-sets them to $V_{cont}$."
+    }
+  ]
+}

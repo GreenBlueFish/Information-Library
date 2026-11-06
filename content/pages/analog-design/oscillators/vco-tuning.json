@@ -1,0 +1,170 @@
+{
+  "title": "VCOs and Ring-Oscillator Tuning",
+  "intro": "What makes a good voltage-controlled oscillator, and the circuit tricks that let a ring oscillator's frequency follow a control voltage (Razavi, Sections 15.4 and 15.4.1).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The ideal VCO"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{out} = \\omega_0 + K_{VCO} V_{cont}"
+    },
+    {
+      "type": "prose",
+      "text": "$\\omega_0$ is the intercept at $V_{cont} = 0$ and $K_{VCO}$ the gain, in rad/s/V (watch the factor $2\\pi$ if a datasheet quotes Hz/V). The span $\\omega_2 - \\omega_1$ the control can reach is the tuning range."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-vco-characteristic.svg",
+      "alt": "Output frequency against control voltage. A dashed straight line joins (V1, omega1) to (V2, omega2). The real curve is S-shaped: flat near V1, steep in the middle, flat again near V2.",
+      "caption": "A real tuning curve (solid) against the ideal straight line (dashed)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Figures of merit"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Centre frequency: set by the application, from MHz clocks to hundreds of GHz.",
+        "Tuning range: must cover the application's frequencies plus the drift of the centre frequency over process and temperature, which can be 2:1 for CMOS oscillators; some clocking systems need 10x to 100x.",
+        "Gain: noise on $V_{cont}$ appears as frequency noise scaled by $K_{VCO}$, so smaller is better, yet covering $\\omega_1$ to $\\omega_2$ with $V_{cont}$ between $V_1$ and $V_2$ requires $K_{VCO} \\ge (\\omega_2-\\omega_1)/(V_2-V_1)$. A lower supply means less control range and a higher gain.",
+        "Linearity: a varying $K_{VCO}$ upsets PLL settling. Real curves have a high-gain middle and flat ends, so for a given range the peak gain exceeds the straight-line value.",
+        "Output amplitude: larger is less sensitive to noise; it trades with power, supply and even tuning range, and should not vary across the range.",
+        "Power: typically 1 to 10 mW.",
+        "Supply and common-mode rejection: oscillators are very sensitive, especially single-ended ones.",
+        "Spectral purity: device and supply noise cause jitter (time domain) and phase noise (frequency domain)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Tuning a ring: change the delay"
+    },
+    {
+      "type": "prose",
+      "text": "Since $f_{osc} = 1/(2NT_D)$, any knob on the stage delay tunes the ring."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Variable resistor loads"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-triode-load-stage.svg",
+      "alt": "A differential pair M1, M2 with tail current ISS. Its loads are PMOS transistors M3 and M4 from VDD whose gates are both driven by Vcont. The outputs are taken at the drains.",
+      "caption": "A ring stage with triode PMOS loads. The output time constant is $R_{on3,4} C_L$."
+    },
+    {
+      "type": "prose",
+      "text": "With M3 and M4 in deep triode,"
+    },
+    {
+      "type": "math",
+      "tex": "\\tau = R_{on}C_L = \\frac{C_L}{\\mu_p C_{ox}(W/L)_{3,4}\\,(V_{DD} - V_{cont} - |V_{THP}|)}, \\qquad f_{osc} \\propto V_{DD} - V_{cont} - |V_{THP}|"
+    },
+    {
+      "type": "prose",
+      "text": "so the frequency is roughly linear in $V_{cont}$. To keep the loads in deep triode the drop $I_{SS}R_{on}$ must stay a small fraction of their overdrive, which caps $V_{cont}$; beyond that they saturate and the stage needs common-mode feedback. The real problem is the swing, $2I_{SS}R_{on}$ differential: a 2:1 tuning range means a 2:1 change in amplitude."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Replica biasing"
+    },
+    {
+      "type": "prose",
+      "text": "Fix the swing by servoing. In a replica branch, an op amp drives the gate of a triode PMOS M5 carrying $I_1$ so that its drain sits at $V_{REF}$; the same gate voltage goes to M3 and M4. If the stage devices and tail match the replica, every output swings exactly from $V_{DD}$ to $V_{REF}$, and tuning is done by changing $I_1$ and $I_{SS}$ together:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{on} \\approx \\frac{V_{DD} - V_{REF}}{I_{SS}} \\;\\Rightarrow\\; f_{osc} \\propto \\frac{I_{SS}}{(V_{DD} - V_{REF})\\,C_L}"
+    },
+    {
+      "type": "prose",
+      "text": "a fairly linear characteristic with a constant swing. The op amp's bandwidth then enters the PLL loop, so it must be fast enough not to slow settling."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Positive-feedback (negative-resistance) loads"
+    },
+    {
+      "type": "prose",
+      "text": "Put a cross-coupled pair M3, M4 in parallel with load resistors $R_P$. Its half-circuit resistance $-1/g_{m3,4}$ in parallel with $R_P$ gives"
+    },
+    {
+      "type": "math",
+      "tex": "R_{eq} = \\frac{R_P}{1 - g_{m3,4}R_P}, \\qquad A_v = \\frac{g_{m1,2}R_P}{1 - g_{m3,4}R_P}"
+    },
+    {
+      "type": "prose",
+      "text": "More current in the cross-coupled pair raises $R_{eq}$ and the time constant, lowering the frequency. To keep the swing constant, a control pair M5, M6 steers a fixed total $I_T$ between the input pair and the cross-coupled pair; the swing is then $2R_P I_T$ differentially, and $V_{cont1}$, $V_{cont2}$ form a differential control input with better noise immunity. A small fixed current $I_H$ keeps the input pair alive when all of $I_T$ is steered away (otherwise the gain drops to zero and oscillation stops). Typical range is 2:1."
+    },
+    {
+      "type": "prose",
+      "text": "The steering pair costs headroom: its equilibrium overdrive adds to the supply needed. A low $K_{VCO}$ wants a small $g_m$ for M5, M6, which means a large overdrive and so even more headroom. Current folding avoids the stacked pair: a differential pair drives two current mirrors whose outputs always sum to a constant $KI_{SS}$, at the price of extra noise in the control path."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Interpolation"
+    },
+    {
+      "type": "prose",
+      "text": "Each stage sums a fast path and a slow path (the slow one has one more stage of delay), with $V_{cont}$ shifting the gain from one to the other. Two differential pairs with shorted outputs add their currents; a third pair steers a constant tail between them, keeping the swing fixed. The delay moves between the two extremes, about a 2:1 range. Combining interpolation with a cross-coupled load widens it further."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Very wide range"
+    },
+    {
+      "type": "prose",
+      "text": "Most of these give at most about 3:1. Adding PMOS devices driven by the input that pull each output fully to $V_{DD}$ keeps the swing nearly constant as $I_{SS}$ changes enormously; such a ring can tune over more than four decades with less than a 2:1 amplitude change."
+    },
+    {
+      "type": "problem",
+      "title": "VCO tuning",
+      "text": "$f_0 = 2\\text{ GHz}$ at $V_{cont} = 0$ and $K_{VCO} = 500\\text{ MHz/V}$. What is the output at $V_{cont} = 0.8\\text{ V}$?",
+      "solution": [
+        "$f = 2\\text{ GHz} + 0.5\\text{ GHz/V} \\times 0.8\\text{ V} = 2.4\\text{ GHz}$."
+      ],
+      "answer": "2.4 GHz."
+    },
+    {
+      "type": "problem",
+      "title": "Required gain and control-line noise",
+      "text": "A VCO must cover 1.8 to 2.2 GHz with $V_{cont}$ between 0.2 and 1.0 V. Find the minimum $K_{VCO}$ in Hz/V and rad/s/V, and the frequency error caused by 1 mV of ripple on the control line.",
+      "solution": [
+        "$K_{VCO} \\ge 400\\text{ MHz}/0.8\\text{ V} = 500\\text{ MHz/V}$, i.e. $2\\pi \\times 5\\times10^8 = 3.14\\times10^9\\text{ rad/s/V}$.",
+        "1 mV of ripple moves the frequency by 500 kHz (more where the real curve is steeper than the straight line)."
+      ],
+      "answer": "500 MHz/V ($3.14\\times10^9$ rad/s/V); about 500 kHz per mV."
+    },
+    {
+      "type": "problem",
+      "title": "Triode-load tuning",
+      "text": "In the triode-load stage, $V_{DD} = 1.2\\text{ V}$ and $|V_{THP}| = 0.4\\text{ V}$. $V_{cont}$ is moved from 0 to 0.4 V. By what factor do the frequency and the swing change (deep triode assumed)?",
+      "solution": [
+        "Load overdrive goes from 0.8 V to 0.4 V, so $R_{on}$ doubles.",
+        "$f_{osc} \\propto 1/(R_{on}C_L)$ halves; the swing $2I_{SS}R_{on}$ doubles. This is why replica biasing is used."
+      ],
+      "answer": "Frequency halves; swing doubles."
+    },
+    {
+      "type": "problem",
+      "title": "Negative-resistance load",
+      "text": "A stage has $R_P = 2\\text{ k}\\Omega$ and $g_{m1,2} = 2\\text{ mS}$. Compare its load resistance and gain with the cross-coupled pair off and with $g_{m3,4} = 0.25\\text{ mS}$.",
+      "solution": [
+        "Off: $R_{eq} = 2\\text{ k}\\Omega$, gain $= 4$.",
+        "On: $R_{eq} = 2\\text{ k}/(1 - 0.5) = 4\\text{ k}\\Omega$, gain $= 8$. The output time constant doubles, so the delay roughly doubles and the ring slows."
+      ],
+      "answer": "2 kΩ, gain 4; 4 kΩ, gain 8."
+    }
+  ]
+}

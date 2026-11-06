@@ -17,17 +17,21 @@
       "text": "Current-based versus conductance-based coupling"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "current-based (CUBA):      I_syn(t) = w · s(t)\nconductance-based (COBA):  I_syn(t) = g_max · w · s(t) · (E_syn − V(t))\n\ns(t) = synaptic kernel (sum over presynaptic spikes), V = postsynaptic membrane potential\nE_syn = reversal potential: ≈ 0 mV for AMPA/NMDA, ≈ −70 to −80 mV for GABA_A, ≈ −90 to −95 mV for GABA_B"
+      "type": "list",
+      "items": [
+        "Current-based (CUBA): $I_{syn}(t) = w\\, s(t)$",
+        "Conductance-based (COBA): $I_{syn}(t) = g_{max}\\, w\\, s(t)\\,(E_{syn} - V(t))$",
+        "$s(t)$ = synaptic kernel (sum over presynaptic spikes), $V$ = postsynaptic membrane potential",
+        "$E_{syn}$ = reversal potential: ≈ 0 mV for AMPA/NMDA, ≈ −70 to −80 mV for GABA_A, ≈ −90 to −95 mV for GABA_B"
+      ]
     },
     {
       "type": "prose",
-      "text": "In a current-based synapse every spike injects the same charge regardless of the postsynaptic state. It is linear, analytically tractable, and what most neuromorphic hardware (Loihi's CUBA neuron, many FPGA designs) and many network models (Brunel 2000; Potjans & Diesmann 2014) use. In a conductance-based synapse the driving force (E_syn − V) shrinks as V approaches the reversal potential: excitatory input becomes weaker as the cell depolarises, and inhibition with E_syn near rest acts mainly as shunting, dividing rather than subtracting input. High total conductance also shortens the effective membrane time constant (τ_eff = C / g_total), which is a large effect in vivo (Destexhe, Rudolph & Paré 2003). Diehl & Cook (2015) used conductance-based synapses, so their network depends on this. Rule of thumb: use CUBA when you need speed, analytic insight or hardware compatibility, and calibrate weights so that one spike produces a realistic postsynaptic potential (about 0.1–1 mV for cortical excitatory connections; Potjans & Diesmann use a mean PSP of 0.15 mV). Use COBA when the balance between excitation and inhibition, shunting inhibition, or voltage-dependent NMDA effects matter."
+      "text": "In a current-based synapse every spike injects the same charge regardless of the postsynaptic state. It is linear, analytically tractable, and what most neuromorphic hardware (Loihi's CUBA neuron, many FPGA designs) and many network models (Brunel 2000; Potjans & Diesmann 2014) use. In a conductance-based synapse the driving force ($E_{syn} - V$) shrinks as V approaches the reversal potential: excitatory input becomes weaker as the cell depolarises, and inhibition with $E_{syn}$ near rest acts mainly as shunting, dividing rather than subtracting input. High total conductance also shortens the effective membrane time constant ($\\tau_{eff} = C / g_{total}$), which is a large effect in vivo (Destexhe, Rudolph & Paré 2003). Diehl & Cook (2015) used conductance-based synapses, so their network depends on this. Rule of thumb: use CUBA when you need speed, analytic insight or hardware compatibility, and calibrate weights so that one spike produces a realistic postsynaptic potential (about 0.1–1 mV for cortical excitatory connections; Potjans & Diesmann use a mean PSP of 0.15 mV). Use COBA when the balance between excitation and inhibition, shunting inhibition, or voltage-dependent NMDA effects matter."
     },
     {
       "type": "prose",
-      "text": "The plot makes the difference visible on a passive membrane (C = 200 pF, gL = 10 nS, rest −65 mV, spiking switched off so the voltage can be followed). A number of excitatory synapses fire as independent 10 Hz Poisson trains between 50 and 250 ms, and every input spike adds a conductance that decays with τ = 5 ms. The current-based version injects that conductance times the driving force at rest, (E_e − E_L) = 65 mV, whatever the voltage; the conductance-based version injects g(t)·(E_e − V). With few or weak inputs the two traces coincide. With many inputs the CUBA membrane climbs past 0 mV, the excitatory reversal potential, which a real membrane cannot do (the plot clips it at 200 mV), while the COBA membrane saturates below E_e and its effective time constant shortens as the total conductance grows: the 'high-conductance state' of an active cortical neuron."
+      "text": "The plot makes the difference visible on a passive membrane ($C = 200\\text{ pF}$, $g_L = 10\\text{ nS}$, rest $-65\\text{ mV}$, spiking switched off so the voltage can be followed). A number of excitatory synapses fire as independent 10 Hz Poisson trains between 50 and 250 ms, and every input spike adds a conductance that decays with $\\tau = 5\\text{ ms}$. The current-based version injects that conductance times the driving force at rest, $(E_e - E_L) = 65\\text{ mV}$, whatever the voltage; the conductance-based version injects $g(t)\\,(E_e - V)$. With few or weak inputs the two traces coincide. With many inputs the CUBA membrane climbs past 0 mV, the excitatory reversal potential, which a real membrane cannot do (the plot clips it at 200 mV), while the COBA membrane saturates below $E_e$ and its effective time constant shortens as the total conductance grows: the 'high-conductance state' of an active cortical neuron."
     },
     {
       "type": "widget",
@@ -67,9 +71,23 @@
       "text": "Kernels: exponential, alpha, difference of exponentials"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "exponential (instant rise):        s(t) = exp(−t/τ_d)                             τ_d: decay\nalpha function (rise = decay):     s(t) = (t/τ) · exp(1 − t/τ)                     peak 1 at t = τ\ndifference of exponentials:        s(t) = N · (exp(−t/τ_d) − exp(−t/τ_r)),  τ_r < τ_d\n                                    N normalises the peak to 1\n\nevent-driven update for the exponential kernel (one state variable per neuron, not per synapse):\n    on each presynaptic spike:  g ← g + w\n    every step:                 g ← g · exp(−dt/τ_d)"
+      "type": "list",
+      "items": [
+        "Exponential (instant rise): $s(t) = \\exp(-t/\\tau_d)$, where $\\tau_d$ is the decay time constant",
+        "Alpha function (rise = decay): $s(t) = \\frac{t}{\\tau} \\exp(1 - t/\\tau)$, with peak 1 at $t = \\tau$",
+        "Difference of exponentials: $s(t) = N \\left( \\exp(-t/\\tau_d) - \\exp(-t/\\tau_r) \\right)$ with $\\tau_r < \\tau_d$; $N$ normalises the peak to 1"
+      ]
+    },
+{
+      "type": "prose",
+      "text": "Event-driven update for the exponential kernel (one state variable per neuron, not per synapse):"
+    },
+{
+      "type": "list",
+      "items": [
+        "On each presynaptic spike: $g \\leftarrow g + w$",
+        "Every step: $g \\leftarrow g \\exp(-dt/\\tau_d)$"
+      ]
     },
     {
       "type": "prose",
@@ -91,16 +109,25 @@
     },
     {
       "type": "prose",
-      "text": "At resting potential, NMDA channels are plugged by extracellular magnesium ions; depolarisation expels the Mg²⁺ and lets current flow. The NMDA receptor is therefore a coincidence detector: it conducts only when presynaptic glutamate (input) and postsynaptic depolarisation occur together. This is the molecular basis of many Hebbian and STDP-like plasticity rules, and of the dendritic NMDA spikes on the next page. Jahr & Stevens (1990) gave the widely used fit:"
+      "text": "At resting potential, NMDA channels are plugged by extracellular magnesium ions; depolarisation expels the $\\mathrm{Mg}^{2+}$ and lets current flow. The NMDA receptor is therefore a coincidence detector: it conducts only when presynaptic glutamate (input) and postsynaptic depolarisation occur together. This is the molecular basis of many Hebbian and STDP-like plasticity rules, and of the dendritic NMDA spikes on the next page. Jahr & Stevens (1990) gave the widely used fit:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "I_NMDA = g_NMDA · s(t) · B(V) · (V − E_NMDA)      (sign convention: positive = outward)\nB(V)   = 1 / (1 + ([Mg²⁺]_o / 3.57 mM) · exp(−0.062 · V))      V in mV, [Mg²⁺]_o ≈ 1 mM\n\nB(−70 mV) ≈ 0.04     B(−40 mV) ≈ 0.23     B(0 mV) ≈ 0.78"
+      "type": "math",
+      "tex": "I_{NMDA} = g_{NMDA}\\, s(t)\\, B(V)\\,(V - E_{NMDA})",
+      "caption": "sign convention: positive = outward"
+    },
+{
+      "type": "math",
+      "tex": "B(V) = \\frac{1}{1 + \\frac{[\\mathrm{Mg}^{2+}]_o}{3.57\\text{ mM}} \\exp(-0.062\\, V)}",
+      "caption": "$V$ in mV, $[\\mathrm{Mg}^{2+}]_o \\approx 1$ mM"
+    },
+{
+      "type": "prose",
+      "text": "$B(-70\\text{ mV}) \\approx 0.04$, $B(-40\\text{ mV}) \\approx 0.23$, $B(0\\text{ mV}) \\approx 0.78$."
     },
     {
       "type": "prose",
-      "text": "The resulting I–V curve has a region of negative slope between roughly −70 and −20 mV: more depolarisation produces more inward current, a positive feedback that can sustain a regenerative plateau if enough NMDA conductance is active on a thin dendrite. Many network models include NMDA as a slow excitatory channel without the Mg²⁺ block; that keeps the slow time constant but throws away the coincidence-detection property, which is often exactly the property an HTM-inspired column needs."
+      "text": "The resulting I–V curve has a region of negative slope between roughly −70 and −20 mV: more depolarisation produces more inward current, a positive feedback that can sustain a regenerative plateau if enough NMDA conductance is active on a thin dendrite. Many network models include NMDA as a slow excitatory channel without the $\\mathrm{Mg}^{2+}$ block; that keeps the slow time constant but throws away the coincidence-detection property, which is often exactly the property an HTM-inspired column needs."
     },
     {
       "type": "heading",
@@ -116,9 +143,25 @@
       "text": "Synaptic efficacy changes on a time scale of tens to hundreds of milliseconds with the presynaptic firing history. Between neocortical pyramidal cells, synapses mostly depress: a high-frequency train produces successively smaller EPSPs because vesicle resources are used up (Markram & Tsodyks 1996; Tsodyks & Markram 1997). Other connections, for example from pyramidal cells onto somatostatin-type interneurons, facilitate. The Tsodyks–Markram model captures both with a resource variable x and a utilisation variable u:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "dx/dt = (1 − x)/τ_rec − u⁺ · x⁻ · δ(t − t_spike)          resources (depression)\ndu/dt = (U − u)/τ_facil + U · (1 − u⁻) · δ(t − t_spike)    utilisation (facilitation)\nPSC amplitude for a spike ∝ w · u⁺ · x⁻\n\ndepressing (typical E→E):     U ≈ 0.5,  τ_rec ≈ several hundred ms, little or no facilitation\nfacilitating (e.g. E→SST):    small U,  long τ_facil"
+      "type": "math",
+      "tex": "\\frac{dx}{dt} = \\frac{1 - x}{\\tau_{rec}} - u^+ x^-\\, \\delta(t - t_{spike})",
+      "caption": "resources (depression)"
+    },
+{
+      "type": "math",
+      "tex": "\\frac{du}{dt} = \\frac{U - u}{\\tau_{facil}} + U\\,(1 - u^-)\\, \\delta(t - t_{spike})",
+      "caption": "utilisation (facilitation)"
+    },
+{
+      "type": "prose",
+      "text": "PSC amplitude for a spike $\\propto w\\, u^+ x^-$."
+    },
+{
+      "type": "list",
+      "items": [
+        "Depressing (typical E→E): $U \\approx 0.5$, $\\tau_{rec}$ several hundred ms, little or no facilitation",
+        "Facilitating (e.g. E→SST): small $U$, long $\\tau_{facil}$"
+      ]
     },
     {
       "type": "prose",
@@ -132,10 +175,10 @@
     {
       "type": "list",
       "items": [
-        "Start with current-based exponential synapses (τ ≈ 2–5 ms excitatory, 5–10 ms inhibitory) and per-connection delays of about 1–2 ms. This matches hardware and lets you compare against Potjans & Diesmann-style models.",
+        "Start with current-based exponential synapses ($\\tau \\approx 2\\text{–}5$ ms excitatory, 5–10 ms inhibitory) and per-connection delays of about 1–2 ms. This matches hardware and lets you compare against Potjans & Diesmann-style models.",
         "Switch to conductance-based synapses when you study E/I balance, shunting or when copying Diehl & Cook-style learning networks, which were tuned with conductances.",
         "Add an NMDA-like, voltage-gated slow channel on dendritic segments when you implement predictive (depolarised) states; this is the biological mechanism behind HTM's distal segments.",
-        "Keep track of which time constant does what: synaptic τ sets temporal precision, membrane τm sets integration window, NMDA/plateau durations (50–200 ms) set how long a prediction is held, STP time constants set sensitivity to transients.",
+        "Keep track of which time constant does what: synaptic $\\tau$ sets temporal precision, membrane $\\tau_m$ sets integration window, NMDA/plateau durations (50–200 ms) set how long a prediction is held, STP time constants set sensitivity to transients.",
         "A minimal Brian2 starting point with conductance-based AMPA-like and GABA_A-like synapses (exponential kernels, 1.5 ms delay, Poisson drive) follows."
       ]
     },
@@ -154,8 +197,8 @@
       "items": [
         "Weight units differ between CUBA (pA or nA) and COBA (nS); converting a network between them requires re-scaling by a typical driving force (about 60 mV for excitation from rest), and the result will still behave differently.",
         "Instantaneous (delta) synapses with zero delay create artificial synchrony and order effects within a time step; always use at least one step of delay.",
-        "Kernel normalisation: an alpha kernel normalised to peak 1 carries e·τ times more charge than one normalised to unit area. State which normalisation you use when reporting weights.",
-        "On fixed-point hardware, slow decays (NMDA, GABA_B, STP recovery) need enough bits; a decay factor exp(−dt/τ) close to 1 rounds badly at low precision."
+        "Kernel normalisation: an alpha kernel normalised to peak 1 carries $e\\tau$ times more charge than one normalised to unit area. State which normalisation you use when reporting weights.",
+        "On fixed-point hardware, slow decays (NMDA, GABA_B, STP recovery) need enough bits; a decay factor $\\exp(-dt/\\tau)$ close to 1 rounds badly at low precision."
       ]
     },
     {

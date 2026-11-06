@@ -1,0 +1,116 @@
+{
+  "title": "OTA Common-Mode and Supply Behaviour",
+  "intro": "The five-transistor OTA has a single-ended output, so a common-mode input change shows up at the output even when every device is matched. Its supply rejection is also worse than a fully differential stage's.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Common-mode gain with matched devices"
+    },
+    {
+      "type": "prose",
+      "text": "Because the output is taken against ground, the CM gain is defined as the single-ended output change per input CM change, $A_{CM} = \\Delta V_{out}/\\Delta V_{in,CM}$. With matched devices $V_{out} = V_F$ at every CM level, so F and the output can be shorted: M1 and M2 merge, M3 and M4 merge into one diode, and the circuit is a degenerated CS stage with a diode load. Neglecting $r_{o1,2}/2$ and taking $1/(2g_{m3,4}) \\ll r_{o3,4}/2$:"
+    },
+    {
+      "type": "math",
+      "tex": "A_{CM} \\approx -\\frac{\\frac{1}{2g_{m3,4}} \\parallel \\frac{r_{o3,4}}{2}}{\\frac{1}{2g_{m1,2}} + R_{SS}} \\approx -\\frac{1}{1 + 2g_{m1,2}R_{SS}}\\cdot\\frac{g_{m1,2}}{g_{m3,4}}"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/current-mirrors-and-biasing-ota-cm-equivalent.svg",
+      "alt": "Equivalent circuit: a diode-connected PMOS labelled M3 plus M4 from VDD to the output node, an NMOS labelled M1 plus M2 below it with gate at V in CM, and a resistor RSS from its source to ground.",
+      "caption": "With matched devices the output tracks the diode node, so the OTA folds into a CS stage with a diode load and tail degeneration."
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{CMRR} = \\left|\\frac{A_{DM}}{A_{CM}}\\right| = (1 + 2g_{m1,2}R_{SS})\\,g_{m3,4}(r_{o1,2} \\parallel r_{o3,4})"
+    },
+    {
+      "type": "prose",
+      "text": "If the tail is a single transistor with $R_{SS} = r_o$ and $2g_m r_o \\gg 1$, the CMRR is of order $(g_m r_o)^2$. Tail capacitance lowers the effective $R_{SS}$ at high frequency, so high-frequency CM noise is rejected much less well."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A tempting but wrong argument"
+    },
+    {
+      "type": "prose",
+      "text": "One might argue $A_{CM} = 0$: a CM step adds $\\Delta I$ to both input devices, the mirror copies M1's $\\Delta I$ to M4, and M4 supplies exactly what M2 needs. The flaw is that M3 is not an ideal mirror input: F moves by $\\Delta I(1/g_{m3} \\parallel r_{o3})$, so M4's current changes by $g_{m4}r_{o3}\\Delta I/(1 + g_{m3}r_{o3})$, slightly less than $\\Delta I$. The shortfall flows through $r_{o4}$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta V_{out} = -\\frac{\\Delta I\\,r_{o4}}{1 + g_{m3}r_{o3}}",
+      "caption": "With matched PMOS devices this equals the change at node F."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Common-mode gain with a gm mismatch"
+    },
+    {
+      "type": "prose",
+      "text": "With $g_{m1} \\ne g_{m2}$, node P follows the input as a source follower with transconductance $g_{m1} + g_{m2}$, so each input current is its own $g_m$ times $\\Delta V_{in,CM}/[1 + (g_{m1} + g_{m2})R_{SS}]$. The mirror copies M1's change, the difference from M2's change flows through about $r_{o4}$, and for $r_{o3} \\gg 1/g_{m3}$ and $r_{o3} \\approx r_{o4}$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\Delta V_{out}}{\\Delta V_{in,CM}} \\approx \\frac{(g_{m1} - g_{m2})r_{o3} - g_{m2}/g_{m3}}{1 + (g_{m1} + g_{m2})R_{SS}}"
+    },
+    {
+      "type": "prose",
+      "text": "Compared with the matched result, the extra term $(g_{m1} - g_{m2})r_{o3}$ is multiplied by an $r_o$, so even a small mismatch can dominate the CM gain."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Supply rejection"
+    },
+    {
+      "type": "prose",
+      "text": "Hold the inputs fixed and step $V_{DD}$. M1 behaves as a high-impedance current source, so $V_{GS3}$ stays put and node F moves with the supply; by symmetry the output follows F. The gain from $V_{DD}$ to $V_{out}$ is therefore about 1: the OTA has poor supply rejection."
+    },
+    {
+      "type": "prose",
+      "text": "A fully differential pair with PMOS current-source loads biased from a mirror behaves differently. Both outputs again move by roughly $\\Delta V_{DD}$ (if the cascode of the input devices and tail looks like a very high impedance), but they move together, so the differential output is untouched. The price is that such a stage needs common-mode feedback to set its output CM level."
+    },
+    {
+      "type": "list",
+      "items": [
+        "OTA drawback 1: finite CMRR even with perfect matching, because the CM change reaches the single-ended output directly.",
+        "OTA drawback 2: about unity gain from the supply to the output."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "CM gain and CMRR",
+      "text": "An OTA has $g_{m1,2} = g_{m3,4} = 1\\text{ mS}$, all $r_o = 50\\text{ k}\\Omega$, and a tail with $R_{SS} = 50\\text{ k}\\Omega$. Find $A_{CM}$, $A_{DM}$ and the CMRR.",
+      "solution": [
+        "$A_{CM} \\approx -\\frac{1}{1 + 2 \\cdot 1\\text{ mS} \\cdot 50\\text{ k}\\Omega} \\cdot 1 = -\\frac{1}{101} = -0.0099$.",
+        "$A_{DM} \\approx g_{m1}(r_o \\parallel r_o) = 25$.",
+        "$\\mathrm{CMRR} = 25/0.0099 = 2525$, i.e. 68 dB (the formula $(1 + 2g_mR_{SS})g_m(r_o \\parallel r_o) = 101 \\cdot 25$ gives the same)."
+      ],
+      "answer": "$A_{CM} \\approx -0.0099$, $A_{DM} = 25$, CMRR about 2500 (68 dB)."
+    },
+    {
+      "type": "problem",
+      "title": "Effect of a 10 percent gm mismatch",
+      "text": "In the OTA above, $g_{m1} = 1.05\\text{ mS}$ and $g_{m2} = 0.95\\text{ mS}$ (with $g_{m3} = 1\\text{ mS}$, $r_{o3} = 50\\text{ k}\\Omega$). Estimate the CM gain.",
+      "solution": [
+        "Numerator: $(g_{m1} - g_{m2})r_{o3} - g_{m2}/g_{m3} = 0.1\\text{ mS} \\cdot 50\\text{ k}\\Omega - 0.95 = 5 - 0.95 = 4.05$.",
+        "Denominator: $1 + (g_{m1} + g_{m2})R_{SS} = 1 + 2\\text{ mS} \\cdot 50\\text{ k}\\Omega = 101$.",
+        "$\\Delta V_{out}/\\Delta V_{in,CM} \\approx 0.040$, about four times larger than the matched value and of opposite sign."
+      ],
+      "answer": "About +0.04."
+    },
+    {
+      "type": "problem",
+      "title": "Supply ripple",
+      "text": "A 20 mV ripple rides on $V_{DD}$. Roughly how much appears at the output of (a) a five-transistor OTA and (b) a fully differential pair with mirror-biased PMOS loads, measured differentially?",
+      "solution": [
+        "(a) The diode node and the output follow the supply nearly one-for-one, so about 20 mV.",
+        "(b) Each output also moves by about 20 mV, but equally, so the differential output sees almost nothing (only mismatch-induced residue)."
+      ],
+      "answer": "About 20 mV versus nearly zero."
+    }
+  ]
+}

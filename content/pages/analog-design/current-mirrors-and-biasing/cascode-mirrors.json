@@ -1,0 +1,179 @@
+{
+  "title": "Cascode Current Mirrors",
+  "intro": "Channel-length modulation spoils a mirror whenever the output device's $V_{DS}$ differs from the reference device's. Either make $V_{DS2}$ follow $V_{DS1}$ (the cascode mirror) or make $V_{DS1}$ follow $V_{DS2}$ (resistor and low-voltage cascode schemes).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "First approach: cascode the output"
+    },
+    {
+      "type": "prose",
+      "text": "A cascode device M3 on top of M2 shields M2's drain from the output, so $V_{DS2}$ barely moves. To make it equal to $V_{DS1} = V_{GS1}$, the cascode gate needs $V_b = V_{GS3} + V_{GS1}$. Stacking a second diode-connected device M0 on M1 produces exactly that, provided $V_{GS0} = V_{GS3}$. Then $V_Y = V_X$ and the copy is accurate, even with body effect, because M0 and M3 sit at the same source voltage and see the same body bias."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/current-mirrors-and-biasing-cascode-mirror.svg",
+      "alt": "Cascode current mirror. Left: IREF from VDD flows into diode-connected M0 stacked on diode-connected M1; node X between them. Right: M3 stacked on M2; node Y between them, output current at the top of M3. M0 and M3 gates are tied (node N), M1 and M2 gates are tied.",
+      "caption": "Cascode mirror. Size $W_3/W_0 = W_2/W_1$ with $L_3 = L_0$ so that $V_{GS3} = V_{GS0}$; M0 and M3 are often minimum length, M1 and M2 may be longer."
+    },
+    {
+      "type": "math",
+      "tex": "R_{out} \\approx g_{m3} r_{o3} r_{o2}"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Headroom cost"
+    },
+    {
+      "type": "prose",
+      "text": "With identical devices and no body effect, $V_N = V_{GS0} + V_{GS1}$, and M3 stays saturated while the output is above $V_N - V_{TH}$:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out,min} = V_{GS0} + V_{GS1} - V_{TH} = 2V_{ov} + V_{TH}"
+    },
+    {
+      "type": "prose",
+      "text": "A cascode current source could work down to $2V_{ov}$ if $V_b$ were only $V_{GS3} + V_{ov2}$, but then $V_{DS2}$ would be one overdrive while $V_{DS1} = V_{GS1}$, and the copy would be inaccurate. The plain cascode mirror wastes one $V_{TH}$ of headroom because $V_{DS2} = V_{GS2}$ when $V_{GS2} - V_{TH}$ would do."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Large-signal behaviour as the output falls"
+    },
+    {
+      "type": "prose",
+      "text": "Above $V_N - V_{TH}$ both output devices are saturated and $I_{out} = I_{REF}$. Below it, M3 enters triode first (M2 cannot leave saturation first, because that would need M3's current to fall while its $V_{GS}$ rises). M3 then needs more gate-source voltage, so node Y drops, M2's current sags slightly, and the output resistance collapses because M3's $g_m$ shrinks in triode. Once Y falls below $V_{GS2} - V_{TH}$, M2 enters triode and the current drops steeply to zero at $V_{out} = 0$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Maximum reference current"
+    },
+    {
+      "type": "prose",
+      "text": "The reference branch needs $V_N = V_{GS0} + V_{GS1}$ below the supply minus whatever the reference source needs. With $V_{IREF}$ the voltage required across the reference source:"
+    },
+    {
+      "type": "math",
+      "tex": "I_{REF,max} = \\frac{\\mu_n C_{ox}}{2}\\cdot\\frac{(V_{DD} - V_{IREF} - V_{TH0} - V_{TH1})^2}{\\left(\\sqrt{(L/W)_0} + \\sqrt{(L/W)_1}\\right)^2}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Second approach: lower the reference device's VDS"
+    },
+    {
+      "type": "prose",
+      "text": "Instead, bring $V_{DS1}$ down to about one overdrive. A resistor $R_1$ between M1's drain and gate with $R_1 I_{REF} \\approx V_{TH1}$ gives $V_{DS1} = V_{GS1} - R_1 I_{REF} \\approx V_{GS1} - V_{TH1}$, and a cascode bias $V_b = V_{GS3} + (V_{GS1} - V_{TH1})$ puts $V_{DS2}$ at the same value. M1 with $R_1$ still behaves like a diode: a KCL at its drain gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_X}{I_X} = \\frac{R_1 + r_o}{1 + g_m r_o} \\approx \\frac{1}{g_m}"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Weakness 1: $R_1 I_{REF}$ and $V_{TH}$ drift differently with process and temperature, so the condition $R_1 I_{REF} \\approx V_{TH1}$ is not robust.",
+        "Weakness 2: generating $V_b = V_{GS3} + (V_{GS1} - V_{TH1})$ is awkward. A diode M5 plus a resistor $R_6$ ($V_b = V_{GS5} + R_6 I_6$) needs an IR drop to track $V_{GS}$, which it does not. Using a diode M5 for $V_{GS}$ and a copy of the M1-$R_1$ pair (M6 with $R_6$, $I_6 = I_{REF}$, $R_6 = R_1$, $(W/L)_6 = (W/L)_1$) for the overdrive makes the terms track, apart from small body-effect differences."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The low-voltage cascode"
+    },
+    {
+      "type": "prose",
+      "text": "A cleaner way to make $V_{DS1}$ equal $V_{DS2}$ is to stack the reference devices as a cascode and take M1's gate from the top of the stack. The cascode gate $V_b$ is shared with M3, so $V_{DS1} = V_b - V_{GS0}$ and, with $V_{GS0} = V_{GS3}$, $V_{DS1} = V_{DS2}$ automatically. This low-voltage (or wide-swing) cascode is used more widely than the plain cascode mirror."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/current-mirrors-and-biasing-low-voltage-cascode.svg",
+      "alt": "Low-voltage cascode mirror. Left: IREF flows into the drain of M0 (node X), stacked on M1 (node A between them); a wire from X goes to the gates of M1 and M2, hopping over the Vb line. M0 and M3 gates are tied to an external bias Vb. Right: M3 stacked on M2 with node B between them and the output at the top of M3.",
+      "caption": "Low-voltage cascode mirror: $V_A = V_B = V_b - V_{GS0}$, so both bottom devices see the same $V_{DS}$ of about one overdrive."
+    },
+    {
+      "type": "prose",
+      "text": "Both reference devices must be saturated: M0 needs $V_b - V_{TH0} \\le V_X = V_{GS1}$, and M1 needs $V_{GS1} - V_{TH1} \\le V_A = V_b - V_{GS0}$. Hence"
+    },
+    {
+      "type": "math",
+      "tex": "V_{GS0} + (V_{GS1} - V_{TH1}) \\le V_b \\le V_{GS1} + V_{TH0}"
+    },
+    {
+      "type": "prose",
+      "text": "A solution exists only if $V_{GS0} - V_{TH0} < V_{TH1}$, so M0 is sized for an overdrive well below a threshold. For the least headroom, $V_b$ sits at (or slightly above) the lower bound, and the output works down to about $2V_{ov}$. $V_b$ can be produced by a diode-connected device (supplying $V_{GS}$) on top of a device biased to drop one overdrive, or by a diode plus a resistor, which is less well controlled."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Variations"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Replica biasing when there is no room for a cascode"
+    },
+    {
+      "type": "prose",
+      "text": "If the tail of a differential pair has too little headroom for a cascode, make $V_{DS1}$ copy the tail's $V_{DS}$ instead. Put a scaled replica of the pair, with the same lengths and widths in the ratio $W_r/W_d = I_{REF}/I_{SS}$, on top of the reference device and drive its gates from the same inputs. Its source node then tracks the tail node P even when the input CM level moves (until the replica enters triode)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A regulated mirror"
+    },
+    {
+      "type": "prose",
+      "text": "Another high-impedance output uses feedback rather than stacking: a transistor M3 senses the output node X and pulls on the gate node N of the output device M1, via the diode device M2. If $V_X$ rises by $\\Delta V$, M1's current tends to rise by $\\Delta V/r_{o1}$, but M3 draws $g_{m3}\\Delta V$ from N, lowering $V_N$ by about $g_{m3}\\Delta V/g_{m2}$ and cutting M1's current by $g_{m1}g_{m3}\\Delta V/g_{m2}$. Choosing $g_{m1}g_{m3}/g_{m2} \\approx 1/r_{o1}$ cancels the change. The output must stay above $V_{TH3}$ for M3 to regulate, which is more than the $V_{DS,sat}$ a cascode would need, and at very high $V_X$ M3 absorbs all of $I_{REF}$ and turns M1 off."
+    },
+    {
+      "type": "callout",
+      "text": "In nanometer processes $\\lambda$ is so large that even a cascode mirror's output current still varies visibly with $V_{out}$ across its whole saturated range; check mirror accuracy in simulation over the real output range."
+    },
+    {
+      "type": "problem",
+      "title": "Headroom of the two cascode mirrors",
+      "text": "All devices have $V_{TH} = 0.4\\text{ V}$ and $V_{ov} = 0.2\\text{ V}$. What is the minimum output voltage of a plain cascode mirror and of a low-voltage cascode mirror?",
+      "solution": [
+        "Plain: $2V_{ov} + V_{TH} = 0.4 + 0.4 = 0.8\\text{ V}$.",
+        "Low-voltage: about $2V_{ov} = 0.4\\text{ V}$, half as much."
+      ],
+      "answer": "0.8 V versus 0.4 V."
+    },
+    {
+      "type": "problem",
+      "title": "Choosing the low-voltage cascode bias",
+      "text": "In a low-voltage cascode, $V_{TH} = 0.4\\text{ V}$ for all devices, M0 runs at $V_{ov0} = 0.15\\text{ V}$ and M1 at $V_{ov1} = 0.2\\text{ V}$. Find the allowed range of $V_b$ and a good choice.",
+      "solution": [
+        "$V_{GS0} = 0.55\\text{ V}$ and $V_{GS1} = 0.6\\text{ V}$.",
+        "Lower bound: $V_{GS0} + V_{ov1} = 0.75\\text{ V}$. Upper bound: $V_{GS1} + V_{TH0} = 1.0\\text{ V}$.",
+        "Choose slightly above the lower bound, around 0.8 V, to keep the output headroom near $2V_{ov}$ with some margin."
+      ],
+      "answer": "$0.75\\text{ V} \\le V_b \\le 1.0\\text{ V}$; pick about 0.8 V."
+    },
+    {
+      "type": "problem",
+      "title": "Largest reference current",
+      "text": "A cascode mirror runs from 1.8 V; the reference source needs 0.3 V. Both $V_{TH} = 0.4\\text{ V}$, $\\mu_n C_{ox}(W/L)_0 = 4\\text{ mA/V}^2$ and $\\mu_n C_{ox}(W/L)_1 = 2\\text{ mA/V}^2$. Find $I_{REF,max}$.",
+      "hint": "Each overdrive is $\\sqrt{2I_{REF}/k}$.",
+      "solution": [
+        "Require $V_{GS0} + V_{GS1} \\le 1.8 - 0.3 = 1.5\\text{ V}$, so the two overdrives must sum to $1.5 - 0.8 = 0.7\\text{ V}$.",
+        "$\\sqrt{2I/4} + \\sqrt{2I/2} = \\sqrt{2I}\\left(\\frac{1}{2} + \\frac{1}{\\sqrt{2}}\\right) = 1.207\\sqrt{2I} = 0.7$, so $\\sqrt{2I} = 0.580$ and $I = 0.168\\text{ mA}$."
+      ],
+      "answer": "About 0.17 mA."
+    },
+    {
+      "type": "problem",
+      "title": "Is the resistor-shifted device still a diode?",
+      "text": "M1 has $g_m = 1\\text{ mS}$ and $r_o = 20\\text{ k}\\Omega$, with $R_1 = 4\\text{ k}\\Omega$ between drain and gate. Find the small-signal impedance at its drain.",
+      "solution": [
+        "$\\frac{R_1 + r_o}{1 + g_m r_o} = \\frac{24\\text{ k}\\Omega}{21} = 1.14\\text{ k}\\Omega$, close to $1/g_m = 1\\text{ k}\\Omega$."
+      ],
+      "answer": "About 1.14 kΩ, nearly $1/g_m$."
+    }
+  ]
+}

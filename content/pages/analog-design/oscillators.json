@@ -1,13 +1,87 @@
 {
   "title": "Oscillators",
-  "intro": "Sources of periodic signals.",
+  "intro": "An oscillator turns DC power into a periodic signal with no input. In CMOS it is almost always a ring of delay stages or an LC tank with an active circuit that cancels the tank loss, and in practice it is voltage-controlled so a PLL can steer it (Razavi, Chapter 15).",
   "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Oscillation as feedback"
+    },
+    {
+      "type": "prose",
+      "text": "Put an amplifier $H(s)$ in a negative-feedback loop. The closed-loop gain is $H/(1+H)$; if at some frequency $\\omega_0$ the loop gain equals $-1$, this gain is infinite and the circuit amplifies its own noise at $\\omega_0$ without bound. Followed around the loop, a noise component returns with gain $|H|$ each trip: the amplitude forms the series $V_0(1 + |H| + |H|^2 + \\dots)$, which converges to $V_0/(1-|H|)$ for $|H|<1$ and grows for $|H| \\ge 1$."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-feedback-loop.svg",
+      "alt": "Block diagram: a noise source enters a summing node, passes through an amplifier H(s) to the output, and the output is fed back to the minus input of the summing node.",
+      "caption": "The feedback view: an oscillator is a loop whose gain reaches minus one at one frequency."
+    },
+    {
+      "type": "math",
+      "tex": "|H(j\\omega_0)| \\ge 1, \\qquad \\angle H(j\\omega_0) = 180^{\\circ}",
+      "caption": "Barkhausen criteria (necessary, not sufficient)."
+    },
+    {
+      "type": "prose",
+      "text": "The 180° here is phase that $H$ itself adds, on top of the 180° the subtractor already contributes; together they make 360° and the returning signal reinforces the original. A loop can get that phase in three equivalent ways: an inverting amplifier with 180° of frequency-dependent shift, a non-inverting amplifier with 360° in its stages, or a non-inverting one with 0° at $\\omega_0$ (an LC loop at resonance). Because process and temperature move the gain, designs aim for a small-signal loop gain two to three times the minimum."
+    },
+    {
+      "type": "prose",
+      "text": "Once the oscillation grows, the stages saturate. The gain averaged over a cycle falls until it is exactly one, which is what sets the amplitude: the poles start in the right half plane and are pushed back onto the $j\\omega$ axis by nonlinearity."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The two families"
+    },
     {
       "type": "list",
       "items": [
-        "Ring oscillators.",
-        "LC oscillators and VCOs."
+        "Ring oscillators: three or more inverting stages in a loop. Small, wide tuning range, many phases for free, but noisy and supply-sensitive.",
+        "LC oscillators: a resonant tank whose loss is cancelled by a cross-coupled pair (negative-Gm) or a single-transistor Colpitts circuit. Much lower phase noise and higher frequencies, but they need inductors (area) and tune over a narrow range."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "In this chapter"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Ring Oscillators: why three stages, the minimum gain and frequency, large-signal delay, differential rings and loads.",
+        "LC Tanks and Tuned Stages: resonance, Q, series-to-parallel conversion, tuned amplifiers.",
+        "Cross-Coupled LC Oscillators: the negative-Gm oscillator, start-up, amplitude, supply sensitivity.",
+        "Colpitts and One-Port Oscillators: the capacitive-divider oscillator and the negative-resistance view.",
+        "VCOs and Ring Tuning: VCO figures of merit and ways to tune a ring.",
+        "Varactors and LC Tuning: pn-junction and MOS varactors, tuning range and its limits.",
+        "Mathematical Model of VCOs: phase as the integral of frequency, $K_{VCO}/s$, sidebands."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Rule of thumb from the book's opening joke: in high-frequency design, amplifiers oscillate and oscillators don't. An amplifier with too much phase shift and an oscillator with too little gain are the same mistake seen from two sides."
+    },
+    {
+      "type": "problem",
+      "title": "Sub-unity loop gain",
+      "text": "A loop has 180° of extra phase at $\\omega_0$ but $|H(j\\omega_0)| = 0.8$. A noise burst of amplitude $V_0$ at $\\omega_0$ is injected. What amplitude does the summing node settle to? Does it oscillate?",
+      "solution": [
+        "The returning copies add in phase: $V_0(1 + 0.8 + 0.8^2 + \\dots) = V_0/(1 - 0.8) = 5V_0$.",
+        "The sum converges, so the response decays once the burst ends; the circuit rings but does not sustain oscillation."
+      ],
+      "answer": "Settles at $5V_0$ while driven; no oscillation."
+    },
+    {
+      "type": "problem",
+      "title": "Gain margin for start-up",
+      "text": "An oscillator's loop gain is nominally 2.5 at the oscillation frequency. Over corners the transconductance can fall by 35% and the tank resistance by 20%. Does it still start?",
+      "solution": [
+        "The loop gain scales with $g_m R$: $2.5 \\times 0.65 \\times 0.8 = 1.3$.",
+        "This is still above 1, so it starts in the worst corner, though with little margin."
+      ],
+      "answer": "Yes, worst-case loop gain about 1.3."
     }
   ]
 }

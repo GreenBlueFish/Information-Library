@@ -1,0 +1,94 @@
+{
+  "title": "The Degenerated Differential Pair",
+  "intro": "Resistors in the sources of a differential pair trade gain for a wider, more linear input range, exactly as degeneration does in a single CS stage.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Wider input range"
+    },
+    {
+      "type": "prose",
+      "text": "Put $R_S$ in series with each source. When M2 just turns off, M1 carries all of $I_{SS}$ and $V_{GS2} = V_{TH}$. Writing the loop from one gate to the other through both sources:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta V_{in2} = V_{GS1} - V_{TH} + R_S I_{SS} = \\sqrt{\\frac{2 I_{SS}}{\\mu_n C_{ox} W/L}} + R_S I_{SS}"
+    },
+    {
+      "type": "prose",
+      "text": "The first term is the undegenerated limit $\\Delta V_{in1}$, so the range over which both devices conduct grows by $R_S I_{SS}$ on each side. The characteristic becomes straighter and its slope falls."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gain"
+    },
+    {
+      "type": "prose",
+      "text": "The half circuit is a degenerated CS stage (ignoring $\\lambda$ and body effect):"
+    },
+    {
+      "type": "math",
+      "tex": "|A_v| = \\frac{R_D}{\\frac{1}{g_m} + R_S}, \\qquad G_m = \\frac{g_m}{1 + g_m R_S}"
+    },
+    {
+      "type": "prose",
+      "text": "When $g_m R_S \\gg 1$ the gain approaches $R_D/R_S$, a ratio of resistors, so it also becomes less sensitive to $g_m$ variation with process and temperature."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Headroom, and the split-tail fix"
+    },
+    {
+      "type": "prose",
+      "text": "With a single tail source below two source resistors, each $R_S$ carries $I_{SS}/2$ at equilibrium and drops $R_S I_{SS}/2$. The tail behaves as if it needed that much more headroom: the input CM level and the lowest output voltage both rise by that amount, which costs $R_S I_{SS}$ of differential output swing."
+    },
+    {
+      "type": "prose",
+      "text": "Splitting the tail into two $I_{SS}/2$ sources, one per source terminal, and joining the sources through $2R_S$ removes the DC drop: at equilibrium no current flows in $2R_S$. For differential signals the midpoint of $2R_S$ is a virtual ground, so the half circuit still sees $R_S$. The price is that the two tail sources now contribute differential noise and offset, which a single shared source would not."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-amplifiers-degenerated-pair.svg",
+      "alt": "Differential pair with resistor loads. The sources of M1 and M2 each go to their own current source of ISS over 2 to ground, and a resistor 2RS connects the two sources.",
+      "caption": "Split-tail degeneration: no bias current in the degeneration resistor, so no headroom is lost."
+    },
+    {
+      "type": "callout",
+      "text": "Degeneration is the simplest linearisation of a pair. Other methods (offset pairs, cross-coupled pairs) appear in the nonlinearity chapter; Razavi returns to them in Chapter 14."
+    },
+    {
+      "type": "problem",
+      "title": "Range and gain with degeneration",
+      "text": "A pair with $k = \\mu_n C_{ox} W/L = 4\\text{ mA/V}^2$, $I_{SS} = 1\\text{ mA}$, $R_D = 5\\text{ k}\\Omega$ gets $R_S = 200\\text{ }\\Omega$ in each source. Find the input difference that turns one side off and the small-signal gain, and compare with $R_S = 0$.",
+      "solution": [
+        "Without degeneration $\\Delta V_{in1} = \\sqrt{2 \\cdot 1/4} = 0.707\\text{ V}$; with it, $\\Delta V_{in2} = 0.707 + 0.2\\text{ k}\\Omega \\cdot 1\\text{ mA} = 0.907\\text{ V}$.",
+        "At equilibrium $g_m = \\sqrt{k I_{SS}} = 2\\text{ mS}$, so $|A_v| = 5\\text{ k}\\Omega/(500 + 200)\\,\\Omega = 7.14$, against $g_m R_D = 10$ without $R_S$."
+      ],
+      "answer": "Range grows from 0.71 V to 0.91 V; gain falls from 10 to 7.1."
+    },
+    {
+      "type": "problem",
+      "title": "Sensitivity to gm",
+      "text": "In the pair above, process variation raises $g_m$ by 20 percent to 2.4 mS. By how much does the gain change with and without $R_S = 200\\text{ }\\Omega$?",
+      "hint": "Only the $1/g_m$ part of the denominator changes.",
+      "solution": [
+        "Without $R_S$ the gain is $g_m R_D$, so it rises 20 percent, from 10 to 12.",
+        "With $R_S$: $5000/(1/2.4\\text{ mS} + 200) = 5000/616.7 = 8.11$, up from 7.14, a rise of 13.5 percent."
+      ],
+      "answer": "20 percent without degeneration, 13.5 percent with it."
+    },
+    {
+      "type": "problem",
+      "title": "Headroom cost of a shared tail",
+      "text": "With $R_S = 200\\text{ }\\Omega$ and $I_{SS} = 1\\text{ mA}$ fed from one tail source, how much higher must the input CM level be, and how much differential output swing is lost, compared with the split-tail version?",
+      "solution": [
+        "Each $R_S$ carries 0.5 mA and drops 0.1 V, so the input CM level (and the lowest allowed drain voltage) rises by 0.1 V.",
+        "Each output loses 0.1 V of downward room, so the differential peak-to-peak swing falls by $R_S I_{SS} = 0.2\\text{ V}$. The split tail with $2R_S = 400\\text{ }\\Omega$ between the sources loses nothing."
+      ],
+      "answer": "0.1 V higher CM level; 0.2 V less differential swing."
+    }
+  ]
+}

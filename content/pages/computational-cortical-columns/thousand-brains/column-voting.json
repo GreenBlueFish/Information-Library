@@ -44,9 +44,44 @@
       "text": "The math: voting as intersection or as evidence summation"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Strict (noise-free) voting = intersection of candidate sets:\n  C_consensus = C₁ ∩ C₂ ∩ … ∩ C_K\nWith N objects, F equally likely features, K columns sensing K different locations:\n  E[# wrong objects after one glance] ≈ (N − 1) · F^(−K)\n  single-glance recognition when  K ≳ log(N − 1) / log F\n  e.g. N = 1000, F = 10  →  K ≈ 3 columns suffice for one-touch recognition (idealised)\n\nNoise-tolerant voting = summing evidence:\n  e_c(o) = # sensations of column c contradicting object o\n  E(o)  = Σ_c e_c(o);     candidates = { o : E(o) ≤ min_o' E(o') + slack }\n\nSpiking/neural version (one settling step):\n  a_i ← kWTA( ff_i + β · Σ_{c' ≠ c} Σ_j W^lat_ij a_j )    β < threshold, so lateral input\n                                                          biases but cannot drive firing alone"
+      "type": "prose",
+      "text": "Strict (noise-free) voting = intersection of candidate sets:"
+    },
+{
+      "type": "math",
+      "tex": "C_{consensus} = C_1 \\cap C_2 \\cap \\dots \\cap C_K"
+    },
+{
+      "type": "prose",
+      "text": "With $N$ objects, $F$ equally likely features, $K$ columns sensing $K$ different locations:"
+    },
+{
+      "type": "list",
+      "items": [
+        "Expected number of wrong objects after one glance: $\\approx (N - 1)\\, F^{-K}$",
+        "Single-glance recognition when $K$ is at least about $\\frac{\\log(N - 1)}{\\log F}$",
+        "e.g. $N = 1000$, $F = 10$: $K \\approx 3$ columns suffice for one-touch recognition (idealised)"
+      ]
+    },
+{
+      "type": "prose",
+      "text": "Noise-tolerant voting = summing evidence:"
+    },
+{
+      "type": "list",
+      "items": [
+        "$e_c(o)$ = number of sensations of column $c$ contradicting object $o$",
+        "$E(o) = \\sum_c e_c(o)$; candidates $= \\lbrace o : E(o) \\le \\min_{o'} E(o') + \\text{slack} \\rbrace$"
+      ]
+    },
+{
+      "type": "prose",
+      "text": "Spiking/neural version (one settling step):"
+    },
+{
+      "type": "math",
+      "tex": "a_i \\leftarrow \\mathrm{kWTA}\\left( ff_i + \\beta \\sum_{c' \\ne c} \\sum_j W^{lat}_{ij}\\, a_j \\right)",
+      "caption": "$\\beta <$ threshold, so lateral input biases but cannot drive firing alone"
     },
     {
       "type": "prose",
@@ -169,7 +204,7 @@
       "type": "list",
       "items": [
         "Representation. Give each column an object layer of a few thousand excitatory cells with about 2% active per object (the 2017 simulations used an output layer on the order of 4,000 cells with roughly 40 active). Choose each object's SDR at random during learning and hold it active while the column explores the object.",
-        "Lateral connections. Learn excitatory synapses from object cells of column c' onto object cells of column c with a Hebbian or STDP rule while the same object is presented to all columns. Make them sparse (each cell samples a subset of other columns' cells) — all-to-all grows as K²n² and is a memory problem on neuromorphic hardware.",
+        "Lateral connections. Learn excitatory synapses from object cells of column c' onto object cells of column c with a Hebbian or STDP rule while the same object is presented to all columns. Make them sparse (each cell samples a subset of other columns' cells) — all-to-all grows as $K^2 n^2$ and is a memory problem on neuromorphic hardware.",
         "Lateral input should bias, not drive. Put lateral synapses on a separate dendritic compartment or scale them so that lateral input alone stays subthreshold. Otherwise columns can 'hallucinate' an object with no feedforward support.",
         "Inhibition does the selection. Use k-WTA or strong local PV-like feedback inhibition (see 'Inhibition and k-Winners-Take-All' in section 3) so that, among cells with feedforward support, those with the most lateral support win. Without it, unions never narrow.",
         "Settling time. Allow a few iterations per sensation — a few cycles of 10–20 ms each with millisecond-scale axonal delays for long-range links. Check that the result does not depend on update order.",

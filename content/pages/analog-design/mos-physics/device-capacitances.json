@@ -1,0 +1,124 @@
+{
+  "title": "Layout and Capacitances",
+  "intro": "A transistor's speed is set by its capacitances, and those come straight from its geometry. This page covers how a MOSFET is laid out and how each capacitance depends on the region of operation (Razavi, Sections 2.4.1 and 2.4.2).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Layout"
+    },
+    {
+      "type": "prose",
+      "text": "In layout, $W/L$ is chosen for the circuit (transconductance, current) while the minimum $L$ and all spacings come from the process design rules. The gate is a strip of polysilicon crossing a rectangle of diffusion; the parts of the diffusion on either side are the source and drain. Each must be wired to metal through contact windows, and the gate poly extends a little past the diffusion edge so the transistor's edge is well defined. The source/drain regions have one dimension equal to $W$ and the other, $E$, set by the contacts and spacing rules (typically three to four times the minimum channel length)."
+    },
+    {
+      "type": "prose",
+      "text": "Transistors connected in series or sharing a node can share a diffusion region: two devices whose drain and source meet at the same node are drawn with one strip between their gates, which removes the junction area of one region. Connections that cannot be made in diffusion or poly (a gate to another device's source, say) need a metal wire."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/mos-physics-layout.svg",
+      "alt": "Two top-view layouts. Left: one green diffusion rectangle of height W crossed by a vertical red poly gate; contact squares sit in the source region on the left and the drain region on the right, and the drain region's length is marked E. Right: a diffusion strip of height W/2 crossed by two poly gates, giving source, drain, source from left to right, with contacts in each region; the drain in the middle is shared by both fingers.",
+      "caption": "One finger versus two fingers of half the width. The two-finger device has the same W/L but about half the drain junction capacitance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where the capacitances come from"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gate oxide: $C_1 = W L C_{ox}$ between gate and channel.",
+        "Depletion: $C_2 = W L \\sqrt{q \\epsilon_{si} N_{sub}/(4\\Phi_F)}$ between channel and substrate.",
+        "Overlap: the gate overlaps source and drain by about $L_D$. Fringing fields make it larger than $W L_D C_{ox}$, so it is specified per unit width, $C_{ov}$ (fF/µm), and the overlap capacitance is $W C_{ov}$ on each side.",
+        "Junctions: source and drain form reverse-biased diodes to the substrate, with a bottom-plate part $C_j$ per unit area and a sidewall part $C_{jsw}$ per unit perimeter. Each falls with reverse voltage: $C_j = C_{j0}/(1 + V_R/\\Phi_B)^m$, with $\\Phi_B$ the built-in potential and $m$ about 0.3 to 0.4 (the sidewall term has its own exponent)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Between the four terminals this gives $C_{GS}$, $C_{GD}$, $C_{GB}$, $C_{SB}$ and $C_{DB}$ (source-drain capacitance is negligible). For the simple rectangle of length $E$:"
+    },
+    {
+      "type": "math",
+      "tex": "C_{DB} = C_{SB} = W E C_j + 2(W + E)C_{jsw}"
+    },
+    {
+      "type": "prose",
+      "text": "For the two-finger layout with a shared drain, each finger is $W/2$ wide:"
+    },
+    {
+      "type": "math",
+      "tex": "C_{DB} = \\frac{W}{2}E C_j + 2\\left(\\frac{W}{2} + E\\right)C_{jsw}, \\qquad C_{SB} = W E C_j + 2(W + 2E)C_{jsw}"
+    },
+    {
+      "type": "prose",
+      "text": "Folding roughly halves the drain capacitance for the same $W/L$, which is why wide devices are drawn as many fingers with drains shared. (These formulas count the full perimeter with one $C_{jsw}$; the gate-side wall really differs, but the error is small next to the other capacitance on the node.)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gate capacitances in each region"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/mos-physics-cgs-cgd.svg",
+      "alt": "Plot of capacitance against gate-source voltage with fixed drain voltage. Both CGS (solid blue) and CGD (dashed red) sit at the low overlap value W Cov when the device is off. Above VTH, CGS jumps to two thirds W L Cox plus W Cov while CGD stays at W Cov; this is saturation. Above VD plus VTH the device enters triode and both settle at W L Cox over 2 plus W Cov.",
+      "caption": "Gate-source and gate-drain capacitance against VGS. The simple model jumps between regions; real devices (and good simulator models) change smoothly."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Off: $C_{GS} = C_{GD} = W C_{ov}$, and the gate sees the bulk through the oxide and depletion capacitances in series: $C_{GB} = \\frac{(W L C_{ox})C_d}{W L C_{ox} + C_d}$ with $C_d = W L\\sqrt{q\\epsilon_{si}N_{sub}/(4\\Phi_F)}$.",
+        "Deep triode: source and drain are at nearly the same voltage and supply the channel charge equally, so $C_{GS} = C_{GD} = \\frac{1}{2}W L C_{ox} + W C_{ov}$.",
+        "Saturation: the channel is pinched off at the drain, so $C_{GD} \\approx W C_{ov}$. The gate-channel voltage varies from $V_{GS}$ at the source to $V_{TH}$ at pinch-off, and the resulting capacitance to the source is two thirds of the oxide total: $C_{GS} = \\frac{2}{3}W L C_{ox} + W C_{ov}$.",
+        "Once a channel exists it shields the gate from the bulk; $C_{GB}$ is neglected in triode and saturation because the gate charge is supplied from source and drain.",
+        "Junction capacitances $C_{SB}$ and $C_{DB}$ depend on the source and drain voltages relative to the bulk, not on the region."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "When a device's two diffusions swap roles (a pass transistor whose voltages cross), its capacitances move with them: which side gets $\\frac{2}{3}WLC_{ox}$ depends on which diffusion is currently the source."
+    },
+    {
+      "type": "problem",
+      "title": "Junction capacitance, one finger versus two",
+      "text": "A transistor has $W = 20\\,\\mu\\text{m}$ and source/drain length $E = 0.6\\,\\mu\\text{m}$, with $C_j = 1\\text{ fF}/\\mu\\text{m}^2$ and $C_{jsw} = 0.1\\text{ fF}/\\mu\\text{m}$. Find $C_{DB}$ and $C_{SB}$ for a single finger and for two fingers with a shared drain.",
+      "hint": "In the folded version the drain is one region of width W/2; the source is two such regions.",
+      "solution": [
+        "Single finger: $C_{DB} = C_{SB} = 20 \\cdot 0.6 \\cdot 1 + 2(20.6)(0.1) = 12 + 4.12 = 16.1\\text{ fF}$.",
+        "Two fingers: $C_{DB} = 10 \\cdot 0.6 \\cdot 1 + 2(10.6)(0.1) = 8.1\\text{ fF}$, and $C_{SB} = 12 + 2(21.2)(0.1) = 16.2\\text{ fF}$."
+      ],
+      "answer": "16.1 fF each for one finger; $C_{DB} = 8.1\\text{ fF}$, $C_{SB} = 16.2\\text{ fF}$ for two fingers."
+    },
+    {
+      "type": "problem",
+      "title": "Gate capacitances",
+      "text": "A device has $W = 10\\,\\mu\\text{m}$, $L = 0.1\\,\\mu\\text{m}$, $C_{ox} = 20\\text{ fF}/\\mu\\text{m}^2$ and $C_{ov} = 0.3\\text{ fF}/\\mu\\text{m}$. Find $C_{GS}$ and $C_{GD}$ in saturation and in deep triode.",
+      "solution": [
+        "$W L C_{ox} = 10 \\cdot 0.1 \\cdot 20 = 20\\text{ fF}$ and $W C_{ov} = 3\\text{ fF}$.",
+        "Saturation: $C_{GS} = \\frac{2}{3}(20) + 3 = 16.3\\text{ fF}$, $C_{GD} = 3\\text{ fF}$.",
+        "Deep triode: $C_{GS} = C_{GD} = 10 + 3 = 13\\text{ fF}$."
+      ],
+      "answer": "Saturation: 16.3 fF and 3 fF; triode: 13 fF each."
+    },
+    {
+      "type": "problem",
+      "title": "Junction capacitance under reverse bias",
+      "text": "A junction has $C_{j0} = 1\\text{ fF}/\\mu\\text{m}^2$, $\\Phi_B = 0.8\\text{ V}$ and $m = 0.4$. What is its capacitance per unit area at a reverse voltage of 1.2 V?",
+      "solution": [
+        "$C_j = \\frac{1}{(1 + 1.2/0.8)^{0.4}} = 2.5^{-0.4} \\approx 0.693\\text{ fF}/\\mu\\text{m}^2$."
+      ],
+      "answer": "About $0.69\\text{ fF}/\\mu\\text{m}^2$, 31 percent lower than at zero bias."
+    },
+    {
+      "type": "problem",
+      "title": "Gate resistance and fingers",
+      "text": "A single-finger device has an effective distributed gate resistance of $40\\,\\Omega$. It is redrawn as four fingers of a quarter of the width each, all gates driven in parallel. Estimate the new gate resistance.",
+      "solution": [
+        "Each finger is a quarter as long, so its resistance is $40/4 = 10\\,\\Omega$; four in parallel give $10/4 = 2.5\\,\\Omega$. Splitting into $N$ fingers divides the gate resistance by about $N^2$ (a factor of four for two fingers)."
+      ],
+      "answer": "About $2.5\\,\\Omega$."
+    }
+  ]
+}

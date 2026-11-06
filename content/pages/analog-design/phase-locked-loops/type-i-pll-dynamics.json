@@ -1,0 +1,136 @@
+{
+  "title": "Dynamics of the Type I PLL",
+  "intro": "A linear model of the simple PLL in the phase domain, its second-order response, and the trade-offs among settling speed, ripple, phase error and stability (Razavi, Section 16.1.3).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Linear phase model"
+    },
+    {
+      "type": "prose",
+      "text": "Assume the loop is locked and look only at excess phases $\\Phi_{in}$, $\\Phi_{out}$. The PD is a subtractor with gain $K_{PD}$, the filter is $1/(1 + s/\\omega_{LPF})$ and the VCO is $K_{VCO}/s$:"
+    },
+    {
+      "type": "math",
+      "tex": "H_{open}(s) = K_{PD}\\cdot\\frac{1}{1 + s/\\omega_{LPF}}\\cdot\\frac{K_{VCO}}{s}"
+    },
+    {
+      "type": "prose",
+      "text": "One pole at the origin makes this a type I loop. Its loop gain is infinite at DC, so slow input phase changes are copied exactly to the output. Closing the loop:"
+    },
+    {
+      "type": "math",
+      "tex": "H(s) = \\frac{\\Phi_{out}}{\\Phi_{in}} = \\frac{K_{PD}K_{VCO}}{\\frac{s^2}{\\omega_{LPF}} + s + K_{PD}K_{VCO}} = \\frac{\\omega_n^2}{s^2 + 2\\zeta\\omega_n s + \\omega_n^2}"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_n = \\sqrt{\\omega_{LPF}K_{PD}K_{VCO}}, \\qquad \\zeta = \\frac{1}{2}\\sqrt{\\frac{\\omega_{LPF}}{K_{PD}K_{VCO}}}"
+    },
+    {
+      "type": "prose",
+      "text": "Because frequency is the derivative of phase, the same $H(s)$ relates input and output frequency, and since $\\omega_{out}$ follows $V_{cont}$, watching $V_{cont}$ after an input frequency step shows the closed-loop response directly."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Step response and settling"
+    },
+    {
+      "type": "prose",
+      "text": "For $\\zeta < 1$, after a frequency step $\\Delta\\omega$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{out}(t) = \\left[1 - \\frac{1}{\\sqrt{1-\\zeta^2}}e^{-\\zeta\\omega_n t}\\sin\\left(\\omega_n\\sqrt{1-\\zeta^2}\\,t + \\theta\\right)\\right]\\Delta\\omega, \\quad \\theta = \\sin^{-1}\\sqrt{1-\\zeta^2}"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pll-step-response.svg",
+      "alt": "Four step responses rising to one: zeta 0.2 overshoots strongly and rings for a long time, zeta 0.5 overshoots modestly, zeta 0.707 slightly, and zeta 1 rises smoothly without overshoot.",
+      "caption": "Step responses of a second-order loop at constant $\\omega_n$."
+    },
+    {
+      "type": "prose",
+      "text": "The decay rate is $\\zeta\\omega_n$, and in the type I loop it is fixed by the filter alone:"
+    },
+    {
+      "type": "math",
+      "tex": "\\zeta\\omega_n = \\frac{\\omega_{LPF}}{2}"
+    },
+    {
+      "type": "prose",
+      "text": "A lower $\\omega_{LPF}$ removes more ripple from the control line but settles more slowly. $\\zeta$ below 0.5 rings badly; designs use $\\zeta \\ge \\sqrt{2}/2$ or even 1 to allow for spread (some applications need far more to avoid peaking in $H$)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The trade-offs"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Ripple vs settling: both set by $\\omega_{LPF}$.",
+        "Ripple vs stability: lowering $\\omega_{LPF}$ lowers $\\zeta$.",
+        "Phase error vs stability: the static error $\\Delta\\omega/(K_{PD}K_{VCO})$ and $\\zeta$ both fall as $K_{PD}K_{VCO}$ rises."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The Bode plot shows the same thing: the loop gain falls at 20 dB/dec up to $\\omega_{LPF}$ and 40 dB/dec beyond, with phase going from −90° to −180°. Raising $K_{PD}K_{VCO}$ lifts the whole magnitude curve, pushing the crossover to where the phase is closer to −180°. On the root locus, the open-loop poles at 0 and $-\\omega_{LPF}$ meet at $-\\omega_{LPF}/2$ when $K_{PD}K_{VCO} = \\omega_{LPF}/4$ ($\\zeta = 1$), then split vertically with their real part stuck at $-\\omega_{LPF}/2$; the angle $\\psi$ of the poles from the negative real axis satisfies $\\cos\\psi = \\zeta$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Error transfer function"
+    },
+    {
+      "type": "math",
+      "tex": "H_e(s) = \\frac{\\Phi_{in} - \\Phi_{out}}{\\Phi_{in}} = 1 - H(s) = \\frac{s^2 + 2\\zeta\\omega_n s}{s^2 + 2\\zeta\\omega_n s + \\omega_n^2}"
+    },
+    {
+      "type": "prose",
+      "text": "For a frequency step, $\\Phi_{in} = \\Delta\\omega/s^2$, and the final-value theorem gives a phase error of $2\\zeta\\Delta\\omega/\\omega_n = \\Delta\\omega/(K_{PD}K_{VCO})$, matching the static result. A charge pump removes this error, which is the main reason for the next topic."
+    },
+    {
+      "type": "problem",
+      "title": "Choosing the loop gain",
+      "text": "A type I PLL has $\\omega_{LPF} = 2\\pi \\times 200\\text{ kHz}$ and should have $\\zeta = 0.707$. Find $K_{PD}K_{VCO}$, $\\omega_n$ and the decay rate.",
+      "solution": [
+        "From $\\zeta = \\frac{1}{2}\\sqrt{\\omega_{LPF}/K}$: $K = \\omega_{LPF}/(4\\zeta^2) = \\omega_{LPF}/2 = 6.28\\times10^5\\text{ s}^{-1}$.",
+        "$\\omega_n = \\sqrt{\\omega_{LPF}K} = \\omega_{LPF}/\\sqrt{2} = 8.89\\times10^5\\text{ rad/s}$.",
+        "$\\zeta\\omega_n = \\omega_{LPF}/2 = 6.28\\times10^5\\text{ s}^{-1}$, a time constant of 1.6 µs."
+      ],
+      "answer": "$K = 6.28\\times10^5\\text{ s}^{-1}$, $\\omega_n = 8.9\\times10^5$ rad/s, $\\zeta\\omega_n = 6.3\\times10^5\\text{ s}^{-1}$."
+    },
+    {
+      "type": "problem",
+      "title": "Settling time",
+      "text": "A type I loop with $\\omega_{LPF} = 2\\pi \\times 50\\text{ kHz}$ must hop by 1 MHz and settle within 1 kHz. Estimate the settling time, taking the worst case of the sinusoid and ignoring the $1/\\sqrt{1-\\zeta^2}$ factor.",
+      "solution": [
+        "Need $e^{-\\zeta\\omega_n t_s} = 10^{-3}$, so $t_s = 6.91/(\\zeta\\omega_n) = 13.8/\\omega_{LPF}$.",
+        "$t_s = 13.8/(3.14\\times10^5) = 44\\ \\mu\\text{s}$."
+      ],
+      "answer": "About 44 µs."
+    },
+    {
+      "type": "problem",
+      "title": "Phase error after a frequency step",
+      "text": "$K_{PD}K_{VCO} = 2\\pi \\times 10\\text{ MHz}$ (in rad/s per rad). The input frequency steps by 2 MHz. What is the new steady-state phase error change?",
+      "solution": [
+        "$\\Delta\\phi = \\Delta\\omega/(K_{PD}K_{VCO}) = (2\\pi \\cdot 2\\times10^6)/(2\\pi\\cdot10^7) = 0.2\\text{ rad}$."
+      ],
+      "answer": "0.2 rad (11.5°)."
+    },
+    {
+      "type": "problem",
+      "title": "Phase margin",
+      "text": "For $\\zeta = 0.707$ ($K_{PD}K_{VCO} = \\omega_{LPF}/2$), find the gain crossover and phase margin of the open loop.",
+      "solution": [
+        "With $x = \\omega/\\omega_{LPF}$: $|H_{open}| = 0.5/(x\\sqrt{1+x^2}) = 1$, so $x^2(1+x^2) = 0.25$, $x^2 = (\\sqrt{2}-1)/2 = 0.207$, $x = 0.455$.",
+        "Phase $= -90^{\\circ} - \\tan^{-1}0.455 = -114.5^{\\circ}$, so the phase margin is 65.5°."
+      ],
+      "answer": "Crossover at $0.455\\,\\omega_{LPF}$; PM about 65°."
+    }
+  ]
+}

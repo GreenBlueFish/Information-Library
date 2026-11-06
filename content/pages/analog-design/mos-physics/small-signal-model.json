@@ -1,24 +1,15 @@
 {
   "title": "MOS Device Models",
-  "intro": "Amplifier analysis replaces the transistor with a linear small-signal model around the bias point.",
+  "intro": "Amplifier analysis replaces each transistor with a linear model around its bias point. This page builds the small-signal model and covers SPICE models, NMOS versus PMOS and long versus short channel (Razavi, Sections 2.4.3 to 2.4.6).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Small-signal model"
+      "text": "Large-signal versus small-signal"
     },
     {
       "type": "prose",
-      "text": "For small signals around a bias point the transistor in saturation is a voltage-controlled current source plus a resistor and capacitors:"
-    },
-    {
-      "type": "code",
-      "lang": "text",
-      "source": "id = gm*vgs + gmb*vbs + vds/ro\n\ngm  = 2*ID/Vov\ngmb = eta*gm       (eta about 0.1 - 0.3)\nro  = 1/(lambda*ID)"
-    },
-    {
-      "type": "prose",
-      "text": "A useful figure of merit is the intrinsic gain gm*ro = 2/(lambda*Vov). It is the maximum voltage gain a single transistor can provide, and it drops with scaling because lambda grows as L shrinks."
+      "text": "The square-law equations and the voltage-dependent capacitances together are the large-signal model: they work for any voltages but are nonlinear. When the signal only perturbs the bias point slightly, linearize: change one terminal voltage difference by a small amount, hold the others, and record how every terminal current changes. Each dependence becomes a linear element. Uppercase/lowercase conventions vary; here lowercase $v_{gs}$, $i_d$ are small-signal quantities."
     },
     {
       "type": "figure",
@@ -29,53 +20,143 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Capacitances"
+      "text": "Building the model"
     },
     {
       "type": "list",
       "items": [
-        "Gate-source Cgs: about (2/3)*W*L*Cox plus overlap in saturation.",
-        "Gate-drain Cgd: mostly overlap capacitance W*Cov in saturation. Small but important because of the Miller effect.",
-        "Source/drain-bulk Csb, Cdb: reverse-biased junction capacitances that fall with reverse voltage.",
-        "The transit frequency fT = gm / (2*pi*(Cgs + Cgd)) is the frequency at which the current gain falls to one."
+        "Gate voltage: a change $v_{gs}$ changes the drain current by $g_m v_{gs}$, a voltage-controlled current source from drain to source. The gate current is negligible. This alone is the model of an ideal MOSFET and the first one to use for any circuit.",
+        "Drain voltage: channel-length modulation makes $i_d$ depend on $v_{ds}$. A current source proportional to the voltage across itself is just a resistor, $r_o$ between drain and source.",
+        "Bulk voltage: the bulk acts as a second gate, adding $g_{mb} v_{bs}$ in parallel with $g_m v_{gs}$ and with the same polarity (raising the bulk has the same effect as raising the gate)."
       ]
+    },
+    {
+      "type": "math",
+      "tex": "r_o = \\frac{\\partial V_{DS}}{\\partial I_D} = \\frac{1}{\\frac{1}{2}\\mu_n C_{ox}\\frac{W}{L}(V_{GS}-V_{TH})^2\\lambda} \\approx \\frac{1}{\\lambda I_D}"
+    },
+    {
+      "type": "math",
+      "tex": "g_{mb} = \\frac{\\partial I_D}{\\partial V_{BS}} = g_m\\frac{\\gamma}{2\\sqrt{2\\Phi_F + V_{SB}}} = \\eta\\, g_m"
+    },
+    {
+      "type": "prose",
+      "text": "$\\eta$ is typically around 0.25, and since it falls as $V_{SB}$ grows, body effect weakens at larger source-bulk voltage. $r_o$ limits the gain of most amplifiers. In terms of bias, $g_m \\propto \\sqrt{I_D}$; for a device biased by a current source with its source floating, $g_{mb}$ depends on $I_D$ in a less obvious way because $V_{SB}$ changes with current too."
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "NMOS versus PMOS"
+      "text": "The complete model"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/mos-physics-complete-model.svg",
+      "alt": "Small-signal model with terminals G, D, S and B. Between D and S, three elements in parallel: a current source gm vgs, a current source gmb vbs, both pointing from drain to source, and a resistor ro. Capacitor Cgd joins G to D, Cgs joins G to S, Cgb joins G to B, Csb joins S to B and Cdb joins D to B.",
+      "caption": "The complete small-signal model. The capacitances take their values from the bias point (see Layout and Capacitances)."
     },
     {
       "type": "prose",
-      "text": "Hole mobility is about 2 to 4 times lower than electron mobility, so a PMOS needs 2 to 4 times the W/L for the same gm and has lower fT. Short-channel devices of both types have comparable speeds because velocity saturation reduces the difference."
+      "text": "Each terminal also has some series resistance from the material and contacts; good layout keeps it small. Gate resistance matters most (it adds noise and slows the gate), and splitting a wide device into fingers reduces it sharply. Nobody analyses a large circuit with this full model on every device: the skill is choosing the simplest model that captures each transistor's role (see the choice of device models on the Single-Stage Amplifiers page)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "PMOS small-signal model"
+    },
+    {
+      "type": "prose",
+      "text": "The model describes changes in currents caused by changes in voltages, so it is identical for NMOS and PMOS. Make $V_{GS}$ of a PMOS more negative and its current, which is negative in the drain-to-source direction, becomes more negative: a negative change in $v_{gs}$ produces a negative change in $i_d$, just as for an NMOS. Drawing a PMOS with its source on top can make the $g_m v_{gs}$ source appear to point upward; that is a drawing artefact, not a different model."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Intrinsic gain and transit frequency"
+    },
+    {
+      "type": "math",
+      "tex": "g_m r_o = \\sqrt{2\\mu_n C_{ox}\\frac{W}{L}I_D}\\cdot\\frac{1}{\\lambda I_D} = \\frac{2}{\\lambda (V_{GS}-V_{TH})}"
+    },
+    {
+      "type": "prose",
+      "text": "The intrinsic gain is the most voltage gain one transistor can give. It rises with $L$ (because $\\lambda \\propto 1/L$ dominates) and falls with current. In modern short-channel devices it is only about 5 to 10. The transit frequency $f_T = g_m/[2\\pi(C_{GS}+C_{GD})]$ is where the device's current gain falls to one."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Layout"
+      "text": "SPICE models"
     },
     {
       "type": "prose",
-      "text": "To reduce drain/source junction capacitance, wide transistors are split into several parallel fingers that share diffusion regions. The same finger structure reduces gate resistance, which would otherwise add thermal noise and slow the gate."
+      "text": "Simulators need a model of every device. The simplest is the Level 1 model, essentially the equations of this chapter, defined by a short list of parameters:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "VTO (threshold at zero $V_{SB}$, V), GAMMA ($\\gamma$, $\\text{V}^{1/2}$), PHI ($2\\Phi_F$, V), LAMBDA ($\\lambda$, $\\text{V}^{-1}$).",
+        "TOX (oxide thickness, m), UO (mobility, $\\text{cm}^2/\\text{V}\\cdot\\text{s}$), NSUB (substrate doping, $\\text{cm}^{-3}$), LD (lateral diffusion, m).",
+        "CJ and CJSW (bottom and sidewall junction capacitance per area and per length), MJ and MJSW (their exponents), PB (junction built-in potential).",
+        "CGDO and CGSO (overlap capacitance per unit width), JS (junction leakage per area)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Razavi's example 0.5-µm values have $V_{TO}$ around 0.7 V (NMOS) and $-0.8$ V (PMOS) and $\\lambda$ of 0.1 and 0.2 $\\text{V}^{-1}$; problems on these pages use their own round numbers. Modern models (BSIM and successors) have hundreds of parameters to capture short-channel behaviour."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "NMOS versus PMOS"
+    },
+    {
+      "type": "prose",
+      "text": "Holes are less mobile than electrons, so $\\mu_p C_{ox}$ is roughly half of $\\mu_n C_{ox}$: for the same size and current a PMOS has about $\\sqrt{0.5}$ of the $g_m$ and needs about twice the width for the same current drive. NMOS devices also tend to have higher output resistance. Designers therefore use NMOS wherever there is a choice; the main exception is when flicker noise matters, where PMOS devices are often quieter."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Long-channel versus short-channel"
+    },
+    {
+      "type": "prose",
+      "text": "Almost everything above describes long-channel devices (minimum lengths of a few microns). Nanometer devices depart from the square law, and simple models overestimate their intrinsic gain badly. The simple model is still worth learning first: it gives the intuition that tells you what to simulate and how to read the results; accuracy comes from simulation with real models (see Short-Channel Effects and Device Models)."
     },
     {
       "type": "problem",
       "title": "Intrinsic gain",
-      "text": "A transistor has Vov = 0.2 V and lambda = 0.2 V^-1 at its operating length. Find gm*ro. What if the length is doubled?",
+      "text": "A transistor has $V_{ov} = 0.2\\text{ V}$ and $\\lambda = 0.2\\text{ V}^{-1}$ at its operating length. Find $g_m r_o$. What if the length is doubled at the same overdrive?",
       "solution": [
-        "gm*ro = 2/(lambda*Vov) = 2 / (0.2 * 0.2) = 50.",
-        "Doubling L halves lambda, so gm*ro = 100. Intrinsic gain therefore rises with L but speed falls."
+        "$g_m r_o = 2/(\\lambda V_{ov}) = 2/(0.2 \\cdot 0.2) = 50$.",
+        "Doubling $L$ halves $\\lambda$, so $g_m r_o = 100$. Intrinsic gain rises with $L$, but speed falls."
       ],
-      "answer": "gm*ro = 50, rising to 100 when L doubles."
+      "answer": "$g_m r_o = 50$, rising to 100."
     },
     {
       "type": "problem",
       "title": "Transit frequency",
-      "text": "gm = 2 mS, Cgs = 20 fF, Cgd = 5 fF. Estimate fT.",
+      "text": "$g_m = 2\\text{ mS}$, $C_{GS} = 20\\text{ fF}$, $C_{GD} = 5\\text{ fF}$. Estimate $f_T$.",
       "solution": [
-        "fT = gm / [2*pi*(Cgs + Cgd)] = 2e-3 / (2*pi*25e-15) = 12.7 GHz."
+        "$f_T = \\frac{g_m}{2\\pi(C_{GS}+C_{GD})} = \\frac{2 \\times 10^{-3}}{2\\pi \\cdot 25 \\times 10^{-15}} \\approx 12.7\\text{ GHz}$."
       ],
-      "answer": "fT is about 12.7 GHz."
+      "answer": "$f_T \\approx 12.7\\text{ GHz}$."
+    },
+    {
+      "type": "problem",
+      "title": "A complete set of small-signal parameters",
+      "text": "An NMOS with $\\mu_n C_{ox} = 200\\,\\mu\\text{A/V}^2$ and $W/L = 20$ carries $I_D = 200\\,\\mu\\text{A}$ in saturation with $V_{SB} = 0.5\\text{ V}$. Take $\\lambda = 0.1\\text{ V}^{-1}$, $\\gamma = 0.4\\text{ V}^{1/2}$ and $2\\Phi_F = 0.8\\text{ V}$. Find $g_m$, $V_{ov}$, $r_o$, $\\eta$, $g_{mb}$ and $g_m r_o$.",
+      "solution": [
+        "$g_m = \\sqrt{2 \\cdot 200\\,\\mu \\cdot 20 \\cdot 200\\,\\mu} = \\sqrt{1.6 \\times 10^{-6}} = 1.26\\text{ mS}$, so $V_{ov} = 2I_D/g_m = 0.316\\text{ V}$.",
+        "$r_o = 1/(0.1 \\cdot 200\\,\\mu\\text{A}) = 50\\text{ k}\\Omega$, and $g_m r_o \\approx 63$.",
+        "$\\eta = 0.4/(2\\sqrt{1.3}) = 0.175$, so $g_{mb} = 0.22\\text{ mS}$."
+      ],
+      "answer": "$g_m = 1.26\\text{ mS}$, $V_{ov} = 0.32\\text{ V}$, $r_o = 50\\text{ k}\\Omega$, $\\eta = 0.175$, $g_{mb} = 0.22\\text{ mS}$, $g_m r_o \\approx 63$."
+    },
+    {
+      "type": "problem",
+      "title": "How body effect changes with bias",
+      "text": "With $\\gamma = 0.4\\text{ V}^{1/2}$ and $2\\Phi_F = 0.8\\text{ V}$, compare $\\eta$ at $V_{SB} = 0$ and at $V_{SB} = 1\\text{ V}$.",
+      "solution": [
+        "$\\eta = \\gamma/(2\\sqrt{2\\Phi_F + V_{SB}})$: $0.4/(2 \\cdot 0.894) = 0.224$ at $V_{SB} = 0$ and $0.4/(2 \\cdot 1.342) = 0.149$ at 1 V."
+      ],
+      "answer": "0.22 at zero bias, 0.15 at 1 V: the incremental body effect weakens as $V_{SB}$ grows."
     }
   ]
 }
