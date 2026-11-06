@@ -1,28 +1,123 @@
 {
   "title": "Ring Oscillators",
-  "intro": "A ring of an odd number of inverting stages has no stable DC state, so it oscillates.",
+  "intro": "A ring oscillator is a loop of gain stages with an odd number of inversions. It has no stable DC point, so it oscillates at a frequency set by the stage delay (Razavi, Section 15.2).",
   "blocks": [
     {
+      "type": "heading",
+      "level": 2,
+      "text": "Why at least three stages"
+    },
+    {
       "type": "prose",
-      "text": "With N inverting stages (N odd and at least 3) of delay Td each, the signal needs two trips around the ring (2N delays) to repeat:"
+      "text": "One common-source stage in a unity-gain loop has one pole: at most 90° of extra phase (reached only at infinite frequency), so the loop never gets the 180° it needs. Two stages have positive feedback at DC (two inversions) and simply latch. Adding an ideal third inversion to the two-pole loop removes the latch, but two poles give 180° only at infinite frequency where the gain is gone. With three stages, each with a pole, the phase passes 180° at a finite frequency where the gain can still exceed one."
     },
     {
       "type": "figure",
-      "src": "assets/figures/analog-design/ring-oscillator.svg",
-      "alt": "Three inverters connected in a loop. The output of each inverter feeds the input of the next, and the output of the third feeds back to the input of the first. A tap labelled out leaves the output of the third inverter.",
-      "caption": "A three-stage ring oscillator."
+      "src": "assets/figures/analog-design/oscillators-cs-ring.svg",
+      "alt": "Three NMOS common-source stages, each with a resistor RD to VDD and a capacitor CL from its drain to ground. The drain of each stage drives the gate of the next; the drain of the third stage drives the gate of the first and is also the output.",
+      "caption": "Three common-source stages in a ring. Each drain node is a pole, $\\omega_0 = 1/(R_D C_L)$."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "f_osc = 1 / (2 * N * Td)"
+      "type": "heading",
+      "level": 2,
+      "text": "Minimum gain and frequency"
+    },
+    {
+      "type": "prose",
+      "text": "With each stage $-A_0/(1 + s/\\omega_0)$, the loop gain is $H(s) = -A_0^3/(1+s/\\omega_0)^3$. The extra 180° must split equally, 60° per stage, so $\\tan^{-1}(\\omega_{osc}/\\omega_0) = 60^{\\circ}$; and the magnitude must be one there."
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{osc} = \\sqrt{3}\\,\\omega_0, \\qquad A_0 \\ge 2"
+    },
+    {
+      "type": "prose",
+      "text": "For $N$ identical stages the same argument gives $\\omega_{osc} = \\omega_0 \\tan(180^{\\circ}/N)$ and $A_{0,min} = 1/\\cos(180^{\\circ}/N)$: 2 for three stages, $\\sqrt{2}$ for four, about 1.24 for five. Neighbouring nodes in a three-stage ring are 120° apart (60° of lag plus an inversion gives 240°, the same as −120°), so the ring gives several clock phases for free."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Start-up and amplitude limiting"
+    },
+    {
+      "type": "prose",
+      "text": "Treat the ring as a positive-feedback loop (the three inversions are already in $H$). The closed-loop poles are the roots of $(1 + s/\\omega_0)^3 + A_0^3 = 0$:"
+    },
+    {
+      "type": "math",
+      "tex": "s_1 = -(A_0+1)\\,\\omega_0, \\qquad s_{2,3} = \\left[\\frac{A_0}{2}\\left(1 \\pm j\\sqrt{3}\\right) - 1\\right]\\omega_0"
+    },
+    {
+      "type": "prose",
+      "text": "The real pole decays away. The complex pair has real part $(A_0/2 - 1)\\omega_0$, so for $A_0 > 2$ the output is a growing sinusoid $\\propto \\exp\\left(\\frac{A_0-2}{2}\\omega_0 t\\right)\\cos\\left(\\frac{\\sqrt{3}A_0}{2}\\omega_0 t\\right)$. The growth stops when the stages saturate; they then spend enough of each cycle in their low-gain region that the average loop gain is one."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Large-signal view: delay"
+    },
+    {
+      "type": "prose",
+      "text": "A CMOS-inverter ring released at the trip point grows to rail-to-rail swings. Once it does, each node switches one inverter delay $T_D$ after the one before, and the pattern repeats after the edge has gone round twice:"
+    },
+    {
+      "type": "math",
+      "tex": "f_{osc} = \\frac{1}{2 N T_D}"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-ring-waveforms.svg",
+      "alt": "Three square waveforms VX, VY and VZ. Each edge on one waveform is followed one delay TD later by an opposite edge on the next waveform; the pattern repeats every six delays.",
+      "caption": "A three-stage CMOS ring: each node switches $T_D$ after its predecessor, so the period is $6T_D$."
+    },
+    {
+      "type": "prose",
+      "text": "The small-signal start-up frequency $\\sqrt{3}A_0\\omega_0/2$ and the large-signal $1/(6T_D)$ need not agree: $\\omega_0$ comes from the small-signal resistance and capacitance near the trip point, while $T_D$ comes from nonlinear drive currents. In practice the frequency falls from the first value toward the second as the amplitude grows. (A simulator started exactly at the trip point never leaves it; one node must be given a different initial voltage.)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Differential rings"
+    },
+    {
+      "type": "prose",
+      "text": "A ring of differential pairs with resistive loads switches the full tail current each half cycle once its gain is well above the minimum, so each output swings $I_{SS} R$. A differential stage can be made non-inverting by swapping its two output wires, so differential rings can use an even number of stages; four stages give four phases and their complements, 45° apart."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-differential-ring.svg",
+      "alt": "Four differential amplifier blocks A1 to A4 in a row, connected output to input by pairs of straight wires. The two output wires of A4 return to the inputs of A1 swapped.",
+      "caption": "An even-stage differential ring: the crossed return link supplies the extra inversion."
+    },
+    {
+      "type": "prose",
+      "text": "Three to five stages is the usual choice; more stages lower the frequency for the same delay and cost power."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Swing and supply limits"
+    },
+    {
+      "type": "prose",
+      "text": "For resistor-loaded pairs that switch completely, each drain moves between $V_{DD}$ and $V_{DD} - I_{SS}R_P$. A fully-on input transistor has its gate at $V_{DD}$ and drain at $V_{DD} - I_{SS}R_P$, so it stays saturated only if $I_{SS} R_P \\le V_{TH}$: the swing per node is at most one threshold. The tail node is lowest in equilibrium (both sides at $I_{SS}/2$), and it moves at twice the oscillation frequency, a fact sometimes used to double frequency. Keeping the tail source saturated sets the minimum supply:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{DD} \\ge V_{I_{SS}} + V_{TH} + \\sqrt{\\frac{I_{SS}}{\\mu_n C_{ox}(W/L)}} + \\frac{R_P I_{SS}}{2}",
+      "caption": "Tail headroom + one threshold + equilibrium overdrive + half the swing."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Loads without resistors"
     },
     {
       "type": "list",
       "items": [
-        "More stages: lower frequency, lower phase noise per cycle but more power.",
-        "Delay depends on supply and temperature, so the ring is a VCO if the supply or bias current is varied.",
-        "Differential rings with delay cells are used in high-speed PLLs."
+        "PMOS in deep triode with a fixed gate voltage: a resistor, but its value depends on how accurately the gate is biased.",
+        "Diode-connected PMOS: simple, but costs a threshold of headroom.",
+        "PMOS whose gate is driven by an NMOS source follower from its own drain: it sits near the edge of triode, uses only $|V_{DS}|$ of headroom, looks like about $1/g_m$, and responds faster than a diode load (the follower drives its $C_{GS}$). The follower's output resistance can even make the load look inductive."
       ]
     },
     {
@@ -62,18 +157,51 @@
       "title": "Ring frequency",
       "text": "Five stages, each with 20 ps delay. Find the oscillation frequency.",
       "solution": [
-        "f = 1/(2 * 5 * 20 ps) = 1/(200 ps) = 5 GHz."
+        "$f = 1/(2 \\cdot 5 \\cdot 20\\text{ ps}) = 1/(200\\text{ ps}) = 5\\text{ GHz}$."
       ],
       "answer": "5 GHz."
     },
     {
       "type": "problem",
       "title": "Why odd?",
-      "text": "Why can an even number of inverters not oscillate?",
+      "text": "Why can a ring of an even number of single-ended inverters not oscillate?",
       "solution": [
-        "An even number of inversions gives positive feedback overall: two stable states (latch) exist. An odd number gives negative feedback with delay, and no consistent DC solution, so the signal keeps chasing itself."
+        "An even number of inversions gives positive feedback at DC, so the loop has two stable states and latches. An odd number gives negative feedback at DC with delay, so no DC state is stable and the signal keeps chasing itself."
       ],
-      "answer": "Even = latch; odd = oscillation."
+      "answer": "Even: latch. Odd: oscillation."
+    },
+    {
+      "type": "problem",
+      "title": "Designing a three-stage CS ring",
+      "text": "Each stage of the ring above has $g_m = 2\\text{ mS}$ and $C_L = 100\\text{ fF}$. (a) What is the smallest $R_D$ that lets it oscillate? (b) With $R_D = 2\\text{ k}\\Omega$, find the frequency at which oscillation starts and the growth rate of its envelope.",
+      "solution": [
+        "(a) Need $A_0 = g_m R_D \\ge 2$, so $R_D \\ge 1\\text{ k}\\Omega$.",
+        "(b) $A_0 = 4$ and $\\omega_0 = 1/(R_D C_L) = 1/(2\\text{ k}\\Omega \\cdot 100\\text{ fF}) = 5 \\times 10^9\\text{ rad/s}$.",
+        "Start-up frequency $\\sqrt{3}A_0\\omega_0/2 = 1.73 \\times 10^{10}\\text{ rad/s}$, i.e. 2.76 GHz. Envelope grows as $e^{\\sigma t}$ with $\\sigma = (A_0-2)\\omega_0/2 = 5\\times10^9\\text{ s}^{-1}$.",
+        "As the amplitude saturates the frequency drops toward the large-signal value; at the threshold of oscillation ($A_0 = 2$) it would be $\\sqrt{3}\\omega_0$, about 1.38 GHz."
+      ],
+      "answer": "(a) 1 kΩ. (b) About 2.76 GHz at start-up, envelope rate $5\\times10^9\\text{ s}^{-1}$."
+    },
+    {
+      "type": "problem",
+      "title": "Five-stage differential ring",
+      "text": "A five-stage ring uses stages with a 3 dB bandwidth of 4 GHz. What gain per stage is needed, and at what frequency does it oscillate (small-signal estimate)?",
+      "solution": [
+        "Each stage must supply $180^{\\circ}/5 = 36^{\\circ}$.",
+        "$f_{osc} = 4\\text{ GHz} \\cdot \\tan 36^{\\circ} = 2.91\\text{ GHz}$; $A_0 = 1/\\cos 36^{\\circ} = 1.24$."
+      ],
+      "answer": "$A_0 \\ge 1.24$, about 2.9 GHz."
+    },
+    {
+      "type": "problem",
+      "title": "Minimum supply",
+      "text": "A resistor-loaded differential ring has $I_{SS} = 1\\text{ mA}$, $R_P = 400\\ \\Omega$, $\\mu_n C_{ox} W/L = 20\\text{ mA/V}^2$, $V_{TH} = 0.4\\text{ V}$ and needs 0.2 V across the tail source. Check that the input devices stay saturated and find the minimum $V_{DD}$.",
+      "solution": [
+        "Swing $I_{SS}R_P = 0.4\\text{ V} \\le V_{TH}$: just acceptable.",
+        "Equilibrium overdrive $\\sqrt{1\\text{ mA}/20\\text{ mA/V}^2} = 0.224\\text{ V}$.",
+        "$V_{DD} \\ge 0.2 + 0.4 + 0.224 + 0.2 = 1.02\\text{ V}$."
+      ],
+      "answer": "About 1.02 V."
     }
   ]
 }

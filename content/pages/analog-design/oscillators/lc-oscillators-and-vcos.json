@@ -1,52 +1,137 @@
 {
-  "title": "LC Oscillators and VCOs",
-  "intro": "An LC tank resonates at 1/(2*pi*sqrt(L*C)) but loses energy in its resistance. An amplifier supplies negative resistance to compensate.",
+  "title": "Cross-Coupled LC Oscillators",
+  "intro": "Two tuned stages in a loop give the workhorse of CMOS LC design: the cross-coupled, or negative-Gm, oscillator (Razavi, Sections 15.3.2 and 15.3.4).",
   "blocks": [
     {
-      "type": "figure",
-      "src": "assets/figures/analog-design/lc-vco-tank.svg",
-      "alt": "An LC tank circuit: an inductor L, a fixed capacitor and a variable capacitor (varactor) all connected in parallel between a top and bottom rail. An arrow through the varactor shows that its value is set by the tuning voltage.",
-      "caption": "An LC tank with a varactor. The tuning voltage changes the capacitance, and with it the resonant frequency."
-    },
-    {
-      "type": "code",
-      "lang": "text",
-      "source": "f0 = 1 / (2*pi*sqrt(L*C))       Q = R_p / (w0*L)  (parallel loss R_p)\nSustained oscillation needs  gm >= 1/R_p"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Cross-coupled pair: provides the negative resistance -2/gm to cancel R_p.",
-        "Phase noise falls with higher tank Q and larger signal swing.",
-        "A varactor (voltage-dependent capacitor) in the tank tunes the frequency: this is an LC VCO."
-      ]
-    },
-    {
       "type": "heading",
-      "level": 3,
-      "text": "VCO model"
+      "level": 2,
+      "text": "Two tuned stages in a loop"
     },
     {
       "type": "prose",
-      "text": "A VCO has an output frequency w_out = w0 + K_VCO * V_cont, so its output phase is the integral of the control voltage. This integration is why a VCO appears as 1/s in a PLL loop."
+      "text": "Cascade two tank-loaded common-source stages and close the loop. Unlike two resistor-loaded stages, this does not latch, because the tanks make the gain near DC very small. At resonance each stage adds no frequency-dependent phase and each inverts, so the loop phase is 360°. It oscillates if"
+    },
+    {
+      "type": "math",
+      "tex": "(g_m R_P)^2 \\ge 1"
+    },
+    {
+      "type": "prose",
+      "text": "Away from resonance, each tank adds up to ±90° and the gain drops, so the loop can oscillate only at the tank frequency. The two drains move in opposite directions, so the outputs are differential."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The circuit"
+    },
+    {
+      "type": "prose",
+      "text": "Redrawn, the loop is a pair whose drains drive each other's gates. Adding a tail current $I_{SS}$ fixes the bias and makes the swing much less dependent on $V_{DD}$."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-cross-coupled.svg",
+      "alt": "Two parallel tanks, each made of a resistor RP, inductor LP and capacitor CP, hang from VDD to nodes X and Y. NMOS M1 has its drain at X and M2 at Y. The gate of M1 connects to Y and the gate of M2 to X, the wires crossing. The two sources join at a tail current source ISS to ground.",
+      "caption": "The cross-coupled LC oscillator. $R_P$ models the tank loss."
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{osc} \\approx \\frac{1}{\\sqrt{L_P C_P}}",
+      "caption": "$C_P$ includes transistor, varactor, wiring and inductor capacitance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The negative-resistance view"
+    },
+    {
+      "type": "prose",
+      "text": "Seen between X and Y, the cross-coupled pair has a small-signal resistance of $-2/g_m$. The two tanks in series form one tank of $2L_P$, $C_P/2$ and $2R_P$ across the same nodes. The loss is cancelled when $2R_P \\ge 2/g_m$:"
+    },
+    {
+      "type": "math",
+      "tex": "g_m R_P \\ge 1"
+    },
+    {
+      "type": "prose",
+      "text": "This is the same condition as the loop-gain argument; the negative-resistance (one-port) view and the feedback view are two descriptions of one circuit. A negative resistance just means that raising the voltage across the port makes it draw less current."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Start-up and steady state"
+    },
+    {
+      "type": "prose",
+      "text": "At power-up $V_X = V_Y \\approx V_{DD}$ and each transistor carries $I_{SS}/2$. Noise at resonance is amplified and grows. The drain currents follow $V_X - V_Y$ as in a differential pair, so as the amplitude grows the pair steers ever more of $I_{SS}$ to one side, the effective gain falls, and growth stops. With generous $g_m R_P$ the pair switches completely: each drain current is a square wave between 0 and $I_{SS}$, while the tank filters it so the voltages stay nearly sinusoidal."
+    },
+    {
+      "type": "prose",
+      "text": "In this fully switched (current-limited) regime the tank responds to the fundamental of the current. A square wave between 0 and $I_{SS}$ has a fundamental amplitude of $(2/\\pi)I_{SS}$, so"
+    },
+    {
+      "type": "math",
+      "tex": "V_{X,peak} \\approx \\frac{2}{\\pi} I_{SS} R_P, \\qquad V_{XY,peak} \\approx \\frac{4}{\\pi} I_{SS} R_P",
+      "caption": "Standard estimate for a fully switched pair; valid until the swing drives the transistors into triode."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Supply sensitivity and variants"
+    },
+    {
+      "type": "prose",
+      "text": "Even with perfect symmetry, a differential LC oscillator still responds to the supply: the drain junction capacitances $C_{DB}$ sit across about $V_{DD}$, so changing $V_{DD}$ changes the tank capacitance and the frequency. If $C_{DB}$ were the whole tank capacitance, with $C_{DB} = C_{DB0}/(1 + V_{DD}/\\phi_B)^m$,"
+    },
+    {
+      "type": "math",
+      "tex": "K_{VDD} = \\frac{\\partial \\omega_{out}}{\\partial V_{DD}} = \\frac{m}{2\\phi_B\\left(1 + V_{DD}/\\phi_B\\right)}\\,\\omega_{out}"
+    },
+    {
+      "type": "prose",
+      "text": "This gain varies with both $V_{DD}$ and frequency, an example of a nonlinear tuning curve. Using a PMOS cross-coupled pair instead lets the swing centre on ground, allows varactors to connect directly to the tank nodes (see Varactors and LC Tuning), and lowers flicker noise, which matters because low-frequency device noise is upconverted to phase noise near the carrier."
+    },
+    {
+      "type": "prose",
+      "text": "Phase noise, the random wander of the output phase, improves with higher tank Q and larger swing: a bigger signal is perturbed relatively less by the same device noise."
     },
     {
       "type": "problem",
       "title": "LC frequency",
-      "text": "L = 1 nH and C = 1 pF. Find the resonant frequency.",
+      "text": "$L = 1\\text{ nH}$ and $C = 1\\text{ pF}$. Find the resonant frequency.",
       "solution": [
-        "f0 = 1 / (2*pi*sqrt(1e-9 * 1e-12)) = 1 / (2*pi * 3.16e-11) = 5.03 GHz."
+        "$f_0 = \\frac{1}{2\\pi\\sqrt{10^{-9} \\cdot 10^{-12}}} = \\frac{1}{2\\pi \\cdot 3.16\\times10^{-11}} = 5.03\\text{ GHz}$."
       ],
       "answer": "5.03 GHz."
     },
     {
       "type": "problem",
-      "title": "VCO tuning",
-      "text": "f0 = 2 GHz at Vcont = 0, K_VCO = 500 MHz/V. What is the output at Vcont = 0.8 V?",
+      "title": "Start-up transconductance",
+      "text": "Each tank of a cross-coupled oscillator has $R_P = 500\\ \\Omega$. What $g_m$ per transistor is needed to start, and what would you design for with a 3x margin?",
       "solution": [
-        "f = 2 GHz + 0.5 GHz/V * 0.8 V = 2.4 GHz."
+        "$g_m \\ge 1/R_P = 2\\text{ mS}$; with margin, about 6 mS (at the equilibrium current $I_{SS}/2$)."
       ],
-      "answer": "2.4 GHz."
+      "answer": "2 mS minimum; about 6 mS in practice."
+    },
+    {
+      "type": "problem",
+      "title": "Amplitude",
+      "text": "The same oscillator has $I_{SS} = 2\\text{ mA}$ and switches completely. Estimate the single-ended and differential peak amplitudes.",
+      "solution": [
+        "Single-ended: $(2/\\pi) \\cdot 2\\text{ mA} \\cdot 500\\ \\Omega = 0.64\\text{ V}$.",
+        "Differential: twice that, $1.27\\text{ V}$ peak."
+      ],
+      "answer": "About 0.64 V single-ended, 1.27 V differential (peak)."
+    },
+    {
+      "type": "problem",
+      "title": "Supply pushing",
+      "text": "Suppose the whole tank capacitance of a 5 GHz cross-coupled oscillator were drain junction capacitance with $m = 0.35$, $\\phi_B = 0.8\\text{ V}$, at $V_{DD} = 1.2\\text{ V}$. How much does the frequency move per volt of supply?",
+      "solution": [
+        "$\\frac{m}{2\\phi_B(1 + V_{DD}/\\phi_B)} = \\frac{m}{2(\\phi_B + V_{DD})} = \\frac{0.35}{4.0} = 0.0875\\text{ V}^{-1}$.",
+        "So $\\Delta f/\\Delta V_{DD} = 0.0875 \\times 5\\text{ GHz} \\approx 440\\text{ MHz/V}$, i.e. 4.4 MHz for 10 mV of supply noise. Real tanks have mostly fixed capacitance, so the effect is smaller but still present."
+      ],
+      "answer": "About 440 MHz/V."
     }
   ]
 }

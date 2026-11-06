@@ -1,0 +1,98 @@
+{
+  "title": "LC Tanks and Tuned Stages",
+  "intro": "The resonator at the heart of an LC oscillator, its losses, and how a tank behaves as an amplifier load (Razavi, Section 15.3.1).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ideal and lossy tanks"
+    },
+    {
+      "type": "prose",
+      "text": "An inductor $L_1$ in parallel with a capacitor $C_1$ resonates where their reactances cancel, and the impedance there is infinite:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{res} = \\frac{1}{\\sqrt{L_1 C_1}}"
+    },
+    {
+      "type": "prose",
+      "text": "Real inductors have series resistance $R_S$ from the metal of the spiral. The inductor quality factor is $Q = L_1\\omega/R_S$, only about 5 to 10 for on-chip spirals. With $R_S$ the impedance stays finite at every frequency; its peak is near $1/\\sqrt{L_1 C_1}$, shifted slightly by $R_S$:"
+    },
+    {
+      "type": "math",
+      "tex": "|Z_{eq}(j\\omega)|^2 = \\frac{R_S^2 + L_1^2\\omega^2}{(1 - L_1C_1\\omega^2)^2 + R_S^2C_1^2\\omega^2}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Series-to-parallel conversion"
+    },
+    {
+      "type": "prose",
+      "text": "Over a narrow band, $L_1$ in series with $R_S$ behaves like $L_P$ in parallel with $R_P$. Equating the two impedances at $s = j\\omega$ gives $L_P = L_1(1 + 1/Q^2)$ and $R_S R_P = L_1 L_P \\omega^2$. For $Q$ above about 3:"
+    },
+    {
+      "type": "math",
+      "tex": "L_P \\approx L_1, \\qquad R_P \\approx \\frac{L_1^2\\omega^2}{R_S} = Q^2 R_S"
+    },
+    {
+      "type": "prose",
+      "text": "The same trick turns a capacitor with series resistance into a parallel RC, with $Q = 1/(C\\omega R_S)$. The whole tank then becomes three parallel elements $L_P$, $C_P$, $R_P$, and the parallel form gives the useful identity $Q = R_P/(L_P\\omega)$."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-tank-impedance.svg",
+      "alt": "Two plots against log frequency. Top: the magnitude of the tank impedance, small far from resonance and peaking sharply at R_P at the resonant frequency. Bottom: the phase of the impedance, near plus 90 degrees below resonance, crossing zero at resonance and approaching minus 90 degrees above it.",
+      "caption": "A parallel tank is inductive below resonance (positive phase), a pure resistance $R_P$ at $\\omega_1$, and capacitive above."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The tuned amplifier"
+    },
+    {
+      "type": "prose",
+      "text": "Use the tank as the drain load of a common-source stage. At resonance the gain is $-g_m R_P$; near DC it is tiny because the inductor shorts the drain to $V_{DD}$. Tying the drain back to its own gate does not oscillate: at resonance the loop phase is 180° (just the inversion), and the tank's own phase never reaches the extra 180° needed."
+    },
+    {
+      "type": "prose",
+      "text": "A useful property: the inductor cannot hold a DC drop, so the drain's average voltage stays near $V_{DD}$ and the output swings symmetrically above and below the supply. With a good tank the peak-to-peak swing can exceed $V_{DD}$."
+    },
+    {
+      "type": "callout",
+      "text": "Tank loss sets everything downstream: start-up needs $g_m$ large compared with $1/R_P$, the amplitude is roughly current times $R_P$, and phase noise improves with Q. On-chip, $R_P$ is limited mostly by the inductor's series resistance."
+    },
+    {
+      "type": "problem",
+      "title": "Inductor loss as a parallel resistor",
+      "text": "A 2 nH spiral has $Q = 8$ at 5 GHz. Find its series resistance, the equivalent parallel resistance, and the capacitance that resonates with it at 5 GHz.",
+      "solution": [
+        "$L\\omega = 2\\text{ nH} \\cdot 2\\pi \\cdot 5\\text{ GHz} = 62.8\\ \\Omega$, so $R_S = 62.8/8 = 7.85\\ \\Omega$.",
+        "$R_P = Q^2 R_S = 64 \\times 7.85 = 503\\ \\Omega$ (also $Q L\\omega = 8 \\times 62.8$).",
+        "$C = 1/(\\omega^2 L) = 1/((3.14\\times10^{10})^2 \\cdot 2\\times10^{-9}) = 0.507\\text{ pF}$."
+      ],
+      "answer": "$R_S = 7.85\\ \\Omega$, $R_P \\approx 503\\ \\Omega$, $C \\approx 0.51\\text{ pF}$."
+    },
+    {
+      "type": "problem",
+      "title": "Tuned-stage gain",
+      "text": "The tank of the previous problem loads a common-source transistor with $g_m = 10\\text{ mS}$. What is the gain at 5 GHz, and roughly what is it at DC if the bias is unchanged?",
+      "solution": [
+        "At resonance the load is $R_P$: $A_v = -g_m R_P = -10\\text{ mS} \\cdot 503\\ \\Omega \\approx -5.0$.",
+        "At DC the load is just $R_S = 7.85\\ \\Omega$ (ignoring $r_o$), so $|A_v| \\approx 0.08$: the stage cannot latch through its DC path."
+      ],
+      "answer": "About −5 at resonance, below 0.1 at DC."
+    },
+    {
+      "type": "problem",
+      "title": "When the approximation fails",
+      "text": "An inductor has $Q = 2$ at the frequency of interest. By what factor does the exact $L_P$ differ from $L_1$, and how does $R_P$ compare with $Q^2 R_S$?",
+      "solution": [
+        "$L_P = L_1(1 + 1/Q^2) = 1.25 L_1$: a 25% error if you assume $L_P = L_1$.",
+        "Exactly, $R_P = L_1 L_P\\omega^2/R_S = (1 + 1/Q^2)Q^2 R_S = 5 R_S$ rather than $4R_S$. The simple forms need $Q$ of about 3 or more."
+      ],
+      "answer": "$L_P = 1.25L_1$; $R_P = 5R_S$ instead of $4R_S$."
+    }
+  ]
+}

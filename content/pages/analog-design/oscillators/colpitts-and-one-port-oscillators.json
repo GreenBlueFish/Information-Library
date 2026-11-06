@@ -1,0 +1,114 @@
+{
+  "title": "Colpitts and One-Port Oscillators",
+  "intro": "An LC oscillator with a single transistor, and the negative-resistance way of looking at all LC oscillators (Razavi, Sections 15.3.3 and 15.3.4).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From a tuned stage to Colpitts"
+    },
+    {
+      "type": "prose",
+      "text": "A tuned common-source stage cannot feed its drain back to its own gate (180° short). But a common-gate path has no inversion, so return the drain to the source through a capacitor instead. With only a coupling capacitor $C_2$ and an ideal bias current source at the source, this still fails: whatever current is injected at the source passes straight through $C_2$ and the transistor into the tank, so the closed-loop transimpedance is just the tank impedance and never becomes infinite. Adding a capacitor $C_1$ from source to ground, so the drain swing is divided down onto the source, gives the Colpitts oscillator."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-colpitts.svg",
+      "alt": "NMOS M1 with gate at a bias voltage Vb. The drain connects to a tank of inductor LP and resistor RP in parallel to VDD, and is the output. Capacitor C1 connects the drain to the source. The source goes to ground through capacitor C2 and also through a bias current source Ib.",
+      "caption": "Colpitts oscillator: the drain-to-source capacitor and the source-to-ground capacitor divide the drain swing back onto the source."
+    },
+    {
+      "type": "prose",
+      "text": "Modelling M1 as $g_m V_1$, injecting a test current at the source and setting the real and imaginary parts of the denominator of the closed-loop gain to zero (using $g_m L_P \\ll R_P(C_1+C_2)$) gives the frequency and the start-up condition:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_R^2 = \\frac{1}{L_P}\\,\\frac{C_1 + C_2}{C_1 C_2}, \\qquad g_m R_P \\ge \\frac{(C_1+C_2)^2}{C_1 C_2}"
+    },
+    {
+      "type": "prose",
+      "text": "The required gain is smallest for $C_1 = C_2$, giving $g_m R_P \\ge 4$, four times what the cross-coupled pair needs. With low-Q on-chip inductors (small $R_P$), that is a real handicap, which is why the cross-coupled topology dominates in CMOS. A capacitance $C_P$ across the inductor simply adds to the series combination: $\\omega_R^2 = 1/[L_P(C_P + C_1C_2/(C_1+C_2))]$, and the gain condition is unchanged."
+    },
+    {
+      "type": "prose",
+      "text": "The excitation point does not matter: a linear loop has the same natural frequencies wherever the stimulus is applied, as long as removing the stimulus restores the circuit (a voltage source in series, or a current source in parallel)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One-port (negative-resistance) oscillators"
+    },
+    {
+      "type": "prose",
+      "text": "Hit an RLC tank with a current impulse and it rings down, losing energy in $R_P$ each cycle. Put $-R_P$ in parallel and the net resistance is infinite, so it rings forever. Any active one-port that presents a negative resistance across a tank can therefore make an oscillator; positive feedback, which divides impedances by a negative loop gain, is the way to get one."
+    },
+    {
+      "type": "prose",
+      "text": "Example: a source follower M1 whose source drives a common-gate stage M2 that feeds back to the follower's input (no inversion anywhere, so the feedback is positive). Neglecting $r_o$ and body effect, the input impedance is"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_X}{I_X} = -\\left(\\frac{1}{g_{m1}} + \\frac{1}{g_{m2}}\\right) = -\\frac{2}{g_m}"
+    },
+    {
+      "type": "prose",
+      "text": "Placed across a tank, this oscillates if $R_P \\ge 2/g_m$; the inductor can even supply M2's bias. Making it fully differential, with a tank on each drain, turns it into the cross-coupled pair, which presents $-2/g_m$ between its drains."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Three capacitively coupled forms"
+    },
+    {
+      "type": "prose",
+      "text": "A transistor with $C_1$ from gate to source and $C_2$ from source to drain (no node grounded) presents, between gate and drain,"
+    },
+    {
+      "type": "math",
+      "tex": "Z_X = -\\frac{g_m}{C_1 C_2\\omega^2} + \\frac{1}{j\\omega C_1} + \\frac{1}{j\\omega C_2}"
+    },
+    {
+      "type": "prose",
+      "text": "a negative resistance in series with $C_1$ and $C_2$ in series. Bridging it with an inductor gives an oscillator, and grounding each of the three nodes in turn gives three classic circuits: drain grounded (a source-follower based oscillator), gate grounded (the Colpitts above), and source grounded (usually called the Pierce oscillator, common in crystal oscillators). Each needs its own bias network: a gate bias $V_b$ and a current source in the source, for example."
+    },
+    {
+      "type": "problem",
+      "title": "Colpitts design",
+      "text": "A Colpitts oscillator has $L_P = 4\\text{ nH}$, $C_1 = C_2 = 2\\text{ pF}$, negligible $C_P$ and $R_P = 800\\ \\Omega$. Find the frequency and the minimum $g_m$.",
+      "solution": [
+        "Series capacitance $C_1C_2/(C_1+C_2) = 1\\text{ pF}$, so $f = 1/(2\\pi\\sqrt{4\\text{ nH}\\cdot 1\\text{ pF}}) = 2.52\\text{ GHz}$.",
+        "With $C_1 = C_2$: $g_m R_P \\ge 4$, so $g_m \\ge 5\\text{ mS}$."
+      ],
+      "answer": "2.52 GHz; $g_m \\ge 5\\text{ mS}$."
+    },
+    {
+      "type": "problem",
+      "title": "Unequal capacitors",
+      "text": "If $C_1 = 4C_2$, what minimum $g_m R_P$ does the Colpitts oscillator need?",
+      "solution": [
+        "$(C_1+C_2)^2/(C_1C_2) = (5C_2)^2/(4C_2^2) = 6.25$."
+      ],
+      "answer": "6.25, versus 4 for equal capacitors."
+    },
+    {
+      "type": "problem",
+      "title": "How negative?",
+      "text": "In the floating three-terminal circuit, $g_m = 10\\text{ mS}$ and $C_1 = C_2 = 1\\text{ pF}$. What negative resistance does it present at 2 GHz, and what series loss can the inductor have?",
+      "solution": [
+        "$\\omega = 1.257\\times10^{10}$ rad/s, $C_1C_2\\omega^2 = 10^{-24} \\cdot 1.58\\times10^{20} = 1.58\\times10^{-4}$.",
+        "$R = -g_m/(C_1C_2\\omega^2) = -0.01/1.58\\times10^{-4} \\approx -63\\ \\Omega$. The inductor's series resistance (plus other series losses) must stay below about 63 Ω for start-up."
+      ],
+      "answer": "About −63 Ω; series loss below 63 Ω."
+    },
+    {
+      "type": "problem",
+      "title": "Cross-coupled versus Colpitts",
+      "text": "A tank has $R_P = 300\\ \\Omega$. Compare the minimum transconductance needed by a cross-coupled oscillator and an equal-capacitor Colpitts oscillator.",
+      "solution": [
+        "Cross-coupled: $g_m \\ge 1/R_P = 3.3\\text{ mS}$.",
+        "Colpitts: $g_m \\ge 4/R_P = 13.3\\text{ mS}$, four times more current-hungry transconductance."
+      ],
+      "answer": "3.3 mS versus 13.3 mS."
+    }
+  ]
+}

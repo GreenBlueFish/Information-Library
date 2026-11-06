@@ -1,0 +1,102 @@
+{
+  "title": "Varactors and LC Tuning",
+  "intro": "An LC oscillator's frequency is $1/(2\\pi\\sqrt{LC})$, and on-chip inductors are hard to vary, so LC VCOs tune the capacitance with varactors (Razavi, Section 15.4.2).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Junction varactors"
+    },
+    {
+      "type": "prose",
+      "text": "A reverse-biased pn junction has a voltage-dependent capacitance:"
+    },
+    {
+      "type": "math",
+      "tex": "C_{var} = \\frac{C_0}{\\left(1 + V_R/\\phi_B\\right)^m}",
+      "caption": "$m$ is 0.5 for an abrupt junction but about 0.3 to 0.4 for CMOS junctions."
+    },
+    {
+      "type": "prose",
+      "text": "With low supplies $V_R$ can only move a little, so the capacitance range, and the frequency range ($\\propto \\sqrt{C_{max}/C_{min}}$), is small. Every fixed capacitance in the tank (transistor, inductor, wiring) dilutes the variable part and narrows the range further."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-varactor-cv.svg",
+      "alt": "Left: normalised capacitance of a pn-junction varactor falling smoothly from 1 at zero bias to about 0.62 at 2 V reverse bias. Right: capacitance of an accumulation-mode MOS varactor rising monotonically from a minimum to a maximum as the gate-source voltage goes from negative to positive.",
+      "caption": "Left: a pn-junction varactor ($m = 0.35$). Right: a MOS varactor in accumulation mode."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/lc-vco-tank.svg",
+      "alt": "An LC tank circuit: an inductor L, a fixed capacitor and a variable capacitor (varactor) all connected in parallel between a top and bottom rail. An arrow through the varactor shows that its value is set by the tuning voltage.",
+      "caption": "An LC tank with a varactor. The tuning voltage changes the capacitance, and with it the resonant frequency."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Varactors in a cross-coupled VCO"
+    },
+    {
+      "type": "prose",
+      "text": "Two diodes with their cathodes at the tank nodes X and Y and anodes joined at $V_{cont}$ tune an NMOS cross-coupled oscillator. The diodes must not forward-bias much: if each node swings with peak amplitude $A$ below $V_{DD}$, roughly $0 < V_{cont} < V_{DD} - A + 0.3\\text{ V}$. A bigger swing therefore leaves less tuning range, a trade-off common to most LC VCOs. Since the nodes swing about 1 V, each diode's capacitance varies within a cycle; what tunes the frequency is its average value."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Junction varactors in CMOS"
+    },
+    {
+      "type": "prose",
+      "text": "A p+ diffusion inside an n-well gives a diode with both terminals floating (a junction to the substrate has its anode stuck at ground, so it cannot be used across a differential tank). It has two flaws: the lightly doped well adds series resistance, lowering Q, and the well itself has a large capacitance to the substrate that adds fixed capacitance. Surrounding each small p+ island with an n+ ring cuts the series resistance; many islands in parallel raise the capacitance, but the shared well's substrate capacitance grows too."
+    },
+    {
+      "type": "prose",
+      "text": "The fixed capacitances in such a VCO come from: the well-to-substrate capacitance of the diodes; the transistors ($C_{GD}$ effectively doubled by the opposite swing at the other side, plus $C_{GS}$ and $C_{DB}$); and the spiral inductor itself, often 100 to 200 µm on a side. A PMOS cross-coupled pair centres the swing on ground, so the diode anodes can tie to X and Y and the well capacitance moves off the tank nodes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "MOS varactors"
+    },
+    {
+      "type": "prose",
+      "text": "A MOSFET's gate capacitance varies with $V_{GS}$, but non-monotonically (it dips in depletion between accumulation and inversion), which would make $K_{VCO}$ change sign. Put an NMOS inside an n-well, tie source, drain and well together as one terminal and use the gate as the other: this accumulation-mode varactor moves monotonically from $C_{min}$ (depletion) to $C_{max}$ (accumulation). It never forward-biases, so the voltage across it can take either polarity, and it is the standard varactor in modern LC VCOs."
+    },
+    {
+      "type": "callout",
+      "text": "Tuning range and phase noise pull against each other: a larger varactor gives more range but adds loss (lower Q) and raises $K_{VCO}$, so control-line noise matters more. Large ranges are often covered by switched capacitor banks plus a small varactor."
+    },
+    {
+      "type": "problem",
+      "title": "Junction varactor range",
+      "text": "A junction varactor has $\\phi_B = 0.7\\text{ V}$, $m = 0.35$, and $V_R$ from 0 to 2 V. (a) What tuning range does it give alone? (b) What if the tank also has a fixed capacitance equal to $C_0$?",
+      "solution": [
+        "At 2 V: $C = C_0(1 + 2/0.7)^{-0.35} = 0.623C_0$.",
+        "(a) $f_{max}/f_{min} = \\sqrt{1/0.623} = 1.27$: about 27%.",
+        "(b) Total goes from $2C_0$ to $1.623C_0$: $\\sqrt{2/1.623} = 1.11$, only about 11%."
+      ],
+      "answer": "(a) about 27%; (b) about 11%."
+    },
+    {
+      "type": "problem",
+      "title": "Control-voltage window",
+      "text": "An NMOS cross-coupled VCO with junction varactors (cathodes at the tank nodes) runs from $V_{DD} = 1.2\\text{ V}$ with a peak swing of 0.5 V per node. What is the usable range of $V_{cont}$ if 0.3 V of forward bias is tolerable?",
+      "solution": [
+        "Lowest node voltage $V_{DD} - A = 0.7\\text{ V}$; $V_{cont}$ may exceed it by 0.3 V.",
+        "$0 < V_{cont} < 1.0\\text{ V}$. Doubling the swing to 1 V would shrink this to 0.5 V."
+      ],
+      "answer": "0 to about 1.0 V."
+    },
+    {
+      "type": "problem",
+      "title": "MOS varactor with parasitics",
+      "text": "A MOS varactor goes from $C_{min} = C_{max}/3$ to $C_{max}$. Fixed tank capacitance is $0.5C_{max}$. What frequency ratio can be tuned?",
+      "solution": [
+        "Total: $C_{max} + 0.5C_{max} = 1.5C_{max}$ down to $0.333C_{max} + 0.5C_{max} = 0.833C_{max}$.",
+        "Ratio $\\sqrt{1.5/0.833} = 1.34$, i.e. about ±15% around the centre."
+      ],
+      "answer": "About 1.34 (roughly ±15%)."
+    }
+  ]
+}

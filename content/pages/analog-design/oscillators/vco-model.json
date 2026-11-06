@@ -1,0 +1,137 @@
+{
+  "title": "Mathematical Model of VCOs",
+  "intro": "To analyse a PLL the VCO is described by what it does to phase: it integrates the control voltage (Razavi, Section 15.5).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Phase and frequency"
+    },
+    {
+      "type": "prose",
+      "text": "In $V_m\\sin\\phi(t)$, $\\phi$ is the total phase; the waveform crosses zero whenever $\\phi$ passes a multiple of $\\pi$. A signal whose phase climbs faster crosses zero more often, so frequency is the slope of phase:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega = \\frac{d\\phi}{dt}, \\qquad \\phi = \\int \\omega\\, dt + \\phi_0"
+    },
+    {
+      "type": "prose",
+      "text": "A phase that alternates between two slopes produces a waveform that alternates between two frequencies, which is binary frequency modulation (frequency shift keying)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The VCO output"
+    },
+    {
+      "type": "prose",
+      "text": "Since $\\omega_{out} = \\omega_0 + K_{VCO}V_{cont}$ is memoryless, a change in $V_{cont}$ changes the frequency at once, and the phase integrates it:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out}(t) = V_m\\cos\\left(\\omega_0 t + K_{VCO}\\int V_{cont}\\,dt\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "(If the characteristic is nonlinear, $K_{VCO}$ cannot be pulled out of the integral.) Writing $V_m\\cos[(\\omega_0 + K_{VCO}V_{cont})t]$ instead is a common mistake: differentiating that phase gives an extra term $K_{VCO}t\\,dV_{cont}/dt$, which is wrong unless $V_{cont}$ is constant."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Excess phase and the integrator model"
+    },
+    {
+      "type": "prose",
+      "text": "In a PLL only the second term matters. Call it the excess phase $\\phi_{ex} = K_{VCO}\\int V_{cont}dt$; viewed from control voltage to excess phase, the VCO is an ideal integrator:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\Phi_{ex}}{V_{cont}}(s) = \\frac{K_{VCO}}{s}"
+    },
+    {
+      "type": "prose",
+      "text": "This pole at the origin is why a PLL with any loop filter has at least one integrator in its loop."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ripple on the control line"
+    },
+    {
+      "type": "prose",
+      "text": "Let $V_{cont} = V_m\\cos\\omega_m t$. Then $V_{out} = V_0\\cos\\left(\\omega_0 t + \\frac{K_{VCO}V_m}{\\omega_m}\\sin\\omega_m t\\right)$. For a small modulation index ($K_{VCO}V_m/\\omega_m \\ll 1$ rad):"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out}(t) \\approx V_0\\cos\\omega_0 t - \\frac{K_{VCO}V_m V_0}{2\\omega_m}\\left[\\cos(\\omega_0-\\omega_m)t - \\cos(\\omega_0+\\omega_m)t\\right]"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/oscillators-fm-sidebands.svg",
+      "alt": "A spectrum with a tall line at omega0 and two shorter lines at omega0 minus omegam and omega0 plus omegam.",
+      "caption": "A small periodic disturbance on $V_{cont}$ creates sidebands at $\\omega_0 \\pm \\omega_m$, each $K_{VCO}V_m/(2\\omega_m)$ relative to the carrier."
+    },
+    {
+      "type": "prose",
+      "text": "So a VCO is also a frequency modulator, and in a locked loop the control voltage must be very quiet; any periodic ripple appears as spurs beside the carrier (reference spurs in a PLL)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Non-sinusoidal outputs"
+    },
+    {
+      "type": "prose",
+      "text": "A square-ish output is a Fourier series. If the fundamental's frequency moves by $\\Delta f$, the $n$th harmonic moves by $n\\Delta f$, so the $n$th term carries $nK_{VCO}\\int V_{cont}dt$ of excess phase. The harmonics follow the fundamental, so analysis usually tracks the fundamental only, even when waveforms are drawn as rectangles."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Jitter and phase noise"
+    },
+    {
+      "type": "prose",
+      "text": "A real oscillator's zero crossings wander. Writing the output as $A\\cos[\\omega_0 t + \\phi_n(t)]$, the random $\\phi_n(t)$ is jitter in the time domain; its spectrum is phase noise in the frequency domain. Phase noise is usually quoted as the noise power in a 1 Hz band at an offset $\\Delta\\omega$ from the carrier, relative to the carrier power, in dBc/Hz. It falls with offset, and for a given oscillator improves with larger swing and, for LC designs, higher tank Q. The PLL page shows how a loop suppresses the slow part of this wander."
+    },
+    {
+      "type": "problem",
+      "title": "Phase from a frequency step",
+      "text": "A VCO with $K_{VCO} = 2\\pi \\times 100\\text{ MHz/V}$ sees $V_{cont}$ rise by 50 mV for 10 ns and then return. How much extra phase has it accumulated?",
+      "solution": [
+        "$\\Delta\\phi = K_{VCO}\\int V_{cont}dt = 2\\pi \\times 10^8 \\times 0.05 \\times 10^{-8} = 0.314\\text{ rad}$ (18°).",
+        "The frequency returns to its old value but the phase offset remains: phase is the integral of frequency."
+      ],
+      "answer": "0.314 rad, about 18°."
+    },
+    {
+      "type": "problem",
+      "title": "Sideband level",
+      "text": "$K_{VCO} = 2\\pi \\times 200\\text{ MHz/V}$ and the control line carries a 1 mV, 1 MHz ripple. Find the modulation index and the sideband level relative to the carrier.",
+      "solution": [
+        "Index $K_{VCO}V_m/\\omega_m = (2\\pi \\cdot 2\\times10^8 \\cdot 10^{-3})/(2\\pi \\cdot 10^6) = 0.2\\text{ rad}$, small enough for the approximation.",
+        "Each sideband is half the index: 0.1 of the carrier, i.e. $-20\\text{ dBc}$."
+      ],
+      "answer": "0.2 rad; each sideband at −20 dBc."
+    },
+    {
+      "type": "problem",
+      "title": "FSK",
+      "text": "A VCO with $f_0 = 1\\text{ GHz}$ and $K_{VCO} = 50\\text{ MHz/V}$ (i.e. $2\\pi \\times 50$ Mrad/s/V) has $V_{cont}$ toggling between 0 and 0.1 V. What two frequencies does it produce, and what does the phase look like?",
+      "solution": [
+        "1 GHz and $1\\text{ GHz} + 50\\text{ MHz/V} \\times 0.1\\text{ V} = 1.005\\text{ GHz}$.",
+        "The phase is a continuous ramp whose slope alternates between $2\\pi \\times 1.000$ and $2\\pi \\times 1.005$ Grad/s; there are no phase jumps."
+      ],
+      "answer": "1.000 and 1.005 GHz; a piecewise-linear phase."
+    },
+    {
+      "type": "problem",
+      "title": "Harmonics",
+      "text": "A ring VCO's square-wave output has its fundamental pulled 10 MHz higher by the control voltage. How far do the third and fifth harmonics move?",
+      "solution": [
+        "The $n$th harmonic carries $n$ times the excess phase, so it moves by $n \\times 10\\text{ MHz}$: 30 MHz and 50 MHz."
+      ],
+      "answer": "30 MHz and 50 MHz."
+    }
+  ]
+}
