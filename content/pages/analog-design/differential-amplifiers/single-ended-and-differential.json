@@ -1,0 +1,104 @@
+{
+  "title": "Single-Ended and Differential Operation",
+  "intro": "One node measured against a fixed potential carries a single-ended signal. A differential signal is the difference between two nodes that move equal and opposite amounts around a common-mode level.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Definitions"
+    },
+    {
+      "type": "prose",
+      "text": "In a differential signal the two nodes swing symmetrically about a bias value called the common-mode (CM) level; strictly, the two nodes should also present equal impedances to that potential. The CM level is simply what both nodes sit at when no signal is present."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-amplifiers-signals.svg",
+      "alt": "Two plots. Left: one sine wave swinging about a fixed level, labelled single-ended. Right: two sine waves in antiphase, V_X and V_Y, about a dashed common-mode level, labelled differential.",
+      "caption": "Single-ended (one node against a fixed reference) and differential (two antiphase nodes about a common-mode level)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Swing"
+    },
+    {
+      "type": "prose",
+      "text": "If each node swings $\\pm V_0$ about the CM level, each node has a peak-to-peak swing of $2V_0$, but the difference $V_X - V_Y$ runs from $-2V_0$ to $+2V_0$, a peak-to-peak swing of $4V_0$. A differential output therefore doubles the usable swing for a given supply; a circuit on a 1 V supply can deliver a differential swing well above 1 V peak-to-peak."
+    },
+    {
+      "type": "prose",
+      "text": "For a resistively loaded pair of CS stages, one output can swing from $V_{DD}$ down to about one overdrive, a range of $V_{DD} - (V_{GS} - V_{TH})$, so the differential peak-to-peak swing is $2[V_{DD} - (V_{GS} - V_{TH})]$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Immunity to coupled noise"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Victim made differential: a clock line routed midway between the two phases of a sensitive signal couples the same disturbance into both. The CM level jumps, the difference does not.",
+        "Aggressor made differential: if the clock is distributed as $CK$ and $\\overline{CK}$ on two lines equidistant from the victim, their coupled edges cancel.",
+        "Both differential: if the victim pair simply runs beside the aggressor pair, each victim line sees opposite edges and the difference is corrupted. Swapping the aggressor positions halfway along the run (a twisted-pair arrangement) makes each victim line see both phases equally, so the coupling cancels."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Supply rejection"
+    },
+    {
+      "type": "prose",
+      "text": "In a single CS stage with a resistor load, a step on $V_{DD}$ appears almost one-for-one at the output. In two matched CS stages read differentially, the supply moves both outputs by the same amount and $V_X - V_Y$ is untouched."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Other benefits and the cost"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Even-order distortion cancels in a symmetric differential circuit, so it is more linear (treated in the nonlinearity chapter).",
+        "Biasing is simpler, because the CM level can be set separately from the signal path.",
+        "The cost is roughly twice the area and some extra power, which is almost always worth paying."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Two separate CS stages already give some of these benefits, but their bias currents, and hence their gain and output CM level, follow the input CM level. If the input CM is too low the devices turn off and the output clips. The differential pair fixes this with a tail current source; see the next page."
+    },
+    {
+      "type": "problem",
+      "title": "Coupled clock glitch",
+      "text": "A clock with a 1.2 V swing couples to a signal line through 4 fF, and the signal node has 96 fF to ground. (a) What glitch appears on a single-ended line? (b) The signal is made differential, but the clock couples to the second line through only 3.6 fF (the second node has 96 fF to ground as well). What glitch appears in the differential output?",
+      "hint": "Each node is a capacitive divider between the coupling capacitance and the node capacitance.",
+      "solution": [
+        "(a) Capacitive divider: $\\Delta V = 1.2\\text{ V} \\cdot \\frac{4}{4 + 96} = 48\\text{ mV}$.",
+        "(b) Line 2: $\\Delta V_2 = 1.2\\text{ V} \\cdot \\frac{3.6}{3.6 + 96} = 43.4\\text{ mV}$. The differential output sees only the difference, $48 - 43.4 = 4.6\\text{ mV}$."
+      ],
+      "answer": "48 mV single-ended; about 4.6 mV differential (a tenfold improvement even with a 10 percent coupling mismatch)."
+    },
+    {
+      "type": "problem",
+      "title": "Differential swing on a low supply",
+      "text": "Two resistively loaded CS stages run from $V_{DD} = 1.2\\text{ V}$ with an overdrive of 0.2 V. What is the largest peak-to-peak swing of one output, and of the differential output?",
+      "solution": [
+        "One output can swing between $V_{DD} = 1.2\\text{ V}$ and about $V_{GS} - V_{TH} = 0.2\\text{ V}$, so 1.0 V peak-to-peak.",
+        "The two outputs swing in antiphase, so the difference spans twice that: 2.0 V peak-to-peak, larger than the supply."
+      ],
+      "answer": "1.0 V single-ended, 2.0 V differential."
+    },
+    {
+      "type": "problem",
+      "title": "Routing two differential lines side by side",
+      "text": "A differential data pair runs parallel to a differential clock pair for 2 mm. Why does placing them next to each other without any crossing corrupt the data, and what layout fixes it?",
+      "solution": [
+        "The data line nearer the clock pair sits closer to one clock phase than the other, and so does its partner, but in the opposite order. Each data line therefore picks up a net disturbance of opposite sign, which is a differential error.",
+        "Swapping the positions of the two clock lines (or the data lines) at the midpoint makes each data line spend half the run next to each clock phase, so the coupled charge cancels on both lines."
+      ],
+      "answer": "Cross the lines halfway so each victim sees both aggressor phases equally."
+    }
+  ]
+}

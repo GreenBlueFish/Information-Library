@@ -1,19 +1,95 @@
 {
-  "title": "Loads and the Gilbert Cell",
-  "intro": "Resistors take a lot of area and give a gain that is hard to set. In integrated circuits transistors replace them.",
+  "title": "MOS Loads and Cascode Pairs",
+  "intro": "Resistors take area and give gains that are hard to set, so integrated differential pairs usually use transistor loads. The half circuit gives the gain of each version directly.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Differential pair with MOS loads"
+      "text": "Diode-connected loads"
     },
     {
-      "type": "list",
-      "items": [
-        "Diode-connected loads: Av = -gm1/gm3 = -sqrt(mu_n*(W/L)1 / (mu_p*(W/L)3)) for PMOS diode loads (the mobilities cancel if the loads are NMOS). Small and linear, with excellent stability of gain over process.",
-        "Current-source loads: Av = -gm1 * (ro1 || ro3). Large gain but the output common-mode level is undefined without feedback (see common-mode feedback in op amps).",
-        "Active (mirror) loads: a current mirror as the load gives a single-ended output with the full differential gain, described on the Active Current Mirrors page."
-      ]
+      "type": "prose",
+      "text": "Each load is a diode-connected PMOS, which looks like $1/g_{mP}$ to AC ground:"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = -g_{mN}\\left(\\frac{1}{g_{mP}} \\parallel r_{oN} \\parallel r_{oP}\\right) \\approx -\\frac{g_{mN}}{g_{mP}} = -\\sqrt{\\frac{\\mu_n (W/L)_N}{\\mu_p (W/L)_P}}"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-amplifiers-diode-loads.svg",
+      "alt": "Differential pair M1, M2 with tail ISS. Each drain connects to a diode-connected PMOS load, M3 and M4, whose gates are tied to their own drains and whose sources go to VDD. Outputs X and Y are at the drains.",
+      "caption": "Diode-connected loads: a well-defined but low gain, and the output CM level is fixed at $V_{DD} - |V_{GSP}|$."
+    },
+    {
+      "type": "prose",
+      "text": "The gain is a ratio of device sizes, so it is stable, but it is small. For a fixed current and input device, raising the gain means shrinking $(W/L)_P$, which raises $|V_{GSP} - V_{THP}|$ and lowers the output CM level. Gain, output swing and input CM range therefore trade against each other. The upside is that the loads define the output CM level, $V_{DD} - |V_{GSP}|$, with no extra circuitry."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Current-source loads"
+    },
+    {
+      "type": "prose",
+      "text": "With PMOS current sources as loads the gain is that of a CS stage with an active load:"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = -g_{mN}(r_{oN} \\parallel r_{oP})"
+    },
+    {
+      "type": "prose",
+      "text": "In nanometer processes this is only about 5 to 10. The output CM level is no longer defined by anything: it is set by the small difference between the NMOS and PMOS currents across two high resistances, so a high-gain fully differential stage needs common-mode feedback (see the op-amp pages)."
+    },
+    {
+      "type": "prose",
+      "text": "One way to bias the PMOS loads without a separate $V_b$ is to join the two outputs through two equal large resistors $R_1$ and drive both PMOS gates from their midpoint N. At DC each PMOS is then effectively diode-connected through $R_1$, so $V_X = V_Y = V_N = V_{DD} - |V_{GS3,4}|$. For a differential output N does not move, so the half circuit has $R_1$ to AC ground:"
+    },
+    {
+      "type": "math",
+      "tex": "|A_v| = g_{m1}(r_{o1} \\parallel R_1 \\parallel r_{o3})",
+      "caption": "Negligible gain loss if $R_1 \\gg r_{o1} \\parallel r_{o3}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Raising the gain with auxiliary current sources"
+    },
+    {
+      "type": "prose",
+      "text": "The gain of the diode-loaded pair is limited by $g_{mP}$. Supplying most of each input transistor's current from a PMOS current source in parallel with the diode lets the diode carry less current; at the same overdrive its W/L, and therefore $g_{mP}$, falls in proportion. If the extra sources carry 80 percent of $I_{SS}/2$, the diode current and $g_{mP}$ drop fivefold and the gain rises fivefold (ignoring $r_o$)."
+    },
+    {
+      "type": "prose",
+      "text": "The diode loads still cost at least $V_{TH}$ of headroom, so a better version uses resistors as the loads with PMOS sources alongside. Each output can now rise to $V_{DD} - |V_{GS} - V_{TH}|_{P}$ instead of $V_{DD} - |V_{TH}|$, and since $R_D$ carries only 20 percent of the current it can be five times larger for the same output CM level:"
+    },
+    {
+      "type": "math",
+      "tex": "|A_v| = g_{mN}(R_D \\parallel r_{oN} \\parallel r_{oP})"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-amplifiers-aux-current-sources.svg",
+      "alt": "Differential pair whose drains X and Y each connect to a resistor RD to VDD and, in parallel, to a PMOS current source M5 or M6 with gates tied to Vb. Each PMOS is marked as carrying 0.4 ISS.",
+      "caption": "Resistor loads with auxiliary PMOS current sources. With long PMOS devices $r_{oP} \\gg r_{oN}$ and the gain approaches $g_{mN}(R_D \\parallel r_{oN})$; as $R_D \\to \\infty$ the circuit becomes the current-source-loaded pair."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The cascode differential pair"
+    },
+    {
+      "type": "prose",
+      "text": "To go beyond $g_m r_o$, cascode both the input devices and the loads, which gives a differential version of the cascode stage. With input M1, NMOS cascode M3, PMOS cascode M5 and PMOS source M7 in each half, the half circuit gives"
+    },
+    {
+      "type": "math",
+      "tex": "|A_v| \\approx g_{m1}\\left[(g_{m3} r_{o3} r_{o1}) \\parallel (g_{m5} r_{o5} r_{o7})\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "The gain rises by roughly a factor $g_m r_o$, paid for with two more stacked devices of headroom. This telescopic structure, and the CM feedback it needs, return in the op-amp chapter."
     },
     {
       "type": "heading",
@@ -22,16 +98,46 @@
     },
     {
       "type": "prose",
-      "text": "Put two cross-coupled differential pairs on top of a third pair: the bottom pair, driven by one input, supplies the tail currents of the upper pairs, which are driven by the second input. The output current is proportional to the product of the two differential inputs. This 'four-quadrant multiplier' is used as a mixer in radio receivers and as a variable-gain amplifier."
+      "text": "Stacking two cross-connected pairs on a third pair gives a variable-gain amplifier and analog multiplier; it has its own page, The Gilbert Cell."
     },
     {
       "type": "problem",
       "title": "Diode-connected load gain",
-      "text": "A pair has (W/L)1 = 40 and diode-connected PMOS loads with (W/L)3 = 10 at equal current. mu_n is 3 times mu_p. Find the gain.",
+      "text": "A pair has $(W/L)_1 = 40$ and diode-connected PMOS loads with $(W/L)_3 = 10$ at equal current; $\\mu_n$ is 3 times $\\mu_p$. Find the gain.",
       "solution": [
-        "Gain = -gm1/gm3 = -sqrt( mu_n*(W/L)1 / (mu_p*(W/L)3) ) = -sqrt( 3 * 40 / 10 ) = -sqrt(12) = -3.46."
+        "$A_v = -g_{m1}/g_{m3} = -\\sqrt{\\mu_n (W/L)_1/(\\mu_p (W/L)_3)} = -\\sqrt{3 \\cdot 40/10} = -\\sqrt{12} = -3.46$."
       ],
-      "answer": "About -3.5."
+      "answer": "About −3.5."
+    },
+    {
+      "type": "problem",
+      "title": "Cascoding a current-source-loaded pair",
+      "text": "Every NMOS has $g_m = 1\\text{ mS}$, $r_o = 20\\text{ k}\\Omega$; every PMOS has $g_m = 1\\text{ mS}$, $r_o = 25\\text{ k}\\Omega$. Compare the gain of the simple current-source-loaded pair with the fully cascoded pair.",
+      "solution": [
+        "Simple: $g_m(r_{oN} \\parallel r_{oP}) = 1\\text{ mS} \\cdot 11.1\\text{ k}\\Omega = 11.1$.",
+        "Cascoded: NMOS side $g_m r_o^2 = 1\\text{ mS} \\cdot 20\\text{ k} \\cdot 20\\text{ k} = 400\\text{ k}\\Omega$; PMOS side $1\\text{ mS} \\cdot 25\\text{ k} \\cdot 25\\text{ k} = 625\\text{ k}\\Omega$; in parallel 244 kΩ, so $|A_v| = 244$."
+      ],
+      "answer": "About 11 versus about 244."
+    },
+    {
+      "type": "problem",
+      "title": "Self-biased loads",
+      "text": "In the self-biased current-source-loaded pair, $g_{m1} = 1\\text{ mS}$, $r_{o1} = 20\\text{ k}\\Omega$, $r_{o3} = 25\\text{ k}\\Omega$ and $R_1 = 100\\text{ k}\\Omega$. What gain is lost to $R_1$?",
+      "solution": [
+        "Without $R_1$: $1\\text{ mS} \\cdot (20 \\parallel 25)\\text{ k}\\Omega = 11.1$.",
+        "With it: $11.1\\text{ k} \\parallel 100\\text{ k} = 10.0\\text{ k}\\Omega$, so $|A_v| = 10.0$, about 10 percent less."
+      ],
+      "answer": "Gain falls from 11.1 to 10.0."
+    },
+    {
+      "type": "problem",
+      "title": "How much auxiliary current?",
+      "text": "A diode-loaded pair has a gain of 3. The designer adds PMOS current sources that carry 75 percent of each input device's current and resizes the diodes to keep the same overdrive. Ignoring $r_o$, what is the new gain?",
+      "solution": [
+        "The diodes now carry a quarter of the current. At constant overdrive $g_m = 2I_D/|V_{GS} - V_{TH}|$, so $g_{mP}$ falls fourfold.",
+        "$|A_v| = g_{mN}/g_{mP}$ rises fourfold, to 12."
+      ],
+      "answer": "About 12."
     }
   ]
 }

@@ -1,0 +1,108 @@
+{
+  "title": "The Gilbert Cell",
+  "intro": "A differential pair's gain depends on its tail current, and a pair can steer a current between two destinations. Combining the two properties gives the Gilbert cell, a variable-gain amplifier and analog multiplier.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From a VGA to the Gilbert cell"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A pair whose tail current is set by a control voltage is already a variable-gain amplifier (VGA): $|A_v| = g_m R_D$ with $g_m = \\sqrt{\\mu_n C_{ox}(W/L) I_{tail}}$, from zero up to a maximum set by headroom.",
+        "To swing the gain from negative to positive, use two pairs with opposite polarities, gains $-g_m R_D$ and $+g_m R_D$, and vary their tail currents in opposite directions.",
+        "Adding their output voltages is done for free by tying the corresponding drains together, which sums the currents into shared load resistors.",
+        "The circuit that varies two currents in opposite directions is itself a differential pair, so a third pair, driven by the control voltage, supplies the two tails."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/differential-amplifiers-gilbert-cell.svg",
+      "alt": "Gilbert cell. A bottom pair M5 and M6, driven by V cont plus and minus, feeds node A (sources of M1 and M2) and node B (sources of M3 and M4) from a tail ISS. M1 and M4 gates take V in plus, M2 and M3 gates take V in minus. Drains of M1 and M3 join at the left load resistor and output, drains of M2 and M4 at the right load resistor and output, with a wire hop where the cross connection passes.",
+      "caption": "The Gilbert cell. With $V_{cont}$ strongly positive only M1-M2 are active (gain of one sign); strongly negative, only M3-M4 (opposite sign); balanced, the two cancel and the gain is zero."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gain as a function of the control voltage"
+    },
+    {
+      "type": "prose",
+      "text": "Let the control pair split $I_{SS}$ into $I_5$ and $I_6$. Each upper pair then has the gain of a pair with that tail, and because the pairs are cross-connected their contributions subtract. With square-law devices of process transconductance times W/L equal to $k$ in the upper quad:"
+    },
+    {
+      "type": "math",
+      "tex": "|A_v| = R_D\\left|\\sqrt{k I_5} - \\sqrt{k I_6}\\right|"
+    },
+    {
+      "type": "prose",
+      "text": "The gain is a continuous, monotonic function of $V_{cont}$, running from $-\\sqrt{k I_{SS}}R_D$ through zero (at $I_5 = I_6$) to $+\\sqrt{k I_{SS}}R_D$. Normally the four quad transistors are matched to one another, and the two control transistors likewise."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Multiplier and mixer"
+    },
+    {
+      "type": "prose",
+      "text": "Since $V_{out} = V_{in} \\cdot f(V_{cont})$ and $f$ is odd and smooth, keeping the first term of its Taylor series gives $V_{out} \\approx \\alpha V_{in} V_{cont}$: the cell multiplies its two inputs, and works with either sign of either input (four quadrants). Any voltage-controlled VGA does this in principle. Driving $V_{cont}$ with a large local-oscillator square wave makes the quad flip polarity at the LO rate, which is how the Gilbert cell serves as a mixer in radio receivers."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Headroom"
+    },
+    {
+      "type": "prose",
+      "text": "Like a cascode, the cell stacks devices. With the input CM level $V_{CM,in}$, the sources of the quad sit at $V_A = V_B = V_{CM,in} - V_{GS1}$. For M5 and M6 to stay saturated:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{CM,cont} \\le V_{CM,in} - V_{GS1} + V_{TH5,6}"
+    },
+    {
+      "type": "prose",
+      "text": "Since $V_{GS1} - V_{TH5,6}$ is about one overdrive, the control CM level must sit at least one overdrive below the input CM level, and the whole stack needs about one more overdrive of supply than a single pair."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Swapping the inputs"
+    },
+    {
+      "type": "prose",
+      "text": "The roles can be exchanged: the signal drives the bottom pair, which converts it to a differential current, and the control drives the quad, which routes that current to the outputs straight or crossed. With $V_{cont}$ strongly positive the gain is $+g_{m5,6}R_D$, strongly negative $-g_{m5,6}R_D$, and zero when balanced. Degenerating the bottom pair then makes the voltage-to-current conversion linear, which is the usual arrangement for a mixer whose signal path must be linear."
+    },
+    {
+      "type": "problem",
+      "title": "Gain at a partial control setting",
+      "text": "A Gilbert cell has $I_{SS} = 1\\text{ mA}$, $R_D = 2\\text{ k}\\Omega$ and $k = 4\\text{ mA/V}^2$ for each upper transistor. The control voltage steers 0.8 mA to one upper pair and 0.2 mA to the other. Find the gain, and the maximum gain.",
+      "hint": "Each upper pair's transconductance is $\\sqrt{k I_{tail}}$.",
+      "solution": [
+        "$\\sqrt{k I_5} = \\sqrt{4 \\cdot 0.8} = 1.789\\text{ mS}$; $\\sqrt{k I_6} = \\sqrt{0.8} = 0.894\\text{ mS}$.",
+        "$|A_v| = 2\\text{ k}\\Omega \\cdot (1.789 - 0.894)\\text{ mS} = 1.79$.",
+        "Maximum, with all of $I_{SS}$ in one pair: $2\\text{ k}\\Omega \\cdot \\sqrt{4 \\cdot 1}\\text{ mS} = 4$."
+      ],
+      "answer": "About 1.8; maximum 4."
+    },
+    {
+      "type": "problem",
+      "title": "Control common-mode level",
+      "text": "The input quad has $V_{CM,in} = 1.2\\text{ V}$ and $V_{GS1} = 0.65\\text{ V}$; M5 and M6 have $V_{TH} = 0.45\\text{ V}$. What is the highest allowed control CM level?",
+      "solution": [
+        "$V_A = 1.2 - 0.65 = 0.55\\text{ V}$. M5 stays saturated while its gate is no more than $V_{TH}$ above its drain: $V_{CM,cont} \\le 0.55 + 0.45 = 1.0\\text{ V}$."
+      ],
+      "answer": "1.0 V, which is one overdrive (0.2 V) below the input CM level."
+    },
+    {
+      "type": "problem",
+      "title": "Why the gain is zero at balance",
+      "text": "Explain without equations why $V_{cont1} = V_{cont2}$ gives zero gain.",
+      "solution": [
+        "Balanced control splits $I_{SS}$ equally, so the two upper pairs have equal $g_m$. Each output node collects one drain from each pair, and the pairs are driven with opposite polarity relative to that node, so the signal currents arriving at each output are equal and opposite and cancel."
+      ],
+      "answer": "Equal tails give equal and opposite signal currents at each output."
+    }
+  ]
+}
