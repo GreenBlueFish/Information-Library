@@ -1,30 +1,41 @@
 {
   "title": "Properties of Feedback",
-  "intro": "A feedback amplifier trades open-loop gain for accuracy, bandwidth and controlled impedances.",
+  "intro": "A feedback amplifier trades open-loop gain for accuracy, bandwidth, controlled impedances and linearity. All of these follow from one fact: the closed-loop gain hardly depends on the forward amplifier (Razavi, Section 8.1).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "The ideal negative-feedback system"
+      "text": "Gain desensitization"
     },
     {
       "type": "prose",
-      "text": "An amplifier of gain A, with a fraction beta of its output subtracted from the input, has closed-loop gain"
+      "text": "A common-source stage has a gain $g_m r_O$ that drifts with mobility, oxide thickness, temperature and bias. Wrap it in a capacitive divider: $C_1$ from the input to the gate and $C_2$ from the drain back to the gate. At frequencies where the bias source and $C_2$ load the drain negligibly, writing the charge balance at the gate gives"
     },
     {
       "type": "figure",
-      "src": "assets/figures/analog-design/feedback-loop.svg",
-      "alt": "Block diagram of a negative-feedback system. The input x enters a summing node, where the feedback signal is subtracted. The difference e goes into the amplifier A, whose output is y. The output is fed back through the block beta to the summing node.",
-      "caption": "The standard feedback loop. The closed-loop gain is A/(1 + A*beta)."
+      "src": "assets/figures/analog-design/feedback-cap-feedback-cs.svg",
+      "alt": "Common-source stage: an NMOS M1 with current source I1 from VDD to the drain, the output at the drain. The input drives the gate through C1, and C2 connects the drain back to the gate node X.",
+      "caption": "Capacitive feedback around a common-source stage. The gain approaches $-C_1/C_2$."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Af = A / (1 + A*beta)    -->    1/beta   when A*beta >> 1"
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{-1}{\\left(1 + \\frac{1}{g_{m1} r_{O1}}\\right)\\frac{C_2}{C_1} + \\frac{1}{g_{m1} r_{O1}}} \\approx -\\frac{C_1}{C_2}"
     },
     {
       "type": "prose",
-      "text": "The quantity A*beta is the loop gain. If it is large, the closed-loop gain depends only on the feedback network (often resistors), not on the amplifier."
+      "text": "A capacitor ratio can be held to a fraction of a percent because both capacitors see the same process and temperature. In general, a change $dA$ in the open-loop gain produces"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{dA_{CL}}{A_{CL}} = \\frac{1}{1 + \\beta A}\\,\\frac{dA}{A}"
+    },
+    {
+      "type": "prose",
+      "text": "so the higher the loop gain, the more precise the closed-loop gain. There is a built-in trade: raising $\\beta$ raises the loop gain but lowers the closed-loop gain $\\approx 1/\\beta$. One starts with far more gain than needed and spends it on precision. The same desensitization explains every property below: whatever makes $A$ vary (process, frequency, load, signal level) is suppressed by $1 + \\beta A$."
+    },
+    {
+      "type": "prose",
+      "text": "The loop gain of the capacitive stage is found by zeroing $V_{in}$, injecting $V_t$ at the gate side of the loop and following it: $C_1$ and $C_2$ divide it to $V_t C_2/(C_1 + C_2)$ at the gate and the transistor amplifies by $-g_{m1} r_{O1}$, so $\\beta A = g_{m1} r_{O1} C_2/(C_1 + C_2)$. (Both capacitors have high impedance at low frequency, so the divider still works there.)"
     },
     {
       "type": "widget",
@@ -51,60 +62,163 @@
     },
     {
       "type": "prose",
-      "text": "As A grows, the closed-loop gain flattens at 1/beta. The flat region is where the circuit is insensitive to A: a change in A from 1000 to 600 barely moves the output."
+      "text": "The plot shows the closed-loop gain flattening at $1/\\beta$ once $A$ is large: in that region a large change in $A$ barely moves the output."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Benefits"
+      "text": "Terminal impedances"
+    },
+    {
+      "type": "prose",
+      "text": "Feedback that senses the output voltage tries to hold that voltage regardless of load, so the output behaves like a voltage source: its resistance falls by $1 + \\beta A$. Feedback that senses the output current makes the output a better current source: its resistance rises by $1 + \\beta A$. At the input, returning a voltage in series with the source means the amplifier input sees only the small error voltage, so less current flows and $R_{in}$ rises; returning a current in parallel diverts input current and lowers $R_{in}$."
+    },
+    {
+      "type": "prose",
+      "text": "Example: a common-gate stage (input at the source, load $R_D$) whose output is divided by $C_1$, $C_2$ and fed to the gate of a current source $M_2$ at the input node. Breaking the loop gives $R_{in,open} = 1/(g_{m1} + g_{mb1})$; with the loop closed, $M_2$ returns extra current proportional to the output, and"
+    },
+    {
+      "type": "math",
+      "tex": "R_{in,closed} = \\frac{1}{g_{m1} + g_{mb1}} \\cdot \\frac{1}{1 + g_{m2} R_D \\frac{C_1}{C_1 + C_2}}"
+    },
+    {
+      "type": "prose",
+      "text": "The second factor's denominator is again one plus the loop gain."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bandwidth"
+    },
+    {
+      "type": "prose",
+      "text": "Let the forward amplifier have one pole, $A(s) = A_0/(1 + s/\\omega_0)$. Substituting into $A/(1 + \\beta A)$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{Y}{X}(s) = \\frac{\\frac{A_0}{1 + \\beta A_0}}{1 + \\frac{s}{(1 + \\beta A_0)\\,\\omega_0}}"
+    },
+    {
+      "type": "prose",
+      "text": "The low-frequency gain falls by $1 + \\beta A_0$ and the pole moves up by the same factor, so the gain-bandwidth product $A_0\\omega_0$ is unchanged. The benefit is that one can now buy speed by cascading: to get a gain of 100 from an amplifier whose open-loop gain is 100 and bandwidth 10 MHz, close two copies at a gain of 10 each (100 MHz each) and cascade them. The rise time drops by about ten times, for twice the power."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/feedback-bandwidth-extension.svg",
+      "alt": "Bode magnitude plot. The open-loop curve is flat at 60 dB and rolls off from 1 MHz. The closed-loop curve with beta 0.1 is flat at 20 dB out to about 100 MHz, then joins the open-loop roll-off.",
+      "caption": "A one-pole amplifier with and without feedback: the gain drops by $1 + \\beta A_0 = 101$ and the bandwidth grows by the same factor."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Nonlinearity"
+    },
+    {
+      "type": "prose",
+      "text": "A nonlinear amplifier is one whose small-signal gain (slope) changes with signal level, say from $A_1$ near the bias point to $A_2 = A_1 - \\Delta A$ at the peaks. Open loop, the gain ratio is $1 - \\Delta A/A_1$. Closed loop,"
+    },
+    {
+      "type": "math",
+      "tex": "r_{closed} = \\frac{A_2/(1+\\beta A_2)}{A_1/(1+\\beta A_1)} \\approx 1 - \\frac{\\Delta A}{A_1}\\cdot\\frac{1}{1 + \\beta A_2}"
+    },
+    {
+      "type": "prose",
+      "text": "so the slope variation, and with it the distortion, shrinks by roughly the loop gain. Chapter 14 treats this in detail."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Noise"
+    },
+    {
+      "type": "prose",
+      "text": "Feedback does not lower noise. If the forward amplifier has input-referred noise $V_n$ and the feedback network is noiseless, then $(V_{in} + V_n - \\beta V_{out})A = V_{out}$: the noise enters exactly like the signal, so the closed-loop input-referred noise is still $V_n$. A resistive feedback network adds its own noise. When the network senses a node other than the output (for example the source of a transistor whose drain is the output), the input-referred noise can even get worse than open loop."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Four types of amplifier"
+    },
+    {
+      "type": "prose",
+      "text": "Inputs and outputs can each be a voltage or a current, giving four amplifier types. A circuit that senses a voltage should have a high input impedance (like a voltmeter); one that senses a current should have a low one (like an ammeter). One that delivers a voltage should have a low output impedance; one that delivers a current, a high one."
     },
     {
       "type": "list",
       "items": [
-        "Gain desensitivity: dAf/Af = (dA/A) / (1 + A*beta). A 20 percent change in A produces a change in Af that is (1 + A*beta) times smaller.",
-        "Bandwidth extension: with a single-pole amplifier the closed-loop bandwidth is (1 + A0*beta) times larger, and the gain falls by the same factor. The gain-bandwidth product is conserved.",
-        "Impedance modification: series mixing at the input multiplies input impedance by (1 + A*beta); shunt mixing divides it. Voltage sensing at the output divides the output impedance by (1 + A*beta); current sensing multiplies it.",
-        "Linearity: nonlinearity is reduced by 1 + A*beta. Noise from the output stage is likewise suppressed but noise at the input is not."
+        "Voltage amplifier, gain $A_v = V_{out}/V_{in}$ (dimensionless): common-source stage; a source follower after it lowers $R_{out}$.",
+        "Transimpedance amplifier, gain $R_0 = V_{out}/I_{in}$ (ohms): common-gate stage taking a current at its source; a 2 k$\\Omega$ transimpedance gives 2 V per mA.",
+        "Transconductance amplifier, gain $G_m = I_{out}/V_{in}$ (siemens): a transistor converting gate voltage to drain current; a gain stage in front, as in $G_m = -g_{m1}(r_{O1} \\parallel R_D)\\,g_{m2}$, raises it.",
+        "Current amplifier, gain $A_I = I_{out}/I_{in}$: a common-gate device passing its source current to its drain, or a current mirror."
       ]
     },
     {
-      "type": "heading",
-      "level": 3,
-      "text": "Costs"
-    },
-    {
       "type": "prose",
-      "text": "Feedback reduces gain, costs a feedback network that loads the amplifier, and, above all, can cause instability if the loop gain's phase shift reaches 180 degrees where |A*beta| is at least 1. Stability is the subject of the next chapter."
+      "text": "Real versions have finite input and output impedances. Model them so that the ideal case comes out in the limit: a voltage amplifier's $Z_{in}$ in parallel with its input (ideal: infinite), a transimpedance amplifier's $Z_{in}$ in series with its input (ideal: zero)."
     },
     {
       "type": "problem",
       "title": "Gain error",
-      "text": "A = 1000 and beta = 0.1. Find Af and its error from the ideal 1/beta. Then find the change in Af if A drops by 20 percent to 800.",
+      "text": "$A = 1000$ and $\\beta = 0.1$. Find the closed-loop gain and its error from $1/\\beta$. Then find the change in closed-loop gain if $A$ drops by 20% to 800.",
       "solution": [
-        "Af = 1000 / (1 + 100) = 9.901. The ideal is 10, so the error is 1 percent.",
-        "At A = 800: Af = 800 / (1 + 80) = 9.877. The change is only 0.24 percent, compared with 20 percent in A (about 1/(1 + A*beta) = 1/101 of it)."
+        "$A_{CL} = 1000/(1 + 100) = 9.901$. The ideal is 10, so the error is 1%.",
+        "At $A = 800$: $A_{CL} = 800/(1 + 80) = 9.877$. The change is only 0.24%, against 20% in $A$, consistent with the factor $1/(1 + \\beta A) \\approx 1/100$."
       ],
-      "answer": "Af = 9.90 (1% below 10); a 20% drop in A changes Af by only 0.24%."
+      "answer": "$A_{CL} = 9.90$ (1% low); a 20% drop in $A$ moves it by only 0.24%."
+    },
+    {
+      "type": "problem",
+      "title": "Capacitive feedback stage",
+      "text": "In the capacitive-feedback common-source stage, $g_{m1} r_{O1} = 50$ and $C_1 = 4C_2$. Find the loop gain, the closed-loop gain and its error from the ideal $-C_1/C_2$.",
+      "solution": [
+        "$\\beta A = g_{m1} r_{O1}\\,C_2/(C_1 + C_2) = 50 \\times 0.2 = 10$.",
+        "Gain $= -1/[(1 + 1/50)(0.25) + 1/50] = -1/0.275 = -3.64$.",
+        "Check: the ideal $-C_1/C_2 = -4$ times $\\beta A/(1 + \\beta A) = 10/11$ also gives $-3.64$. The error is $1/11 = 9.1\\%$."
+      ],
+      "answer": "Loop gain 10; gain $-3.64$, 9.1% below $-4$."
     },
     {
       "type": "problem",
       "title": "Bandwidth extension",
-      "text": "An amplifier has A0 = 1000 and a pole at 10 kHz. Use beta = 0.1. Find the closed-loop gain and bandwidth.",
+      "text": "An amplifier has $A_0 = 1000$ and a pole at 10 kHz. With $\\beta = 0.1$, find the closed-loop gain and bandwidth.",
       "solution": [
-        "Loop gain at DC = 100, so the closed-loop gain is 1000/101 = 9.9.",
-        "The closed-loop pole is (1 + A0*beta) * 10 kHz = 101 * 10 kHz = 1.01 MHz.",
-        "Gain times bandwidth is about 10 MHz, the same as the original 1000 * 10 kHz."
+        "The loop gain at DC is 100, so the closed-loop gain is $1000/101 = 9.9$.",
+        "The closed-loop pole is $101 \\times 10\\text{ kHz} = 1.01\\text{ MHz}$.",
+        "Gain times bandwidth is about 10 MHz, the same as $1000 \\times 10\\text{ kHz}$."
       ],
       "answer": "Gain 9.9, bandwidth 1.01 MHz."
     },
     {
       "type": "problem",
-      "title": "Output resistance",
-      "text": "A voltage-sampling amplifier has open-loop output resistance 1 kohm and loop gain A*beta = 100. What is Rout with feedback?",
+      "title": "One stage or two?",
+      "text": "An amplifier has $A_0 = 200$ and one pole at 5 MHz. You need a gain of 100. Compare (a) one closed-loop stage with gain 100 and (b) two cascaded closed-loop stages with gain 10 each. Give the $-3$ dB bandwidth of each.",
+      "hint": "For $n$ identical real poles at $\\omega_p$, the $-3$ dB frequency is $\\omega_p\\sqrt{2^{1/n} - 1}$.",
       "solution": [
-        "Voltage sensing at the output divides Rout by (1 + A*beta): 1 kohm / 101 = 9.9 ohm."
+        "(a) $200/(1 + 200\\beta) = 100$ gives $1 + 200\\beta = 2$, so the pole moves to $2 \\times 5 = 10$ MHz.",
+        "(b) Each stage needs $1 + 200\\beta = 20$ ($\\beta = 0.095$), so each has its pole at $20 \\times 5 = 100$ MHz.",
+        "Two identical poles at 100 MHz give a $-3$ dB frequency of $100\\text{ MHz} \\times \\sqrt{\\sqrt{2} - 1} = 64$ MHz."
       ],
-      "answer": "About 9.9 ohm."
+      "answer": "(a) 10 MHz; (b) about 64 MHz, for twice the power."
+    },
+    {
+      "type": "problem",
+      "title": "Linearization",
+      "text": "Over the output swing an amplifier's incremental gain falls from 1000 to 800. It is used with $\\beta = 0.1$. Compare the open- and closed-loop gain ratios.",
+      "solution": [
+        "Open loop: $800/1000 = 0.80$, a 20% slope change.",
+        "Closed loop: $9.877/9.901 = 0.9975$; the formula $1 - (200/1000)/(1 + 80) = 0.9975$ agrees.",
+        "The slope variation fell from 20% to 0.25%, by about the loop gain."
+      ],
+      "answer": "0.80 open loop versus 0.9975 closed loop."
+    },
+    {
+      "type": "problem",
+      "title": "Output resistance",
+      "text": "A voltage-sensing amplifier has an open-loop output resistance of 1 k$\\Omega$ and a loop gain of 100. What is the closed-loop output resistance?",
+      "solution": [
+        "Voltage sensing divides $R_{out}$ by $1 + \\beta A$: $1\\text{ k}\\Omega/101 = 9.9\\;\\Omega$."
+      ],
+      "answer": "About 9.9 $\\Omega$."
     }
   ]
 }

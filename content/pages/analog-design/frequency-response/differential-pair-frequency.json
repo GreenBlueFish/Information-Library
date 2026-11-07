@@ -1,0 +1,108 @@
+{
+  "title": "Frequency Response of Differential Pairs",
+  "intro": "A fully differential pair behaves like its CS half circuit for differential signals. Two effects are new: the common-mode rejection degrades at high frequency because of the tail-node capacitance, and a current-mirror load adds a 'mirror pole' and a left-half-plane zero.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Passive loads: differential and common mode"
+    },
+    {
+      "type": "prose",
+      "text": "For differential inputs the half circuit is a CS stage, with Miller multiplication of $C_{GD}$ and the same poles. Both halves share one transfer function, so the differential output has as many poles as one half, not twice as many."
+    },
+    {
+      "type": "prose",
+      "text": "For common-mode inputs the tail node P matters. Its capacitance $C_P$ (from $C_{GD3}$, $C_{DB3}$, $C_{SB1}$, $C_{SB2}$) can be large because the tail device is made wide to save headroom. Replacing $r_{o3}$ by $r_{o3} \\parallel (1/C_P s)$ and $R_D$ by $R_D \\parallel (1/C_L s)$ in the low-frequency result with a $g_m$ mismatch $\\Delta g_m$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{CMRR} \\approx \\frac{g_m}{\\Delta g_m}\\left[1 + 2g_m\\left(r_{o3} \\parallel \\frac{1}{C_P s}\\right)\\right] = \\frac{g_m}{\\Delta g_m}\\cdot\\frac{r_{o3}C_P s + 1 + 2g_m r_{o3}}{r_{o3}C_P s + 1}"
+    },
+    {
+      "type": "prose",
+      "text": "with $g_m$ the average transconductance of the pair. The CMRR starts falling at the pole $1/(r_{o3}C_P)$ and levels at $g_m/\\Delta g_m$ above the zero $(1 + 2g_m r_{o3})/(r_{o3}C_P) \\approx 2g_m/C_P$."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-cmrr.svg",
+      "alt": "CMRR in dB against frequency on a log axis: flat at about 72 dB up to roughly 40 MHz, then falling at 20 dB per decade, then flattening at about 34 dB above roughly 3 GHz.",
+      "caption": "CMRR against frequency for the values of problem 2."
+    },
+    {
+      "type": "prose",
+      "text": "Practical consequence: high-frequency noise on the supply or ground moves node P through $C_P$, and with mismatch it turns into differential output noise, increasingly so above $1/(2\\pi r_{o3}C_P)$. Low supply voltages make it worse: a wider tail device saves headroom but adds $C_P$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Current-source loads"
+    },
+    {
+      "type": "prose",
+      "text": "With PMOS current-source loads (fully differential), differential swings at the two drains inject opposite currents through $C_{GD3}$ and $C_{GD4}$ into the shared load-gate node, so it stays an AC ground. The half circuit is the CS stage with $R_D$ replaced by $r_{o1} \\parallel r_{o3}$; that large resistance makes the output pole $1/[(r_{o1} \\parallel r_{o3})C_L]$ dominant, which is the starting point of op-amp compensation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Active current-mirror load: the mirror pole"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-ota-poles.svg",
+      "alt": "Five-transistor OTA: NMOS input pair M1 and M2 with tail current ISS; PMOS mirror M3 (diode-connected, node E) and M4. Capacitor CE from node E to ground; the output at the drain of M4 has load capacitor CL.",
+      "caption": "Two signal paths with different transfer functions: a slow one through the mirror node E and a fast one straight to the output."
+    },
+    {
+      "type": "prose",
+      "text": "Half of the signal reaches the output through M3 and M4, passing node E, whose resistance is about $1/g_{m3}$ and whose capacitance $C_E$ includes $C_{GS3}$, $C_{GS4}$, $C_{DB3}$, $C_{DB1}$ and Miller contributions. This gives a mirror pole near $g_{m3}/C_E$; PMOS devices have poor $g_m$ per unit $C_{GS}$, so this pole often matters. With a Thevenin model of the input pair ($V_X = g_{mN}r_{oN}V_{in}$, $R_X = 2r_{oN}$):"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{g_{mN}r_{oN}(2g_{mP} + C_E s)r_{oP}}{2r_{oP}r_{oN}C_E C_L s^2 + \\left[(2r_{oN} + r_{oP})C_E + r_{oP}(1 + 2g_{mP}r_{oN})C_L\\right]s + 2g_{mP}(r_{oN} + r_{oP})}"
+    },
+    {
+      "type": "prose",
+      "text": "With the mirror pole far above the output pole:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{p1} \\approx \\frac{1}{(r_{oN} \\parallel r_{oP})C_L}, \\qquad \\omega_{p2} \\approx \\frac{g_{mP}}{C_E}, \\qquad \\omega_z = -\\frac{2g_{mP}}{C_E}"
+    },
+    {
+      "type": "prose",
+      "text": "The left-half-plane zero at twice the mirror pole follows from adding the two paths: $\\frac{A_0}{1 + s/\\omega_{p1}}\\left(\\frac{1}{1 + s/\\omega_{p2}} + 1\\right)$ has a numerator $2 + s/\\omega_{p2}$. A fully differential pair with current-source loads has no mirror pole, one more reason to prefer it."
+    },
+    {
+      "type": "prose",
+      "text": "Not every fully differential circuit escapes: if the signal current is folded through current mirrors (say $1:K$ mirrors into resistive loads, gain $g_{m1}KR_D$), each mirror's diode node adds a pole near $g_{m3}/C_X$, with $C_X$ including $C_{GS3}$, $C_{GS5}$ and the Miller-multiplied $C_{GD5}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Mirror pole and zero",
+      "text": "A five-transistor OTA has $g_{m3} = g_{mP} = 1\\text{ mS}$, $C_E = 400\\text{ fF}$, $r_{oN} = r_{oP} = 40\\text{ k}\\Omega$ and $C_L = 500\\text{ fF}$. Find the output pole, the mirror pole and the zero.",
+      "solution": [
+        "Output: $r_{oN} \\parallel r_{oP} = 20\\text{ k}\\Omega$, $f_{p1} = 1/(2\\pi \\cdot 20\\text{ k}\\Omega \\cdot 500\\text{ fF}) = 15.9\\text{ MHz}$.",
+        "Mirror: $f_{p2} = 1\\text{ mS}/(2\\pi \\cdot 400\\text{ fF}) = 398\\text{ MHz}$.",
+        "Zero: $2f_{p2} = 796\\text{ MHz}$, left half plane."
+      ],
+      "answer": "15.9 MHz, 398 MHz, and an LHP zero at 796 MHz."
+    },
+    {
+      "type": "problem",
+      "title": "CMRR roll-off",
+      "text": "A resistively loaded pair has $g_m = 2\\text{ mS}$ per device, a 2% transconductance mismatch, a tail device with $r_{o3} = 20\\text{ k}\\Omega$ and $C_P = 200\\text{ fF}$. Find the low-frequency CMRR, the frequency where it starts to fall, and its high-frequency floor.",
+      "solution": [
+        "$g_m/\\Delta g_m = 50$; $1 + 2g_m r_{o3} = 81$; low-frequency CMRR $= 4050$, or 72.1 dB.",
+        "Pole: $1/(2\\pi r_{o3}C_P) = 39.8\\text{ MHz}$.",
+        "Zero: $\\approx 2g_m/(2\\pi C_P) = 3.18\\text{ GHz}$; above it CMRR $\\to g_m/\\Delta g_m = 50$ (34 dB)."
+      ],
+      "answer": "72 dB, falling from about 40 MHz to a 34 dB floor above about 3 GHz."
+    }
+  ]
+}

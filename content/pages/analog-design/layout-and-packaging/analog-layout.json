@@ -1,58 +1,94 @@
 {
-  "title": "Analog Layout Techniques",
-  "intro": "Layout is part of circuit design in analog: the best schematic fails if its matched devices are placed badly.",
+  "title": "Symmetry and Matching",
+  "intro": "Layout techniques that make matched devices see the same process, the same gradients and the same surroundings (Razavi, Sections 19.2.2 to 19.2.5).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Matching techniques"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Same orientation and shape: transistors that must match should be identical in W, L, direction and surrounding.",
-        "Common centroid: arrange devices A and B as A B B A (or A B / B A in 2-D) so linear process gradients cancel.",
-        "Interdigitation: split each device into fingers and interleave them.",
-        "Dummy devices at the ends of arrays so that edge devices see the same environment.",
-        "Symmetry in routing: equal length and equal coupling for differential signals."
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 3,
-      "text": "Substrate coupling"
+      "text": "Orientation and gate shadowing"
     },
     {
       "type": "prose",
-      "text": "Switching digital circuits inject noise into the shared substrate, which reaches analog devices through junction capacitances and the body terminals. Guard rings (grounded p+ rings around sensitive circuits), separate supply pins and distance reduce it. Deep n-wells can isolate NMOS devices."
-    },
-    {
-      "type": "heading",
-      "level": 3,
-      "text": "Packaging"
+      "text": "Many lithography and processing steps behave differently along different axes, so matched transistors must point the same way. Two parallel arrangements remain: gates in line, or gates side by side. Implants are tilted about 7° (to avoid channeling), so the gate casts an implant shadow on one side, making source and drain slightly asymmetric. With gates in line, both devices are shadowed identically. With gates side by side, each device has different neighbours on its two sides (one sees the other device, the other sees field oxide), so they are not identical; dummy transistors on the outside restore the symmetry."
     },
     {
       "type": "prose",
-      "text": "A bond wire adds about 1 nH per mm of inductance and a few hundred fF pad capacitance. At GHz frequencies these parasitics matter: ground bounce on a shared bond wire, and resonances with pad capacitors. Flip-chip and multiple bond wires reduce the impedance."
+      "text": "Symmetry includes the environment: an unrelated wire crossing over only one device of a pair adds mismatch. Copy it over the other device (even as a grounded dummy line) or, better, route it elsewhere. Symmetry also suppresses common-mode noise and even-order distortion."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gradients and common-centroid layout"
+    },
+    {
+      "type": "prose",
+      "text": "Large devices (used for low offset) are long enough for process gradients to matter. Splitting each into halves placed diagonally (a cross-quad) cancels linear gradients in both directions, but its wiring is awkward and can create new asymmetries. Placing four halves in a row also works for gradients along that row:"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/layout-common-centroid.svg",
+      "alt": "Top views: a row of four device halves in the order A, B, B, A with dummies at each end above an arrow showing a gradient; and a two by two grid with A and B on the diagonals.",
+      "caption": "One-dimensional cross-coupling (ABBA) and a cross-quad."
+    },
+    {
+      "type": "prose",
+      "text": "If a parameter steps by $\\Delta$ from one unit to the next, ABBA gives A $= 2C + 3\\Delta$ and B $= 2C + 3\\Delta$: cancelled. ABAB gives A $= 2C + 2\\Delta$ and B $= 2C + 4\\Delta$: an error remains. ABBA leaves the inner B units with different neighbours from the outer A units, so dummies go at both ends."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Trench stress and well proximity"
+    },
+    {
+      "type": "prose",
+      "text": "Shallow trench isolation is filled with oxide, which expands differently from silicon, so it stresses the active area and changes the transistor's I/V characteristic. Grounded dummy fingers at each end of a device (or of a finger array) keep the stress away from the active gates, at the cost of extra drain/source capacitance to ground."
+    },
+    {
+      "type": "prose",
+      "text": "The n-well implant scatters off the thick resist and oxide at the well edge, so PMOS devices near the edge see different doping than those in the middle (the well proximity effect). Matched PMOS devices should sit several microns inside the well, all at similar distances from its edges."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Distributing references"
+    },
+    {
+      "type": "prose",
+      "text": "Bias currents across a large chip usually come from one bandgap through mirrors. Distributing a gate voltage over a long ground line adds the ground drops directly to $V_{GS}$, giving systematic errors. Distributing currents instead, and mirroring them locally (with bypass capacitors at the destination), puts the wire resistance in series with a current source where it does no harm, at the price of mismatch between the local mirrors. Large systems may use several local references. Orientation must match across separately drawn blocks."
+    },
+    {
+      "type": "prose",
+      "text": "Ratios: because the effective length differs from the drawn one by a poorly controlled amount, ratioed mirrors use equal lengths and integer numbers of identical unit widths. A half-size device can be a full unit with half its source left floating, so its surroundings stay identical."
     },
     {
       "type": "problem",
       "title": "Common-centroid",
-      "text": "A linear gradient raises VTH by 1 mV per um across a row. Device A occupies positions 0 and 3 um, B positions 1 and 2 um (ABBA). Compare the average VTH shift of A and B with an AABB layout.",
+      "text": "A linear gradient raises $V_{TH}$ by 1 mV per µm across a row. Device A occupies positions 0 and 3 µm, B positions 1 and 2 µm (ABBA). Compare the average $V_{TH}$ shift of A and B with an AABB layout.",
       "solution": [
-        "ABBA: A averages (0 + 3)/2 = 1.5 um, B averages (1 + 2)/2 = 1.5 um: identical, so mismatch is zero.",
-        "AABB: A at (0 + 1)/2 = 0.5, B at (2 + 3)/2 = 2.5: a 2 mV difference."
+        "ABBA: A averages $(0 + 3)/2 = 1.5$ µm, B averages $(1 + 2)/2 = 1.5$ µm: identical, so mismatch is zero.",
+        "AABB: A at $(0 + 1)/2 = 0.5$, B at $(2 + 3)/2 = 2.5$: a 2 mV difference."
       ],
       "answer": "ABBA cancels the gradient; AABB leaves 2 mV."
     },
     {
       "type": "problem",
-      "title": "Bond-wire reactance",
-      "text": "A 2 nH bond wire carries a 2 GHz signal. What is its impedance magnitude?",
+      "title": "ABAB with an oxide gradient",
+      "text": "Four unit halves in a row have $C_{ox}$ rising 0.1% per unit. Find the relative mismatch between the two devices for ABBA and ABAB connections.",
       "solution": [
-        "|Z| = 2*pi*f*L = 2*pi * 2e9 * 2e-9 = 25 ohm."
+        "Units: 1, 1.001, 1.002, 1.003 (times $C_{ox}$).",
+        "ABBA: A $= 1 + 1.003 = 2.003$, B $= 1.001 + 1.002 = 2.003$: 0.",
+        "ABAB: A $= 1 + 1.002 = 2.002$, B $= 1.001 + 1.003 = 2.004$: 0.1% mismatch (one unit step)."
       ],
-      "answer": "About 25 ohm."
+      "answer": "0 for ABBA; 0.1% for ABAB."
+    },
+    {
+      "type": "problem",
+      "title": "Scaling mirror outputs",
+      "text": "A reference transistor carries $I_{REF}$. Outputs of $0.5I_{REF}$ and $3I_{REF}$ are needed. How should they be drawn?",
+      "solution": [
+        "Same $L$ for all. Choose a unit width $W_u$: reference 2 units, $0.5I_{REF}$ output 1 unit, $3I_{REF}$ output 6 units, all identical fingers, same orientation, with dummies around the array. (Or reference 1 unit and the half-size output as one unit with half its source floating.)"
+      ],
+      "answer": "Equal L; integer multiples of a unit width."
     }
   ]
 }

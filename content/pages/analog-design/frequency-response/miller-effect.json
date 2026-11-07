@@ -1,6 +1,6 @@
 {
   "title": "Miller Effect and Poles",
-  "intro": "Every real amplifier has capacitances. The Miller effect explains why a small bridging capacitor can dominate the frequency response.",
+  "intro": "Every MOSFET carries four capacitances ($C_{GS}$, $C_{GD}$, $C_{DB}$, $C_{SB}$), so exact transfer functions grow messy fast. Two shortcuts make them manageable: Miller's theorem, which splits a bridging impedance into two grounded ones, and associating one pole with each node.",
   "blocks": [
     {
       "type": "heading",
@@ -9,22 +9,63 @@
     },
     {
       "type": "prose",
-      "text": "A capacitor CF between the input and output of an amplifier with voltage gain Av = Vout/Vin looks, from the input side, like a capacitor CF*(1 - Av) to ground, and from the output side like CF*(1 - 1/Av) to ground. For an inverting stage (Av is about -20) a 10 fF bridging capacitor appears as 210 fF at the input."
+      "text": "Take an impedance $Z$ connected between nodes X and Y, and let $A_v = V_Y/V_X$. If the circuit can be redrawn with $Z$ removed and replaced by $Z_1$ from X to ground and $Z_2$ from Y to ground, the currents match when"
+    },
+    {
+      "type": "math",
+      "tex": "Z_1 = \\frac{Z}{1 - A_v}, \\qquad Z_2 = \\frac{Z}{1 - 1/A_v}"
+    },
+    {
+      "type": "prose",
+      "text": "The proof is one line: the current leaving X through $Z$ is $(V_X - V_Y)/Z$, and it must equal $V_X/Z_1$. For a capacitor $C_F$ across an inverting gain $-A$, the input sees $(1 + A)C_F$ and the output sees $(1 + 1/A)C_F \\approx C_F$. Physically, a step $\\Delta V$ at the input moves the far plate by $-A\\Delta V$, so the capacitor takes $(1+A)$ times the charge it would if grounded."
     },
     {
       "type": "figure",
       "src": "assets/figures/analog-design/miller-effect.svg",
       "alt": "An inverting amplifier of gain minus A has its input on the left and its output on the right. A capacitor CF connects the input node to the output node, going over the top of the amplifier.",
-      "caption": "A capacitor CF bridging an inverting amplifier."
+      "caption": "A capacitor $C_F$ bridging an inverting amplifier: the input sees $(1+A)C_F$."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "C_in(Miller)  = CF * (1 - Av)\nC_out(Miller) = CF * (1 - 1/Av)"
+      "type": "heading",
+      "level": 3,
+      "text": "When the theorem applies"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The theorem says what $Z_1$ and $Z_2$ must be if the conversion is valid; it does not say when it is valid. It works well when $Z$ sits in parallel with a main signal path (a $C_{GD}$ across a gain stage). When $Z$ is the only path from X to Y, as in a resistor divider, it gives the right input impedance but a wrong gain.",
+        "Using it for a deliberately large capacitor (Miller multiplication of a small physical $C_F$) works only if the amplifier can swing $A$ times the input without saturating, and if the DC levels are compatible.",
+        "It also gives impedances that look odd: a resistance $r_o$ across a stage of gain $1 + (g_m + g_{mb})r_o$ becomes a negative resistance at the input, which correctly predicts the infinite input resistance of a CG device with an ideal current-source load."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Miller's approximation and its pitfalls"
     },
     {
       "type": "prose",
-      "text": "Miller's theorem is exact only for the frequency at which Av is evaluated, so it is an estimate in a frequency-dependent amplifier. It gives a good approximation of the input pole."
+      "text": "Strictly, $A_v$ must be evaluated at the frequency of interest, which makes the algebra as long as a direct analysis. In practice we plug in the low-frequency gain. This 'Miller approximation' gives good pole estimates for the input node but has three known faults:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "it can drop zeros (the feedforward through $C_F$ disappears);",
+        "it can add a pole that the real circuit does not have;",
+        "it cannot be reused to find the output impedance: the gain $V_X/V_Y$ seen when driving the output is not the inverse of $V_Y/V_X$ measured when driving the input."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Example: an amplifier of gain $-A$ with output resistance $R_{out}$, driven through $R_S$, with $C_F$ from input to output. Direct analysis gives a single pole and a right-half-plane zero:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{R_{out}C_F s - A}{[(A+1)R_S + R_{out}]C_F s + 1}"
+    },
+    {
+      "type": "prose",
+      "text": "The Miller version predicts two poles, $1/[(1+A)R_S C_F]$ and $1/[R_{out}C_F(1 + 1/A)]$, and no zero. The first nearly matches the true pole; the second is an artifact. (See Razavi, Section 6.1.1.)"
     },
     {
       "type": "heading",
@@ -33,27 +74,80 @@
     },
     {
       "type": "prose",
-      "text": "A faster rule of thumb: each node with a total capacitance C and a resistance R to ground contributes a pole at 1/(R*C). Write down the nodes, find the equivalent R and C at each (using Miller's theorem for bridging capacitors), and the product gives the pole frequencies. The lowest is the dominant pole."
+      "text": "In a chain of ideal amplifiers separated by RC nodes, each node gives one pole. The transfer function is a product of first-order factors, each with time constant equal to the resistance seen from that node to ground times the capacitance there."
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{A_1}{1 + R_S C_{in} s} \\cdot \\frac{A_2}{1 + R_1 C_N s} \\cdot \\frac{1}{1 + R_2 C_P s}"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-pole-cascade.svg",
+      "alt": "Vin drives a series resistor RS into node M, which has capacitor Cin to ground and feeds amplifier A1. A1 drives resistor R1 into node N, with capacitor CN to ground, feeding amplifier A2. A2 drives R2 into node P, with capacitor CP to ground, which is Vout.",
+      "caption": "Isolated nodes: each one contributes a pole $1/(RC)$."
+    },
+    {
+      "type": "prose",
+      "text": "When a capacitor or resistor links two nodes, the nodes interact and the rule becomes an estimate. Miller's approximation is what lets us split a bridging capacitor and keep using it. A useful scale: a MOSFET's transit frequency is about $f_T \\approx g_m/(2\\pi C_{GS})$, several hundred GHz in nanometer processes, and it rises with overdrive, so low-voltage biasing costs speed."
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_j = \\frac{1}{R_j C_j}, \\qquad f_T \\approx \\frac{g_m}{2\\pi C_{GS}}"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A dual view: a zero-potential point inside Z"
+    },
+    {
+      "type": "prose",
+      "text": "Since $Z_1 + Z_2 = Z$, Miller's split marks the point along $Z$ where the local potential is zero; grounding that point changes nothing. For a CS stage the input and output move in opposite directions, so such a point exists inside $C_{GD}$. For a resistor divider grounding it cuts the only path, which is why the theorem misleads there. The same idea with admittances and current ratios gives the dual theorem: an admittance $Y$ shared by two loops with currents $I_1$ and $I_2$ splits into $Y_1 = Y/(1 - I_2/I_1)$ and $Y_2 = Y/(1 - I_1/I_2)$ (Razavi, Section 6.10)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
     },
     {
       "type": "problem",
       "title": "Miller capacitance",
-      "text": "CF = 10 fF bridges a stage with gain -20. Find the capacitance seen from the input and from the output.",
+      "text": "$C_F = 10\\text{ fF}$ bridges a stage with gain $-20$. Find the capacitance seen from the input and from the output.",
       "solution": [
-        "Input: CF*(1 - Av) = 10 fF * 21 = 210 fF.",
-        "Output: CF*(1 - 1/Av) = 10 fF * (1 + 1/20) = 10.5 fF."
+        "Input: $C_F(1 - A_v) = 10\\text{ fF} \\times 21 = 210\\text{ fF}$.",
+        "Output: $C_F(1 - 1/A_v) = 10\\text{ fF} \\times (1 + 1/20) = 10.5\\text{ fF}$."
       ],
       "answer": "210 fF at the input and 10.5 fF at the output."
     },
     {
       "type": "problem",
       "title": "Input pole",
-      "text": "A source with RS = 1 kohm drives a CS stage with CGS = 100 fF, CGD = 20 fF and gm*RD = 10. Estimate the input pole frequency.",
+      "text": "A source with $R_S = 1\\text{ k}\\Omega$ drives a CS stage with $C_{GS} = 100\\text{ fF}$, $C_{GD} = 20\\text{ fF}$ and $g_m R_D = 10$. Estimate the input pole frequency.",
       "solution": [
-        "C_in = CGS + (1 + gm*RD)*CGD = 100 + 11 * 20 = 320 fF.",
-        "f = 1/(2*pi*RS*C_in) = 1/(2*pi * 1 kohm * 320 fF) = 497 MHz."
+        "$C_{in} = C_{GS} + (1 + g_m R_D)C_{GD} = 100 + 11 \\times 20 = 320\\text{ fF}$.",
+        "$f = \\frac{1}{2\\pi R_S C_{in}} = \\frac{1}{2\\pi \\cdot 1\\text{ k}\\Omega \\cdot 320\\text{ fF}} = 497\\text{ MHz}$."
       ],
       "answer": "About 0.5 GHz."
+    },
+    {
+      "type": "problem",
+      "title": "Where Miller's approximation adds a pole",
+      "text": "An amplifier with gain $-40$ and output resistance $R_{out} = 5\\text{ k}\\Omega$ is driven through $R_S = 2\\text{ k}\\Omega$; $C_F = 50\\text{ fF}$ joins input and output. Compare the exact pole and zero with the two Miller poles.",
+      "solution": [
+        "Exact pole: $\\omega_p = 1/[(A+1)R_S C_F + R_{out}C_F] = 1/(4.1\\text{ ns} + 0.25\\text{ ns})$, so $f_p = 36.6\\text{ MHz}$.",
+        "Exact zero: $\\omega_z = A/(R_{out}C_F) = 1.6 \\times 10^{11}\\text{ rad/s}$, so $f_z = 25.5\\text{ GHz}$ in the right half plane.",
+        "Miller input pole: $1/[2\\pi (A+1) R_S C_F] = 38.8\\text{ MHz}$, close to the true pole.",
+        "Miller output pole: $1/[2\\pi R_{out}C_F(1 + 1/A)] = 621\\text{ MHz}$, a pole the real circuit does not have; and the zero is missing."
+      ],
+      "answer": "True: one pole at 36.6 MHz and a RHP zero at 25.5 GHz. Miller: 38.8 MHz and a spurious 621 MHz pole."
+    },
+    {
+      "type": "problem",
+      "title": "Transit frequency",
+      "text": "A device has $g_m = 5\\text{ mS}$ and $C_{GS} = 20\\text{ fF}$. Estimate $f_T$.",
+      "solution": [
+        "$f_T \\approx \\frac{g_m}{2\\pi C_{GS}} = \\frac{5 \\times 10^{-3}}{2\\pi \\times 20 \\times 10^{-15}} = 39.8\\text{ GHz}$."
+      ],
+      "answer": "About 40 GHz."
     }
   ]
 }

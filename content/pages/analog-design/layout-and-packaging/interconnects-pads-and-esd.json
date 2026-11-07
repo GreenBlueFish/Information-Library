@@ -1,0 +1,135 @@
+{
+  "title": "Interconnects, Pads and ESD",
+  "intro": "Wires couple signals, add noise and delay, and carry supply current; pads connect the chip to the outside world and must survive electrostatic discharge (Razavi, Sections 19.2.7 and 19.2.8).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Coupling between wires"
+    },
+    {
+      "type": "prose",
+      "text": "Long clock lines and digital wires that cross or run beside analog nodes couple through small capacitances; the disturbance is the capacitance ratio times the large digital swing. For example 50 aF from a 1 V clock onto a node with 10 fF total gives 5 mV."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Differential signals turn most coupling into common mode, if the coupling to both halves is equal; add dummy crossings so each half sees the same aggressors. Differential clocks reduce the net injection further.",
+        "Shielding: grounded lines beside the sensitive wire, or ground planes above and below it, catch the field lines. This beats simply spacing wires apart, but costs routing and adds capacitance to ground."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/layout-shielding.svg",
+      "alt": "Two cross-sections over a substrate. Left: a signal wire with a grounded wire on each side. Right: a signal wire enclosed by ground metal above, below and on both sides.",
+      "caption": "Side shields and a full ground enclosure."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Resistance: noise and delay"
+    },
+    {
+      "type": "prose",
+      "text": "Long wires (40 to 80 mΩ/□), contacts (tens of ohms) and vias (a few ohms) add thermal noise in series with sensitive inputs. Distributed RC lines delay and smear signals:"
+    },
+    {
+      "type": "math",
+      "tex": "T_D \\approx \\frac{1}{2}R_uC_uL^2",
+      "caption": "$R_u$, $C_u$ per unit length; delay grows with the square of length."
+    },
+    {
+      "type": "prose",
+      "text": "In an array of samplers fed by a clock line and a signal line, unequal delays along the two lines make each sampler capture a slightly different instant, and the clock's edges get slower along the line (dispersion), which makes sampling sensitive to noise. Local inverters sharpen the edges but add delay uncertainty."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Power buses"
+    },
+    {
+      "type": "prose",
+      "text": "Supply and ground buses must handle DC and transient drops and electromigration. Strapping several layers in parallel lowers resistance; since the top layer is typically twice as thick, about three layers are needed to halve the resistance of one top layer, which uses up routing layers. If the currents along a bus are known, its width can be tapered for a constant drop along it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pads"
+    },
+    {
+      "type": "prose",
+      "text": "Bond pads around the die perimeter are sized by the bonding process: with 25 to 50 µm wires, roughly 70 to 100 µm on a side, at least 25 µm apart. They are usually two top metals joined by many vias at the edge (a single layer can lift off during bonding), which raises their capacitance. High-frequency pads can be octagonal: trimming the corners cuts area and perimeter by about 20%."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Electrostatic discharge"
+    },
+    {
+      "type": "prose",
+      "text": "A charged person or machine touching a pin dumps charge into a node of tiny capacitance, producing hundreds to thousands of volts. The human body is modelled as a few hundred picofarads in series with a few kilohms. Oxide breaks down above roughly 10 MV/cm (2 V across 2 nm), and junctions can melt under high current."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/layout-esd.svg",
+      "alt": "Pad connected through a series resistor R1 to a node; diode D1 from the node up to VDD and diode D2 from ground up to the node; the node continues to the circuit.",
+      "caption": "Diode clamps to the rails with a series resistor."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Clamp diodes add picofarads to the pin, which costs bandwidth and impedance matching, and R1 adds noise.",
+        "They couple supply noise into the input.",
+        "Badly designed protection can itself trigger latch-up; use only the process's qualified ESD structures."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Crosstalk",
+      "text": "A 1.2 V clock line runs beside a 20 fF analog node with 30 aF of coupling. How large is the disturbance? What if the node is differential with 10% mismatch between the two couplings?",
+      "solution": [
+        "Single-ended: $1.2 \\times 30\\text{ aF}/20\\text{ fF} = 1.8\\text{ mV}$.",
+        "Differential: only the 10% difference counts, about 0.18 mV."
+      ],
+      "answer": "1.8 mV; about 0.18 mV differentially."
+    },
+    {
+      "type": "problem",
+      "title": "Wire noise",
+      "text": "An input is routed through 100 squares of metal at 40 mΩ/□, two vias of 5 Ω and one 30 Ω poly contact. Find its thermal noise density at 300 K.",
+      "solution": [
+        "$R = 4 + 10 + 30 = 44\\ \\Omega$; $\\sqrt{4kTR} = \\sqrt{1.66\\times10^{-20} \\times 44} = 0.85\\text{ nV}/\\sqrt{\\text{Hz}}$, comparable to a low-noise amplifier's own noise."
+      ],
+      "answer": "About 0.85 nV/√Hz."
+    },
+    {
+      "type": "problem",
+      "title": "RC delay",
+      "text": "A 2 mm line has 0.2 Ω/µm and 0.2 fF/µm. Estimate its delay, and the delay if it were split into two 1 mm halves with a buffer between them (ignore the buffer delay).",
+      "solution": [
+        "$\\frac{1}{2} \\times 0.2 \\times 0.2\\times10^{-15} \\times 2000^2 = 80\\text{ ps}$.",
+        "Each half: 20 ps, 40 ps total: halving the length quarters each segment's delay."
+      ],
+      "answer": "80 ps; 40 ps with a repeater."
+    },
+    {
+      "type": "problem",
+      "title": "Pad capacitance",
+      "text": "A single-layer pad is 60 µm × 60 µm with 6 aF/µm² to the substrate and 15 aF/µm of fringe. Find its capacitance, and the saving from an octagonal shape.",
+      "solution": [
+        "$3600 \\times 6 + 240 \\times 15 = 21.6 + 3.6 = 25.2\\text{ fF}$.",
+        "An octagon trims area and perimeter by about 20%: roughly 20 fF."
+      ],
+      "answer": "About 25 fF; about 20 fF octagonal."
+    },
+    {
+      "type": "problem",
+      "title": "ESD energy",
+      "text": "A 100 pF body charged to 2 kV discharges through 1.5 kΩ into a pin. Find the peak current and the stored energy.",
+      "solution": [
+        "Peak current $2000/1500 = 1.3\\text{ A}$; energy $\\frac{1}{2}CV^2 = 0.2\\text{ mJ}$, enough to destroy an unprotected 2 nm gate oxide many times over."
+      ],
+      "answer": "1.3 A; 0.2 mJ."
+    }
+  ]
+}

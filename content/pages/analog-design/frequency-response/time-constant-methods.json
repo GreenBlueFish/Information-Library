@@ -1,0 +1,140 @@
+{
+  "title": "Time-Constant Methods and the Extra Element Theorem",
+  "intro": "Beyond two poles, direct analysis is slow. The zero-value time constant method estimates the dominant pole (or the bandwidth) as a sum of simple RC products; the extra element theorem adds one element at a time to a known transfer function.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One capacitor: the resistance it sees"
+    },
+    {
+      "type": "prose",
+      "text": "In a circuit with a single capacitor $C_1$, the pole is $1/(R_1C_1)$, where $R_1$ is the resistance seen by $C_1$ with the input set to zero. Finding $R_1$ needs only a test source in place of the capacitor."
+    },
+    {
+      "type": "prose",
+      "text": "Example: a CG stage with gate resistance $R_G$, source resistance $R_S$ and only $C_{GD}$. With a test current $I_X$ into $C_{GD}$'s terminals and $V_{in} = 0$:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{eq} = R_D + \\left(\\frac{g_m R_D}{1 + g_m R_S} + 1\\right)R_G"
+    },
+    {
+      "type": "prose",
+      "text": "so $R_G$ appears multiplied by one plus the stage's gain. Miller's approximation is no help here: $C_{GD}$ does not bridge the input and output of a gain stage."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Zero-value time constants (ZVTC)"
+    },
+    {
+      "type": "prose",
+      "text": "Write the denominator as $(1 + s/\\omega_{p1})(1 + s/\\omega_{p2})\\cdots$. Its $s$ coefficient is $b_1 = \\sum 1/\\omega_{pk}$, close to $1/\\omega_{p1}$ when one pole dominates. With all other capacitors set to zero the circuit is first order with $b_1 = R_jC_j$, which identifies each term. Hence"
+    },
+    {
+      "type": "math",
+      "tex": "b_1 = \\sum_j R_j C_j, \\qquad \\omega_{p1} \\approx \\omega_{-3\\mathrm{dB}} \\approx \\frac{1}{\\sum_j R_j C_j}",
+      "caption": "$R_j$ is the resistance seen by $C_j$ with the input zeroed and every other capacitor open."
+    },
+    {
+      "type": "prose",
+      "text": "A two-capacitor RC ladder shows it: its denominator is $R_1R_2C_1C_2s^2 + [R_1C_1 + (R_1 + R_2)C_2]s + 1$, and the two terms in the bracket are exactly the zero-value time constants. Caveats: the individual terms are not the individual poles, zeros are ignored, and the estimate is pessimistic when poles are not well separated. It is still the quickest way to see which capacitor limits the speed."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-zvtc-cs.svg",
+      "alt": "Common-source stage M1 with gate resistance RG from Vin, source degeneration resistor RS to ground, drain resistor RD to VDD, CGS between gate and source, CGD between gate and drain, and CL from the output to ground.",
+      "caption": "Degenerated CS stage with three capacitors."
+    },
+    {
+      "type": "prose",
+      "text": "For the degenerated CS stage above ($\\lambda = \\gamma = 0$):"
+    },
+    {
+      "type": "math",
+      "tex": "R_{C_{GS}} = \\frac{R_G + R_S}{1 + g_m R_S}, \\qquad R_{C_{GD}} = R_D + \\left(\\frac{g_m R_D}{1 + g_m R_S} + 1\\right)R_G, \\qquad R_{C_L} = R_D"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{1}{\\omega_{-3\\mathrm{dB}}} \\approx \\frac{R_G + R_S}{1 + g_m R_S}C_{GS} + \\left[R_D + \\left(\\frac{g_m R_D}{1 + g_m R_S} + 1\\right)R_G\\right]C_{GD} + R_D C_L"
+    },
+    {
+      "type": "prose",
+      "text": "With $R_S = 0$ this is the CS dominant-pole result. Degeneration divides the $C_{GS}$ and $C_{GD}$ terms by $1 + g_m R_S$, at the cost of gain. A CG stage with the same $R_G$ and $R_S$ has the same ZVTC network (the input is zeroed), so the same bandwidth; it avoids Miller multiplication only because a CG design keeps $R_G$ near zero, while in a CS stage $R_G$ is the previous stage's output resistance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Extra element theorem (EET)"
+    },
+    {
+      "type": "prose",
+      "text": "Middlebrook's theorem: if $H(s)$ is known and an impedance $Z_1$ is added between nodes A and B, the new transfer function is"
+    },
+    {
+      "type": "math",
+      "tex": "G(s) = H(s)\\,\\frac{1 + Z_{out,0}/Z_1}{1 + Z_{in,0}/Z_1}"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$Z_{in,0}$: the impedance between A and B with $V_{in} = 0$ and $Z_1$ absent.",
+        "$Z_{out,0}$: drive A-B with a source while $V_{in}$ is present and adjust them so that $V_{out} = 0$ (a 'null'); then $Z_{out,0} = V_1/I_1$. The null makes this easy, because nothing flows in the output load.",
+        "For an element added in series with a branch instead: $G = H\\,(1 + Z_1/Z_{out,0})/(1 + Z_1/Z_{in,0})$.",
+        "Start from the capacitor-free gain and add capacitors one at a time; $H$ must be neither zero nor infinite."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Example: CS stage driven through $R_S$ with $C_F$ from gate to drain. $H = -g_m(R_D \\parallel r_o)$. Nulling the output forces the drain current to zero, so $Z_{out,0} = -1/g_m$; with the input zeroed, $Z_{in,0} = (1 + g_m R_D)R_S + R_D$. Therefore"
+    },
+    {
+      "type": "math",
+      "tex": "G(s) = -g_m(R_D \\parallel r_o)\\,\\frac{1 - \\frac{C_F}{g_m}s}{1 + \\left[(1 + g_m R_D)R_S + R_D\\right]C_F s}"
+    },
+    {
+      "type": "prose",
+      "text": "Both the RHP zero $g_m/C_F$ and the Miller-like pole drop out with little algebra. Adding a capacitor $C_B$ from the drain to ground next gives $Z_{out,0} = 0$ (the drain is held at zero) and a $Z_{in,0}$ that includes $C_F$, and leads to the full second-order result (Razavi, Section 6.8)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Bandwidth by ZVTC",
+      "text": "A degenerated CS stage has $R_G = 1\\text{ k}\\Omega$, $R_S = 200\\ \\Omega$, $g_m = 5\\text{ mS}$, $R_D = 2\\text{ k}\\Omega$, $C_{GS} = 100\\text{ fF}$, $C_{GD} = 20\\text{ fF}$, $C_L = 100\\text{ fF}$. Estimate the $-3$ dB bandwidth and the largest contributor.",
+      "solution": [
+        "$g_m R_S = 1$. $R_{C_{GS}} = 1200/2 = 600\\ \\Omega$, $\\tau_1 = 60\\text{ ps}$.",
+        "$R_{C_{GD}} = 2000 + (10/2 + 1) \\times 1000 = 8\\text{ k}\\Omega$, $\\tau_2 = 160\\text{ ps}$.",
+        "$R_{C_L} = 2\\text{ k}\\Omega$, $\\tau_3 = 200\\text{ ps}$.",
+        "Sum $420\\text{ ps}$, so $f_{-3\\mathrm{dB}} \\approx 1/(2\\pi \\cdot 420\\text{ ps}) = 379\\text{ MHz}$. $C_L$ contributes most, closely followed by $C_{GD}$."
+      ],
+      "answer": "About 380 MHz; $C_L$ and $C_{GD}$ dominate."
+    },
+    {
+      "type": "problem",
+      "title": "Pole and zero by the EET",
+      "text": "A CS stage has $g_m = 2\\text{ mS}$, $R_D = 10\\text{ k}\\Omega$ ($r_o$ large), source resistance $R_S = 5\\text{ k}\\Omega$ and $C_F = 20\\text{ fF}$ from gate to drain. Find the pole and zero.",
+      "solution": [
+        "$Z_{in,0} = (1 + g_m R_D)R_S + R_D = 21 \\times 5\\text{ k}\\Omega + 10\\text{ k}\\Omega = 115\\text{ k}\\Omega$.",
+        "Pole: $1/(2\\pi \\cdot 115\\text{ k}\\Omega \\cdot 20\\text{ fF}) = 69.2\\text{ MHz}$.",
+        "Zero: $g_m/(2\\pi C_F) = 15.9\\text{ GHz}$ in the right half plane."
+      ],
+      "answer": "Pole 69 MHz; RHP zero 15.9 GHz."
+    },
+    {
+      "type": "problem",
+      "title": "Resistance seen by C_GD in a CG stage",
+      "text": "A CG stage has $g_m = 4\\text{ mS}$, $R_S = 500\\ \\Omega$, $R_D = 3\\text{ k}\\Omega$ and an unbypassed gate resistance $R_G = 1\\text{ k}\\Omega$. With $C_{GD} = 15\\text{ fF}$ as the only capacitor, find the pole.",
+      "solution": [
+        "$g_m R_D/(1 + g_m R_S) = 12/3 = 4$.",
+        "$R_{eq} = 3\\text{ k}\\Omega + (4 + 1) \\times 1\\text{ k}\\Omega = 8\\text{ k}\\Omega$.",
+        "$f = 1/(2\\pi \\cdot 8\\text{ k}\\Omega \\cdot 15\\text{ fF}) = 1.33\\text{ GHz}$ (3.54 GHz without $R_G$)."
+      ],
+      "answer": "About 1.3 GHz."
+    }
+  ]
+}

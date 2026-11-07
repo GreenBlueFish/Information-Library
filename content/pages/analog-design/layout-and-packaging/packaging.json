@@ -1,0 +1,118 @@
+{
+  "title": "Packaging",
+  "intro": "The package's bond wires, traces and pins add inductance and capacitance that limit high-speed and high-precision chips (Razavi, Section 19.4).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Package parasitics"
+    },
+    {
+      "type": "prose",
+      "text": "In a simple package the die sits in a cavity and bond wires run to the tips of traces that lead to the pins. Every connection therefore has bond-wire and trace self-inductance, capacitance to ground, and mutual inductance and capacitance to its neighbours. These dimensions are set by mechanics, assembly cost and skin-effect loss, and have shrunk far less than circuits have sped up, so packages must be modelled in simulation from the start (often by the designer, from calculation and measurement)."
+    },
+    {
+      "type": "math",
+      "tex": "L \\approx 0.2\\ln\\frac{2h}{r}\\ \\text{nH/mm}",
+      "caption": "A round wire of radius $r$ at height $h$ above a ground plane: about 1 nH/mm for typical bond wires."
+    },
+    {
+      "type": "prose",
+      "text": "A flat trace of width $W$ at height $d$ has $L \\approx 1.6K_f\\,d/W$ nH/mm with fringe factor $K_f \\approx 0.72(d/W) + 1$. Total bond wire plus trace inductance runs from about 2 to 20 nH. Real bond wires curve and need field solvers for accurate models."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Self-inductance: supply and ground bounce"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/layout-supply-bounce.svg",
+      "alt": "A CMOS inverter with input Vin driving a load capacitor CL. Its supply comes from external VDD through inductance LD to the on-chip rail VDD1, and its ground goes from the on-chip GND1 through inductance LG to ground.",
+      "caption": "A clock buffer's current flows through the package inductances."
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta V = L\\frac{\\Delta I}{\\Delta t}"
+    },
+    {
+      "type": "prose",
+      "text": "A buffer charging $C_L$ draws $C_L\\Delta V/\\Delta t$ through the supply and ground inductances, and the on-chip rails bounce by $L\\,\\Delta I/\\Delta t$. One gate gives millivolts; thousands switching together give hundreds of millivolts. Differential circuits draw nearly constant current and bounce far less. Hence separate analog and digital supplies (and sometimes a third, quieter supply for switch drivers, whose supply noise would couple through the switch's overlap capacitance)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Multiple bond wires in parallel lower the inductance, but mutual coupling $M$ between them means two wires give $(L_S + M)/2$, not $L_S/2$.",
+        "On-chip decoupling between $V_{DD}$ and ground makes the two bounce together, which differential circuits tolerate. It can resonate with the package inductance, so it needs damping resistance (e.g. a MOS capacitor's channel resistance), and a large MOS decoupling capacitor occupies gate area comparable to the whole circuit and costs yield.",
+        "Packages with a ground plane under the die (attached with conductive epoxy, sometimes exposed on the bottom) give the substrate a low-inductance connection; ground pads can be down-bonded to it.",
+        "Inputs: package inductance with pad and input capacitance forms a resonant low-pass that slows settling. Reference voltages brought from outside settle slowly when the circuit kicks them.",
+        "Output buffers driving tens of milliamps cause large rail drops that slow their own edges and add timing jitter."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For internal bias nodes kicked by many switching circuits (for example the shared gate line of many current-switch tail sources), a decoupling capacitor helps only if it is 100 to 1000 times the coupling capacitance, and then it slows the node's recovery; placed off-chip, it sits behind the package inductance. Sometimes leaving the node unbypassed settles fastest; simulate."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mutual inductance and capacitance"
+    },
+    {
+      "type": "prose",
+      "text": "Noisy wires (digital supplies, clocks, output buffers) couple into analog supplies and inputs through mutual inductance, and an arbitrary pad order defeats even differential signaling, because the aggressors are not symmetric. Pad-frame planning matters: run critical wires perpendicular to each other (on perpendicular sides of the die) or put quiet ground wires between them. Opposite currents help: a supply wire and its ground return side by side have total inductance $2L_S - M$ instead of $2L_S$."
+    },
+    {
+      "type": "prose",
+      "text": "Trace capacitance limits input bandwidth and loads drivers, and with the wire inductance forms a high-Q resonance that transient currents can excite, amplifying noise. Trace-to-trace capacitance adds more coupling."
+    },
+    {
+      "type": "problem",
+      "title": "Bond-wire reactance",
+      "text": "A 2 nH bond wire carries a 2 GHz signal. What is its impedance magnitude?",
+      "solution": [
+        "$|Z| = 2\\pi fL = 2\\pi \\times 2\\times10^9 \\times 2\\times10^{-9} = 25\\ \\Omega$."
+      ],
+      "answer": "About 25 Ω."
+    },
+    {
+      "type": "problem",
+      "title": "Inductance per length",
+      "text": "Estimate the inductance per millimetre of a 25 µm diameter bond wire 0.5 mm above the ground plane.",
+      "solution": [
+        "$0.2\\ln(2 \\times 500/12.5) = 0.2\\ln 80 = 0.88\\text{ nH/mm}$, close to the 1 nH/mm rule."
+      ],
+      "answer": "About 0.9 nH/mm."
+    },
+    {
+      "type": "problem",
+      "title": "Buffer bounce",
+      "text": "A clock buffer swings 1 pF by 1.2 V in 0.2 ns through 3 nH of supply inductance. Estimate the supply bounce.",
+      "solution": [
+        "$I = 1\\text{ pF} \\times 1.2\\text{ V}/0.2\\text{ ns} = 6\\text{ mA}$.",
+        "$\\Delta V = 3\\text{ nH} \\times 6\\text{ mA}/0.2\\text{ ns} = 90\\text{ mV}$ (rough: the current is not constant during the edge)."
+      ],
+      "answer": "About 90 mV."
+    },
+    {
+      "type": "problem",
+      "title": "Processor supply",
+      "text": "A digital chip's supply current changes by 30 A in 3 ns. It has 300 supply bond wires and 300 ground bond wires, each 4 nH including package. Estimate the bounce on each rail and the worst-case total.",
+      "solution": [
+        "Each rail: $(4\\text{ nH}/300) \\times 30\\text{ A}/3\\text{ ns} = 133\\text{ mV}$.",
+        "If supply and ground bounce in opposite directions, about 270 mV between the rails: hence on-package decoupling and more bond wires."
+      ],
+      "answer": "About 133 mV per rail, about 270 mV worst case."
+    },
+    {
+      "type": "problem",
+      "title": "Decoupling resonance",
+      "text": "1 nF of on-chip decoupling sits behind an effective 1 nH of package inductance. Where does it resonate, and why might that matter?",
+      "solution": [
+        "$f = 1/(2\\pi\\sqrt{10^{-9}\\cdot10^{-9}}) = 159\\text{ MHz}$.",
+        "If the clock or one of its harmonics or subharmonics lands near 159 MHz, the resonance amplifies supply noise instead of suppressing it; damping resistance or a different value is needed."
+      ],
+      "answer": "About 160 MHz."
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+{
+  "title": "Loading and Two-Port Analysis",
+  "intro": "The tidy $A/(1 + \\beta A)$ formulas assume an ideal feedback network that does not load the amplifier. Real networks draw current and have finite impedance, so the open-loop amplifier must be built with the network's loading included (Razavi, Sections 8.4 and 8.5).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why breaking the loop is hard"
+    },
+    {
+      "type": "prose",
+      "text": "The standard recipe is: break the loop, find the open-loop gain and impedances, find the loop gain, then scale by $1 + \\beta A$. Five things get in the way:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Loading: the network loads the amplifier output (a divider drawing current from an op amp) and its finite output impedance loads the input (a divider resistance degenerating an input transistor).",
+        "No clean split: in some circuits it is arbitrary whether a resistor belongs to the forward amplifier or to the feedback network.",
+        "Non-canonical circuits: a degenerated common-source stage senses the drain current but the output of interest is the drain voltage, so it maps onto none of the four topologies.",
+        "Bilateral paths: signals also travel backwards, for example through $C_{GD}$, or forwards through the feedback network.",
+        "Several loops: a resistor around two stages plus local degeneration or $C_{GS}$ feedback inside them. Which loop gain is 'the' loop gain?"
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Three remedies follow. The two-port method on this page handles loading in the four canonical topologies and still yields open-loop quantities and the loop gain. Bode's and Middlebrook's methods (next page) give exact closed-loop results without breaking the loop at all."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two-port models"
+    },
+    {
+      "type": "prose",
+      "text": "Any linear two-port can be described by four parameter sets. The Z model uses series impedances and current-controlled voltage sources; the Y model, shunt admittances and voltage-controlled current sources; the H and G hybrid models mix the two. Each parameter is measured with the other port open (Z) or shorted (Y), and the hybrids mix those conditions, so $Y_{11}$ is generally not $1/Z_{11}$."
+    },
+    {
+      "type": "prose",
+      "text": "Pick the model that matches the amplifier type. A MOS gate draws no current, so models controlled by input current (Z, H) misbehave for a voltage input. The G model, with an input admittance $G_{11}$, an output impedance $G_{22}$ and a voltage-controlled voltage source, is the natural voltage amplifier."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The loading recipe"
+    },
+    {
+      "type": "prose",
+      "text": "For voltage-voltage feedback, describe both amplifier and network with G models, neglect the amplifier's reverse transmission and the network's forward transmission (unilateralize), and solve. The result has the familiar form $A_{v,open}/(1 + g_{21}A_{v,open})$, with"
+    },
+    {
+      "type": "math",
+      "tex": "A_{v,open} = A_0 \\cdot \\frac{Z_{in}}{Z_{in} + g_{22}} \\cdot \\frac{g_{11}^{-1}}{g_{11}^{-1} + Z_{out}}, \\qquad \\beta = g_{21}"
+    },
+    {
+      "type": "prose",
+      "text": "The two factors are voltage dividers: the network's output impedance $g_{22}$ in series with the amplifier input, and its input impedance $1/g_{11}$ loading the amplifier output. Here $g_{22}$ is measured with the network's sensing port shorted and $g_{11}$ with its return port open. Repeating the derivation with the matching models gives one rule per topology:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Voltage-voltage (G models): at the input, the network's output impedance with its sensing port shorted ($g_{22}$, in series); at the output, its input admittance with its return port open ($g_{11}$, in parallel). Loop gain $g_{21}A_{v,open}$, with $g_{21} = V_2/V_1$ at $I_2 = 0$.",
+        "Current-voltage (Y model for the amplifier, Z model for the network): at the input, the sensing port open ($z_{22}$, in series); at the output, the return port open ($z_{11}$, in series with the output current path). Loop gain $z_{21}G_{m,open}$.",
+        "Voltage-current (Z model for the amplifier, Y model for the network): at the input, the sensing port shorted ($y_{22}$, in parallel); at the output, the return port shorted ($y_{11}$, in parallel). Loop gain $y_{21}R_{0,open}$.",
+        "Current-current (H models): at the input, the sensing port open ($h_{22}$, in parallel); at the output, the return port shorted ($h_{11}$, in series). Loop gain $h_{21}A_{I,open}$."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Memory aid: terminate the network's far port so that it carries no feedback. A port that senses or returns a voltage (a shunt connection) is shorted; a port that senses or returns a current (a series connection) is opened. The loaded open-loop amplifier then keeps the network's impedances but not its feedback signal."
+    },
+    {
+      "type": "prose",
+      "text": "Then the procedure is always three steps: (1) build the open-loop amplifier with loading and compute $A_{OL}$, $R_{in,OL}$ and $R_{out,OL}$; (2) compute $\\beta$ from the network alone and the loop gain $\\beta A_{OL}$; (3) scale gain and impedances by $1 + \\beta A_{OL}$ in the direction set by the topology."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Example: two CS stages with a resistive divider"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/feedback-series-shunt-loading.svg",
+      "alt": "Left: two NMOS common-source stages M1 and M2 with drain resistors RD1 and RD2. M1's source has RS to ground, and RF runs from the output (drain of M2) back to M1's source. Right: the same amplifier with the loop opened: M1's source sees RS in parallel with RF to ground, and the output is loaded by RF in series with RS to ground.",
+      "caption": "Voltage-voltage feedback around two inverting stages, and its loaded open-loop amplifier."
+    },
+    {
+      "type": "prose",
+      "text": "$R_F$ and $R_S$ sense $V_{out}$ and return a fraction to the source of $M_1$, which subtracts it from $V_{in}$ (two inversions make the loop negative). Following the recipe, the input side sees the network with its output end shorted ($R_F \\parallel R_S$ degenerating $M_1$) and the output side sees it with its input end open ($R_F + R_S$ loading $R_{D2}$). With $\\lambda = \\gamma = 0$:"
+    },
+    {
+      "type": "math",
+      "tex": "A_{v,open} = \\frac{R_{D1}}{R_F \\parallel R_S + \\frac{1}{g_{m1}}}\\; g_{m2}\\left[R_{D2} \\parallel (R_F + R_S)\\right], \\qquad \\beta = \\frac{R_S}{R_F + R_S}"
+    },
+    {
+      "type": "prose",
+      "text": "The answer neglects $C_{GD2}$ and the small signal that leaks forward from $M_1$'s source through $R_F$ to the output ($M_1$ also acts as a source follower). For moderate loop gains the error is small, as the problem below shows."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Example: the resistive-feedback TIA"
+    },
+    {
+      "type": "prose",
+      "text": "For the $R_F$-around-a-common-source transimpedance stage (voltage-current), shorting both ports of the network puts $R_F$ from gate to ground and from drain to ground. With an input current $I_{in}$ flowing into $R_F$ at the gate:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{0,open} = -R_F\\, g_m (R_F \\parallel R_D), \\qquad y_{21} = -\\frac{1}{R_F}, \\qquad \\frac{V_{out}}{I_{in}} = \\frac{-R_F\\, g_m (R_F \\parallel R_D)}{1 + g_m (R_F \\parallel R_D)}"
+    },
+    {
+      "type": "math",
+      "tex": "R_{in} = \\frac{R_F}{1 + g_m(R_F \\parallel R_D)}, \\qquad R_{out} = \\frac{R_F \\parallel R_D}{1 + g_m(R_F \\parallel R_D)}"
+    },
+    {
+      "type": "prose",
+      "text": "These carry the approximations of the model: breaking the loop at the gate gives a loop gain $g_m R_D$, not $g_m(R_F \\parallel R_D)$, and the exact output resistance with the input open is $R_D \\parallel (1/g_m)$, whereas the formula gives $R_D/(1 + g_m R_D + R_D/R_F)$. The discrepancies are of order $R_D/R_F$. If the input is a voltage source with series resistance $R_S$, convert it to a Norton source and treat $R_S$ as part of the amplifier's input loading."
+    },
+    {
+      "type": "problem",
+      "title": "Two-stage series-shunt",
+      "text": "In the two-stage circuit, $g_{m1} = g_{m2} = 5$ mS, $R_{D1} = R_{D2} = 4\\text{ k}\\Omega$, $R_S = 500\\;\\Omega$ and $R_F = 4.5\\text{ k}\\Omega$ ($\\lambda = \\gamma = 0$). Find the loaded open-loop gain, the loop gain and the closed-loop gain.",
+      "solution": [
+        "$R_F \\parallel R_S = 450\\;\\Omega$, so the first stage gives $4000/(450 + 200) = 6.15$.",
+        "$R_{D2} \\parallel (R_F + R_S) = 4\\text{ k}\\parallel 5\\text{ k} = 2.22\\text{ k}\\Omega$, so the second gives $5\\text{ mS} \\times 2.22\\text{ k}\\Omega = 11.1$. $A_{v,open} = 68.4$.",
+        "$\\beta = 500/5000 = 0.1$, loop gain $6.84$, closed-loop gain $68.4/7.84 = 8.72$ (ideal 10).",
+        "A direct nodal solution of the full circuit gives 8.73, so the two-port estimate is within 0.1%."
+      ],
+      "answer": "$A_{v,open} \\approx 68.4$, loop gain $\\approx 6.8$, $A_{v,closed} \\approx 8.72$."
+    },
+    {
+      "type": "problem",
+      "title": "Resistive-feedback TIA with loading",
+      "text": "A transimpedance stage has $g_m = 10$ mS, $R_D = 2\\text{ k}\\Omega$ and $R_F = 10\\text{ k}\\Omega$ ($\\lambda = 0$). Find the transimpedance, $R_{in}$ and $R_{out}$ with the two-port method, and compare $R_{out}$ with the exact $R_D \\parallel (1/g_m)$.",
+      "solution": [
+        "$R_F \\parallel R_D = 1.667\\text{ k}\\Omega$; $R_{0,open} = -10\\text{ k}\\Omega \\times 10\\text{ mS} \\times 1.667\\text{ k}\\Omega = -166.7\\text{ k}\\Omega$; loop gain $16.7$.",
+        "Transimpedance $-166.7\\text{ k}/17.67 = -9.43\\text{ k}\\Omega$; $R_{in} = 10\\text{ k}/17.67 = 566\\;\\Omega$; $R_{out} = 1.667\\text{ k}/17.67 = 94.3\\;\\Omega$.",
+        "Exact: $R_D \\parallel 100\\;\\Omega = 95.2\\;\\Omega$. A nodal solution also gives $-9.43\\text{ k}\\Omega$ and $R_{in} = 571\\;\\Omega$: the two-port answers are within about 1%."
+      ],
+      "answer": "$-9.43\\text{ k}\\Omega$, $R_{in} \\approx 570\\;\\Omega$, $R_{out} \\approx 94\\;\\Omega$ (exact 95 $\\Omega$)."
+    },
+    {
+      "type": "problem",
+      "title": "Opening the loop correctly",
+      "text": "A current-voltage loop senses the output current with a resistor $r_M$ in series with the load and returns $r_M I_{out}$ to the input. When building the open-loop amplifier, what goes in series with the input and what goes in series with the output path?",
+      "solution": [
+        "For series-series feedback the network is described by a Z model. Its loading on each side is found with the other port open.",
+        "So $r_M$ appears in series with the input loop (as $z_{22}$) and also in series with the output path (as $z_{11}$); for a single resistor both equal $r_M$, and $\\beta = z_{21} = r_M$."
+      ],
+      "answer": "$r_M$ in both places; $\\beta = r_M$."
+    }
+  ]
+}

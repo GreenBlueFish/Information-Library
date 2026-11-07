@@ -1,0 +1,116 @@
+{
+  "title": "Noise in Current Mirrors and Differential Pairs",
+  "intro": "A current mirror copies the noise of its reference device along with its current, multiplied by the mirror ratio. A differential pair has two devices in the signal path, so its input noise power is twice that of a single CS stage.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Current mirrors"
+    },
+    {
+      "type": "prose",
+      "text": "Mirror $I_{REF}$ through $M_{REF}$ into M1 with $(W/L)_1 = N(W/L)_{REF}$, $N$ around 5 to 10 to save reference current. $M_{REF}$'s gate noise appears at its gate through its own $1/g_{m,REF}$, so a capacitor $C_B$ at the shared gate filters it. With $\\overline{V_{n,REF}^2} = N\\overline{V_{n1}^2}$ for flicker noise (area ratio $N$, equal lengths):"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{I_{n,out}^2} = \\left(\\frac{N g_{m,REF}^2}{C_B^2\\omega^2 + g_{m,REF}^2} + 1\\right)g_{m1}^2\\,\\overline{V_{n1}^2}"
+    },
+    {
+      "type": "prose",
+      "text": "For the reference noise to be negligible, $(N - 1)g_{m,REF}^2 \\ll C_B^2\\omega^2$ at the lowest frequency of interest, which can demand nanofarads. Adding a resistor $R_B$ between the reference gate and $C_B$ lowers the filter corner to $1/[(1/g_{m,REF} + R_B)C_B]$, dividing the required $C_B$ by $1 + g_{m,REF}R_B$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{I_{n,out}^2} = \\left[\\frac{g_{m,REF}^2\\left(\\overline{V_{n,REF}^2} + \\overline{V_{n,RB}^2}\\right)}{(1 + g_{m,REF}R_B)^2C_B^2\\omega^2 + g_{m,REF}^2} + \\overline{V_{n1}^2}\\right]g_{m1}^2"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/noise-mirror-filter.svg",
+      "alt": "Current mirror: IREF from VDD into diode-connected MREF; MREF's gate connects through resistor RB to the gate of M1, which has a capacitor CB to ground. M1's drain carries ID1.",
+      "caption": "An RC filter between the reference and the output device."
+    },
+    {
+      "type": "prose",
+      "text": "$R_B$ can be large before its thermal noise rivals the reference device's flicker noise; the limit is area (and DC error from gate leakage through $R_B$). A long, narrow MOSFET biased at a small overdrive serves as a compact $R_B$. The noise of the reference current itself (often from a bandgap) also passes through."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Differential pair"
+    },
+    {
+      "type": "prose",
+      "text": "With the inputs tied, the two device noise currents are uncorrelated, so node P is not a virtual ground for them. Still, half of $I_{n1}$ flows in each load and the two halves add (they are correlated) to $I_{n1}R_D$ differentially. With the loads' noise:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,out}^2} = \\left(\\overline{I_{n1}^2} + \\overline{I_{n2}^2}\\right)R_D^2 + 2 \\cdot 4kTR_D, \\qquad \\overline{V_{n,in}^2} = 8kT\\left(\\frac{\\gamma}{g_m} + \\frac{1}{g_m^2R_D}\\right) + \\frac{2K}{C_{ox}WL f}"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/noise-diff-pair-sources.svg",
+      "alt": "Resistively loaded differential pair M1, M2 with tail current ISS; a noise voltage source Vn1 squared in series with M1's gate and Vn2 squared in series with M2's gate.",
+      "caption": "Moving each device's noise to its gate gives the result directly."
+    },
+    {
+      "type": "prose",
+      "text": "That is twice the CS value (in power), since there are two devices in the signal path; for the same $g_m$ per device the pair also burns twice the current. A fully differential circuit's input noise power is twice that of its half circuit. With current-source loads M3 and M4:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,in}^2} = 8kT\\gamma\\left(\\frac{1}{g_{m1}} + \\frac{g_{m3}}{g_{m1}^2}\\right) + \\frac{2K_N}{C_{ox}(WL)_1f} + \\frac{2K_P}{C_{ox}(WL)_3f}\\cdot\\frac{g_{m3}^2}{g_{m1}^2}"
+    },
+    {
+      "type": "prose",
+      "text": "The five-transistor OTA (mirror load) gives the same thermal result, $8kT\\gamma(1/g_{m1,2} + g_{m3,4}/g_{m1,2}^2)$: the short-circuit output current is $4kT\\gamma(2g_{m1,2} + 2g_{m3,4})$, since M3's noise circulates in the diode and is copied by M4. Again, make the load $g_m$ small relative to the input pair's."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Tail current noise"
+    },
+    {
+      "type": "prose",
+      "text": "In a balanced pair the tail noise splits equally and only moves the common mode. Off balance it slightly modulates $g_m$ ($g_m \\approx g_{m0}(1 + I_n/2I_{SS})$), which is usually negligible. In the OTA, though, the output follows the mirror node, so tail noise appears at the output as $\\overline{I_n^2}/(4g_{m3}^2)$ even with equal inputs."
+    },
+    {
+      "type": "prose",
+      "text": "A pair biased at tiny current can serve as a large floating resistor of about $2/g_{m1}$, but it is noisier than a real resistor of the same value (and nonlinear): the noise between its two outputs is $8kT\\gamma(g_{m1} + g_{m3})/g_{m1}^2$ plus flicker terms."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Bypass capacitor for a mirror",
+      "text": "A 1:4 mirror ($N = 4$) has $g_{m,REF} = 2\\text{ mS}$. The lowest frequency of interest is 100 kHz, and the reference flicker noise should be suppressed tenfold, i.e. $C_B^2\\omega^2 = 10(N - 1)g_{m,REF}^2$. Find $C_B$, then $C_B$ with $R_B = 50\\text{ k}\\Omega$.",
+      "solution": [
+        "$\\omega = 6.28 \\times 10^5$ rad/s. $C_B = \\sqrt{30} \\times 2 \\times 10^{-3}/6.28 \\times 10^5 = 17.4\\text{ nF}$.",
+        "With $R_B$, divide by $1 + g_{m,REF}R_B = 101$: $C_B = 173\\text{ pF}$."
+      ],
+      "answer": "17 nF without $R_B$; about 170 pF with $50\\text{ k}\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Pair against CS",
+      "text": "Each device has $g_m = 2\\text{ mS}$, $\\gamma = 1$, and $R_D = 5\\text{ k}\\Omega$. Compare the input thermal noise of a CS stage and a differential pair.",
+      "solution": [
+        "CS: $4kT(500 + 50)\\ \\Omega$, so $3.02\\text{ nV}/\\sqrt{\\text{Hz}}$.",
+        "Pair: twice the power, $4.27\\text{ nV}/\\sqrt{\\text{Hz}}$ ($\\sqrt{2}$ times larger)."
+      ],
+      "answer": "3.0 against 4.3 nV/$\\sqrt{\\text{Hz}}$."
+    },
+    {
+      "type": "problem",
+      "title": "OTA noise",
+      "text": "A five-transistor OTA has $g_{m1,2} = 2\\text{ mS}$, $g_{m3,4} = 1\\text{ mS}$, $\\gamma = 1$. Find the input thermal noise density.",
+      "solution": [
+        "$8kT\\gamma(1/g_{m1} + g_{m3}/g_{m1}^2) = 8kT(500 + 250)\\ \\Omega = 3.31 \\times 10^{-20} \\times 750 = 2.48 \\times 10^{-17}\\ \\text{V}^2/\\text{Hz}$.",
+        "$\\sqrt{2.48 \\times 10^{-17}} = 4.98\\text{ nV}/\\sqrt{\\text{Hz}}$; the load adds half as much as the pair."
+      ],
+      "answer": "About $5.0\\text{ nV}/\\sqrt{\\text{Hz}}$."
+    }
+  ]
+}

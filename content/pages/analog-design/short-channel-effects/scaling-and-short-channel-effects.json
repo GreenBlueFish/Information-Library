@@ -1,59 +1,109 @@
 {
-  "title": "Scaling and Short-Channel Effects",
-  "intro": "Shrinking transistors changes more than their size: it changes what circuits can do.",
+  "title": "Scaling Theory",
+  "intro": "How shrinking a MOSFET changes its current, capacitance, speed and power, and why the same scaling that helps digital logic hurts analog dynamic range (Razavi, Section 17.1).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Scaling theory"
+      "text": "Constant-field scaling"
     },
     {
       "type": "prose",
-      "text": "In ideal constant-field scaling every dimension and voltage is divided by S (>1) and doping is multiplied by S. Gate delay falls as 1/S, device area as 1/S^2, power per gate as 1/S^2 and power density stays constant. In practice voltages scaled more slowly, which raised power density."
+      "text": "Dennard's ideal rules: divide every lateral and vertical dimension ($W$, $L$, $t_{ox}$, junction depth) and both $V_{DD}$ and $V_{TH}$ by $\\alpha > 1$, and multiply every doping level by $\\alpha$. Fields stay constant, hence the name."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/sce-scaling.svg",
+      "alt": "Cross-section of an NMOS transistor next to a copy half the size, with an arrow from the large to the small one.",
+      "caption": "Ideal scaling shrinks everything, including the voltages."
+    },
+    {
+      "type": "math",
+      "tex": "I_{D,scaled} = \\frac{1}{2}\\mu_n(\\alpha C_{ox})\\frac{W/\\alpha}{L/\\alpha}\\left(\\frac{V_{GS}-V_{TH}}{\\alpha}\\right)^2 = \\frac{I_D}{\\alpha}"
+    },
+    {
+      "type": "prose",
+      "text": "The channel capacitance $WLC_{ox}$ falls by $\\alpha$. Depletion widths shrink by $\\alpha$ (doping up, voltage down, if $V_R \\gg \\phi_B$), so junction bottom capacitance per area rises by $\\alpha$ while sidewall capacitance per length stays (the junction is shallower); with the areas and perimeters shrinking, every junction capacitance also falls by $\\alpha$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Digital consequences"
+    },
+    {
+      "type": "math",
+      "tex": "T_d \\approx \\frac{C}{I}V_{DD} \\to \\frac{T_d}{\\alpha}, \\qquad P = fCV_{DD}^2 \\to \\frac{P}{\\alpha^3}\\ (\\text{same } f)"
+    },
+    {
+      "type": "prose",
+      "text": "Gates get $\\alpha$ times faster, density rises by $\\alpha^2$, and the power per gate falls by $\\alpha^3$ at the same clock, or by $\\alpha^2$ if the clock rises by $\\alpha$ (power density then unchanged). This is the engine behind Moore's observation that transistor counts double every year or two."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Analog consequences"
+    },
+    {
+      "type": "math",
+      "tex": "g_m = \\mu(\\alpha C_{ox})\\frac{W/\\alpha}{L/\\alpha}\\cdot\\frac{V_{GS}-V_{TH}}{\\alpha} = g_m, \\qquad r_O = \\frac{1}{(\\alpha\\lambda)(I_D/\\alpha)} = r_O"
+    },
+    {
+      "type": "prose",
+      "text": "($\\lambda$ rises by $\\alpha$ because $\\Delta L/L$ stays fixed while $V_{DS}$ shrinks.) So ideal scaling keeps $g_m$, $r_O$ and the intrinsic gain $g_mr_O$ constant; real processes have in fact lost intrinsic gain. The real blow is the supply: allowed swings shrink by $\\alpha$, while thermal noise, set by $g_m$, does not. The dynamic range (maximum swing over noise) therefore falls by $\\alpha$."
+    },
+    {
+      "type": "prose",
+      "text": "Restoring it requires noise voltages $\\alpha$ times smaller, so $g_m$ must grow by $\\alpha^2$ (noise voltage goes as $1/\\sqrt{g_m}$). With the overdrive scaled down by $\\alpha$, $g_m = 2I_D/V_{ov}$ forces $I_D$ up by $\\alpha$, so power $(V_{DD}/\\alpha)(\\alpha I_D)$ stays constant, and $W$ must grow by $\\alpha$ instead of shrinking, raising device capacitance by $\\alpha$. If $kT/C$ noise sets the floor, keeping the slew rate costs even more current, and power rises."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Short-channel effects"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Velocity saturation: carriers reach a maximum speed, so ID is nearly linear in Vov at high field.",
-        "DIBL: the drain voltage lowers the barrier, reducing VTH and ro.",
-        "Mobility degradation: the vertical field reduces mobility.",
-        "Hot carriers and gate leakage: reliability and static current.",
-        "Narrow-width and well-proximity effects change VTH with layout."
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Models and corners"
+      "text": "Real scaling"
     },
     {
       "type": "prose",
-      "text": "Foundries supply BSIM-family compact models fitted to measurements. Because the process varies, circuits are simulated across process corners: typical (TT), fast (FF), slow (SS) and the skewed corners FS and SF, together with supply and temperature extremes."
+      "text": "Supplies and thresholds have not shrunk as fast as dimensions (for example $V_{DD}$ went from 5 V to 2.5 V and $V_{TH}$ from 0.8 V to 0.4 V while L went from 1 µm to 0.25 µm). Constant-voltage scaling, where dimensions shrink but voltages stay, raises every field by $\\alpha$, risking breakdown and worsening short-channel effects. Actual technologies have followed a mix of the two, with device engineering to keep them reliable."
     },
     {
       "type": "problem",
       "title": "Scaling",
-      "text": "Technology is scaled by S = 1.4. The old gate length is 180 nm. Find the new length, the relative gate delay, and the relative power per gate.",
+      "text": "Technology is scaled by $S = 1.4$. The old gate length is 180 nm. Find the new length, the relative gate delay, and the relative power per gate if the clock frequency also rises by $S$.",
       "solution": [
-        "L = 180 / 1.4 = 129 nm.",
-        "Delay scales as 1/S = 0.71.",
-        "Power per gate scales as 1/S^2 = 0.51."
+        "$L = 180/1.4 = 129\\text{ nm}$.",
+        "Delay scales as $1/S = 0.71$.",
+        "Power per gate: $fCV^2 \\to (Sf)(C/S)(V/S)^2 = P/S^2 = 0.51P$ (at a fixed clock it would be $1/S^3 = 0.36$)."
       ],
       "answer": "129 nm; delay 0.71x; power 0.51x."
     },
     {
       "type": "problem",
-      "title": "Why corners?",
-      "text": "Give two reasons an analog design must be simulated at process corners.",
+      "title": "Drain current after scaling",
+      "text": "A transistor carrying 1 mA is ideally scaled by $\\alpha = 2$ with its bias voltages. What current does it carry, and what happens to its $g_m$ and $r_O$?",
       "solution": [
-        "Device parameters such as VTH, mobility and capacitance vary from lot to lot, shifting bias currents, gm and gain. A circuit that works in TT may lose headroom, bandwidth or phase margin in SS or FF corners, so each specification must hold at all of them (and over supply and temperature)."
+        "$I_D \\to 1\\text{ mA}/2 = 0.5\\text{ mA}$.",
+        "$g_m$ and $r_O$ are unchanged, so is $g_mr_O$."
       ],
-      "answer": "Parameter spread shifts bias and speed; specs must hold in all corners."
+      "answer": "0.5 mA; $g_m$, $r_O$ unchanged."
+    },
+    {
+      "type": "problem",
+      "title": "Keeping the dynamic range",
+      "text": "A thermal-noise-limited amplifier is moved to a process scaled by $\\alpha = 2$ (supply halved). (a) By how much does its dynamic range fall if $g_m$ is kept? (b) To restore it, by what factors must $g_m$, $I_D$, $W$ and power change?",
+      "solution": [
+        "(a) Swing halves, noise is unchanged: dynamic range falls by 2 (6 dB).",
+        "(b) Noise voltage must halve, so $g_m \\times 4$. With $V_{ov}/2$, $I_D = g_mV_{ov}/2$ grows by 2. $W$ grows by 2 (instead of halving). Power $(V_{DD}/2)(2I_D)$ is unchanged."
+      ],
+      "answer": "(a) 6 dB. (b) $g_m \\times 4$, $I_D \\times 2$, $W \\times 2$, same power."
+    },
+    {
+      "type": "problem",
+      "title": "Constant-voltage scaling",
+      "text": "A 4 nm oxide carries 1.8 V. The process is scaled by 2 at constant voltage. Compare the oxide field before and after with a breakdown field of about 10 MV/cm.",
+      "solution": [
+        "Before: $1.8\\text{ V}/4\\text{ nm} = 4.5\\text{ MV/cm}$.",
+        "After: $1.8\\text{ V}/2\\text{ nm} = 9\\text{ MV/cm}$, uncomfortably close to breakdown, which is why supplies had to come down."
+      ],
+      "answer": "4.5 MV/cm becomes 9 MV/cm."
     }
   ]
 }

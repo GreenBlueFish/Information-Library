@@ -1,0 +1,114 @@
+{
+  "title": "Noise-Power Trade-Off and Noise Bandwidth",
+  "intro": "Input-referred thermal noise falls as $1/g_m$, so lower noise costs current. And total noise depends on how much bandwidth the circuit integrates, which the noise bandwidth makes comparable between circuits.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Linear scaling"
+    },
+    {
+      "type": "prose",
+      "text": "Take a CS stage, double $W/L$ and $I_D$ and halve $R_D$. Gain and swings are unchanged, but $g_m$ and the gate area double, so the input thermal and flicker noise powers halve: 3 dB less noise for twice the power (and twice the input capacitance). It is the same as placing two copies of the circuit in parallel."
+    },
+    {
+      "type": "prose",
+      "text": "In general, two identical circuits in parallel each see the other's output impedance as a divider of 1/2, so"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,out}^2} = \\frac{\\overline{V_{n1,out}^2}}{4} + \\frac{\\overline{V_{n2,out}^2}}{4} = \\frac{\\overline{V_{n1,out}^2}}{2}"
+    },
+    {
+      "type": "prose",
+      "text": "This assumes the bandwidth is fixed by the application, and that the input noise current is negligible: scaling doubles $\\overline{I_{n,in}^2}$, because the input impedance halves. Input-referred noise power times supply power is therefore roughly constant for a topology at given bandwidth."
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,in}^2} \\propto \\frac{1}{g_m}, \\qquad \\text{halving } \\overline{V_{n,in}^2} \\text{ doubles the power}"
+    },
+    {
+      "type": "prose",
+      "text": "At fixed overdrive, doubling $g_m$ means doubling current and width; at fixed $W/L$ it would take four times the current, since $g_m \\propto \\sqrt{I_D}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Noise bandwidth"
+    },
+    {
+      "type": "prose",
+      "text": "Total noise is the area under the output spectrum, including the tail beyond the $-3$ dB point. The noise bandwidth $B_n$ is defined so that a flat spectrum at the low-frequency level $V_0^2$, cut off sharply at $B_n$, has the same area:"
+    },
+    {
+      "type": "math",
+      "tex": "V_0^2\\,B_n = \\int_0^\\infty \\overline{V_{n,out}^2}(f)\\,df"
+    },
+    {
+      "type": "prose",
+      "text": "For one pole, $\\int_0^\\infty \\frac{df}{1 + (f/f_p)^2} = \\frac{\\pi}{2}f_p$:"
+    },
+    {
+      "type": "math",
+      "tex": "B_n = \\frac{\\pi}{2}f_p \\approx 1.57f_p"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/noise-bandwidth.svg",
+      "alt": "Normalised one-pole noise spectrum against frequency over pole frequency, falling to one half at fp; a shaded rectangle of height one extends to pi over two times fp and has the same area as the curve.",
+      "caption": "Equal areas define the noise bandwidth."
+    },
+    {
+      "type": "prose",
+      "text": "For two identical poles $B_n = (\\pi/4)f_p$, while the $-3$ dB bandwidth is $0.64f_p$: the ratio of noise to $-3$ dB bandwidth shrinks as roll-off steepens (1.57 for one pole, 1.22 for two). $B_n$ lets you compare circuits with the same low-frequency noise but different high-frequency behaviour."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Integrate at the output, not the input"
+    },
+    {
+      "type": "prose",
+      "text": "Input-referred noise is often flat (the CS stage's $4kT\\gamma/g_m$), and integrating it over all frequencies would give infinity. Only the output noise, which the circuit's poles shape, integrates to a finite value. For a fair comparison, integrate at the output and divide by the square of the mid-band gain. For a CS stage with load capacitance, ignoring $R_D$'s noise:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,in,tot}^2} = \\frac{\\gamma g_mR_D\\,kT/C_L}{g_m^2R_D^2} = \\frac{\\gamma kT}{g_mR_DC_L}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Integrated noise",
+      "text": "White noise of $10\\text{ nV}/\\sqrt{\\text{Hz}}$ passes through a one-pole low-pass filter with its pole at 1 MHz. Find the total rms output noise.",
+      "solution": [
+        "Noise bandwidth $= (\\pi/2) \\times 1\\text{ MHz} = 1.57\\text{ MHz}$.",
+        "$V_{rms} = 10\\text{ nV} \\times \\sqrt{1.57 \\times 10^6} = 10^{-8} \\times 1253 = 12.5\\ \\mu\\text{V}$."
+      ],
+      "answer": "About $12.5\\ \\mu\\text{V}$ rms."
+    },
+    {
+      "type": "problem",
+      "title": "Paying for 6 dB",
+      "text": "An amplifier draws 2 mA and has $3\\text{ nV}/\\sqrt{\\text{Hz}}$ input noise (thermal, negligible noise current). By linear scaling, what current gives $1.5\\text{ nV}/\\sqrt{\\text{Hz}}$?",
+      "solution": [
+        "Halving the voltage density means a quarter of the noise power: two doublings of the scaling.",
+        "Each doubling doubles the current: $2\\text{ mA} \\times 4 = 8\\text{ mA}$."
+      ],
+      "answer": "8 mA (four times the power)."
+    },
+    {
+      "type": "problem",
+      "title": "Input-referred total",
+      "text": "A current-source-loaded CS stage has $g_m = 4\\text{ mS}$, $R_D = 5\\text{ k}\\Omega$ (output resistance), $C_L = 1\\text{ pF}$ and $\\gamma = 1$. Ignoring load noise, find the total input-referred rms noise.",
+      "solution": [
+        "$\\overline{V_{n,in,tot}^2} = \\gamma kT/(g_mR_DC_L) = 4.14 \\times 10^{-21}/(20 \\times 10^{-12}) = 2.07 \\times 10^{-10}\\ \\text{V}^2$.",
+        "rms $= 14.4\\ \\mu\\text{V}$."
+      ],
+      "answer": "About $14\\ \\mu\\text{V}$ rms."
+    }
+  ]
+}

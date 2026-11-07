@@ -1,0 +1,143 @@
+{
+  "title": "Representing Noise in Circuits",
+  "intro": "Output noise is what you measure, but it scales with gain, so circuits are compared by their input-referred noise. In general that takes two sources, a series voltage and a parallel current, and they are usually correlated.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Output noise"
+    },
+    {
+      "type": "prose",
+      "text": "Zero the input, find each source's contribution at the output and add. For a CS stage with resistive load ($\\lambda = 0$), the transistor's thermal and flicker currents and the load's current all flow into $R_D$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,out}^2} = \\left(4kT\\gamma g_m + \\frac{K g_m^2}{C_{ox}WL f} + \\frac{4kT}{R_D}\\right)R_D^2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Input-referred noise voltage"
+    },
+    {
+      "type": "prose",
+      "text": "Adding a noiseless gain stage after the CS stage multiplies the output noise but not the SNR, so output noise alone is a misleading figure of merit. Instead place one source $\\overline{V_{n,in}^2}$ at the input of a noiseless copy so that it produces the same output: divide by $A_v^2$. For the CS stage"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,in}^2} = \\frac{4kT\\gamma}{g_m} + \\frac{K}{C_{ox}WL f} + \\frac{4kT}{g_m^2R_D}"
+    },
+    {
+      "type": "prose",
+      "text": "The first term is the thermal noise of a resistor $\\gamma/g_m$ in series with the gate; the last is a resistor $1/(g_m^2R_D)$. The total thermal part is often quoted as an equivalent noise resistance $R_T$ with $\\overline{V_{n,in}^2} = 4kTR_T$. The load's share falls as $R_D$ rises, because its output noise grows as $\\sqrt{R_D}$ while the gain grows as $R_D$. Input-referred noise cannot be measured at the input; it is a fiction that tells you how small a signal the circuit can detect."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why a current source is also needed"
+    },
+    {
+      "type": "prose",
+      "text": "Give the CS stage an input capacitance $C_{in}$ and drive it from a source resistance $R_1$. With only a voltage source at the input, $R_1$ and $C_{in}$ would filter it, and the output noise would vanish as $R_1 \\to \\infty$. But the transistor's noise reaches the output whatever drives the gate. The fix is a second source, a current $\\overline{I_{n,in}^2}$ in parallel with the input; together the two represent any linear two-port exactly."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/noise-input-referred-model.svg",
+      "alt": "A source with impedance ZS drives a series noise voltage source Vn,in squared, then a node with a noise current source In,in squared to ground, then a noiseless copy of the circuit.",
+      "caption": "The general input-referred model."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Input shorted ($Z_S = 0$): the current source is bypassed; equate output noises to get $\\overline{V_{n,in}^2}$.",
+        "Input open ($Z_S \\to \\infty$): the voltage source carries no current; equate output noises to get $\\overline{I_{n,in}^2}$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For the CS stage with $C_{in}$ (thermal noise only), the open-input output noise $4kT(\\gamma g_m + 1/R_D)R_D^2$ must equal $\\overline{I_{n,in}^2}(1/C_{in}\\omega)^2g_m^2R_D^2$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{I_{n,in}^2} = (C_{in}\\omega)^2\\,\\frac{4kT}{g_m^2}\\left(\\gamma g_m + \\frac{1}{R_D}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "At a node X fed from an impedance $Z_S$, the total noise is $V_{n,X} = \\frac{Z_{in}}{Z_{in} + Z_S}V_{n,in} + \\frac{Z_{in}Z_S}{Z_{in} + Z_S}I_{n,in}$. The current source can be ignored when the driving impedance is small enough, whatever $Z_{in}$ is:"
+    },
+    {
+      "type": "math",
+      "tex": "|Z_S|^2 \\ll \\frac{\\overline{V_{n,in}^2}}{\\overline{I_{n,in}^2}}"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Correlation, and why nothing is counted twice"
+    },
+    {
+      "type": "prose",
+      "text": "$V_{n,in}$ and $I_{n,in}$ often come from the same physical sources, so they are correlated and must be added as voltages, not powers. For the CS stage, $V_{n,in} = V_{n,M1} + V_{n,RD}/(g_mR_D)$ and $I_{n,in} = C_{in}s\\,V_{n,in}$. Substituting into the node-X expression gives $V_{n,X} = V_{n,M1} + V_{n,RD}/(g_mR_D)$, independent of $Z_S$ and $C_{in}$: the output noise is right for any source, with no double counting."
+    },
+    {
+      "type": "prose",
+      "text": "This is a common case: if the output noise is the same with the input shorted or open, then $I_{n,in} = V_{n,in}/Z_{in}$ (fully correlated), and for any source impedance the input node simply sees $V_{n,X} = V_{n,in}$. Then use the voltage source alone, applied directly at the input node (Razavi, Section 7.10)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Using short-circuit output current"
+    },
+    {
+      "type": "prose",
+      "text": "Sometimes it is easier to short the output and find the noise current, then divide by a transconductance (input shorted) or a current gain (input open). Example: a transistor with a feedback resistor $R_F$ from drain to gate and an ideal current-source load ($\\lambda = 0$)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Input and output both shorted: $\\overline{I_{n,out}^2} = 4kT/R_F + 4kT\\gamma g_m$. The short-circuit transconductance is $G_m = g_m - 1/R_F$, so $\\overline{V_{n,in}^2} = \\frac{4kT/R_F + 4kT\\gamma g_m}{(g_m - 1/R_F)^2}$.",
+        "Input open, output shorted: $R_F$'s noise drives the gate directly, giving $\\overline{I_{n,out}^2} = 4kTR_Fg_m^2 + 4kT\\gamma g_m$. The current gain is $g_mR_F - 1$, so $\\overline{I_{n,in}^2} = \\frac{4kTR_Fg_m^2 + 4kT\\gamma g_m}{(g_mR_F - 1)^2}$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Here the output noise differs between open and shorted inputs, so both sources matter."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Equivalent noise resistance",
+      "text": "A CS stage has $g_m = 5\\text{ mS}$, $R_D = 2\\text{ k}\\Omega$, $\\gamma = 1$. Find $R_T$ and the input noise density at 300 K (thermal only).",
+      "solution": [
+        "$R_T = \\gamma/g_m + 1/(g_m^2R_D) = 200 + 1/(2.5 \\times 10^{-5} \\times 2000) = 200 + 20 = 220\\ \\Omega$.",
+        "$\\sqrt{4kT \\cdot 220} = \\sqrt{1.656 \\times 10^{-20} \\times 220} = 1.91\\text{ nV}/\\sqrt{\\text{Hz}}$."
+      ],
+      "answer": "$R_T = 220\\ \\Omega$, $1.9\\text{ nV}/\\sqrt{\\text{Hz}}$."
+    },
+    {
+      "type": "problem",
+      "title": "When does the noise current matter?",
+      "text": "The same stage has $C_{in} = 200\\text{ fF}$. At 100 MHz find $I_{n,in}$ and the source impedance above which it matters.",
+      "solution": [
+        "$C_{in}\\omega = 200\\text{ fF} \\times 2\\pi \\times 10^8 = 1.26 \\times 10^{-4}$ S.",
+        "$\\overline{I_{n,in}^2} = (1.26 \\times 10^{-4})^2 \\times \\frac{1.656 \\times 10^{-20}}{2.5 \\times 10^{-5}} \\times (5 \\times 10^{-3} + 5 \\times 10^{-4})$, so $I_{n,in} = 0.24\\text{ pA}/\\sqrt{\\text{Hz}}$.",
+        "$V_{n,in}/I_{n,in} = 1.91\\text{ nV}/0.24\\text{ pA} \\approx 8\\text{ k}\\Omega$; this equals $1/(C_{in}\\omega)$, as the full correlation predicts."
+      ],
+      "answer": "$0.24\\text{ pA}/\\sqrt{\\text{Hz}}$; it matters for $|Z_S|$ approaching 8 k$\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Feedback-resistor amplifier",
+      "text": "In the $R_F$ amplifier above, $g_m = 10\\text{ mS}$, $R_F = 2\\text{ k}\\Omega$, $\\gamma = 1$. Find $V_{n,in}$ and $I_{n,in}$.",
+      "solution": [
+        "$\\overline{V_{n,in}^2} = 4kT(5 \\times 10^{-4} + 10^{-2})/(10^{-2} - 5 \\times 10^{-4})^2 = 4kT \\times 116\\ \\Omega$, so $V_{n,in} = 1.39\\text{ nV}/\\sqrt{\\text{Hz}}$.",
+        "$\\overline{I_{n,in}^2} = 4kT(2000 \\times 10^{-4} + 10^{-2})/(20 - 1)^2 = 4kT \\times 5.82 \\times 10^{-4}$ S, so $I_{n,in} = 3.10\\text{ pA}/\\sqrt{\\text{Hz}}$."
+      ],
+      "answer": "$1.39\\text{ nV}/\\sqrt{\\text{Hz}}$ and $3.1\\text{ pA}/\\sqrt{\\text{Hz}}$."
+    }
+  ]
+}

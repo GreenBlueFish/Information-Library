@@ -1,0 +1,109 @@
+{
+  "title": "Design Rules and Multifinger Transistors",
+  "intro": "The geometric rules every layout must obey, the antenna effect, and how wide transistors are split into fingers (Razavi, Sections 19.1 and 19.2.1).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mask layers"
+    },
+    {
+      "type": "prose",
+      "text": "A layout is the set of polygons for each mask: n-well, active, poly, n+ and p+ implants, contacts and metals. A PMOS, for example, needs its well to enclose the device with margin for misalignment, an implant region around its active area, a separate gate (poly) mask, and contacts to metal 1. Modern tools often generate implants and wells automatically."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Design rules"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Minimum width: narrow lines may break or have high local resistance; thicker layers need larger minimum widths.",
+        "Minimum spacing: shapes too close may short, or an implant may spill onto a neighbouring poly line.",
+        "Minimum enclosure: a well around a device, or poly and metal around a contact, with margin for misalignment.",
+        "Minimum extension: the gate must extend past the active area so the transistor works at its edge.",
+        "Maximum rules: long metal lines need larger widths against lift-off; antenna rules limit conductor area connected to a gate."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A modern process has several hundred such rules. They are written to give digital yield; analog layout needs further precautions."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Antenna effect"
+    },
+    {
+      "type": "prose",
+      "text": "While a large metal (or poly) area connected to a small gate is being etched, it collects charge from the plasma and its potential can rise enough to break the gate oxide permanently. Processes cap the area of conductor tied to a gate; if a large area is unavoidable, break the line and reconnect it through a higher layer (which is patterned later), so the gate is not attached during the dangerous etch."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Multifinger transistors"
+    },
+    {
+      "type": "prose",
+      "text": "A wide device is split into $N$ parallel fingers sharing source and drain strips. This cuts drain/source junction area and gate resistance. Each finger has poly resistance $R_□(W/N)/L$, the $N$ fingers are in parallel, and a gate contacted at one end has an effective distributed resistance one third of its end-to-end value:"
+    },
+    {
+      "type": "math",
+      "tex": "R_G \\approx \\frac{1}{3}\\cdot\\frac{R_□ W}{N^2 L}"
+    },
+    {
+      "type": "prose",
+      "text": "Rule of thumb: each finger's gate resistance should be below the $1/g_m$ of that finger; in low-noise circuits the gate resistance should be a fifth to a tenth of $1/g_m$ (contacting the gate at both ends also helps)."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/layout-multifinger.svg",
+      "alt": "Top view of an active rectangle crossed by six vertical poly gate fingers, with diffusion strips labelled S and D alternating between them and contacts in each strip; grey dummy poly fingers at both ends.",
+      "caption": "A six-finger transistor with dummy gates."
+    },
+    {
+      "type": "prose",
+      "text": "More fingers mean more strip perimeter. For odd $N$, the terminal with $(N+1)/2$ strips has a sidewall capacitance"
+    },
+    {
+      "type": "math",
+      "tex": "C_P = \\frac{N+1}{2}\\left(2E + \\frac{2W}{N}\\right)C_{jsw} = \\left[(N+1)E + \\frac{N+1}{N}W\\right]C_{jsw}",
+      "caption": "$E$ is the strip width (source/drain extension)."
+    },
+    {
+      "type": "prose",
+      "text": "so $NE$ must stay well below $W$. Very many fingers are arranged in several rows to keep the layout compact. In a cascode with equal widths, the drain of the input device and the source of the cascode device can share one diffusion that needs no contact, so it can be made much smaller, reducing the capacitance at that internal node."
+    },
+    {
+      "type": "problem",
+      "title": "How many fingers?",
+      "text": "A 4 µm / 30 nm transistor has $g_m = 1/(150\\ \\Omega)$ and poly with $R_□ = 20\\ \\Omega/□$. How many fingers keep the gate's thermal noise voltage at a fifth of the gate-referred channel noise ($\\gamma = 1$)?",
+      "solution": [
+        "Channel noise $4kT\\gamma/g_m$ corresponds to 150 Ω; the gate resistance must therefore be at most $150/25 = 6\\ \\Omega$ (a fifth in voltage is 1/25 in power).",
+        "$R_G = \\frac{1}{3}\\cdot\\frac{20 \\times 133}{N^2} = 889/N^2 \\le 6$, so $N^2 \\ge 148$ and $N \\ge 12.2$: use 13 fingers (or 12 contacted at both ends)."
+      ],
+      "answer": "13 fingers."
+    },
+    {
+      "type": "problem",
+      "title": "Perimeter versus fingers",
+      "text": "For $W = 20\\ \\mu\\text{m}$, $E = 0.3\\ \\mu\\text{m}$ and $C_{jsw} = 0.1\\text{ fF}/\\mu\\text{m}$, find $C_P$ for $N$ = 1, 9 and 41.",
+      "solution": [
+        "$N = 1$: $(2 \\times 0.3 + 2 \\times 20) \\times 0.1 = 4.06\\text{ fF}$.",
+        "$N = 9$: $(10 \\times 0.3 + 10 \\times 20/9) \\times 0.1 = 2.52\\text{ fF}$.",
+        "$N = 41$: $(42 \\times 0.3 + 42 \\times 20/41) \\times 0.1 = 3.31\\text{ fF}$: the $(N+1)E$ term now dominates."
+      ],
+      "answer": "4.06, 2.52 and 3.31 fF."
+    },
+    {
+      "type": "problem",
+      "title": "Antenna fix",
+      "text": "A long metal-1 line connects to a tiny gate and violates the antenna rule. Suggest a fix that keeps the connection.",
+      "solution": [
+        "Cut the metal-1 line near the gate and bridge the gap with a short metal-2 jumper, so during the metal-1 etch the large area is not connected to the gate. (Alternatively add a small reverse-biased diode at the gate to bleed the charge, if the process allows.)"
+      ],
+      "answer": "Break the line and jumper it on a higher layer."
+    }
+  ]
+}
