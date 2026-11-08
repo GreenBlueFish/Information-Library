@@ -88,9 +88,11 @@ export function weightTransfer(config, state) {
   const front = Math.min(0.8, Math.max(0.2, num(state, config, "front", 0.5)));
   const h = num(state, config, "cgHeight", 0.45);
   const L = Math.max(1, num(state, config, "wheelbase", 2.6));
-  // clamp each axle at zero: past that the wheels lift off
+  // clamp each axle between zero and the whole weight: past that one end lifts off
+  const w = (mass * G) / 1000;
+  const clamp = (x) => Math.min(w, Math.max(0, x));
   return [
-    curve("front axle", (a) => Math.max(0, axleLoads(a, mass, front, h, L).front), -1.5, 1, 126),
-    curve("rear axle", (a) => Math.max(0, axleLoads(a, mass, front, h, L).rear), -1.5, 1, 126),
+    curve("front axle", (a) => clamp(axleLoads(a, mass, front, h, L).front), -1.5, 1, 126),
+    curve("rear axle", (a) => clamp(axleLoads(a, mass, front, h, L).rear), -1.5, 1, 126),
   ];
 }
