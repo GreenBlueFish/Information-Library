@@ -1,0 +1,124 @@
+{
+  "title": "Folded-Cascode Op Amps",
+  "intro": "Folding the cascode turns the input current around into transistors of the opposite polarity, so the cascode no longer stacks on top of the input pair. The result tolerates equal input and output common-mode levels and a wider input range (Razavi, Sections 9.2.4 to 9.2.6).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The folding idea"
+    },
+    {
+      "type": "prose",
+      "text": "In a cascode amplifier the input device converts voltage to current and the cascode passes that current to a high-impedance load. The input device can just as well be of the opposite type, feeding the cascode's source from the side. The output is still about $g_{m1}R_{out}V_{in}$, but the headroom is no longer the sum of both devices. Applied to a differential pair, an NMOS-input telescopic op amp becomes a PMOS-input folded cascode."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/operational-amplifiers-folded-cascode.svg",
+      "alt": "Folded-cascode op amp. A tail current source ISS from VDD feeds a PMOS input pair M1, M2. Each drain goes down to a folding node X or Y, which is the source of an NMOS cascode M3 or M4 sitting on an NMOS current source M5 or M6. Above the cascodes are PMOS cascode loads M7, M8 and PMOS current sources M9, M10. Outputs are at the drains of M3 and M4.",
+      "caption": "PMOS-input folded cascode. The input current enters the cascode at the folding nodes X and Y."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Power: in a telescopic op amp one tail current biases both the input pair and the cascodes. In a folded cascode the input pair and the cascode branches need separate currents: $I_{D5} = I_{SS}/2 + I_{D3}$. So it usually burns more power.",
+        "Common-mode levels: the telescopic input CM cannot exceed about $V_{b1} - V_{GS3} + V_{TH1}$; the PMOS-input folded cascode only needs it above about $V_{b1} - V_{GS3} - |V_{THP}|$. Input and output can be shorted without losing swing, and a PMOS pair's n-well can be tied to its source."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Swing and gain"
+    },
+    {
+      "type": "prose",
+      "text": "With $V_{b1}$ and $V_{b2}$ placed well, each output can move from $V_{OD3} + V_{OD5}$ up to $V_{DD} - (|V_{OD7}| + |V_{OD9}|)$:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out,pp} = V_{DD} - \\left(V_{OD3} + V_{OD5} + |V_{OD7}| + |V_{OD9}|\\right) \\text{ per side}"
+    },
+    {
+      "type": "prose",
+      "text": "one overdrive (the tail's) more than a telescopic stage. $M_5$ and $M_6$, carrying the largest current, may need a large overdrive to keep their capacitance down. For the gain, the short-circuit transconductance is nearly $g_{m1}$ because the cascode source is a low impedance, and the output resistance is the parallel of the two cascodes, with $r_{O1}$ and $r_{O5}$ now in parallel under $M_3$:"
+    },
+    {
+      "type": "math",
+      "tex": "|A_v| \\approx g_{m1}\\left\\{\\left[(g_{m3} + g_{mb3})r_{O3}(r_{O1} \\parallel r_{O5})\\right] \\parallel \\left[(g_{m7} + g_{mb7})r_{O7}r_{O9}\\right]\\right\\}"
+    },
+    {
+      "type": "prose",
+      "text": "This is typically two to three times below a comparable telescopic op amp: a PMOS input pair has less $g_m$, and $M_5$, carrying two currents, has a low $r_O$ in parallel with $r_{O1}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Poles at the folding nodes"
+    },
+    {
+      "type": "prose",
+      "text": "The folding nodes X and Y see $1/(g_{m3} + g_{mb3})$ and a capacitance that includes $C_{GS3}$, $C_{SB3}$, $C_{DB1}$, $C_{GD1}$ and also $C_{GD5}$ and $C_{DB5}$ of the wide current source. So the folding pole sits lower than the pole at a telescopic cascode's source."
+    },
+    {
+      "type": "prose",
+      "text": "An NMOS-input folded cascode with PMOS cascodes gives more input $g_m$ and so more gain, but its folding pole is worse: the PMOS cascode has low $g_m$, and the PMOS sources carrying both currents are several times wider. For flicker-noise-sensitive work the PMOS-input version is preferred anyway."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why it is used so widely"
+    },
+    {
+      "type": "prose",
+      "text": "Overall, the folded cascode buys only slightly more swing than the telescopic one, and pays in power, gain, pole frequencies and noise. It is used for two reasons: its input and output CM levels can be equal without hurting swing (with high gain the inputs barely move while each output swings to within two overdrives of either rail), and its input CM range is wider. An NMOS-input version accepts input CM from $V_{GS1} + V_{OD,tail}$ up to $V_{b2} + |V_{GS3}| + V_{TH1}$, which can exceed $V_{DD}$; a PMOS-input version works down to zero input CM."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Design outline"
+    },
+    {
+      "type": "prose",
+      "text": "Same order as before: split power between the input pair and the cascode branches; give the heavily loaded current sources the most overdrive, then cascodes, then the PMOS loads; fix the output CM in the middle of the allowed swing; size the input pair from the minimum input CM level (if input CM equals output CM, $V_{GS1} + V_{OD,tail}$ must fit under it). Then compute gain. If it falls short, lengthen $M_5$-$M_6$ (their $r_O$ is the bottleneck), widen the input pair for more $g_m$, and consider doubling the cascodes' $L$ and $W$ (costing folding-node capacitance). Single-ended versions use a cascode mirror at the top, ideally low-voltage."
+    },
+    {
+      "type": "problem",
+      "title": "Folded-cascode gain",
+      "text": "$g_{m1} = 2$ mS. The resistance looking into the NMOS cascode branch is 3 M$\\Omega$ and into the PMOS cascode branch 3 M$\\Omega$. Find the gain.",
+      "solution": [
+        "$R_{out} = 3\\text{ M}\\Omega \\parallel 3\\text{ M}\\Omega = 1.5\\text{ M}\\Omega$.",
+        "$A_v = 2\\text{ mS} \\times 1.5\\text{ M}\\Omega = 3000$, or 69.5 dB."
+      ],
+      "answer": "3000 (69.5 dB)."
+    },
+    {
+      "type": "problem",
+      "title": "Where the gain goes",
+      "text": "A PMOS-input folded cascode has $g_{m1} = 1$ mS, $r_{O1} = 40\\text{ k}\\Omega$, $r_{O5} = 20\\text{ k}\\Omega$, $g_{m3}r_{O3} = 25$ (neglect body effect), and a PMOS cascode load of $g_{m7}r_{O7}r_{O9} = 800\\text{ k}\\Omega$. Find the gain. Which change helps most?",
+      "solution": [
+        "$r_{O1} \\parallel r_{O5} = 13.3\\text{ k}\\Omega$; NMOS side $25 \\times 13.3\\text{ k} = 333\\text{ k}\\Omega$.",
+        "$R_{out} = 333\\text{ k} \\parallel 800\\text{ k} = 235\\text{ k}\\Omega$, so $A_v = 235$ (47 dB).",
+        "The NMOS side dominates, and within it $r_{O5}$ is the smallest term, so lengthening $M_5$-$M_6$ (raising $r_{O5}$) helps most."
+      ],
+      "answer": "About 235; lengthen the folding current sources."
+    },
+    {
+      "type": "problem",
+      "title": "Power cost",
+      "text": "A telescopic op amp has $I_{SS} = 200\\;\\mu$A. A folded cascode with the same input pair current uses 100 $\\mu$A in each cascode branch. Compare total currents and the current in $M_5$.",
+      "solution": [
+        "Telescopic: 200 $\\mu$A total.",
+        "Folded: $I_{SS} = 200\\;\\mu$A plus two cascode branches of 100 $\\mu$A gives 400 $\\mu$A; $M_5$ carries $100 + 100 = 200\\;\\mu$A."
+      ],
+      "answer": "Twice the current; $M_5$ carries 200 $\\mu$A."
+    },
+    {
+      "type": "problem",
+      "title": "Folding pole",
+      "text": "At node X of a folded cascode, $g_{m3} = 1$ mS (body effect neglected) and the total capacitance is 200 fF. Where is the folding pole?",
+      "solution": [
+        "$f_p = g_{m3}/(2\\pi C_X) = 10^{-3}/(2\\pi \\times 200\\text{ fF}) = 796$ MHz."
+      ],
+      "answer": "About 0.8 GHz."
+    }
+  ]
+}

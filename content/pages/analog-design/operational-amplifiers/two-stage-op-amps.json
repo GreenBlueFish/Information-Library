@@ -1,72 +1,121 @@
 {
-  "title": "Two-Stage Op Amps and Gain Boosting",
-  "intro": "When one stage cannot deliver enough gain and swing, a second stage is added. The price is stability work.",
+  "title": "Two-Stage Op Amps",
+  "intro": "When one stage cannot give both the gain and the swing, split the jobs: a first stage for gain and a common-source second stage for swing (Razavi, Sections 9.3, 9.6 and 9.7.4).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Two-stage op amp"
+      "text": "Why two stages"
     },
     {
       "type": "prose",
-      "text": "A differential pair with a mirror load drives a common-source second stage. Gain is the product of the two stage gains, gm1*(ro2||ro4) * gm6*(ro6||ro7), commonly 60 to 80 dB. The output can swing within an overdrive of each rail. A compensation capacitor CC around the second stage (Miller compensation) keeps it stable (see the next chapter)."
+      "text": "Telescopic and folded cascodes convert voltage to current once, so their gain is $G_m R_{out}$ and every cascode that raises $R_{out}$ eats swing. With a 0.9 V supply and a required 0.8 V single-ended swing, no cascode stack fits. A two-stage op amp isolates the requirements: the first stage provides gain, and the second, a simple common-source stage, swings to within one overdrive of each rail."
     },
     {
       "type": "figure",
-      "src": "assets/figures/analog-design/two-stage-miller.svg",
-      "alt": "Block diagram of a two-stage op amp. The input drives the first stage, a differential stage, whose output drives the second, common-source stage and then the output. A compensation capacitor Cc connects from the output of the first stage to the output of the second.",
-      "caption": "A two-stage op amp. The Miller capacitor Cc spans the second stage."
+      "src": "assets/figures/analog-design/operational-amplifiers-two-stage.svg",
+      "alt": "Fully differential two-stage op amp. An NMOS differential pair M1, M2 with tail ISS has PMOS current-source loads M3, M4 biased by Vb1. Their drains, X and Y, drive the gates of PMOS common-source transistors M5 and M6, whose NMOS current-source loads M7 and M8 are biased by Vb2. The outputs Vout1 and Vout2 are at the drains of M5/M7 and M6/M8.",
+      "caption": "A fully differential two-stage op amp. Common-mode feedback and compensation are not shown."
+    },
+    {
+      "type": "math",
+      "tex": "A_v = g_{m1,2}(r_{O1,2} \\parallel r_{O3,4}) \\cdot g_{m5,6}(r_{O5,6} \\parallel r_{O7,8}), \\qquad V_{out,pp} = V_{DD} - |V_{OD5,6}| - V_{OD7,8} \\text{ per side}"
+    },
+    {
+      "type": "prose",
+      "text": "For more gain, cascode the first stage. Because the second stage has a gain of 10 or so, the swing at X and Y is small, so the first stage can be optimized for gain alone:"
+    },
+    {
+      "type": "math",
+      "tex": "A_v \\approx \\left\\{g_{m1,2}\\left[(g_{m3,4}r_{O3,4}r_{O1,2}) \\parallel (g_{m5,6}r_{O5,6}r_{O7,8})\\right]\\right\\}\\left[g_{m9,10}(r_{O9,10} \\parallel r_{O11,12})\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "A single-ended output can be made by keeping the first stage differential and converting the two second-stage currents with a current mirror. More than two stages is rare: each stage adds at least one pole, and stability becomes hard to guarantee (multipath and nested-Miller schemes exist for that)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Design procedure"
+    },
+    {
+      "type": "prose",
+      "text": "Split the power between the stages. Design the output stage first: its swing sets the overdrives (for example 0.2 V and 0.3 V for the two output devices). Give the larger overdrive to the current-source device: a small overdrive on the current source raises its noise current, and the signal device wants high $g_m = 2I_D/V_{OD}$. That makes the signal device wide, which adds capacitance at X and Y. Then the first stage: because $V_{DS3,4} = |V_{GS5,6}|$, the second stage fixes the first stage's operating point and its allowed overdrives. Keep the input pair's overdrive small (high $g_m$, low noise; at very low overdrive it enters subthreshold, where $g_m \\approx I_D/(\\xi V_T)$), and the load devices' overdrive large so they contribute less noise than the input pair."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Gain boosting"
+      "text": "Verifying the output swing"
     },
     {
       "type": "prose",
-      "text": "To get cascode-level output resistance without the swing penalty, add an auxiliary amplifier that regulates the cascode transistor's source, multiplying the output resistance by its gain. Gain boosting raises DC gain by 20 to 40 dB at the cost of more current and some extra poles."
+      "text": "In nanometer devices the saturation-triode boundary is blurry, so do not judge swing from bias points. Instead apply sinusoids of growing amplitude in simulation and plot the gain against output amplitude; the swing is the amplitude where the gain has dropped by an accepted amount (for example 10%, about 1 dB). If distortion is what matters, put the op amp in its closed-loop configuration and find the amplitude at which the harmonics become unacceptable."
     },
     {
       "type": "heading",
-      "level": 3,
-      "text": "Output swing and common-mode feedback"
+      "level": 2,
+      "text": "Common-mode feedback in two-stage op amps"
+    },
+    {
+      "type": "prose",
+      "text": "Both stages have high-impedance, current-defined outputs, so both need their CM level defined (see the Common-Mode Feedback page for the basics). Three options:"
     },
     {
       "type": "list",
       "items": [
-        "The peak output swing is VDD minus the sum of overdrives of the transistors in series at each rail.",
-        "Fully differential op amps need common-mode feedback (CMFB): a circuit that senses the output common-mode level and corrects the load currents to hold it near a reference."
+        "Sense the output CM and correct only the second stage (its current sources): nothing defines X and Y. If $I_{SS}$ is less than what $M_3$ and $M_4$ want, X and Y rise until $M_3$, $M_4$ fall into triode, which also cuts $|V_{GS5,6}|$ and the second-stage current. Not usable.",
+        "Sense the output CM and correct the first stage (for example $I_{SS}$): if the outputs are high, the error amplifier cuts $I_{SS}$, X and Y rise, $M_5$-$M_6$ conduct less and the outputs fall. It works because $M_5$ and $M_6$ themselves sense the CM at X and Y. But the CM loop now passes the pole at X, the output pole, the error amplifier's pole and a pole from the large sensing resistors with the error amplifier's input capacitance: three or four poles, hard to stabilize.",
+        "Use two separate local loops, one per stage. A neat version: resistors $R_1$, $R_2$ between X and Y with their midpoint driving the gates of the PMOS loads, so the loads act as current sources for differential signals and as diodes for CM; $M_5$, $M_6$ then mirror their currents. Resistors $R_3$, $R_4$ across the outputs do the same for the NMOS output loads. Gain $g_{m1}(r_{O1} \\parallel r_{O3} \\parallel R_1)\\,g_{m5}(r_{O5} \\parallel r_{O7} \\parallel R_3)$."
       ]
     },
     {
-      "type": "heading",
-      "level": 3,
-      "text": "Slew rate"
+      "type": "prose",
+      "text": "In that last scheme the output CM sits at the output NMOS devices' $V_{GS}$, a little above a threshold, well below mid-supply. Drawing a small current $I_Q$ from the midpoint of $R_3$, $R_4$ shifts the output CM up by $R_3 I_Q/2$. With a cascoded first stage, sense the CM near (not at) X and Y so the sensing does not load the high-impedance nodes."
     },
     {
       "type": "prose",
-      "text": "Large inputs saturate the differential pair; the output is then limited by how fast the tail current ISS can charge the compensation or load capacitor: SR = ISS/CC (two-stage, first stage limit) or ISS/CL (single stage). Slew rate causes distortion and sets settling time for large steps."
+      "text": "Two-stage op amps must also be compensated (Miller compensation with pole splitting) and they slew at a rate set by the first-stage current and the compensation capacitor; see Stability and Frequency Compensation. To raise the gain of a one-stage op amp without a second stage, see Gain Boosting."
     },
     {
       "type": "problem",
       "title": "Two-stage gain",
-      "text": "Stage one has gm1 = 1 mS with output resistance 50 kohm || 50 kohm. Stage two has gm6 = 2 mS with output resistance 25 kohm. Find the total gain.",
+      "text": "Stage one has $g_{m1} = 1$ mS and output resistance $50\\text{ k}\\Omega \\parallel 50\\text{ k}\\Omega$. Stage two has $g_{m6} = 2$ mS and output resistance 25 k$\\Omega$. Find the total gain.",
       "solution": [
-        "Stage 1: 1 mS * 25 kohm = 25.",
-        "Stage 2: 2 mS * 25 kohm = 50.",
-        "Total = 25 * 50 = 1250, or 62 dB."
+        "Stage 1: $1\\text{ mS} \\times 25\\text{ k}\\Omega = 25$.",
+        "Stage 2: $2\\text{ mS} \\times 25\\text{ k}\\Omega = 50$.",
+        "Total $25 \\times 50 = 1250$, or 62 dB."
       ],
       "answer": "1250 (62 dB)."
     },
     {
       "type": "problem",
-      "title": "Slewing",
-      "text": "ISS = 100 uA, CC = 1 pF. A 0.5 V step is applied. How long does the output slew, and what is the slew rate?",
+      "title": "Swing comparison",
+      "text": "At $V_{DD} = 1.2$ V, compare the per-side swing of a two-stage op amp whose output devices have overdrives of 0.2 V (PMOS) and 0.15 V (NMOS) with a telescopic op amp whose five stacked devices each have 0.15 V.",
       "solution": [
-        "SR = ISS / CC = 100 uA / 1 pF = 100 V/us.",
-        "Time to slew 0.5 V = 0.5 V / (100 V/us) = 5 ns."
+        "Two-stage: $1.2 - 0.2 - 0.15 = 0.85\\text{ V}_{pp}$ per side, 1.7 V differential.",
+        "Telescopic: $1.2 - 5 \\times 0.15 = 0.45\\text{ V}_{pp}$ per side, 0.9 V differential."
       ],
-      "answer": "SR = 100 V/us; 5 ns to slew 0.5 V."
+      "answer": "0.85 V versus 0.45 V per side."
+    },
+    {
+      "type": "problem",
+      "title": "Designing for gain",
+      "text": "A two-stage design has a first stage with $g_{m1} = 2$ mS and $r_{O1} \\parallel r_{O3} = 20\\text{ k}\\Omega$, and a second stage with $g_{m5} = 4$ mS and $r_{O5} \\parallel r_{O7} = 5\\text{ k}\\Omega$. What is the gain? If all lengths in the first stage are doubled at the same overdrive and current, what is it then?",
+      "solution": [
+        "$40 \\times 20 = 800$ (58 dB).",
+        "Doubling $L$ (and $W$) leaves $g_m$ unchanged and doubles $r_O$, so the first stage gives 80 and the total 1600 (64 dB), at the cost of more capacitance at X and Y."
+      ],
+      "answer": "800, then 1600."
+    },
+    {
+      "type": "problem",
+      "title": "The broken CMFB option",
+      "text": "In a fully differential two-stage op amp, CMFB senses the outputs and adjusts only the output-stage NMOS current sources. The tail current is 2% below what the PMOS loads $M_3$, $M_4$ try to supply. What happens?",
+      "solution": [
+        "No loop defines the CM level at X and Y. With the loads supplying more than the tail sinks, X and Y rise until $M_3$, $M_4$ enter triode and their current drops to $I_{SS}/2$ each.",
+        "Then $|V_{GS5,6}|$ is smaller than designed, so the second stage runs at a much lower current than intended, regardless of what the output CMFB does."
+      ],
+      "answer": "X and Y float up and starve the second stage; the first stage needs its own CM control."
     }
   ]
 }

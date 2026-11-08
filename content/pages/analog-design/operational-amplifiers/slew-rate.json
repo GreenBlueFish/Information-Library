@@ -1,0 +1,126 @@
+{
+  "title": "Slew Rate",
+  "intro": "A linear circuit's step response gets steeper in proportion to the step; a real op amp's cannot, because the current available to charge its capacitors is limited. Slewing caps large-signal speed and adds distortion (Razavi, Sections 9.9 and 9.10).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Linear settling versus slewing"
+    },
+    {
+      "type": "prose",
+      "text": "In a linear system the step response of a one-pole circuit is $V_0(1 - e^{-t/\\tau})$, whose slope $V_0 e^{-t/\\tau}/\\tau$ is proportional to the final value: double the step and the slope doubles everywhere. A closed-loop op amp behaves this way for small steps. For large steps the output instead ramps with a fixed slope, the slew rate, and only near the end does the response turn exponential."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/operational-amplifiers-slewing.svg",
+      "alt": "Plot of output voltage against time for a buffer. A 0.2 V step gives a smooth exponential. A 1 V step first rises as a straight ramp, then curves into an exponential approach to 1 V; it lags the dashed ideal exponential for a 1 V step.",
+      "caption": "Step responses of a buffer with $\\tau = 10$ ns and $SR = 40\\text{ V}/\\mu\\text{s}$. Only the large step slews."
+    },
+    {
+      "type": "prose",
+      "text": "Origin: in a differential pair driving $C_L$ in a buffer, a small step $\\Delta V$ shifts the drain currents by $\\pm g_m\\Delta V/2$, and the mirror delivers $g_m\\Delta V$ into $C_L$; as the output catches up the current shrinks. A big step steers all of $I_{SS}$ to one side and turns the other transistor off. The loop is then effectively open: $C_L$ charges with the constant $I_{SS}$ whatever the input, giving a ramp of slope $I_{SS}/C_L$, until the output comes close enough for the off device to turn back on. The same happens on falling edges."
+    },
+    {
+      "type": "prose",
+      "text": "Slewing is nonlinear (the output does not scale with the input), so a slewing amplifier distorts. To reproduce a sine $V_0\\sin\\omega_0 t$ without slewing,"
+    },
+    {
+      "type": "math",
+      "tex": "SR \\ge V_0\\,\\omega_0"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Slew rates of common topologies"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Five-transistor OTA or folded cascode with single-ended output: $SR = I_{SS}/C_L$, independent of the PMOS current $I_P$ in the folded case.",
+        "Fully differential telescopic: each output ramps at $I_{SS}/(2C_L)$ in opposite directions, so the differential output slews at $I_{SS}/C_L$.",
+        "Capacitive-feedback amplifier ($C_1$ from input to the inverting node, $C_2$ from there to the output, no extra load): during slewing $I_{SS}$ flows through the series combination, $SR = I_{SS}(C_1 + C_2)/(C_1C_2)$.",
+        "Two-stage Miller-compensated op amp: $SR = I_{SS}/C_C$ (covered with compensation in Chapter 10)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "In a folded cascode with $I_{SS} > I_P$, slewing turns the cascode off and drives the folding node far down, pushing the input pair and tail into triode; returning to equilibrium then needs a large swing at that node, which slows settling. Clamp transistors that conduct the excess $I_{SS} - I_P$ (or tie the folding nodes toward $V_{DD}$ through devices that are off in normal operation) limit that excursion."
+    },
+    {
+      "type": "prose",
+      "text": "Raising the slew rate for a given load means raising $I_{SS}$ and widening every device proportionally to keep the swing: power and input capacitance go up, while $g_m r_O$ and hence gain stay the same. The boundary between slewing and linear settling is fuzzy; one way to define it is the input difference at which the pair's currents differ by less than some fraction $\\alpha$ of $I_{SS}$, roughly $\\Delta V_G \\approx \\alpha I_{SS}/g_m$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "High-slew-rate (class-AB) op amps"
+    },
+    {
+      "type": "prose",
+      "text": "A constant-current (class-A) stage can only slew with its bias current. The cure is a stage whose available current grows during the transient. In a common-source stage with a current-source load, letting the load's gate follow the input (a complementary inverter-like push-pull stage) does this but has poor supply rejection. With differential signals available, control each PMOS load through a current mirror driven by the opposite input: when one side's input falls, its NMOS draws less and the mirrored PMOS current on that side rises. These push-pull stages are loosely called class-AB."
+    },
+    {
+      "type": "prose",
+      "text": "With tail sources $I_{SS1}$ (main pairs) and $I_{SS2}$ (mirror-control pairs) and a mirror ratio $W_4/W_8$, the differential slew rate becomes"
+    },
+    {
+      "type": "math",
+      "tex": "SR = \\frac{I_{SS1} + I_{SS2}\\,(W_4/W_8)}{C_L}"
+    },
+    {
+      "type": "prose",
+      "text": "against $I_{SS1}/C_L$ without push-pull. The mirror path also adds small-signal gain: the effective input transconductance becomes $g_{m1} + (W_4/W_8)g_{m5}$. The catch is the mirror pole $\\omega_{p,X} \\approx g_{m8}/C_Y$, which falls as $W_4/W_8$ rises (more capacitance for the same $g_{m8}$), and a nearby zero that cannot be placed on it. Putting a differential pair in front of such a push-pull stage gives a two-stage class-AB op amp with gain $g_{m9}(r_{O9} \\parallel r_{O11})[g_{m1} + (W_4/W_8)g_{m5}](r_{O1} \\parallel r_{O2})$; when the first stage steers all its current to one side, its output node jumps nearly to a rail and turns the output device on hard, so the available slewing current can far exceed the bias current."
+    },
+    {
+      "type": "problem",
+      "title": "Slew rate for a sine",
+      "text": "An op amp must deliver a 0.5 V amplitude sine at 20 MHz. What is the minimum slew rate?",
+      "solution": [
+        "$SR \\ge V_0\\omega_0 = 0.5 \\times 2\\pi \\times 20\\text{ MHz} = 62.8\\text{ V}/\\mu\\text{s}$."
+      ],
+      "answer": "About 63 V/$\\mu$s."
+    },
+    {
+      "type": "problem",
+      "title": "Folded cascode",
+      "text": "A single-ended folded cascode has $I_{SS} = 200\\;\\mu$A, PMOS currents $I_P = 150\\;\\mu$A and $C_L = 2$ pF. What is its slew rate? Does $I_P$ matter?",
+      "solution": [
+        "$SR = I_{SS}/C_L = 200\\;\\mu\\text{A}/2\\text{ pF} = 100\\text{ V}/\\mu\\text{s}$; $I_P$ does not set it.",
+        "But with $I_{SS} > I_P$ the folding node collapses during slewing, slowing recovery, unless it is clamped."
+      ],
+      "answer": "100 V/$\\mu$s."
+    },
+    {
+      "type": "problem",
+      "title": "Slew plus settle",
+      "text": "A buffer has $\\tau = 10$ ns and $SR = 40\\text{ V}/\\mu\\text{s}$. A 1 V step is applied. Estimate the time to settle within 1 mV and compare with a purely linear response.",
+      "solution": [
+        "Slewing lasts until the linear slope $(V_0 - V_{out})/\\tau$ falls to SR, i.e. until the error is $SR \\cdot \\tau = 0.4$ V: after $(1 - 0.4)/0.04 = 15$ ns.",
+        "Then linear settling from 0.4 V to 1 mV: $10\\text{ ns} \\times \\ln(400) = 60$ ns. Total about 75 ns.",
+        "Linear only: $10\\text{ ns} \\times \\ln(1000) = 69$ ns."
+      ],
+      "answer": "About 75 ns versus 69 ns."
+    },
+    {
+      "type": "problem",
+      "title": "Capacitive amplifier",
+      "text": "A capacitive-feedback amplifier has $C_1 = 3$ pF, $C_2 = 1$ pF and $I_{SS} = 100\\;\\mu$A, with negligible extra load. Find the slew rate.",
+      "solution": [
+        "Series capacitance $C_1C_2/(C_1 + C_2) = 0.75$ pF.",
+        "$SR = 100\\;\\mu\\text{A}/0.75\\text{ pF} = 133\\text{ V}/\\mu\\text{s}$."
+      ],
+      "answer": "About 133 V/$\\mu$s."
+    },
+    {
+      "type": "problem",
+      "title": "Push-pull gain",
+      "text": "A class-AB stage uses $W_4/W_8 = 4$ and $I_{SS2} = I_{SS1}$. By what factor does the slew rate rise, and at what power cost?",
+      "solution": [
+        "$SR = (I_{SS1} + 4I_{SS1})/C_L = 5I_{SS1}/C_L$, five times the class-A value.",
+        "The control pairs double the tail current (plus mirror currents), roughly twice the power."
+      ],
+      "answer": "Five times the slew rate for about twice the power."
+    }
+  ]
+}
