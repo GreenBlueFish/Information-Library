@@ -14,6 +14,7 @@ import * as cortex from "./cortex.js";
 import * as foundations from "./foundations.js";
 import * as columns from "./columns.js";
 import * as analog from "./analog.js";
+import * as racing from "./racing.js";
 
 export const SIMS = {
   lif: neurons.lif,
@@ -75,4 +76,7 @@ export const SIMS = {
   bandgap: analog.bandgap,
   "sc-integrator": analog.scIntegrator,
   "ring-oscillator": analog.ringOscillator,
+  "tyre-curve": racing.tyreCurve,
+  "cornering-speed": racing.corneringSpeed,
+  "weight-transfer": racing.weightTransfer,
 };

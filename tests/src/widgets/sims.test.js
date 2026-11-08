@@ -189,4 +189,28 @@ describe("widgets/sims (mushroom body)", () => {
     expect(evidence.points.at(-1).y > 90).toBe(true);
     expect(elimination.points.at(-1).y < 50).toBe(true);
   });
+  it("tyre-curve: force peaks at peakSlip, and more load gives less than proportionally more grip", () => {
+    const [light, mid, heavy] = SIMS["tyre-curve"]({}, { peakSlip: 7 });
+    const peak = (s) => s.points.reduce((b, p) => (p.y > b.y ? p : b));
+    expect(Math.abs(peak(mid).x - 7) < 0.3).toBe(true);
+    expect(peak(heavy).y > peak(mid).y && peak(heavy).y < 1.5 * peak(mid).y).toBe(true);
+    expect(peak(light).y > 0.5 * peak(mid).y).toBe(true);
+  });
+
+  it("cornering-speed: v = sqrt(mu g r) without downforce, and downforce only adds speed", () => {
+    const [plain, aero] = SIMS["cornering-speed"]({}, { mu: 1, vTop: 1000 });
+    const at = (s, r) => s.points.find((p) => Math.abs(p.x - r) < 1).y;
+    expect(Math.abs(at(plain, 100) - Math.sqrt(9.81 * 100) * 3.6) < 0.5).toBe(true);
+    expect(aero.points.every((p, i) => p.y >= plain.points[i].y)).toBe(true);
+    expect(at(aero, 200) - at(plain, 200) > at(aero, 20) - at(plain, 20)).toBe(true);
+  });
+
+  it("weight-transfer: braking loads the front axle, accelerating the rear, total unchanged", () => {
+    const [front, rear] = SIMS["weight-transfer"]({}, {});
+    const first = 0, last = front.points.length - 1;
+    expect(front.points[first].y > rear.points[first].y).toBe(true);
+    expect(rear.points[last].y > front.points[last].y).toBe(true);
+    const total = front.points[60].y + rear.points[60].y;
+    expect(Math.abs(total - 1200 * 9.81 / 1000) < 1e-6).toBe(true);
+  });
 });
