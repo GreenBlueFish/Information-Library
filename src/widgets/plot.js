@@ -37,6 +37,8 @@
  * @property {Array<{x:number, y:number}>} points  Ordered sample points. An
  *   empty array is allowed (the series contributes to the legend but draws no
  *   line). Non-finite x/y values are skipped so a simulation gap does not throw.
+ *   A point with `move: true` lifts the pen: the line jumps to it without
+ *   joining it to the previous point (for separate marks such as spike stems).
  * @property {string} [label]  Human label shown in the legend. When omitted the
  *   series is labeled positionally ("Series 1", "Series 2", …).
  */
@@ -153,7 +155,7 @@ function normalizeSeries(series) {
     const rawPoints = s && Array.isArray(s.points) ? s.points : [];
     const points = rawPoints
       .filter((p) => p && Number.isFinite(p.x) && Number.isFinite(p.y))
-      .map((p) => ({ x: p.x, y: p.y }));
+      .map((p) => (p.move === true ? { x: p.x, y: p.y, move: true } : { x: p.x, y: p.y }));
     const label = s && typeof s.label === "string" && s.label.length > 0
       ? s.label
       : `Series ${i + 1}`;
@@ -370,7 +372,7 @@ function pointsToPath(points, project) {
   return points
     .map((p, i) => {
       const { x, y } = project(p.x, p.y);
-      return `${i === 0 ? "M" : "L"} ${round(x)} ${round(y)}`;
+      return `${i === 0 || p.move ? "M" : "L"} ${round(x)} ${round(y)}`;
     })
     .join(" ");
 }

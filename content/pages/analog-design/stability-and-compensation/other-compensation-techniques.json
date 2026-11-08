@@ -1,0 +1,106 @@
+{
+  "title": "Other Compensation Techniques",
+  "intro": "The right-half-plane zero comes from signal flowing forward through $C_C$. Make $C_C$ conduct only backward, from the output to the first-stage node, and the zero disappears while pole splitting remains (Razavi, Section 10.7).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Source follower in series with $C_C$"
+    },
+    {
+      "type": "prose",
+      "text": "Insert a source follower so that $C_C$ is driven from the output through the follower but cannot be driven forward from the first-stage node (the follower's small $C_{GS}$ is all that couples back). With the first stage modelled by $R_S$, the output stage by $g_{m1}$ (output transistor), $R_L$, $C_L$, and the follower's $g_{m2}$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{-g_{m1}R_L R_S\\,(g_{m2} + C_C s)}{R_L C_L C_C(1 + g_{m2}R_S)s^2 + \\left[(1 + g_{m1}g_{m2}R_L R_S)C_C + g_{m2}R_L C_L\\right]s + g_{m2}}"
+    },
+    {
+      "type": "prose",
+      "text": "The zero is now in the left half plane at $-g_{m2}/C_C$ and can be used to cancel a pole. With the usual inequalities the poles are close to the plain Miller values, and the output pole moves from $1/(R_L C_L)$ to about $g_{m1}/C_L$. The drawback is swing: the follower limits the output's lower end to $V_{GS2} + V_{I2}$, the voltage it and its current source need."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Common-gate (current-buffer) compensation"
+    },
+    {
+      "type": "prose",
+      "text": "Better: let $C_C$ couple the output to the source of a common-gate transistor whose drain is the first-stage output node. The capacitor isolates the DC levels, so the swing is not limited. A change $\\Delta V$ at the first-stage node produces $A_v\\Delta V$ at the output and a current $A_v\\Delta V\\,C_C s$ through $C_C$ (the common-gate source impedance $1/g_{m2}$ is small), which is delivered to the first-stage node: Miller multiplication by $A_v$ again, but one-way."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/stability-and-compensation-common-gate-compensation.svg",
+      "alt": "Output stage: NMOS M_out with current source I1 from VDD to the output. Node A, from the first stage, drives the gate of M_out and the drain of a common-gate NMOS M_c whose gate is at Vb. M_c's source has a bias current sink I2 to ground and connects through capacitor CC to the output.",
+      "caption": "Common-gate compensation: $C_C$ returns output current through $M_c$ to the first-stage node A."
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{-g_{m1}R_S R_L\\,(g_{m2} + C_C s)}{R_L C_L C_C s^2 + \\left[(1 + g_{m1}R_S)g_{m2}R_L C_C + C_C + g_{m2}R_L C_L\\right]s + g_{m2}}"
+    },
+    {
+      "type": "prose",
+      "text": "Again a left-half-plane zero. The second pole comes out higher than in the follower version by about $g_{m2}R_S$: at high frequency the loop through $M_2$ and $R_S$ lowers the output resistance by that factor. Capacitance at the first-stage node reduces the effect, but the technique can give much more bandwidth than plain Miller compensation."
+    },
+    {
+      "type": "prose",
+      "text": "Slewing needs care. For a rising output, the common-gate device and its bias source must carry $I_{SS}$ in addition to the first stage's own current, or the input stage's operating point collapses and the slew rate falls to the bias current over $C_C$. For a falling output, the other bias current must support $I_{SS}$ and the cascode current, so equal slew rates in both directions require bias currents about as large as $I_{SS}$, costing power."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Compensating at the cascode node"
+    },
+    {
+      "type": "prose",
+      "text": "When the first stage is a cascode, its own cascode device can play the common-gate role: connect $C_C$ from the output to the source of the cascode transistor (a low-impedance node), instead of to the high-impedance first-stage output. With $R_{eq}$ the resistance at the first-stage output:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Zero at $(g_{m4}R_{eq})(g_{m9}/C_C)$, far above the plain Miller zero $g_{m9}/C_C$.",
+        "Dominant pole near $1/(R_{eq}g_{m9}R_L C_C)$, as if $C_C$ were at the output device's gate.",
+        "First non-dominant pole near $g_{m4}g_{m9}R_{eq}/C_L$, much higher than $g_{m9}/C_L$.",
+        "The capacitance at the cascode node, which sees a large resistance, can add a significant pole in practice; a resistor in series with each $C_C$ can also shift the zero, and both $C_C$ to the cascode node and a conventional $C_C'$ can be combined."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Where did the zero go?",
+      "text": "A two-stage op amp has $g_{m9} = 4$ mS and $C_C = 1$ pF. Compare the zero with plain Miller compensation and with common-gate compensation using $g_{m2} = 1$ mS.",
+      "solution": [
+        "Plain Miller: right-half-plane zero at $g_{m9}/(2\\pi C_C) = 637$ MHz.",
+        "Common gate: left-half-plane zero at $g_{m2}/(2\\pi C_C) = 159$ MHz, which adds phase lead instead of lag."
+      ],
+      "answer": "RHP at 637 MHz versus LHP at 159 MHz."
+    },
+    {
+      "type": "problem",
+      "title": "Second-pole gain",
+      "text": "In common-gate compensation the second pole rises by about $g_{m2}R_S$ relative to the source-follower version. With $g_{m2} = 1$ mS and a first-stage resistance $R_S = 100\\text{ k}\\Omega$, and a source-follower-version output pole at 300 MHz, where would the common-gate version's pole be, ignoring node capacitance at the first-stage output?",
+      "solution": [
+        "$g_{m2}R_S = 100$, so in this idealized model the pole moves to 30 GHz: far beyond anything else.",
+        "In reality the first-stage node capacitance and other poles take over long before, which is why the improvement is quoted as a potential one."
+      ],
+      "answer": "About 100 times higher in the idealized model."
+    },
+    {
+      "type": "problem",
+      "title": "Cascode compensation zero",
+      "text": "With cascode compensation, $g_{m4}R_{eq} = 20$, $g_{m9} = 4$ mS and $C_C = 1$ pF. Where is the zero?",
+      "solution": [
+        "$(g_{m4}R_{eq})(g_{m9}/C_C)/2\\pi = 20 \\times 637\\text{ MHz} = 12.7$ GHz."
+      ],
+      "answer": "About 13 GHz, twenty times the plain Miller zero."
+    },
+    {
+      "type": "problem",
+      "title": "Swing cost of a follower",
+      "text": "In source-follower compensation the follower has $V_{GS} = 0.55$ V and its current source needs 0.15 V. With $V_{DD} = 1.2$ V and the output's upper limit at 1.05 V, how much output range remains?",
+      "solution": [
+        "The lower end is $0.55 + 0.15 = 0.70$ V, so the range is $1.05 - 0.70 = 0.35$ V, versus about 0.9 V without the follower (lower limit about 0.15 V)."
+      ],
+      "answer": "About 0.35 V; the common-gate version avoids this loss."
+    }
+  ]
+}

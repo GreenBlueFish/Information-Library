@@ -1,0 +1,117 @@
+{
+  "title": "Offset Cancellation",
+  "intro": "Making devices larger to lower the offset costs capacitance, and packaging stress can shift offsets after test. Precision circuits instead measure their own offset in a dedicated clock phase, store it on capacitors, and subtract it. The same trick removes low-frequency noise (Razavi, Sections 14.2.2 and 14.2.3).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why cancel rather than size"
+    },
+    {
+      "type": "prose",
+      "text": "Threshold mismatch trades directly with gate capacitance: in an older 0.6 µm process, about 300 fF of channel capacitance per device for 1 mV of $V_{TH}$ mismatch. When many comparators hang on one input (as in a flash ADC), that load is prohibitive. Electronic cancellation sidesteps the trade, and as a bonus suppresses $1/f$ noise. The stored correction leaks away through junction and subthreshold currents, so it must be refreshed, typically at least every few hundred microseconds (a few kilohertz)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Output offset storage"
+    },
+    {
+      "type": "prose",
+      "text": "Put capacitors $C_1$, $C_2$ in series with the amplifier's outputs. In the cancellation phase short the inputs together (to a CM level) and short the far ends of the capacitors to a CM level too: the amplified offset $A_vV_{OS}$ ends up stored across the capacitors. In amplification the stored voltage subtracts exactly the offset, and the switches' charge-injection mismatch is the only residue. Because $A_vV_{OS}$ must not saturate the output, the gain is kept low, roughly below 10."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Input offset storage"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nonlinearity-and-mismatch-input-offset-storage.svg",
+      "alt": "Schematic. Differential inputs pass through switches to the left plates of capacitors C1 and C2; switches S1 and S2 can tie those plates to VCM. The right plates, nodes X and Y, drive the + and minus inputs of a fully differential amplifier Av. Switch S3 connects the amplifier's minus output back to X and S4 connects its plus output back to Y.",
+      "caption": "Cancellation phase: S1 to S4 closed. The amplifier in unity feedback writes its own offset onto $C_1$ and $C_2$."
+    },
+    {
+      "type": "prose",
+      "text": "For high-gain amplifiers, put the capacitors at the inputs and close the amplifier in unity feedback during cancellation. Then"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = \\frac{A_v}{1 + A_v}V_{OS} \\approx V_{OS}"
+    },
+    {
+      "type": "prose",
+      "text": "is stored across $C_1$, $C_2$. After the switches open, a zero input gives an output of $V_{OS}$, so the residual input-referred offset is $V_{OS}/A_v$, provided S3 and S4 inject equal charges and the amplifier's input capacitance is small compared with $C_1$, $C_2$. Unequal injection from S3 and S4 appears as an input offset, and with a large $A_v$ it can saturate the output."
+    },
+    {
+      "type": "prose",
+      "text": "Both storage methods put capacitors in the signal path. Their bottom-plate parasitics add poles (hurting phase margin in a feedback system) and slow settling, worsening the speed-power trade-off."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Auxiliary-amplifier cancellation"
+    },
+    {
+      "type": "prose",
+      "text": "Keep the capacitors out of the signal path: an auxiliary amplifier $A_{aux}$ amplifies a voltage $V_1$ stored on $C_1$, $C_2$ and subtracts the result from the main amplifier's output. If $A_{aux}V_1 = A_1V_{OS1}$ the offset vanishes. $V_1$ is produced in a cancellation phase by closing a loop through a following stage and $A_{aux}$. In practice both are transconductors summing currents into a shared load $R$ (a folded-cascode op amp, with the correction $G_{m2}$ injecting current at the low-impedance folding nodes). Including the offset $V_{OS2}$ of $G_{m2}$:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{OS,tot} = \\frac{V_{OS1}}{1 + G_{m2}R} + \\frac{G_{m2}}{G_{m1}}\\cdot\\frac{V_{OS2}}{1 + G_{m2}R} \\approx \\frac{V_{OS1}}{G_{m2}R} + \\frac{V_{OS2}}{G_{m1}R}"
+    },
+    {
+      "type": "prose",
+      "text": "When S3 and S4 open, a differential injection error $\\Delta V$ on the storage capacitors is not corrected (the loop is open) and appears at the input as $(G_{m2}/G_{m1})\\Delta V$, which is why $G_{m2}$ is made about $0.1G_{m1}$. The unity-gain sampler and multiply-by-two SC circuits cancel the op amp's offset in the same way (unless an equalising switch is added)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Noise reduction: correlated double sampling"
+    },
+    {
+      "type": "prose",
+      "text": "Offset is noise at zero frequency, so cancelling it right before use also cancels slowly varying noise. If the offset is stored at $t_1$ and the signal is sampled at $t_2 = t_1 + \\Delta t$, only noise components fast enough to change appreciably in $\\Delta t$ survive. A sinusoid of amplitude $A$ and frequency $f$ changes by at most $2\\pi fA\\Delta t$ in that time, so components well below $1/\\Delta t$ are suppressed. This is correlated double sampling (CDS), first used in CCD imagers, and it is a strong weapon against MOS $1/f$ noise, whose corner can be 500 kHz to 1 MHz. Its price is aliasing: the sampling folds wideband noise down into the band."
+    },
+    {
+      "type": "problem",
+      "title": "Output storage limit",
+      "text": "An amplifier with $A_v = 8$ has a 5 mV offset and an output range of ±0.5 V. What voltage is stored in output offset storage, and what is the largest gain that keeps the stored value below 10% of the range for offsets up to 10 mV?",
+      "solution": [
+        "$A_vV_{OS} = 40$ mV.",
+        "Need $A_v \\times 10\\text{ mV} \\le 50$ mV, so $A_v \\le 5$."
+      ],
+      "answer": "40 mV; gain at most 5."
+    },
+    {
+      "type": "problem",
+      "title": "Input storage residue",
+      "text": "An amplifier with $A_v = 1000$ and $V_{OS} = 5$ mV uses input offset storage with $C_1 = C_2 = 1$ pF. What is the ideal residual offset? If S3 and S4 inject charges differing by 1 fC, what is the error?",
+      "solution": [
+        "Ideal: $5\\text{ mV}/1000 = 5\\,\\mu$V.",
+        "Injection mismatch: $1\\text{ fC}/1\\text{ pF} = 1$ mV, directly at the input: it dominates by a factor of 200."
+      ],
+      "answer": "5 µV ideally; about 1 mV with the injection mismatch."
+    },
+    {
+      "type": "problem",
+      "title": "Auxiliary-amplifier cancellation",
+      "text": "$G_{m1}R = 1000$, $G_{m2} = 0.1G_{m1}$, and both stages have 5 mV offsets. Find the residual offset, and the error from a 1 mV injection mismatch.",
+      "solution": [
+        "$G_{m2}R = 100$: $V_{OS,tot} = 5/101 + 0.1 \\times 5/101 = 0.0495 + 0.0050 = 0.054$ mV.",
+        "Injection: $(G_{m2}/G_{m1})\\Delta V = 0.1 \\times 1\\text{ mV} = 0.1$ mV."
+      ],
+      "answer": "About 54 µV, plus 100 µV from injection."
+    },
+    {
+      "type": "problem",
+      "title": "How much does CDS help?",
+      "text": "Samples are taken 20 ns after offset storage. Estimate the largest fractional change of a 100 kHz and of a 10 MHz noise component in that interval.",
+      "solution": [
+        "$2\\pi f\\Delta t$: at 100 kHz, $2\\pi \\times 10^5 \\times 2\\times 10^{-8} = 0.013$ (1.3%), so it is almost entirely cancelled.",
+        "At 10 MHz the bound is 1.26, i.e. no suppression at all."
+      ],
+      "answer": "About 1.3% versus no suppression."
+    }
+  ]
+}

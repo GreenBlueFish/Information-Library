@@ -1,0 +1,153 @@
+{
+  "title": "SC Integrators and Common-Mode Feedback",
+  "intro": "Moving a packet of charge every clock period is equivalent to a resistor, which turns the RC integrator into a discrete-time one whose gain depends on a capacitor ratio and the clock. The same switching ideas give a common-mode feedback circuit that does not load the outputs (Razavi, Sections 13.4 and 13.5).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The switched-capacitor resistor"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/switched-capacitor-circuits-sc-resistor.svg",
+      "alt": "Schematic. Node VA connects through switch S1 (phase 1) to a middle node with capacitor CS to ground; the middle node connects through switch S2 (phase 2) to VB. To the right, an approximately-equal sign and a resistor Req between VA and VB.",
+      "caption": "Charge moved per period gives an average current proportional to $V_A - V_B$."
+    },
+    {
+      "type": "math",
+      "tex": "I_{AB} = C_Sf_{CK}\\,(V_A - V_B) \\quad\\Rightarrow\\quad R_{eq} = \\frac{1}{C_Sf_{CK}}"
+    },
+    {
+      "type": "prose",
+      "text": "A 1 pF capacitor clocked at 1 MHz stands in for 1 MΩ in a tiny area, and the resulting time constants depend on a capacitor ratio and a clock, both accurate, instead of on an absolute RC product that varies by tens of percent."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The integrator"
+    },
+    {
+      "type": "prose",
+      "text": "Replacing $R$ in the continuous-time integrator $V_{out} = -\\frac{1}{RC_F}\\int V_{in}\\,dt$ with $C_1$ switched between the input and the virtual ground gives a discrete-time integrator. Each period $C_1$ takes $C_1V_{in}$ and delivers it to $C_2$:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out}(kT_{CK}) = V_{out}\\left[(k-1)T_{CK}\\right] - \\frac{C_1}{C_2}V_{in}\\left[(k-1)T_{CK}\\right]"
+    },
+    {
+      "type": "math",
+      "tex": "H(z) = -\\frac{C_1}{C_2}\\cdot\\frac{z^{-1}}{1 - z^{-1}}",
+      "caption": "An accumulator; for signals well below $f_{CK}$ its unity-gain frequency is $\\omega_u \\approx f_{CK}C_1/C_2$."
+    },
+    {
+      "type": "prose",
+      "text": "Each charge transfer settles with the time constant of the SC amplifiers. A constant input produces a staircase:"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "SC integrator output (staircase)",
+        "params": [
+          {
+            "key": "ratio",
+            "label": "Cs / CF",
+            "control": "range",
+            "min": 0.05,
+            "max": 1,
+            "step": 0.05,
+            "default": 0.25
+          },
+          {
+            "key": "vin",
+            "label": "Vin (V)",
+            "control": "range",
+            "min": -0.5,
+            "max": 0.5,
+            "step": 0.05,
+            "default": 0.1
+          },
+          {
+            "key": "cycles",
+            "label": "clock cycles",
+            "control": "range",
+            "min": 5,
+            "max": 40,
+            "step": 1,
+            "default": 20
+          }
+        ],
+        "config": {
+          "sim": "sc-integrator",
+          "xLabel": "clock cycle",
+          "yLabel": "Vout (V)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Each clock adds a fixed step $(C_s/C_F)V_{in}$ with the sign reversed (this is the simple inverting integrator); flip the sign of $V_{in}$ to run the staircase upward."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Parasitic-insensitive integrator"
+    },
+    {
+      "type": "prose",
+      "text": "The simple version has two flaws: the switch connecting $C_1$ to the input injects input-dependent charge, and the junction capacitance $C_j$ of the switches at the capacitor's left plate stores a charge $\\int_0^{V_{in}}C_j\\,dV$ that is a nonlinear function of $V_{in}$ and is dumped into $C_2$ with the signal."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/switched-capacitor-circuits-integrator.svg",
+      "alt": "Schematic. Vin passes switch S1 to node P, the left plate of C1. S2 grounds P. The right plate of C1 is grounded by S3 or connected through S4 to node X, the op amp's minus input. C2 connects X to the output.",
+      "caption": "Four switches: both plates of $C_1$ are always driven to ground or to a virtual ground."
+    },
+    {
+      "type": "prose",
+      "text": "Sampling: S1 and S3 on, $C_1$ charges to $V_{in}$ while $C_2$ holds the last output. Integration: S3 opens first, then S1, then S2 and S4 close and $C_1$'s charge passes through the virtual ground into $C_2$. S3 opens at ground, so its injection is a constant offset (removed differentially). P is driven between two fixed voltages, so S1 and S2 contribute nothing, and S4 switches at virtual ground. The parasitic at the right plate swings only between ground and virtual ground, so its nonlinearity hardly matters, and the bottom-plate parasitic at P is always driven. This version passes the sample without inversion (left plate goes from $V_{in}$ to ground, as in the non-inverting amplifier)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Switched-capacitor common-mode feedback"
+    },
+    {
+      "type": "prose",
+      "text": "Sensing a differential output's common mode with resistors loads it; sensing with source followers or triode devices limits the swing. Capacitors avoid both: two equal capacitors from the outputs to a node X reproduce at X the average of the output changes, and X drives the tail transistor. If both outputs rise, X rises, the tail current increases and pulls them back down. The circuit must be refreshed periodically, like any stored charge."
+    },
+    {
+      "type": "prose",
+      "text": "The DC voltage across the capacitors is set during the reset phase. In one version a reset switch ties the capacitors to diode-connected sense devices so the output CM becomes $V_{GS} + V_{GS,tail}$; the sense devices may be nonlinear during amplification but are disconnected then. In a more accurate version, during reset one plate of each capacitor goes to the desired $V_{CM}$ and the other to the gate of a replica tail device biased from $I_{REF}$, storing $V_{CM} - V_{GS6}$; in amplification the capacitors move to the outputs and the tail gate, giving an output CM of $V_{CM} - V_{GS6} + V_{GS5} = V_{CM}$ when the tail and replica are matched. With large swings the CM loop speed can limit differential settling, so part of the tail current is often fixed and the CMFB device only trims."
+    },
+    {
+      "type": "problem",
+      "title": "Equivalent resistance",
+      "text": "Find the resistance a 1 pF capacitor emulates at $f_{CK} = 1$ MHz.",
+      "solution": [
+        "$R_{eq} = 1/(f_{CK}C) = 1/(10^6 \\times 10^{-12}) = 1$ MΩ."
+      ],
+      "answer": "1 MΩ."
+    },
+    {
+      "type": "problem",
+      "title": "Integrator staircase",
+      "text": "$C_s = 1$ pF, $C_F = 4$ pF, $V_{in} = 0.1$ V (inverting integrator). What is the step per cycle and the output after 20 cycles?",
+      "solution": [
+        "Step $= -(C_s/C_F)V_{in} = -0.25 \\times 0.1 = -25$ mV per cycle.",
+        "After 20 cycles: $-0.5$ V."
+      ],
+      "answer": "−25 mV per cycle; −0.5 V after 20."
+    },
+    {
+      "type": "problem",
+      "title": "Sine-wave response",
+      "text": "An SC integrator has $C_1 = 1$ pF, $C_2 = 10$ pF and $f_{CK} = 10$ MHz. Estimate the output amplitude for a 0.1 V, 10 kHz input sine by treating $C_1$ as a resistor.",
+      "solution": [
+        "$R_{eq} = 1/(10^7 \\times 10^{-12}) = 100$ kΩ, so $R_{eq}C_2 = 1\\,\\mu$s and $\\omega_u = 10^6$ rad/s (159 kHz).",
+        "Gain at 10 kHz $= \\omega_u/\\omega = 10^6/(2\\pi \\times 10^4) = 15.9$; amplitude $\\approx 1.59$ V (the op amp must be able to swing that)."
+      ],
+      "answer": "About 1.6 V."
+    }
+  ]
+}

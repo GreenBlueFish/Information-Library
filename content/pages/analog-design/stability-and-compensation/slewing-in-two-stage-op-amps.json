@@ -1,0 +1,113 @@
+{
+  "title": "Slewing in Two-Stage Op Amps",
+  "intro": "In a Miller-compensated op amp the compensation capacitor, not the load, usually sets the slew rate, and the output stage must be able to supply the extra current that slewing demands (Razavi, Section 10.6).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A current into a Miller integrator"
+    },
+    {
+      "type": "prose",
+      "text": "Feed a current step $I_{SS}u(t)$ into the input node of a high-gain inverting stage with feedback capacitor $C_F$. Node X is a virtual ground, so $C_F$ charges at a constant rate and the output ramps at $I_{SS}/C_F$. With a real single-transistor stage (transconductance $g_m$, output resistance $r_O$, bias source $I_1$), superposition gives"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out}(t) \\approx -\\frac{I_{SS}}{g_m + r_O^{-1}} + \\frac{I_{SS}}{C_F\\left(1 + g_m^{-1}r_O^{-1}\\right)}\\,t"
+    },
+    {
+      "type": "prose",
+      "text": "At $t = 0^+$, $C_F$ is a short and the current flows through $(1/g_m) \\parallel r_O$, producing a small jump; then the output ramps as though loaded by $C_F(1 + 1/(g_m r_O))$, the Miller effect seen from the output. The bias current $I_1$ does not appear: it only sets the operating point."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Slew rate of a two-stage op amp"
+    },
+    {
+      "type": "prose",
+      "text": "A large positive input step turns off one side of the input pair and the mirror. The whole tail current $I_{SS}$ then flows into $C_C$, while the high-gain second stage keeps the first-stage output node nearly fixed. So the output ramps at"
+    },
+    {
+      "type": "math",
+      "tex": "SR = \\frac{I_{SS}}{C_C}"
+    },
+    {
+      "type": "prose",
+      "text": "This assumes the output stage can deliver the currents. In the positive direction, the output device must carry $I_{SS}$ through $C_C$ on top of its bias current $I_1$; if it is not wide enough to do this in saturation, its gate node drops and can push the input pair into triode. In the negative direction the current source $I_1$ must absorb $I_{SS}$ plus the output device's current; if it cannot, the output device turns off and a smaller current sets the slope."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "With a load capacitance"
+    },
+    {
+      "type": "prose",
+      "text": "Adding $C_L$ at the output: the virtual ground at the first-stage output still forces $C_C$ to carry $I_{SS}$, so the output moves at $I_{SS}/C_C$, and $C_L$ must also be charged at the same rate, needing $C_L\\,dV_{out}/dt = (C_L/C_C)I_{SS}$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "When the output stage sinks (output falling, output device pulling down): the device must conduct $I_1 + I_{SS} + (C_L/C_C)I_{SS}$; as long as it stays saturated, $SR = I_{SS}/C_C$.",
+        "When the output rises, the bias source $I_1$ must supply the current: if $I_1 > I_{SS}(1 + C_L/C_C)$, the output device stays on and $SR = I_{SS}/C_C$; otherwise it turns off and the rest of $I_1$ charges $C_L$:"
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "SR = \\frac{I_1 - I_{SS}}{C_L} \\quad \\text{when } I_1 < I_{SS}\\left(1 + \\frac{C_L}{C_C}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "A class-A output stage therefore needs a bias current several times $I_{SS}$ to avoid becoming the slew bottleneck with a heavy load."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Class-AB two-stage op amps"
+    },
+    {
+      "type": "prose",
+      "text": "A two-stage class-AB op amp (push-pull output driven through mirrors) can also be Miller-compensated, but the mirrors in the signal path add a pole, so these are usually compensated more heavily. In the slewing case where the output device turns off, the output current $I_1$ is now not fixed: it is mirrored up from the input-stage current, $I_1 = \\alpha(W_{p1}/W_{p2})I_{SS}$, giving $SR = [\\alpha(W_{p1}/W_{p2}) - 1]I_{SS}/C_L$, much larger than a class-A stage can manage."
+    },
+    {
+      "type": "problem",
+      "title": "Basic slew rate",
+      "text": "$I_{SS} = 100\\;\\mu$A and $C_C = 1$ pF. A 0.5 V output step is needed. How long does the output slew, and at what rate?",
+      "solution": [
+        "$SR = I_{SS}/C_C = 100\\text{ V}/\\mu\\text{s}$.",
+        "Slewing 0.5 V takes $0.5/100 = 5$ ns."
+      ],
+      "answer": "100 V/$\\mu$s; 5 ns."
+    },
+    {
+      "type": "problem",
+      "title": "Is the output stage strong enough?",
+      "text": "With $I_{SS} = 100\\;\\mu$A, $C_C = 1$ pF and $C_L = 4$ pF, the output stage is biased at $I_1 = 400\\;\\mu$A. Find the rising slew rate.",
+      "solution": [
+        "Required $I_1 > I_{SS}(1 + C_L/C_C) = 500\\;\\mu$A. 400 $\\mu$A is not enough, so the output device turns off.",
+        "$SR = (I_1 - I_{SS})/C_L = 300\\;\\mu\\text{A}/4\\text{ pF} = 75\\text{ V}/\\mu\\text{s}$, below the 100 V/$\\mu$s set by $C_C$."
+      ],
+      "answer": "75 V/$\\mu$s, limited by the output stage."
+    },
+    {
+      "type": "problem",
+      "title": "Initial jump",
+      "text": "A current step of 100 $\\mu$A enters the input of a single-transistor Miller integrator with $g_m = 2$ mS and $r_O = 50\\text{ k}\\Omega$ ($C_F = 1$ pF). Describe the output.",
+      "solution": [
+        "Jump at $t = 0^+$: $-100\\;\\mu\\text{A}/(2\\text{ mS} + 0.02\\text{ mS}) = -49.5$ mV.",
+        "Then a ramp of slope $100\\;\\mu\\text{A}/[1\\text{ pF}\\,(1 + 1/100)] = 99\\text{ V}/\\mu\\text{s}$."
+      ],
+      "answer": "A $-50$ mV step, then a ramp of about 99 V/$\\mu$s."
+    },
+    {
+      "type": "problem",
+      "title": "Compensation versus slewing",
+      "text": "Doubling $C_C$ to gain phase margin, by how much must $I_{SS}$ grow to keep the slew rate, and what happens to GBW at fixed $g_{m1}$?",
+      "solution": [
+        "$SR = I_{SS}/C_C$: $I_{SS}$ must double.",
+        "GBW $= g_{m1}/C_C$ halves at fixed $g_{m1}$; restoring it needs $g_{m1}$ doubled, which at fixed overdrive is again twice the current."
+      ],
+      "answer": "Twice the current; GBW halves unless $g_{m1}$ also doubles."
+    }
+  ]
+}

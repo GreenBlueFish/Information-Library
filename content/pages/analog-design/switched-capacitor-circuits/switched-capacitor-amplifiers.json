@@ -1,106 +1,144 @@
 {
-  "title": "SC Amplifiers and Integrators",
-  "intro": "Capacitor ratios on a chip are accurate to 0.1 percent, much better than absolute values, so SC circuits give precise gain.",
+  "title": "Switched-Capacitor Amplifiers",
+  "intro": "With the switch errors understood, three SC amplifiers can be compared: the unity-gain sampler, the non-inverting amplifier and the precision multiply-by-two. For each, the clock timing removes signal-dependent charge injection, and the feedback factor sets the gain error and the settling time (Razavi, Section 13.3).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Switched-capacitor resistor"
+      "text": "Capacitors on a chip"
     },
     {
       "type": "prose",
-      "text": "A capacitor C switched between two nodes at frequency fclk transfers a charge C*(V1 - V2) per cycle, an average current C*fclk*(V1 - V2). It behaves like a resistor Req = 1/(fclk * C). A 1 pF capacitor at 1 MHz emulates 1 Mohm in a tiny area."
+      "text": "A metal-insulator-metal or stacked-metal capacitor has a parasitic capacitance $C_p$ from its bottom plate to the substrate, typically 5 to 10% of its value, and a much smaller one from the top plate. Circuits are therefore drawn so that the bottom plate is always driven (by the input or the op-amp output) and the top plate faces the sensitive op-amp input."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Amplifier"
+      "text": "Unity-gain sampler"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/switched-capacitor-circuits-unity-gain-sampler.svg",
+      "alt": "Schematic. Vin passes switch S1 to node P, then capacitor CH to node X at the op amp's minus input (plus input grounded). Switch S2 connects X to the output; switch S3 connects P to the output.",
+      "caption": "Sample with S1 and S2; hold by flipping $C_H$ around the op amp with S3."
     },
     {
       "type": "prose",
-      "text": "In the sampling phase the input capacitor C1 samples Vin; in the amplify phase its charge is moved onto the feedback capacitor C2 around an op amp. The gain is C1/C2 and depends only on a ratio."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Integrator"
+      "text": "Sampling: S1 and S2 on, X is a virtual ground and $C_H$ tracks $V_{in}$. Hold: S2 turns off first, then S1, then S3 closes and $C_H$ sits in the feedback loop, so $V_{out} \\approx V_0$, the input at the instant S2 opened."
     },
     {
       "type": "prose",
-      "text": "The same circuit, with C2 not discharged between clocks, accumulates the charge: each cycle adds ΔVout = -(Cs/CF) * Vin. The ideal transfer function is H(z) = -(Cs/CF) * z^-1 / (1 - z^-1), an accumulator. It is the building block of switched-capacitor filters and delta-sigma modulators."
-    },
-    {
-      "type": "widget",
-      "widget": {
-        "type": "parameter-plot",
-        "title": "SC integrator output (staircase)",
-        "params": [
-          {
-            "key": "ratio",
-            "label": "Cs / CF",
-            "control": "range",
-            "min": 0.05,
-            "max": 1,
-            "step": 0.05,
-            "default": 0.25
-          },
-          {
-            "key": "vin",
-            "label": "Vin (V)",
-            "control": "range",
-            "min": -0.5,
-            "max": 0.5,
-            "step": 0.05,
-            "default": 0.1
-          },
-          {
-            "key": "cycles",
-            "label": "clock cycles",
-            "control": "range",
-            "min": 5,
-            "max": 40,
-            "step": 1,
-            "default": 20
-          }
-        ],
-        "config": {
-          "sim": "sc-integrator",
-          "xLabel": "clock cycle",
-          "yLabel": "Vout (V)"
-        }
-      }
-    },
-    {
-      "type": "prose",
-      "text": "Each clock adds a fixed step; the slope of the staircase is Cs/CF times Vin. Reverse the sign of Vin to run the staircase upward."
+      "text": "Why the timing matters: when S2 opens, X is at virtual ground, so its channel charge is the same for every input; it causes only an offset, which a differential version removes (with an extra equalising switch between the two X nodes to cancel the mismatch of the two reset switches). After S2 is open, X floats and its total charge is frozen. Any charge S1 then injects at P cannot change the final output, because once the loop settles X is again a virtual ground and charge conservation at X forces $V_{out} = 0$ for that disturbance. The charge S3 needs to turn on comes from the op amp, not from $C_H$."
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "SC common-mode feedback"
+      "text": "Precision"
     },
     {
       "type": "prose",
-      "text": "Capacitors that sample the output common-mode level and compare it with a reference, switched in the same two-phase manner, give a CMFB circuit without resistor loading on the output."
+      "text": "With finite gain $A_{v1}$ and input capacitance $C_{in}$ at X, charge conservation gives"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = \\frac{V_0}{1 + \\dfrac{1}{A_{v1}}\\left(\\dfrac{C_{in}}{C_H} + 1\\right)} \\approx V_0\\left[1 - \\frac{1}{A_{v1}}\\left(\\frac{C_{in}}{C_H} + 1\\right)\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "A wider input pair raises $A_{v1}$ but also $C_{in}$, so the best size minimises the gain error, not maximises the gain."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Speed"
+    },
+    {
+      "type": "prose",
+      "text": "In the sampling phase the time constant is $\\tau_{sam} = (R_{on1} + 1/G_m)C_H$, since the op amp in unity feedback presents about $1/G_m$ at X. In the hold phase the op amp, modelled as $G_m$ with output resistance $R_0$, driving $C_L$, settles with"
+    },
+    {
+      "type": "math",
+      "tex": "\\tau_{amp} = \\frac{C_LC_{in} + C_{in}C_H + C_HC_L}{G_mC_H} = \\frac{1}{G_m}\\left[C_{in} + \\left(1 + \\frac{C_{in}}{C_H}\\right)C_L\\right]",
+      "caption": "Independent of $R_0$: more output resistance means more loop gain, which leaves the closed-loop speed unchanged."
+    },
+    {
+      "type": "prose",
+      "text": "At the start of the hold phase X jumps to about $-V_0$, so the op amp may slew first: its tail current steers fully to one side and the output ramps at about $I_{SS}/C_L$ until X comes back near its final value, then linear settling with $\\tau_{amp}$ takes over. $C_{in}$ hurts both speed and precision, which is another reason the capacitor's top plate goes to X (bottom-plate sampling), also keeping substrate noise off X. Compared with a plain switch and capacitor followed by a buffer, the flip-around sampler is slower but its charge injection is input-independent."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Non-inverting amplifier"
+    },
+    {
+      "type": "prose",
+      "text": "The two-phase amplifier of the fundamentals page ($C_1$ sampled, then its left plate grounded so its charge moves to $C_2$) gives a gain of $C_1/C_2$ with the same polarity as the input. Again S2 (the reset) opens first and sets the sampling instant; afterwards P is a driven node that goes from one fixed voltage ($V_{in0}$) to another (ground), so injection by S1, the charge S3 absorbs, and any input movement after S2 opens all wash out. Its accuracy and speed:"
+    },
+    {
+      "type": "math",
+      "tex": "\\left|\\frac{V_{out}}{V_{in}}\\right| \\approx \\frac{C_1}{C_2}\\left(1 - \\frac{C_1 + C_2 + C_{in}}{C_2}\\cdot\\frac{1}{A_{v1}}\\right)"
+    },
+    {
+      "type": "math",
+      "tex": "\\tau_{amp} = \\frac{C_L(C_1 + C_{in}) + C_LC_2 + (C_1 + C_{in})C_2}{G_mC_2}"
+    },
+    {
+      "type": "prose",
+      "text": "Read the time constant as an op amp of transconductance $G_m$ reduced by the feedback factor $\\beta = C_2/(C_1 + C_2 + C_{in})$, driving $C_L$ in parallel with $C_2$ in series with $C_1 + C_{in}$. Both the gain error and $\\tau$ grow with the nominal gain $C_1/C_2$. For unity gain ($C_1 = C_2 = C_H$) the error is twice that of the unity-gain sampler, whose feedback factor is $C_H/(C_H + C_{in})$ instead of about 1/2. With $C_L = 0$, $\\tau = (C_1 + C_{in})/G_m$, independent of $C_2$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Precision multiply-by-two"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/switched-capacitor-circuits-multiply-by-two.svg",
+      "alt": "Schematic. Vin drives two switches S1 and S2 to the left plates of equal capacitors C1 and C2, whose right plates join at node X, the op amp's minus input. S3 connects X to the output. S4 connects the left plate of C1 to the output; S5 grounds the left plate of C2.",
+      "caption": "Both capacitors sample; then $C_1$ becomes the feedback capacitor and $C_2$ gives up its charge to it."
+    },
+    {
+      "type": "prose",
+      "text": "Both equal capacitors sample $V_{in}$ (total charge $2CV_{in0}$). In amplification S3 opens first, $C_1$ is flipped around the op amp and $C_2$'s left plate is grounded, so $C_2$ empties into $C_1$ and $V_{out} \\approx 2V_{in0}$. The gain error and time constant follow the non-inverting formulas, but the feedback factor is about 1/2 instead of 1/3 for a gain of two, so it is faster and more accurate. The cost is twice the input capacitance during sampling. As with the others, only S3's charge matters, and it is a constant."
     },
     {
       "type": "problem",
-      "title": "Equivalent resistance",
-      "text": "Find the resistance a 1 pF capacitor emulates at fclk = 1 MHz.",
+      "title": "Required op-amp gain",
+      "text": "A unity-gain sampler has $C_H = 1.5$ pF and $C_{in} = 0.3$ pF. What op-amp gain keeps the gain error below 0.05%?",
       "solution": [
-        "Req = 1/(fclk * C) = 1/(1e6 * 1e-12) = 1 Mohm."
+        "Error $\\approx (C_{in}/C_H + 1)/A_{v1} = 1.2/A_{v1} \\le 5\\times 10^{-4}$.",
+        "$A_{v1} \\ge 2400$."
       ],
-      "answer": "1 Mohm."
+      "answer": "At least 2400."
     },
     {
       "type": "problem",
-      "title": "Integrator staircase",
-      "text": "Cs = 1 pF, CF = 4 pF, Vin = 0.1 V. What is the step per cycle and the output after 20 cycles?",
+      "title": "Settling time constants",
+      "text": "With $G_m = 5$ mS and $C_L = 1$ pF, find $\\tau_{amp}$ for (a) the unity-gain sampler with $C_H = 1.5$ pF, $C_{in} = 0.3$ pF; (b) a non-inverting gain-of-four stage with $C_1 = 2$ pF, $C_2 = 0.5$ pF, $C_{in} = 0.2$ pF.",
       "solution": [
-        "Step = -(Cs/CF) * Vin = -0.25 * 0.1 = -25 mV per cycle.",
-        "After 20 cycles: -0.5 V."
+        "(a) $\\tau = [0.3 + 1.2 \\times 1]\\text{ pF}/5\\text{ mS} = 0.30$ ns.",
+        "(b) $C_1 + C_{in} = 2.2$ pF: numerator $= 1 \\times 2.2 + 1 \\times 0.5 + 2.2 \\times 0.5 = 3.8$ pF²; $\\tau = 3.8\\text{ pF}^2/(5\\text{ mS} \\times 0.5\\text{ pF}) = 1.52$ ns."
       ],
-      "answer": "-25 mV per cycle; -0.5 V after 20."
+      "answer": "0.30 ns and 1.52 ns."
+    },
+    {
+      "type": "problem",
+      "title": "Gain error of a gain-of-four stage",
+      "text": "For the stage of part (b) above, what is the gain error with $A_{v1} = 2000$?",
+      "solution": [
+        "$(C_1 + C_2 + C_{in})/(C_2A_{v1}) = 2.7/(0.5 \\times 2000) = 0.27\\%$."
+      ],
+      "answer": "0.27%."
+    },
+    {
+      "type": "problem",
+      "title": "Multiply-by-two versus non-inverting",
+      "text": "Compare the gain error of a gain-of-two stage built (a) as a multiply-by-two with $C_1 = C_2 = 1$ pF and (b) as a non-inverting amplifier with $C_1 = 2$ pF, $C_2 = 1$ pF, both with $C_{in} = 0.2$ pF and $A_{v1} = 1000$.",
+      "solution": [
+        "(a) Feedback factor $= C/(2C + C_{in}) = 1/2.2$; error $= 2.2/1000 = 0.22\\%$.",
+        "(b) $(2 + 1 + 0.2)/(1 \\times 1000) = 0.32\\%$."
+      ],
+      "answer": "0.22% versus 0.32%."
     }
   ]
 }

@@ -1,0 +1,124 @@
+{
+  "title": "Two-Stage Op Amp Design",
+  "intro": "Gain 500 with 1 V peak-to-peak differential swing needs two stages: a cascode first stage for gain and a simple second stage for swing. This page follows that design from power split to compensation and closed-loop tests (Razavi, Section 11.5.2).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Partitioning"
+    },
+    {
+      "type": "prose",
+      "text": "With about 50 from the first stage, the second needs about 10, and the first stage then swings only about 50 mV, so its cascode devices can have generous $V_{DS}$. Splitting 2 mW equally (refine later once speed and noise are known) and keeping 100 µA for bias gives 475 µA per branch in each stage."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nanometer-design-two-stage.svg",
+      "alt": "Schematic. The telescopic first stage (M1 to M9) has its output X connected to the gate of PMOS M10 in the left output stage, whose drain is Vout1 with an NMOS current source M12 below it biased by Vb5. A series resistor Rz and capacitor Cc connect X to Vout1. The right output stage is not drawn.",
+      "caption": "First stage as before, plus a PMOS common-source output stage with Miller compensation."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "First stage"
+    },
+    {
+      "type": "prose",
+      "text": "Allowing $V_{DS,N} = 150$ mV and $V_{DS,P} = 200$ mV (with margin, five $V_{DS}$ values sum to about 0.95 V), references at $V_{GS} = 350$ mV and $-450$ mV carry much more current per micrometre than before. Velocity saturation means the knee hardly moves with the extra overdrive. Scaling gives widths of tens of micrometres instead of hundreds, and a gain of about 50."
+    },
+    {
+      "type": "prose",
+      "text": "Measuring a node resistance in simulation needs care: driving a test current into one output with the inputs at AC ground lets current flow through the input device into the other half, which degenerates it and overstates the resistance. Short the tail node to AC ground with a big capacitor, or drive X and Y differentially and halve the result."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Second stage"
+    },
+    {
+      "type": "prose",
+      "text": "A gain of 10 needs lengths above minimum. NMOS or PMOS input? With the first-stage output CM near 0.55 V, a 10 µm/80 nm NMOS ($V_{GS} \\approx 0.55$ V, 900 µA) gives $g_mr_O = 12.8$ while a PMOS ($|V_{GS}| \\approx 0.45$ V, 110 µA) gives 17.5, so the PMOS wins, scaled to 41 µm for 450 µA ($r_{OP} = 2.38$ kΩ). The NMOS current source must not drag the gain below 10: $g_{mP}(r_{OP} \\parallel r_{ON}) \\ge 10$ requires $r_{ON} \\ge 1.33r_{OP} \\approx 3$ kΩ."
+    },
+    {
+      "type": "prose",
+      "text": "Sweeping the input shows the gain stays above 500 only up to about 450 mV of differential output. Doubling width and length of the NMOS loads extends that to about 530 mV single-ended; the gain still varies with output level (nonlinearity)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Second-stage CMFB"
+    },
+    {
+      "type": "prose",
+      "text": "The second stage's output resistance is low enough for resistive sensing: two resistors (~30 kΩ) average the outputs at node G and drive the NMOS current-source gates directly. In equilibrium the resistors carry no current, so the output CM equals $V_{GS}$ of the current sources (which varies about 50 mV with PVT, acceptable here). To shift it, inject a current $I_B$ into G:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta V_{CM} = -\\frac{I_BR_1}{2}",
+      "caption": "With $R_1 = R_2$; positive $I_B$ moves the CM down."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequency compensation"
+    },
+    {
+      "type": "prose",
+      "text": "With 1 pF per output the output pole is near 90 MHz, but the pole at X is close (95 MHz), so the two interact: uncompensated, the open loop has 57 dB of gain, crosses unity at 3.2 GHz with $-8°$ of phase margin, and reaches $-120°$ already at 240 MHz. To compensate, draw a $-20$ dB/dec line back from (240 MHz, 0 dB): it meets the 57 dB plateau at $240\\text{ MHz}/700 \\approx 344$ kHz, the required dominant pole. The dominant pole goes at X, not at the output, to benefit from Miller multiplication and pole splitting. With 8 kΩ at X and a second-stage gain of about 12, $C_c \\approx 4.5$ pF."
+    },
+    {
+      "type": "math",
+      "tex": "f_{p1} \\approx \\frac{1}{2\\pi R_X(1 + A_{v2})C_c}"
+    },
+    {
+      "type": "prose",
+      "text": "That gave only 18° of margin, because the right-half-plane zero $g_{m10}/C_c$ sat near 250 MHz. A series resistor moves the zero onto the second pole: $R_z = 1/(\\omega_{p2}C_c) \\approx 190$ Ω for $f_{p2} \\approx 185$ MHz, and the margin jumped to 96°. That excess allowed a much smaller capacitor: $C_c = 0.8$ pF with $R_z = 450$ Ω gives 1.9 GHz unity-gain bandwidth at 65° margin."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Closed-loop checks"
+    },
+    {
+      "type": "prose",
+      "text": "In a gain-of-2 loop with 50 kΩ/100 kΩ resistors and 1 pF loads, the step response still rang: the feedback resistors and the op-amp input capacitance (about 50 fF) form a pole near $1/(2\\pi \\cdot 33\\text{ k}\\Omega \\cdot 50\\text{ fF}) \\approx 95$ MHz inside the loop. Halving the resistors only doubles it; raising $R_z$ to 1.5 kΩ fixes the settling. Two remarks: the op amp was compensated for unity feedback but is used with $\\beta = 1/3$, so it could be compensated less; and everything above is at the typical corner, 27 °C and exactly 1 V. Real designs must hold across SS/FF corners, 0 to 75 °C and ±5% supply, which costs gain, swing or power."
+    },
+    {
+      "type": "problem",
+      "title": "Choosing $C_c$",
+      "text": "A two-stage op amp has $R_X = 10$ kΩ at the first-stage output and a second-stage gain of 9. Where must the dominant pole be for 300 MHz of unity-gain bandwidth if the DC gain is 1000? What $C_c$ is needed?",
+      "solution": [
+        "$f_{p1} = 300\\text{ MHz}/1000 = 300$ kHz.",
+        "$C_c = 1/(2\\pi \\times 3\\times 10^{5} \\times 10^{4} \\times 10) = 5.3$ pF."
+      ],
+      "answer": "300 kHz; about 5.3 pF."
+    },
+    {
+      "type": "problem",
+      "title": "Zero-cancelling resistor",
+      "text": "With $C_c = 3.2$ pF and a non-dominant pole at 200 MHz, what $R_z$ puts the compensation zero on the pole?",
+      "solution": [
+        "$R_z = 1/(2\\pi \\times 2\\times 10^{8} \\times 3.2\\times 10^{-12}) = 249$ Ω."
+      ],
+      "answer": "About 250 Ω."
+    },
+    {
+      "type": "problem",
+      "title": "Shifting the output CM",
+      "text": "The resistive CMFB uses $R_1 = R_2 = 40$ kΩ and sets the CM at $V_{GS} = 0.47$ V. What current into G brings the CM to 0.42 V?",
+      "solution": [
+        "$\\Delta V_{CM} = -I_BR_1/2 = -50$ mV, so $I_B = 2 \\times 50\\text{ mV}/40\\text{ k}\\Omega = 2.5\\,\\mu$A, flowing into G."
+      ],
+      "answer": "2.5 µA."
+    },
+    {
+      "type": "problem",
+      "title": "The pole from the feedback network",
+      "text": "A gain-of-2 loop uses $R_1 = 20$ kΩ and $R_2 = 40$ kΩ with $C_{in} = 60$ fF. Where is the input pole?",
+      "solution": [
+        "$R_1 \\parallel R_2 = 13.3$ kΩ; $f = 1/(2\\pi \\times 13.3\\text{ k}\\Omega \\times 60\\text{ fF}) = 199$ MHz."
+      ],
+      "answer": "About 200 MHz."
+    }
+  ]
+}

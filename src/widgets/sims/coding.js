@@ -62,7 +62,9 @@ export function synapticFilter(config, state) {
     ts.push(t); ys.push(y);
   }
   const ticks = { label: "input spikes", points: [] };
-  for (const sp of spikes) ticks.points.push({ x: sp, y: 0 }, { x: sp, y: -0.05 }, { x: sp, y: 0 });
+  // One separate stem per input spike (a Dirac delta): `move` starts a new
+  // stroke so no line joins one spike to the next along the axis.
+  for (const sp of spikes) ticks.points.push({ x: sp, y: 0, move: true }, { x: sp, y: -0.05 });
   return [series(`${kernel} filtered (1/ms)`, ts, ys), ticks];
 }
 

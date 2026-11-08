@@ -1,0 +1,102 @@
+{
+  "title": "PTAT Currents and Constant-Gm Biasing",
+  "intro": "Some circuits need a current that grows with temperature, others a transconductance that does not change at all. Both come from small variations on the same self-biased loops (Razavi, Sections 12.4 and 12.5).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "PTAT current"
+    },
+    {
+      "type": "prose",
+      "text": "In every bandgap core the branch currents are $V_T\\ln n/R$, so a PTAT current is a by-product. A dedicated generator uses a PMOS mirror on top of $Q_1$ and $R_1 + Q_2$, with an op amp equalising the two nodes:"
+    },
+    {
+      "type": "math",
+      "tex": "I_{PTAT} = \\frac{V_T \\ln n}{R_1}"
+    },
+    {
+      "type": "prose",
+      "text": "An alternative replaces the op amp with the self-biased NMOS/PMOS mirror loop of the supply-independent reference, the pnp pair taking the place of the NMOS devices; the op-amp version gives better supply rejection and works at lower voltage. In both, mismatch and especially the temperature coefficient of $R_1$ bend the current away from the ideal PTAT line."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A bandgap from the PTAT current"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/bandgap-references-ptat-current.svg",
+      "alt": "Schematic. Three PMOS transistors M3, M4 and M5 hang from VDD with their gates on one line driven by op amp A1. M3 feeds node X and the emitter of unit pnp Q1; M4 feeds node Y, then R1, then the emitter of pnp Q2 with n units. X goes to the op amp's minus input and Y to its plus input. M5 drives the output node Vout, from which R2 runs to the emitter of a third pnp Q3.",
+      "caption": "Copy the PTAT current with $M_5$ and push it through $R_2$ on top of a third junction."
+    },
+    {
+      "type": "math",
+      "tex": "V_{REF} = |V_{BE3}| + \\frac{R_2}{R_1}\\,V_T \\ln n"
+    },
+    {
+      "type": "prose",
+      "text": "Here the op amp drives only gates (no resistive load), and the size of $Q_3$ is a free choice as long as the total slope is zero. Mismatch between the PMOS copies is now the main error source."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Constant-Gm biasing"
+    },
+    {
+      "type": "prose",
+      "text": "Noise, gain and speed depend on $g_m$ more than on current. Return to the $R_S$-defined self-biased reference: its current is $\\propto 1/(\\mu_n C_{ox} R_S^2)$, and substituting it into $g_m = \\sqrt{2\\mu_n C_{ox}(W/L)I_D}$ cancels the device parameters:"
+    },
+    {
+      "type": "math",
+      "tex": "g_{m1} = \\frac{2}{R_S}\\left(1 - \\frac{1}{\\sqrt{K}}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "The transconductance is set by a resistor and a ratio, independent of supply, mobility and threshold; every device that copies this current with matching $V_{GS}$ conditions (same type, same current density) inherits the same $g_m$. What is left is the resistor: its process spread sets the accuracy, and a known resistor TC can be compensated with PTAT or bandgap techniques."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Switched-capacitor resistor"
+    },
+    {
+      "type": "prose",
+      "text": "If an accurate clock is available, $R_S$ can be replaced by a capacitor $C_S$ switched at $f_{CK}$, whose average resistance is $1/(C_S f_{CK})$ (see the switched-capacitor chapter). Capacitors are better controlled in absolute value and have a far smaller TC than resistors, so the bias becomes more reproducible; a bypass capacitor $C_B$ smooths the switching ripple. The same trick gives an accurate voltage-to-current converter, $I = V_{REF}C_S f_{CK}$."
+    },
+    {
+      "type": "math",
+      "tex": "g_{m1} = 2 C_S f_{CK}\\left(1 - \\frac{1}{\\sqrt{K}}\\right)"
+    },
+    {
+      "type": "problem",
+      "title": "PTAT current over temperature",
+      "text": "A PTAT generator uses $n = 8$ and $R_1 = 10$ kΩ (zero TC). Find the current at 300 K and at 400 K.",
+      "solution": [
+        "At 300 K: $25.85\\text{ mV}\\times 2.079/10\\text{ k}\\Omega = 5.38\\,\\mu$A.",
+        "At 400 K, $V_T$ scales by $4/3$: $7.17\\,\\mu$A."
+      ],
+      "answer": "5.38 µA and 7.17 µA."
+    },
+    {
+      "type": "problem",
+      "title": "Current-based bandgap",
+      "text": "In the PTAT-current bandgap, $n = 8$ and $|V_{BE3}|$ falls at 1.5 mV/K. What $R_2/R_1$ gives zero TC? With $|V_{BE3}| = 0.72$ V, what is $V_{REF}$?",
+      "solution": [
+        "Need $(R_2/R_1)\\times 0.179\\text{ mV/K} = 1.5$ mV/K: $R_2/R_1 = 8.37$.",
+        "$V_{REF} = 0.72 + 8.37 \\times 53.7\\text{ mV} = 0.72 + 0.449 = 1.17$ V."
+      ],
+      "answer": "$R_2/R_1 \\approx 8.4$; $V_{REF} \\approx 1.17$ V."
+    },
+    {
+      "type": "problem",
+      "title": "Constant-gm with a switched capacitor",
+      "text": "A constant-gm bias uses $K = 4$ and needs $g_{m1} = 0.2$ mS. Find $R_S$. If $R_S$ is replaced by a switched capacitor clocked at 100 MHz, what $C_S$ is needed?",
+      "solution": [
+        "With $K = 4$, $g_{m1} = (2/R_S)(1/2) = 1/R_S$, so $R_S = 5$ kΩ.",
+        "$C_S = 1/(R_S f_{CK}) = 1/(5000 \\times 10^8) = 2$ pF."
+      ],
+      "answer": "$R_S = 5$ kΩ; $C_S = 2$ pF."
+    }
+  ]
+}

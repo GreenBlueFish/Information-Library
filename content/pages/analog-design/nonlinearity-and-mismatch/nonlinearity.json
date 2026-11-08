@@ -1,58 +1,202 @@
 {
   "title": "Nonlinearity",
-  "intro": "No amplifier is perfectly linear. Weak nonlinearity can be described by a short power series.",
+  "intro": "No amplifier is perfectly linear. For the mild nonlinearity of a well-designed precision circuit, a short power series describes everything: harmonics, the deviation from a straight line, and how differential operation and feedback reduce them (Razavi, Section 14.1).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Power-series model"
+      "text": "Polynomial model and the straight-line metric"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "y(t) = a1*x + a2*x^2 + a3*x^3         (x = A*cos(w*t))"
+      "type": "math",
+      "tex": "y(t) = \\alpha_1 x(t) + \\alpha_2 x^2(t) + \\alpha_3 x^3(t) + \\cdots"
     },
     {
-      "type": "list",
-      "items": [
-        "Second harmonic: HD2 = a2*A / (2*a1). Even-order terms vanish in a fully differential circuit.",
-        "Third harmonic: HD3 = a3*A^2 / (4*a1).",
-        "Gain compression: the fundamental is a1*A + (3/4)*a3*A^3. With a3 < 0 the gain falls; it falls by 1 dB at A1dB = sqrt(0.145*|a1/a3|).",
-        "Intermodulation: two tones at w1, w2 produce 2*w1 - w2 and 2*w2 - w1, which fall in-band. The third-order intercept point (IP3) has amplitude A_IP3 = sqrt(4*|a1/(3*a3)|); A_IP3 is 9.6 dB above A1dB."
-      ]
+      "type": "prose",
+      "text": "$\\alpha_1$ is the small-signal gain around $x = 0$. A practical single number: over the input range, draw the straight line through the end points of the real characteristic, find the largest deviation $\\Delta V$, and divide by the full output swing. For an odd characteristic $y = \\alpha_1 x + \\alpha_3 x^3$ over $\\pm x_{max}$ the largest deviation is at $x = x_{max}/\\sqrt{3}$, and"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\Delta y}{y_{max}} \\approx \\frac{|\\alpha_3|}{3\\sqrt{3}\\,\\alpha_1}\\,x_{max}^2",
+      "caption": "Relative nonlinearity grows with the square of the swing."
     },
     {
       "type": "heading",
-      "level": 3,
-      "text": "Reducing nonlinearity"
+      "level": 2,
+      "text": "Harmonics and THD"
     },
     {
-      "type": "list",
-      "items": [
-        "Feedback divides distortion by (1 + loop gain).",
-        "Differential operation cancels even harmonics.",
-        "Source degeneration trades gain for linearity.",
-        "Smaller signal swings."
-      ]
+      "type": "prose",
+      "text": "With $x = A\\cos\\omega t$, the square term gives a DC shift and a second harmonic, the cube term a third harmonic plus a change in the fundamental:"
+    },
+    {
+      "type": "math",
+      "tex": "y = \\alpha_1 A\\cos\\omega t + \\frac{\\alpha_2A^2}{2}\\left[1 + \\cos 2\\omega t\\right] + \\frac{\\alpha_3A^3}{4}\\left[3\\cos\\omega t + \\cos 3\\omega t\\right] + \\cdots"
+    },
+    {
+      "type": "prose",
+      "text": "The $n$th harmonic grows roughly as $A^n$. Total harmonic distortion sums the power of all harmonics relative to the fundamental; for a third-order model"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{THD} = \\frac{\\left(\\alpha_2A^2/2\\right)^2 + \\left(\\alpha_3A^3/4\\right)^2}{\\left(\\alpha_1A + 3\\alpha_3A^3/4\\right)^2}"
+    },
+    {
+      "type": "prose",
+      "text": "Individual ratios: $\\mathrm{HD}_2 = \\alpha_2A/(2\\alpha_1)$ and $\\mathrm{HD}_3 = \\alpha_3A^2/(4\\alpha_1)$ in amplitude. As a scale, high-quality audio wants about $-80$ dB (0.01%) and video about $-60$ dB (0.1%)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Differential circuits"
+    },
+    {
+      "type": "prose",
+      "text": "A differential circuit driven differentially is odd-symmetric, $f(-x) = -f(x)$, so every even coefficient vanishes and no even harmonics appear. The gain in linearity is large even beyond that. Compare a CS stage and a differential pair with the same gain $g_mR_D$ and the same overdrive. The square law gives, for the CS drain current,"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{A_{HD2}}{A_F} = \\frac{V_m}{4\\left(V_{GS} - V_{TH}\\right)}"
+    },
+    {
+      "type": "prose",
+      "text": "while expanding the pair's $I_{D1} - I_{D2}$ for small inputs leaves only a cubic term:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{A_{HD3}}{A_F} \\approx \\frac{V_m^2}{32\\left(V_{GS} - V_{TH}\\right)^2}"
+    },
+    {
+      "type": "prose",
+      "text": "At $V_m = 0.2(V_{GS} - V_{TH})$ that is 5% against 0.125%. The pair uses twice the current, but doubling the CS stage's current at fixed $W/L$ only cuts its distortion by $\\sqrt{2}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Negative feedback"
+    },
+    {
+      "type": "prose",
+      "text": "Nonlinearity is gain that varies with signal level, and feedback desensitises the gain, so it suppresses distortion too. For a core amplifier $\\alpha_1 x + \\alpha_2 x^2$ in a loop with feedback factor $\\beta$, assume the output is $a\\cos\\omega t + b\\cos 2\\omega t$, push it round the loop and keep first-order terms in the small quantities:"
+    },
+    {
+      "type": "math",
+      "tex": "a = \\frac{\\alpha_1}{1 + \\beta\\alpha_1}V_m, \\qquad b = \\frac{\\alpha_2V_m^2}{2}\\cdot\\frac{1}{\\left(1 + \\beta\\alpha_1\\right)^3}"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{b}{a} = \\frac{\\alpha_2V_m}{2\\alpha_1}\\cdot\\frac{1}{\\left(1 + \\beta\\alpha_1\\right)^2}",
+      "caption": "Relative second harmonic falls by $(1 + \\beta\\alpha_1)^2$ for the same input, while the gain falls by $1 + \\beta\\alpha_1$."
+    },
+    {
+      "type": "prose",
+      "text": "A useful design shortcut: if the small-signal gain falls monotonically toward the ends of the range (the usual case), the end-point nonlinearity of a feedback amplifier is always smaller than its gain error $\\approx 1/(\\beta A_0)$. So choosing the open-loop gain to meet a gain-error spec also guarantees the linearity spec. It is pessimistic, and costly when short-channel devices make gain scarce."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Capacitor nonlinearity"
+    },
+    {
+      "type": "prose",
+      "text": "Real capacitors vary with voltage, $C = C_0(1 + \\alpha_1V + \\alpha_2V^2 + \\cdots)$, so charge is $Q = \\int_0^V C\\,dV$, not $CV$. In the SC non-inverting amplifier with nominal gain $M$ ($C_1 = MC_2$) and a linear coefficient $\\alpha_1$ in both capacitors, equating the charge given up by $C_1$ with the charge taken by $C_2$ gives"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} \\approx MV_{in0} + (1 - M)\\,\\frac{M\\alpha_1}{2}\\,V_{in0}^2"
+    },
+    {
+      "type": "prose",
+      "text": "The error vanishes for $M = 1$ (the two capacitors see the same voltage history) and grows with the gain."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sampling-switch nonlinearity"
+    },
+    {
+      "type": "prose",
+      "text": "A switch's on-resistance changes with the signal, so the tiny phase lag $R_{on}C\\omega_0$ of a sampler changes over the cycle. With a periodic input, $R_{on}(t) = R_0 + R_1\\cos\\omega_0t + R_2\\cos 2\\omega_0t + \\cdots$, and for small phase excursions the output picks up a second harmonic of amplitude $V_0R_1C\\omega_0/2$ and a third of $V_0R_2C\\omega_0/2$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{THD} \\approx \\frac{R_1^2 + R_2^2}{4}\\,C^2\\omega_0^2"
+    },
+    {
+      "type": "prose",
+      "text": "A complementary switch has an $R_{on}$ that peaks mid-range (mobility degradation), so it varies at twice the input frequency: $R_1 \\approx 0$ and the third harmonic dominates. A differential sampler removes the even harmonics."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Compression and intermodulation"
+    },
+    {
+      "type": "prose",
+      "text": "For RF-style specifications the same coefficients give two more figures. With $\\alpha_3 < 0$ the fundamental $\\alpha_1A + \\frac{3}{4}\\alpha_3A^3$ compresses, falling 1 dB at"
+    },
+    {
+      "type": "math",
+      "tex": "A_{1dB} = \\sqrt{0.145\\left|\\frac{\\alpha_1}{\\alpha_3}\\right|}"
+    },
+    {
+      "type": "prose",
+      "text": "Two tones at $\\omega_1$ and $\\omega_2$ produce third-order products at $2\\omega_1 - \\omega_2$ and $2\\omega_2 - \\omega_1$, close to the tones and hard to filter. The input level where these would equal the fundamentals (extrapolated) is the third-order intercept:"
+    },
+    {
+      "type": "math",
+      "tex": "A_{IIP3} = \\sqrt{\\frac{4}{3}\\left|\\frac{\\alpha_1}{\\alpha_3}\\right|}",
+      "caption": "$A_{IIP3}$ is about 9.6 dB above $A_{1dB}$."
     },
     {
       "type": "problem",
       "title": "Harmonic distortion",
-      "text": "a1 = 10, a2 = 1, a3 = -2, and A = 0.1 V. Find HD2 and HD3 in dB.",
+      "text": "$\\alpha_1 = 10$, $\\alpha_2 = 1\\text{ V}^{-1}$, $\\alpha_3 = -2\\text{ V}^{-2}$ and $A = 0.1$ V. Find $\\mathrm{HD}_2$, $\\mathrm{HD}_3$ and the THD.",
       "solution": [
-        "HD2 = a2*A / (2*a1) = 0.1/20 = 0.005, or -46 dB.",
-        "HD3 = |a3|*A^2 / (4*a1) = 2 * 0.01 / 40 = 0.0005, or -66 dB."
+        "$\\mathrm{HD}_2 = \\alpha_2A/(2\\alpha_1) = 0.1/20 = 0.005$, or $-46$ dB.",
+        "$\\mathrm{HD}_3 = |\\alpha_3|A^2/(4\\alpha_1) = 2 \\times 0.01/40 = 0.0005$, or $-66$ dB.",
+        "THD $= (0.005^2 + 0.0005^2)/(1 - 0.0015)^2 = 2.53\\times 10^{-5}$, i.e. $-46$ dB: the second harmonic dominates."
       ],
-      "answer": "HD2 = -46 dB, HD3 = -66 dB."
+      "answer": "$-46$ dB, $-66$ dB; THD about $-46$ dB."
+    },
+    {
+      "type": "problem",
+      "title": "End-point nonlinearity",
+      "text": "A differential amplifier has $\\alpha_1 = 10$ and $\\alpha_3 = -2\\text{ V}^{-2}$ and is driven over $\\pm 0.2$ V. Find its end-point nonlinearity.",
+      "solution": [
+        "$|\\alpha_3|x_{max}^2/(3\\sqrt{3}\\alpha_1) = 2 \\times 0.04/(5.196 \\times 10) = 1.5\\times 10^{-3}$."
+      ],
+      "answer": "About 0.15%."
+    },
+    {
+      "type": "problem",
+      "title": "Feedback and the second harmonic",
+      "text": "A core amplifier with $\\alpha_1 = 50$ and $\\alpha_2 = 5\\text{ V}^{-1}$ is driven with $V_m = 10$ mV. Find the relative second harmonic open loop, and with $\\beta = 0.18$.",
+      "solution": [
+        "Open loop: $\\alpha_2V_m/(2\\alpha_1) = 0.05/100 = 5\\times 10^{-4}$.",
+        "$\\beta\\alpha_1 = 9$, so it falls by $(1 + 9)^2 = 100$ to $5\\times 10^{-6}$ (the gain falls from 50 to 5)."
+      ],
+      "answer": "$5\\times 10^{-4}$ open loop; $5\\times 10^{-6}$ closed loop."
+    },
+    {
+      "type": "problem",
+      "title": "Sampler THD",
+      "text": "A complementary sampling switch drives 2 pF; at a 50 MHz input its on-resistance varies as $R_2\\cos 2\\omega_0 t$ with $R_2 = 10$ Ω ($R_1 \\approx 0$). Estimate the THD.",
+      "solution": [
+        "$R_2C\\omega_0 = 10 \\times 2\\times 10^{-12} \\times 2\\pi \\times 5\\times 10^{7} = 6.3\\times 10^{-3}$.",
+        "THD $= (6.3\\times 10^{-3})^2/4 = 9.9\\times 10^{-6}$, about $-50$ dB."
+      ],
+      "answer": "About −50 dB."
     },
     {
       "type": "problem",
       "title": "Input-referred IP3",
-      "text": "Using the same coefficients find the IIP3 amplitude.",
+      "text": "Using $\\alpha_1 = 10$ and $\\alpha_3 = -2\\text{ V}^{-2}$, find $A_{IIP3}$ and $A_{1dB}$.",
       "solution": [
-        "A_IP3 = sqrt(4*|a1| / (3*|a3|)) = sqrt(40/6) = 2.58 V."
+        "$A_{IIP3} = \\sqrt{4 \\times 10/(3 \\times 2)} = \\sqrt{6.67} = 2.58$ V.",
+        "$A_{1dB} = \\sqrt{0.145 \\times 5} = 0.85$ V; the ratio is $2.58/0.85 = 3.0$, i.e. 9.6 dB."
       ],
-      "answer": "About 2.6 V."
+      "answer": "About 2.6 V and 0.85 V."
     }
   ]
 }

@@ -1,0 +1,89 @@
+{
+  "title": "SC Fundamentals",
+  "intro": "This page builds the switched-capacitor amplifier from a continuous-time inverting amplifier in three steps: replace resistors by capacitors, bias the floating node with a switch, and split the operation into two clock phases (Razavi, Section 13.1).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The problem with resistive feedback in CMOS"
+    },
+    {
+      "type": "prose",
+      "text": "For the inverting amplifier with $R_1$ and $R_2$ and an op amp of gain $A_v$ and output resistance $R_{out}$, the closed-loop gain is"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = -\\frac{R_2}{R_1}\\cdot\\frac{A_v - R_{out}/R_2}{1 + R_{out}/R_1 + A_v + R_2/R_1}"
+    },
+    {
+      "type": "prose",
+      "text": "With $R_{out} = 0$ this is the familiar $-(R_2/R_1)/(1 + (1 + R_2/R_1)/A_v)$. A CMOS op amp, though, has $R_{out}$ in the hundreds of kilohms, and the terms $R_{out}/R_2$ and $R_{out}/R_1$ eat into both numerator and denominator. The input resistance $R_1$ also loads the previous stage and adds thermal noise."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Capacitive feedback and the bias problem"
+    },
+    {
+      "type": "prose",
+      "text": "Replace $R_1$ and $R_2$ by $C_1$ and $C_2$: the ideal gain becomes $-C_1/C_2$, and once the output settles no current flows in $C_2$, so the op amp is not loaded. But the inverting input node X now connects only to capacitors; its DC level is whatever charge it started with. A large resistor $R_F$ across $C_2$ fixes the bias but makes the response high-pass:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}}(s) = -\\frac{R_F C_1 s}{R_F C_2 s + 1}",
+      "caption": "Equal to $-C_1/C_2$ only for $\\omega \\gg 1/(R_F C_2)$. A step input shows a jump followed by a decaying tail."
+    },
+    {
+      "type": "prose",
+      "text": "The cure is to replace $R_F$ by a switch: close it to put the op amp in unity-gain feedback, which drives X to the right input common-mode level, then open it and let X hold that level. While it is closed the circuit does not amplify, so amplification becomes a two-phase affair. Leakage (of the switch junctions and the op-amp gate) slowly drains X, so the reset must repeat every cycle."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two phases: sample, then amplify"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/switched-capacitor-circuits-sc-amplifier.svg",
+      "alt": "Schematic. Vin passes through switch S1 to node P, which connects through capacitor C1 to node X, the minus input of an op amp whose plus input is grounded. Switch S3 connects P to ground. Capacitor C2 and switch S2 each connect X to the output.",
+      "caption": "Sampling phase: S1 and S2 on. Amplification phase: S3 on."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Sampling: S1 and S2 closed, S3 open. The op amp in unity gain holds X (and $V_{out}$) near zero, so $C_1$ charges to $V_{in}$. The output carries no useful signal in this phase.",
+        "Amplification: S1 and S2 open and S3 grounds P. The sampled charge $C_1 V_{in0}$ cannot stay on $C_1$ because feedback holds X at virtual ground and P is now at ground, so it moves onto $C_2$."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = \\frac{C_1}{C_2}\\,V_{in0}"
+    },
+    {
+      "type": "prose",
+      "text": "The circuit ignores the input after the sampling instant, works on a held value, and changes topology every half cycle, so its stability must hold in both configurations. The payoff: no resistor loads the op amp once the output settles, and the gain is a capacitor ratio. CMOS dominates this field because it offers both ingredients, a switch with zero offset and an amplifier input that draws no current (a bipolar input's base current would bleed the sampled charge)."
+    },
+    {
+      "type": "problem",
+      "title": "The high-pass corner",
+      "text": "A capacitive-feedback amplifier has $C_2 = 1$ pF and a bias resistor $R_F = 100$ MΩ. What is its low-frequency corner? How large must $R_F$ be to amplify a 10 Hz signal with less than 1% gain error?",
+      "solution": [
+        "Corner $= 1/(2\\pi R_F C_2) = 1/(2\\pi \\times 10^{8} \\times 10^{-12}) = 1.6$ kHz.",
+        "The magnitude is $(C_1/C_2)\\,\\omega R_F C_2/\\sqrt{1 + (\\omega R_F C_2)^2}$; for 1% error $\\omega R_F C_2 \\ge 7$ (since $1/\\sqrt{1 + 1/49} = 0.990$).",
+        "At 10 Hz: $R_F \\ge 7/(2\\pi \\times 10 \\times 10^{-12}) = 1.1\\times 10^{11}$ Ω, about 110 GΩ: impractical, which is why a switch is used."
+      ],
+      "answer": "1.6 kHz; about 110 GΩ."
+    },
+    {
+      "type": "problem",
+      "title": "Resistive feedback with a CMOS op amp",
+      "text": "An op amp has $A_v = 1000$ and $R_{out} = 200$ kΩ. With $R_1 = 10$ kΩ and $R_2 = 40$ kΩ, find the closed-loop gain magnitude and compare with the ideal 4.",
+      "solution": [
+        "Numerator: $A_v - R_{out}/R_2 = 1000 - 5 = 995$.",
+        "Denominator: $1 + R_{out}/R_1 + A_v + R_2/R_1 = 1 + 20 + 1000 + 4 = 1025$.",
+        "Gain $= 4 \\times 995/1025 = 3.88$, a 2.9% error, compared with 0.5% if $R_{out}$ were zero ($4/(1 + 5/1000) = 3.98$)."
+      ],
+      "answer": "About 3.88 (2.9% low)."
+    }
+  ]
+}

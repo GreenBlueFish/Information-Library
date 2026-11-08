@@ -1,0 +1,145 @@
+{
+  "title": "Bandgap Design Issues",
+  "intro": "The first-order bandgap equation hides several effects that set the real accuracy: PTAT bias currents, the parasitic pnp available in CMOS, op-amp offset, the sign of the feedback, curvature, and the reference's own output impedance and noise (Razavi, Sections 12.3 and 12.6).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Collector currents are PTAT"
+    },
+    {
+      "type": "prose",
+      "text": "The $-1.5$ mV/K slope was derived for constant $I_C$, but in the core the collector currents are $V_T\\ln n/R_3$, i.e. PTAT. Including $\\partial I_C/\\partial T = I_C/T$ makes the slope slightly less negative:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\partial V_{BE}}{\\partial T} = \\frac{V_{BE} - (3+m)V_T - E_g/q}{T}"
+    },
+    {
+      "type": "prose",
+      "text": "For $V_{BE} = 0.75$ V this is about $-1.36$ mV/K instead of $-1.45$ mV/K, so the required PTAT gain drops by roughly 6%. Final values always come from simulation with the real device models."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bipolar devices in a CMOS process"
+    },
+    {
+      "type": "prose",
+      "text": "An n-well process contains a vertical pnp for free: a $p^+$ diffusion in the well is the emitter, the n-well is the base and the p-substrate is the collector. The collector is therefore always tied to ground, so the transistors can only be used with grounded collectors (diode-connected with base also grounded, or as emitter followers). Their current gain is low, so base currents can introduce errors that sometimes need cancellation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Op-amp offset"
+    },
+    {
+      "type": "prose",
+      "text": "An input offset $V_{OS}$ in the core subtracts directly from $\\Delta V_{BE}$ and is then amplified with it:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = V_{BE2} + \\left(1 + \\frac{R_2}{R_3}\\right)\\left(V_T\\ln n - V_{OS}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "A 3 mV offset with a gain of 8.4 shifts the output by 25 mV, and because the offset itself drifts with temperature, it also spoils the TC. A more careful small-signal treatment adds a factor $1 + 1/(g_m R_2)$ but tells the same story. Three remedies: a large, carefully laid-out op-amp input pair; a current ratio on top of the area ratio so that $\\Delta V_{BE} = V_T\\ln(mn)$ is larger; and stacking two junctions per branch so the PTAT term doubles relative to $V_{OS}$:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = 2V_{BE} + \\left(1 + \\frac{R_2}{R_3}\\right)\\left[2V_T\\ln(mn) - V_{OS}\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "The price of stacking is an output near 2.5 V. In CMOS the second junction of each stack must be an emitter follower (the collectors are grounded), biased by PMOS current sources so both junctions share the same temperature behaviour; the op amp then drives only gates, but mismatch and channel-length modulation of those PMOS sources enter the output."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Feedback polarity"
+    },
+    {
+      "type": "prose",
+      "text": "The op-amp output feeds back to both of its inputs. The path to the inverting input (through $R_2$ and $R_3$ plus $Q_2$) is negative feedback, the path to the non-inverting input (through $R_1$ and $Q_1$) is positive:"
+    },
+    {
+      "type": "math",
+      "tex": "\\beta_N = \\frac{1/g_{m2} + R_3}{1/g_{m2} + R_3 + R_2}, \\qquad \\beta_P = \\frac{1/g_{m1}}{1/g_{m1} + R_1}"
+    },
+    {
+      "type": "prose",
+      "text": "$\\beta_N$ must exceed $\\beta_P$, preferably by about a factor of two, so the loop stays well damped with a large capacitive load. The extra $R_3$ in the negative path is what guarantees this."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Start-up, supply rejection and curvature"
+    },
+    {
+      "type": "list",
+      "items": [
+        "If X and Y start at zero, the op-amp input pair can sit off and the loop stays dead; a start-up path like the one for self-biased references is added.",
+        "At DC the output is supply-independent as long as the op-amp gain is high, but rejection falls with frequency along with the op-amp loop gain, which is why precision references regulate their own supply.",
+        "The output is flat at only one temperature and bows to either side (curvature), from the non-linear $V_{BE}(T)$, PTAT collector currents and drifting offsets. Correction circuits exist, but in CMOS the zero-TC temperature wanders from sample to sample because of offsets, so curvature correction is rarely worth it without trimming."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Output impedance and transients"
+    },
+    {
+      "type": "prose",
+      "text": "Reference lines are shared, so a block that kicks its bias node disturbs everyone else on it. Consider a PMOS-mirror reference whose op amp (one pole, $A(s) = A_0/(1+s/\\omega_0)$, output resistance $R_{out}$) drives the mirror gate line P. The loop lowers the impedance at P, but only where it has gain:"
+    },
+    {
+      "type": "math",
+      "tex": "Z_{out}(s) = \\frac{R_{out}}{1 + g_{mP}R_1A_0}\\cdot\\frac{1 + s/\\omega_0}{1 + \\dfrac{s}{(1 + g_{mP}R_1A_0)\\,\\omega_0}}"
+    },
+    {
+      "type": "prose",
+      "text": "A zero at $\\omega_0$ and a pole at $(1 + g_{mP}R_1A_0)\\omega_0$: the impedance is low below the op-amp pole and climbs back to almost the open-loop $R_{out}$ (only a factor $\\sqrt{2}$ lower at the pole). So either the op amp is made fast, or P is bypassed with a large capacitor $C_B$. A bypass capacitor must be much larger than whatever couples the disturbance in, the op amp must stay stable with it (a one-stage op amp suits), and a too-small $C_B$ is worst of all: the node is disturbed and then recovers slowly. Test any reference by kicking its output and watching it settle."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Noise"
+    },
+    {
+      "type": "prose",
+      "text": "Reference noise lands directly in the signal path: a bias line multiplied by a mirror ratio $N$ multiplies the reference's noise current by $N$, and the reference of an ADC adds its noise to the input. In the PMOS-mirror core the op amp's input noise appears at the output almost one-to-one ($|V_{n,out}| \\approx V_{n,op}$ when $g_{mP}A_0 \\gg g_{mN} \\gg 1/R_1$), and a bypass capacitor does little against its $1/f$ noise."
+    },
+    {
+      "type": "problem",
+      "title": "Offset error",
+      "text": "A core with $n = 8$ and $1 + R_2/R_3 = 8.37$ has an op amp with $V_{OS} = 3$ mV. Find the output error. Then redesign with stacked junctions and $mn = 24$; what gain is needed for zero TC, and what is the error now, as a fraction of the PTAT term?",
+      "solution": [
+        "Single stack: error $= 8.37 \\times 3 = 25$ mV, against a PTAT term of $8.37\\times 53.7 = 449$ mV (5.6%).",
+        "Stacked: $2V_{BE}$ falls at 3 mV/K, and $2V_T\\ln 24$ = 164 mV rises at 0.548 mV/K, so $1 + R_2/R_3 = 3/0.548 = 5.48$.",
+        "Error $= 5.48 \\times 3 = 16$ mV against a PTAT term of $5.48 \\times 164 = 900$ mV, i.e. 1.8%."
+      ],
+      "answer": "25 mV (5.6% of the PTAT part) versus 16 mV (1.8%)."
+    },
+    {
+      "type": "problem",
+      "title": "Is the feedback negative?",
+      "text": "The core of the previous page runs 50 µA per branch ($1/g_m = 517$ Ω), with $R_3 = 1.07$ kΩ and $R_1 = R_2 = 7.9$ kΩ. Compute $\\beta_N$ and $\\beta_P$.",
+      "solution": [
+        "$\\beta_N = (0.517 + 1.07)/(0.517 + 1.07 + 7.9) = 1.59/9.49 = 0.167$.",
+        "$\\beta_P = 0.517/(0.517 + 7.9) = 0.061$.",
+        "$\\beta_N/\\beta_P \\approx 2.7$: net negative feedback with comfortable margin."
+      ],
+      "answer": "$\\beta_N \\approx 0.17$, $\\beta_P \\approx 0.06$; ratio about 2.7."
+    },
+    {
+      "type": "problem",
+      "title": "Reference impedance",
+      "text": "A PMOS-mirror reference has $R_{out} = 20$ kΩ, $g_{mP}R_1 = 1$ and an op amp with $A_0 = 200$ and $f_0 = 50$ kHz. Find $|Z_{out}|$ at DC and the frequency where it has risen back to near $R_{out}/\\sqrt{2}$.",
+      "solution": [
+        "DC: $20\\text{ k}\\Omega/201 \\approx 100$ Ω.",
+        "Pole at $201 \\times 50\\text{ kHz} \\approx 10$ MHz, where $|Z_{out}| \\approx 14$ kΩ."
+      ],
+      "answer": "About 100 Ω at DC, about 14 kΩ near 10 MHz."
+    }
+  ]
+}
