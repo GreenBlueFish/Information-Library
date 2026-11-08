@@ -1,24 +1,63 @@
 {
   "title": "Noise Statistics and Types",
-  "intro": "Noise sets the smallest signal an analog circuit can handle. It is random, so we describe it by its power spectral density and add independent sources in power.",
+  "intro": "Noise sets the smallest signal a circuit can handle, and it trades with power, speed and linearity. Its instantaneous value is unpredictable, but its average power and spectrum are not, and that is all circuit analysis needs.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Describing noise"
+      "text": "Describing a random signal"
+    },
+    {
+      "type": "prose",
+      "text": "Average power is measured over a long window. Dropping the load resistor, it is expressed in $\\text{V}^2$, and its square root is the rms noise voltage:"
+    },
+    {
+      "type": "math",
+      "tex": "P_{av} = \\lim_{T \\to \\infty}\\frac{1}{T}\\int_{-T/2}^{+T/2} x^2(t)\\,dt"
     },
     {
       "type": "list",
       "items": [
-        "Power spectral density (PSD): noise power per hertz, in V^2/Hz. Its square root, in V/sqrt(Hz), is the 'noise density' you see in data sheets (for example 5 nV/sqrt(Hz)).",
-        "Total rms noise: integrate the PSD over the bandwidth and take the square root.",
-        "Uncorrelated sources add in power: Vn,total^2 = Vn1^2 + Vn2^2. Correlated sources add in amplitude.",
-        "Signal-to-noise ratio: SNR = 10*log10(Psignal / Pnoise)."
+        "Power spectral density (PSD) $S_x(f)$: the average power in a 1 Hz band around $f$, in $\\text{V}^2/\\text{Hz}$. Its square root, in $\\text{nV}/\\sqrt{\\text{Hz}}$, is the 'noise density' of data sheets: $3\\text{ nV}/\\sqrt{\\text{Hz}}$ means $(3\\text{ nV})^2$ in each hertz. The area under the PSD is the total power.",
+        "One-sided and two-sided spectra: for a real signal $S_x$ is even in $f$, so the power between $f_1$ and $f_2$ is $\\int_{f_1}^{f_2} 2S_x(f)\\,df$. Circuit work uses the one-sided spectrum (negative frequencies folded onto positive ones). All formulas below are one-sided.",
+        "White noise has a flat PSD. Truly flat would mean infinite power; in practice 'white' means flat across the band of interest.",
+        "Amplitude distribution: noise from many independent carriers is Gaussian by the central limit theorem, $p(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\exp\\left[-\\frac{(x - m)^2}{2\\sigma^2}\\right]$, and $\\sigma$ is the rms value. The PDF says nothing about how fast the noise varies; the spectrum does."
       ]
     },
     {
       "type": "prose",
-      "text": "Noise analysis procedure: choose the output (or input) node, set all signal sources to zero, find the transfer function from each noise source to that node, multiply each PSD by the squared magnitude of its transfer function, and add."
+      "text": "The key tool: passing noise through a linear system shapes its spectrum by the squared magnitude of the transfer function:"
+    },
+    {
+      "type": "math",
+      "tex": "S_Y(f) = S_X(f)\\,\\left|H(j2\\pi f)\\right|^2"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Adding sources"
+    },
+    {
+      "type": "prose",
+      "text": "For $x_1 + x_2$ the average power is $P_1 + P_2$ plus a cross term $\\lim \\frac{1}{T}\\int 2x_1x_2\\,dt$, the correlation. Independent devices produce uncorrelated noise, so the cross term vanishes and powers add: $\\overline{V_{n,tot}^2} = \\overline{V_{n1}^2} + \\overline{V_{n2}^2}$. Correlated waveforms (two outputs driven by the same source) add as voltages instead."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "SNR and the analysis procedure"
+    },
+    {
+      "type": "prose",
+      "text": "$\\mathrm{SNR} = P_{sig}/P_{noise}$, usually in dB as $10\\log_{10}$ of the ratio; a sinusoid of peak $A$ has $P_{sig} = A^2/2$. Because $P_{noise}$ is the integral of the PSD over the circuit's bandwidth, keep the bandwidth no wider than the signal needs (an audio amplifier with 1 MHz of bandwidth collects 50 times the noise of one with 20 kHz)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "List the noise sources and their PSDs.",
+        "Find the transfer function from each source to the output, with the input signal set to zero.",
+        "Multiply each PSD by $|H|^2$.",
+        "Add the results (in power if uncorrelated) and integrate over frequency for the total."
+      ]
     },
     {
       "type": "heading",
@@ -27,16 +66,73 @@
     },
     {
       "type": "prose",
-      "text": "Random motion of charge carriers in any resistor produces a voltage noise Vn^2 = 4*k*T*R per hertz (or equivalently a current noise 4*k*T/R). It is white, meaning flat to very high frequencies, and depends only on temperature and resistance. For a MOSFET the channel carries a thermal drain-current noise In^2 = 4*k*T*gamma*gm per hertz with gamma = 2/3 for long channels (higher, 1 or more, for short channels)."
+      "text": "Random carrier motion makes any resistor noisy even with no current. It can be modelled by a series voltage source or a parallel current source (the two are equivalent):"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_n^2} = 4kTR, \\qquad \\overline{I_n^2} = \\frac{4kT}{R}",
+      "caption": "per hertz; $k = 1.38 \\times 10^{-23}$ J/K, white up to roughly 100 THz."
+    },
+    {
+      "type": "prose",
+      "text": "A 50 $\\Omega$ resistor at 300 K gives $8.28 \\times 10^{-19}\\ \\text{V}^2/\\text{Hz}$, or $0.91\\text{ nV}/\\sqrt{\\text{Hz}}$. Parallel resistors $R_1$ and $R_2$ add their noise currents, giving $4kT(R_1 \\parallel R_2)$, as expected. The polarity of a noise source is arbitrary but must be kept consistent through an analysis."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/noise-device-models.svg",
+      "alt": "Three noise models. A resistor R with a series voltage source labelled 4kTR. A resistor R with a parallel current source labelled 4kT over R. A MOSFET with a voltage source in series with its gate labelled K over Cox W L f, and a current source from drain to source labelled 4kT gamma gm.",
+      "caption": "Noise models of resistors and MOSFETs."
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "The kT/C result"
+      "text": "kT/C noise"
     },
     {
       "type": "prose",
-      "text": "A resistor R charging a capacitor C produces a total noise voltage across the capacitor of exactly kT/C (in V^2), independent of R, because larger R gives more noise density but less bandwidth. This sets the minimum sampling capacitor in switched-capacitor circuits."
+      "text": "An RC low-pass shapes the resistor's $4kTR$ by $1/(1 + 4\\pi^2R^2C^2f^2)$. Integrating over all frequencies (in $f$, not $\\omega$):"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,out}^2} = \\int_0^\\infty \\frac{4kTR}{1 + 4\\pi^2R^2C^2f^2}\\,df = \\frac{kT}{C}"
+    },
+    {
+      "type": "prose",
+      "text": "The resistance cancels: a larger $R$ is noisier per hertz but narrows the bandwidth by the same factor. With 1 pF at 300 K the rms noise is $64.3\\ \\mu\\text{V}$. Only a larger capacitor lowers it, which sets the size (and hence power) of sampling circuits."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "MOSFET thermal noise"
+    },
+    {
+      "type": "prose",
+      "text": "The channel of a saturated MOSFET behaves like a noisy resistor; its noise is a drain-source current"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{I_n^2} = 4kT\\gamma g_m"
+    },
+    {
+      "type": "prose",
+      "text": "with $\\gamma = 2/3$ for long channels and larger in short-channel devices (take $\\gamma \\approx 1$ as a rule of thumb). Three consequences: a transistor used as a current source should have a small $g_m$; the output noise of a single device does not depend on whether it is used as CS or CG (the input is zeroed for noise analysis); and $r_o$ is not a physical resistor, so it adds no noise. The most a single device can produce at its drain is $4kT\\gamma g_m r_o^2$, with an ideal current-source load."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Gate resistance"
+    },
+    {
+      "type": "prose",
+      "text": "The polysilicon gate is a distributed resistor $R_G$. Devices along it see different fractions of it, and the equivalent lumped noise resistor is $R_G/3$, so $\\overline{V_n^2} = 4kTR_G/3$. Contacting both ends of the gate cuts the distributed resistance to $R_G/4$; splitting the device into $N$ parallel fingers divides it by $N^2$. Its noise is negligible next to the channel noise if"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{R_G}{3} \\ll \\frac{\\gamma}{g_m}"
+    },
+    {
+      "type": "prose",
+      "text": "Simulation models usually include channel thermal and flicker noise but not gate-resistance noise; the designer adds it."
     },
     {
       "type": "heading",
@@ -45,7 +141,46 @@
     },
     {
       "type": "prose",
-      "text": "Surface traps in the gate oxide add a low-frequency noise Vn^2 = K / (Cox*W*L*f). It rises as frequency falls, is usually smaller in PMOS than in NMOS devices, and falls with larger device area. The frequency at which flicker equals thermal noise is the 'corner frequency' fc, typically 10 kHz to 1 MHz."
+      "text": "Dangling bonds at the oxide-silicon interface trap and release carriers at random, adding low-frequency noise. It is modelled as a voltage in series with the gate:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_n^2} = \\frac{K}{C_{ox}WL}\\cdot\\frac{1}{f}"
+    },
+    {
+      "type": "prose",
+      "text": "$K$ is a process constant, of the order of $10^{-25}\\ \\text{V}^2\\text{F}$, that depends on interface cleanliness. The power falls only with gate area: low-noise devices can be hundreds of square microns. PMOS devices are usually quieter because holes travel slightly away from the interface. In a band from $f_L$ to $f_H$ the drain flicker current integrates to"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{I_{n,1/f}^2} = \\frac{K g_m^2}{C_{ox}WL}\\ln\\frac{f_H}{f_L}"
+    },
+    {
+      "type": "prose",
+      "text": "which grows only logarithmically as $f_L \\to 0$; components slower than the observation time are indistinguishable from drift, so $f_L$ is set by the application (about 20 Hz for audio), and its exact value matters little."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Corner frequency"
+    },
+    {
+      "type": "prose",
+      "text": "The 1/f corner $f_C$ is where flicker and thermal densities are equal:"
+    },
+    {
+      "type": "math",
+      "tex": "4kT\\gamma g_m = \\frac{K}{C_{ox}WL}\\cdot\\frac{g_m^2}{f_C} \\quad\\Rightarrow\\quad f_C = \\frac{K}{C_{ox}WL}\\cdot\\frac{g_m}{4kT\\gamma}"
+    },
+    {
+      "type": "prose",
+      "text": "For a given $L$ it varies little; in nanometer processes it lies around 10 to 50 MHz, so flicker noise matters well beyond audio frequencies."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/noise-flicker-corner.svg",
+      "alt": "Log-log plot of noise density against frequency: a line falling at 10 dB per decade in power from the low-frequency end meets a flat thermal floor at about 4 nV per root hertz; the corner fC is at 1 MHz.",
+      "caption": "The 1/f slope meets the thermal floor at the corner $f_C$."
     },
     {
       "type": "widget",
@@ -90,36 +225,71 @@
     },
     {
       "type": "prose",
-      "text": "Below the corner frequency the density follows the 1/f slope; above, it flattens to the thermal floor. Raise gm to lower the floor, or make the transistor bigger (a lower corner) to push flicker noise under the signal band."
+      "text": "Below the corner the density follows the 1/f slope; above, it flattens to the thermal floor. Raise $g_m$ to lower the floor, or make the transistor bigger (a lower corner) to push flicker noise under the signal band."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
     },
     {
       "type": "problem",
       "title": "Resistor noise",
-      "text": "Find the noise density of a 1 kohm resistor at 300 K. (k = 1.38e-23 J/K.)",
+      "text": "Find the noise density of a $1\\text{ k}\\Omega$ resistor at 300 K. ($k = 1.38 \\times 10^{-23}$ J/K.)",
       "solution": [
-        "Vn^2 = 4*k*T*R = 4 * 1.38e-23 * 300 * 1000 = 1.66e-17 V^2/Hz.",
-        "Vn = sqrt(1.66e-17) = 4.07e-9 V/sqrt(Hz) = 4.07 nV/sqrt(Hz)."
+        "$\\overline{V_n^2} = 4kTR = 4 \\times 1.38 \\times 10^{-23} \\times 300 \\times 1000 = 1.66 \\times 10^{-17}\\ \\text{V}^2/\\text{Hz}$.",
+        "$V_n = \\sqrt{1.66 \\times 10^{-17}} = 4.07\\text{ nV}/\\sqrt{\\text{Hz}}$."
       ],
-      "answer": "About 4.1 nV/sqrt(Hz)."
+      "answer": "About $4.1\\text{ nV}/\\sqrt{\\text{Hz}}$."
     },
     {
       "type": "problem",
       "title": "kT/C",
-      "text": "Find the rms noise on a 1 pF capacitor at 300 K. By what factor must C grow to halve the noise voltage?",
+      "text": "Find the rms noise on a 1 pF capacitor at 300 K. By what factor must $C$ grow to halve the noise voltage?",
       "solution": [
-        "Vn = sqrt(k*T/C) = sqrt(4.14e-21 / 1e-12) = sqrt(4.14e-9) = 64 uV.",
-        "Noise power scales as 1/C, so to halve the voltage (quarter the power) C must grow 4 times, to 4 pF."
+        "$V_n = \\sqrt{kT/C} = \\sqrt{4.14 \\times 10^{-21}/10^{-12}} = 64\\ \\mu\\text{V}$.",
+        "Noise power scales as $1/C$, so halving the voltage (a quarter of the power) needs 4 times the capacitance, 4 pF."
       ],
-      "answer": "64 uV rms; need 4x the capacitance for half the noise."
+      "answer": "$64\\ \\mu\\text{V}$ rms; 4 pF for half the noise."
     },
     {
       "type": "problem",
       "title": "Adding noise sources",
-      "text": "Two uncorrelated noise sources have densities 3 nV/sqrt(Hz) and 4 nV/sqrt(Hz). What is the combined density?",
+      "text": "Two uncorrelated sources have densities $3\\text{ nV}/\\sqrt{\\text{Hz}}$ and $4\\text{ nV}/\\sqrt{\\text{Hz}}$. What is the combined density?",
       "solution": [
-        "Add in power: sqrt(3^2 + 4^2) = sqrt(25) = 5 nV/sqrt(Hz)."
+        "Add in power: $\\sqrt{3^2 + 4^2} = 5\\text{ nV}/\\sqrt{\\text{Hz}}$."
       ],
-      "answer": "5 nV/sqrt(Hz)."
+      "answer": "$5\\text{ nV}/\\sqrt{\\text{Hz}}$."
+    },
+    {
+      "type": "problem",
+      "title": "Gate fingers",
+      "text": "A wide device drawn as one finger has $R_G = 200\\ \\Omega$. Find the gate-resistance noise density, then redo it for the same device split into 10 fingers.",
+      "solution": [
+        "One finger: lumped $R_G/3 = 66.7\\ \\Omega$, so $\\sqrt{4kT \\cdot 66.7} = 1.05\\text{ nV}/\\sqrt{\\text{Hz}}$.",
+        "Ten fingers: each has $R_G/10$ (lumped $R_G/30$), and ten in parallel give $R_G/300 = 0.67\\ \\Omega$, so $0.105\\text{ nV}/\\sqrt{\\text{Hz}}$."
+      ],
+      "answer": "$1.05$ and $0.105\\text{ nV}/\\sqrt{\\text{Hz}}$: a factor of $N^2 = 100$ in power."
+    },
+    {
+      "type": "problem",
+      "title": "Flicker coefficient from a corner",
+      "text": "A $50\\ \\mu\\text{m}/0.2\\ \\mu\\text{m}$ NMOS with $C_{ox} = 8.6\\text{ fF}/\\mu\\text{m}^2$ and $g_m = 2\\text{ mS}$ shows a 1/f corner at 200 kHz. Taking $\\gamma = 1$ and $T = 300$ K, find $K$.",
+      "solution": [
+        "$C_{ox}WL = 8.6\\text{ fF}/\\mu\\text{m}^2 \\times 10\\ \\mu\\text{m}^2 = 86\\text{ fF}$.",
+        "$K = f_C \\cdot 4kT\\gamma \\cdot C_{ox}WL/g_m = 2 \\times 10^{5} \\times 1.656 \\times 10^{-20} \\times 8.6 \\times 10^{-14}/(2 \\times 10^{-3}) = 1.42 \\times 10^{-25}\\ \\text{V}^2\\text{F}$."
+      ],
+      "answer": "$K \\approx 1.4 \\times 10^{-25}\\ \\text{V}^2\\text{F}$."
+    },
+    {
+      "type": "problem",
+      "title": "How low to integrate 1/f noise",
+      "text": "Compare the integrated flicker noise power from 10 Hz to 100 kHz with that from 1 kHz to 100 kHz.",
+      "solution": [
+        "The power is proportional to $\\ln(f_H/f_L)$: $\\ln(10^4) = 9.21$ against $\\ln(10^2) = 4.61$.",
+        "Extending the band down two decades only doubles the power (the rms rises by $\\sqrt{2}$)."
+      ],
+      "answer": "Twice the power, $\\sqrt{2}$ times the rms."
     }
   ]
 }

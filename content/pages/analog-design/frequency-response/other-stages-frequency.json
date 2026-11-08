@@ -1,26 +1,131 @@
 {
-  "title": "Frequency Response of Other Stages",
-  "intro": "The same node-by-node method gives the speed of every other single-stage amplifier.",
+  "title": "Source Follower Frequency Response",
+  "intro": "In a source follower $C_{GS}$ ties input to output, so the nodes interact and a one-pole-per-node picture fails. The useful results are the transfer function, the bootstrapped input capacitance, a negative input resistance with capacitive loads, and an output impedance that turns inductive.",
   "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Transfer function"
+    },
+    {
+      "type": "prose",
+      "text": "Neglecting body effect and $r_o$, with $C_L$ the total output capacitance and $R_S$ the source resistance:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{g_m + C_{GS}s}{R_S(C_{GS}C_L + C_{GS}C_{GD} + C_{GD}C_L)s^2 + (g_m R_S C_{GD} + C_L + C_{GS})s + g_m}"
+    },
+    {
+      "type": "prose",
+      "text": "The zero at $-g_m/C_{GS}$ is in the left half plane, near $\\omega_T$: at high frequency $C_{GS}$ carries signal to the output with the same polarity as the transistor. If the poles are far apart the dominant one is"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{p1} \\approx \\frac{1}{R_S C_{GD} + \\frac{C_L + C_{GS}}{g_m}}"
+    },
+    {
+      "type": "prose",
+      "text": "which reduces to $g_m/(C_L + C_{GS})$ for $R_S = 0$. With $C_L = 0$ the numerator cancels a factor and only the input pole $1/(R_S C_{GD})$ is left: with unity gate-to-source gain no current flows in $C_{GS}$, so it is bootstrapped away. A two-transistor variant (a follower whose bias device also amplifies) gives the same second-order form with extra terms."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Input impedance"
+    },
+    {
+      "type": "prose",
+      "text": "Ignoring $C_{GD}$ (it simply shunts the input) and including body effect:"
+    },
+    {
+      "type": "math",
+      "tex": "Z_{in} = \\frac{1}{C_{GS}s} + \\left(1 + \\frac{g_m}{C_{GS}s}\\right)\\frac{1}{g_{mb} + C_L s}"
+    },
     {
       "type": "list",
       "items": [
-        "Source follower: the input capacitance is about CGD + CGS/(1 + gm*RL) (the bootstrapping effect reduces it). Its output impedance rises with frequency (it looks inductive), which can ring with a capacitive load. Bandwidth is typically high.",
-        "Common gate: the input pole at the source is 1/(gm^-1 * (CSB + CGS)): fast, because the input resistance is low. The output pole is at 1/[RD*(CL + CDB + CGD)].",
-        "Cascode: the Miller effect on M1 is small because M1's gain is only about -1 (gm1 * 1/gm2), so its Miller capacitance is 2*CGD1. The cascode therefore has a much higher bandwidth than a CS stage of equal gain. The pole at the node between M1 and M2 is at about gm2/(CGS2 + CSB2 + CDB1 + 2*CGD1).",
-        "Differential pair: the half-circuit gives the same poles as a CS stage with the same loading; with active loads, a 'mirror pole' appears at about gm3/(CGS3 + CGS4) (plus the junction capacitances there) at the diode-connected load node."
+        "Low frequencies ($g_{mb} \\gg |C_L s|$): $Z_{in} \\approx 1/[C_{GS}s\\,(1 + g_m/g_{mb})] + 1/g_{mb}$. The gate sees only $C_{GS}\\,g_{mb}/(g_m + g_{mb})$ plus $C_{GD}$, a small fraction of $C_{GS}$. Miller's approximation with the gain $g_m/(g_m + g_{mb})$ gives the same.",
+        "High frequencies ($g_{mb} \\ll |C_L s|$): $Z_{in} \\approx \\frac{1}{C_{GS}s} + \\frac{1}{C_L s} + \\frac{g_m}{C_{GS}C_L s^2}$. At $s = j\\omega$ the last term is a negative resistance $-g_m/(C_{GS}C_L\\omega^2)$ in series with $C_{GS}$ and $C_L$."
       ]
     },
     {
+      "type": "callout",
+      "text": "A follower driving a capacitive load presents a negative resistance at its input. With an inductive source (bond wire, package) this can oscillate; oscillators exploit exactly this effect."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Output impedance: the follower looks inductive"
+    },
+    {
+      "type": "prose",
+      "text": "Neglecting $C_{GD}$ and body effect, a test source at the output gives"
+    },
+    {
+      "type": "math",
+      "tex": "Z_{out} = \\frac{R_S C_{GS}s + 1}{g_m + C_{GS}s}"
+    },
+    {
+      "type": "prose",
+      "text": "At DC $Z_{out} = 1/g_m$; at very high frequency $C_{GS}$ shorts gate to source and $Z_{out} \\to R_S$. A buffer has $1/g_m < R_S$, so $|Z_{out}|$ rises with frequency: an inductive output. It is matched exactly by $R_2 = 1/g_m$ in series with $R_1 = R_S - 1/g_m$ in parallel with an inductor"
+    },
+    {
+      "type": "math",
+      "tex": "L = \\frac{C_{GS}}{g_m}\\left(R_S - \\frac{1}{g_m}\\right)"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-sf-zout.svg",
+      "alt": "Left: a source follower M1 with its gate driven through RS, CGS between gate and source, and a current source IB as the load; the output impedance is measured at the source. Right: the equivalent network, R2 in series with the parallel combination of R1 and an inductor L.",
+      "caption": "The follower's output impedance equals $R_2$ in series with $R_1 \\parallel L$. $C_{GS}/g_m \\approx 1/\\omega_T$."
+    },
+    {
+      "type": "prose",
+      "text": "Consequences: a follower driving a large load capacitance can ring, since $L$ and $C_L$ form a lightly damped resonance. Used on purpose, a follower with a large gate resistor is an 'active inductor'; as the load of a CS stage it partly cancels $C_L$ and extends the bandwidth, at the cost of a $V_{GS}$ of headroom, and it is lossy (series $1/g_m$, parallel $R_S - 1/g_m$) and limited by the neglected $C_{GD}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
       "type": "problem",
-      "title": "Cascode Miller",
-      "text": "Two stages have the same gm. Stage A is a CS stage with gm*RD = 20. Stage B is a cascode whose M1 sees a load of 1/gm2. Compare their Miller multiplications of CGD1.",
+      "title": "Dominant pole of a follower",
+      "text": "A follower has $g_m = 2\\text{ mS}$, $R_S = 5\\text{ k}\\Omega$, $C_{GD} = 10\\text{ fF}$, $C_{GS} = 80\\text{ fF}$ and $C_L = 200\\text{ fF}$. Estimate the dominant pole.",
       "solution": [
-        "A: Miller factor = 1 + gm*RD = 21.",
-        "B: M1's gain is -gm1 / gm2 = -1, so the factor is 1 + 1 = 2.",
-        "The cascode's input Miller capacitance is about ten times smaller."
+        "$R_S C_{GD} = 50\\text{ ps}$; $(C_L + C_{GS})/g_m = 280\\text{ fF}/2\\text{ mS} = 140\\text{ ps}$.",
+        "$f_{p1} \\approx 1/(2\\pi \\cdot 190\\text{ ps}) = 838\\text{ MHz}$."
       ],
-      "answer": "Factor 21 versus 2."
+      "answer": "About 840 MHz."
+    },
+    {
+      "type": "problem",
+      "title": "Equivalent inductance",
+      "text": "A follower with $g_m = 4\\text{ mS}$ and $C_{GS} = 100\\text{ fF}$ is driven from $R_S = 2\\text{ k}\\Omega$. Find $R_1$, $R_2$ and $L$ of the output network.",
+      "solution": [
+        "$R_2 = 1/g_m = 250\\ \\Omega$; $R_1 = R_S - 1/g_m = 1750\\ \\Omega$.",
+        "$L = (C_{GS}/g_m)(R_S - 1/g_m) = (25\\text{ ps})(1750\\ \\Omega) = 43.75\\text{ nH}$."
+      ],
+      "answer": "$R_2 = 250\\ \\Omega$, $R_1 = 1.75\\text{ k}\\Omega$, $L \\approx 44\\text{ nH}$."
+    },
+    {
+      "type": "problem",
+      "title": "Bootstrapped input capacitance",
+      "text": "A follower has $C_{GS} = 100\\text{ fF}$, $g_m = 3\\text{ mS}$, $g_{mb} = 0.6\\text{ mS}$ and negligible load capacitance at low frequency. How much of $C_{GS}$ does the input see?",
+      "solution": [
+        "The gate-to-source gain is $g_m/(g_m + g_{mb}) = 3/3.6 = 0.833$.",
+        "Miller: $C_{GS}(1 - 0.833) = C_{GS}\\,g_{mb}/(g_m + g_{mb}) = 100 \\times 0.6/3.6 = 16.7\\text{ fF}$, plus $C_{GD}$."
+      ],
+      "answer": "About 17 fF (plus $C_{GD}$)."
+    },
+    {
+      "type": "problem",
+      "title": "Negative input resistance",
+      "text": "A follower with $g_m = 2\\text{ mS}$, $C_{GS} = 50\\text{ fF}$ drives $C_L = 200\\text{ fF}$. Find the input resistance at 1 GHz (high-frequency limit).",
+      "solution": [
+        "$\\omega = 2\\pi \\times 10^{9} = 6.28 \\times 10^{9}\\text{ rad/s}$, $\\omega^2 = 3.95 \\times 10^{19}$.",
+        "$R = -g_m/(C_{GS}C_L\\omega^2) = -2 \\times 10^{-3}/(10^{-26} \\times 3.95 \\times 10^{19}) = -5.07\\text{ k}\\Omega$."
+      ],
+      "answer": "About $-5.1\\text{ k}\\Omega$ in series with $C_{GS}$ and $C_L$."
     }
   ]
 }

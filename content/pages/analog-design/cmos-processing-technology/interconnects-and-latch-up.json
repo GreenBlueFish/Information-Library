@@ -1,0 +1,125 @@
+{
+  "title": "Interconnects and Latch-Up",
+  "intro": "Wire resistance and capacitance, electromigration, and the parasitic bipolar latch that CMOS layouts must guard against (Razavi, Sections 18.7.3 and 18.8).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Wire resistance"
+    },
+    {
+      "type": "prose",
+      "text": "Metal sheet resistance is about 30 mΩ/□ for the thick top layer and about 100 mΩ/□ for lower layers (ignoring skin effect). It matters in supply and ground lines, which see DC and transient drops, and in long signal lines, which become distributed RC delays."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/cmos-ground-bus.svg",
+      "alt": "A row of NMOS current sources M1, M2, M3 up to MN with gates at Vb. Their sources connect to a ground bus with a small resistance r between neighbouring sources; the bus is grounded at the left end.",
+      "caption": "Current sources sharing a ground bus."
+    },
+    {
+      "type": "prose",
+      "text": "Example: $N$ identical current sources (say in a DAC) sit along a ground bus with resistance $r$ between neighbours, grounded at one end. Each segment carries the currents of all sources beyond it, so the far end rises to $Ir(1 + 2 + \\dots + N) = \\frac{N(N+1)}{2}Ir$, and each source loses $g_m$ times its own source voltage. The first and last differ by"
+    },
+    {
+      "type": "math",
+      "tex": "\\left|\\frac{I_1 - I_N}{I}\\right| = g_m r\\,\\frac{N(N-1)}{2}"
+    },
+    {
+      "type": "prose",
+      "text": "growing as $N^2$: ground buses feeding many matched devices must be wide."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Electromigration"
+    },
+    {
+      "type": "prose",
+      "text": "At high current density, metal atoms are gradually pushed along the wire, leaving voids that eventually open the line after years of use. A rule of thumb for aluminium is about 2 mA per µm of width (it depends on thickness, and short peaks may be higher), which sets the minimum width of supply lines."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Wire capacitance"
+    },
+    {
+      "type": "prose",
+      "text": "A wire over the substrate has a parallel-plate part and a fringe part, comparable for narrow lines. An empirical estimate per unit length for a wire of width $W$ and thickness $t$ at height $h$:"
+    },
+    {
+      "type": "math",
+      "tex": "C = \\epsilon\\left[\\frac{W}{h} + 0.77 + 1.06\\left(\\frac{W}{h}\\right)^{0.25} + 1.06\\left(\\frac{t}{h}\\right)^{0.5}\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "Upper layers have less capacitance per area but larger minimum widths, so a minimum-width top-metal line is only slightly better than a lower one. As an example of the trend, in one 0.25 µm process the bottom-plate capacitance fell from 90 aF/µm² for poly to 7 aF/µm² for metal 4, while minimum widths rose from 0.25 to 0.6 µm. Coupling between neighbouring wires needs field solvers and is tabulated in the design manual."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Latch-up"
+    },
+    {
+      "type": "prose",
+      "text": "NMOS-only processes never had this problem; CMOS does. The PMOS source, the n-well and the p-substrate form a vertical pnp (Q1); the NMOS source, the substrate and the n-well form a lateral npn (Q2). Each one's base is the other's collector, and the finite well and substrate resistances connect the bases to $V_{DD}$ and ground."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/cmos-latch-up.svg",
+      "alt": "Two bipolar transistors: a pnp Q1 with emitter at VDD and base pulled to VDD by the n-well resistance R1; an npn Q2 with emitter at ground and base pulled to ground by the substrate resistance R2. The collector of Q1 drives the base of Q2 and the collector of Q2 drives the base of Q1.",
+      "caption": "The parasitic pnp-npn pair (a thyristor) with well and substrate resistances."
+    },
+    {
+      "type": "prose",
+      "text": "Inject current so the npn base X rises: Q2 conducts more, pulling Y (the pnp base) down, so Q1 conducts more and raises X further. If the loop gain reaches one, both saturate and a large current flows from $V_{DD}$ to ground until power is removed. Triggers include displacement current through junction capacitances from large drain swings, and large output buffers whose ground bounce forward-biases source-bulk junctions."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Process: doping profiles (retrograde wells) that keep the parasitic resistances and bipolar gains low.",
+        "Layout: substrate and well contacts close to every transistor, guard rings, and enough spacing between NMOS and PMOS, following the process's latch-up rules."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Ground-bus mismatch",
+      "text": "32 current sources with $g_m = 1\\text{ mS}$ each share a ground bus with $r = 0.1\\ \\Omega$ between neighbours. Estimate the mismatch between the first and last source. What $r$ gives 0.5%?",
+      "solution": [
+        "$g_mr\\,N(N-1)/2 = 10^{-3} \\times 0.1 \\times 496 = 0.0496$: about 5%.",
+        "For 0.5%, $r$ must be 10 times smaller, 0.01 Ω: a much wider bus, or ground connections at both ends or in the middle."
+      ],
+      "answer": "About 5%; 0.01 Ω for 0.5%."
+    },
+    {
+      "type": "problem",
+      "title": "Electromigration",
+      "text": "A supply line carries 20 mA DC. Using the 2 mA/µm rule, how wide must it be? What if two metal layers are strapped in parallel?",
+      "solution": [
+        "One layer: 10 µm.",
+        "Two equal layers share the current: about 5 µm each (if they have similar thickness)."
+      ],
+      "answer": "10 µm; about 5 µm each."
+    },
+    {
+      "type": "problem",
+      "title": "Wire capacitance",
+      "text": "A wire has $W = h = 1\\ \\mu\\text{m}$ and $t = 0.5\\ \\mu\\text{m}$ over a grounded substrate in oxide ($\\epsilon = 3.9\\epsilon_0$). Estimate its capacitance per µm and the share due to fringing.",
+      "solution": [
+        "Bracket: $1 + 0.77 + 1.06 + 1.06\\sqrt{0.5} = 3.58$.",
+        "$C = 3.45\\times10^{-11}\\text{ F/m} \\times 3.58 = 1.24\\times10^{-10}$ F/m, i.e. about 124 aF/µm. The parallel-plate term is only 1 of the 3.58: fringing dominates."
+      ],
+      "answer": "About 124 aF/µm; mostly fringe."
+    },
+    {
+      "type": "problem",
+      "title": "Latch-up prevention",
+      "text": "Name two layout rules that reduce the risk of latch-up, and explain why a well resistance of 1 kΩ is dangerous.",
+      "solution": [
+        "Place well and substrate ties close to every transistor (low well and substrate resistance) and surround NMOS or PMOS devices with guard rings; keep N+ and P+ regions of the two device types apart.",
+        "With 1 kΩ, only about 0.6 mA of injected current develops the 0.6 V that turns on the pnp's base-emitter junction and starts the loop."
+      ],
+      "answer": "Frequent taps and guard rings; 0.6 mA could trigger it."
+    }
+  ]
+}

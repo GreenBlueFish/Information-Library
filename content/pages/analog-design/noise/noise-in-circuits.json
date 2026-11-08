@@ -1,15 +1,15 @@
 {
-  "title": "Noise in Circuits",
-  "intro": "Because the noise of a circuit depends on its gain, designers refer all noise to the input so that stages can be compared with the signal.",
+  "title": "Noise in Single-Stage Amplifiers",
+  "intro": "With input-referred noise in hand, each basic stage reduces to a short formula. The recurring lesson: devices that convert the input voltage to current should have a large $g_m$; devices that only supply bias current should have a small one.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Input-referred noise"
+      "text": "A useful lemma"
     },
     {
       "type": "prose",
-      "text": "Divide the output noise PSD by the squared gain to get an equivalent noise source at the input that would produce the same output if the circuit were noiseless. It is the number to compare with the minimum signal you need to detect."
+      "text": "A drain noise current $\\overline{I_n^2}$ is equivalent to a gate voltage $\\overline{V_n^2} = \\overline{I_n^2}/g_m^2$, for any source impedance at the gate (at low frequencies): both give the same output short-circuit current, $I_n/[Z_S(g_m + g_{mb} + 1/r_o) + 1]$. So $4kT\\gamma/g_m$ is just the channel noise moved to the gate."
     },
     {
       "type": "heading",
@@ -17,35 +17,104 @@
       "text": "Common-source stage"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "Vn,in^2 = 4*k*T*gamma/gm  +  4*k*T/(gm^2 * RD)   (+ flicker)\n= 4kT * ( gamma/gm + 1/(gm^2*RD) )"
+      "type": "figure",
+      "src": "assets/figures/analog-design/noise-cs-sources.svg",
+      "alt": "Common-source stage with a noise current source of 4kT over RD across the load resistor and a noise current source of 4kT gamma gm across M1's drain and source.",
+      "caption": "Both noise currents flow into the load."
     },
     {
-      "type": "prose",
-      "text": "The transistor contributes 4kT*gamma/gm, and the load resistor contributes a term that falls with gm^2*RD, i.e. with gain. To lower input noise, raise gm: it also raises gain. But gm costs current, so low noise costs power."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Noise-power trade-off"
-    },
-    {
-      "type": "prose",
-      "text": "Since thermal input noise is proportional to 1/gm and gm is proportional to the square root of current at fixed W/L, halving the noise power needs twice the gm: four times the current at a fixed W/L, or twice the current (with twice the width) at a fixed Vov. Low-noise design is therefore a power negotiation."
-    },
-    {
-      "type": "heading",
-      "level": 3,
-      "text": "Other stages"
+      "type": "math",
+      "tex": "\\overline{V_{n,in}^2} = 4kT\\left(\\frac{\\gamma}{g_m} + \\frac{1}{g_m^2R_D}\\right) + \\frac{K}{C_{ox}WL}\\cdot\\frac{1}{f}"
     },
     {
       "type": "list",
       "items": [
-        "Common-gate and follower: the same transistor noise 4kT*gamma/gm appears at the input, plus a term from the load resistor; they are rarely used when noise matters.",
-        "Cascode: the upper device contributes little because the lower device's drain resistance is so high; noise is close to the CS stage.",
-        "Current mirrors and differential pairs: each transistor adds its noise. In a pair with mirror load, load transistors add gm3/gm1 times their share. Make gm of the load smaller than the input pair's."
+        "Current-source load M2: both drain currents flow into $r_{o1} \\parallel r_{o2}$, giving $\\overline{V_{n,in}^2} = 4kT\\gamma\\left(\\frac{1}{g_{m1}} + \\frac{g_{m2}}{g_{m1}^2}\\right)$. The output noise of M1 rises as $\\sqrt{g_{m1}}$ while the gain rises as $g_{m1}$, so a larger $g_{m1}$ helps; M2 only adds noise, so keep $g_{m2}$ small (a large overdrive).",
+        "Complementary stage (NMOS and PMOS both driven): same output noise, but gain $(g_{m1} + g_{m2})(r_{o1} \\parallel r_{o2})$, so $\\overline{V_{n,in}^2} = 4kT\\gamma/(g_{m1} + g_{m2})$. Here M2 amplifies as well as adding noise.",
+        "Resistor plus PMOS current source in parallel as the load: $\\overline{V_{n,in}^2} = 4kT\\gamma\\left(\\frac{g_{m2}}{g_{m1}^2} + \\frac{1}{g_{m1}}\\right) + \\frac{1}{C_{ox}f}\\left[\\frac{K_Pg_{m2}^2}{(WL)_2g_{m1}^2} + \\frac{K_N}{(WL)_1}\\right] + \\frac{4kT}{g_{m1}^2R_D}$."
       ]
+    },
+    {
+      "type": "prose",
+      "text": "With $g_m = 2I_D/(V_{GS} - V_{TH})$, the resistive-load result becomes"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,in}^2} = 4kT\\left[\\frac{\\gamma(V_{GS} - V_{TH})}{2I_D} + \\frac{(V_{GS} - V_{TH})^2}{4I_D \\cdot I_DR_D}\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "For a fixed drop $I_DR_D$ (headroom) and fixed overdrive, raising $I_D$ (and width with it) lowers the noise: noise is bought with current. For flicker noise the lever is area: scaling $W$ and $L$ together keeps $g_m$ and thermal noise but cuts 1/f noise, at the cost of capacitance. (A tempting argument that the drain flicker current is independent of $W$ fails because it lets the overdrive change; at fixed $I_D$ and overdrive it falls as $1/(WL)$.)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Integrated output noise and SNR"
+    },
+    {
+      "type": "prose",
+      "text": "With a load capacitance, the output noise is shaped by the output pole. For the current-source-loaded stage, using the kT/C integral,"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,out,tot}^2} = \\gamma(g_{m1} + g_{m2})(r_{o1} \\parallel r_{o2})\\frac{kT}{C_L}, \\qquad \\mathrm{SNR}_{out} = \\frac{C_L}{2\\gamma kT}\\cdot\\frac{g_{m1}^2(r_{o1} \\parallel r_{o2})}{g_{m1} + g_{m2}}V_m^2"
+    },
+    {
+      "type": "prose",
+      "text": "for a sinusoid of peak $V_m$. The SNR improves with $C_L$, that is, with less bandwidth: broadband low-noise design is hard. For a resistive load the same integration gives $\\overline{V_{n,out,tot}^2} = (1 + \\gamma g_mR_D)\\,kT/C_L$; dividing by $(g_mR_D)^2$ and fixing the bandwidth $1/(2\\pi R_DC_L)$ ties $g_m$ and $R_D$ to an rms noise target, and the bias current and headroom must then be checked."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Common-gate stage"
+    },
+    {
+      "type": "prose",
+      "text": "The input impedance is low, so the input noise current matters even at low frequencies. Shorting the input:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,in}^2} = \\frac{4kT(\\gamma g_m + 1/R_D)}{(g_m + g_{mb})^2}, \\qquad \\overline{I_{n,in}^2} = \\frac{4kT}{R_D}"
+    },
+    {
+      "type": "prose",
+      "text": "With the input open, M1's own noise current has nowhere to go but back through M1 (its drain current must cancel it), so only $R_D$ reaches the output: the load noise is referred to the input without any reduction, because the stage has no current gain. The bias source matters too:"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/noise-cg-bias.svg",
+      "alt": "Common-gate stage: M1 with gate at Vb1, drain to RD and the output, source at the input node. Below it, M2 with gate at Vb2 is the bias current source, with a noise current source of 4kT gamma gm2 in parallel.",
+      "caption": "The bias device's noise adds directly to the input noise current."
+    },
+    {
+      "type": "prose",
+      "text": "Its noise current flows into a shorted input, adding no voltage noise, but with the input open it all flows through M1 into $R_D$: it adds $4kT\\gamma g_{m2}$ to $\\overline{I_{n,in}^2}$. Keep $g_{m2}$ small, which means a large overdrive and less headroom. With PMOS current-source load M3 and NMOS bias M2 (all saturated), $\\overline{V_{n,in}^2} = 4kT\\gamma(g_{m1} + g_{m3})/(g_{m1} + g_{mb1})^2$ and $\\overline{I_{n,in}^2} \\approx 4kT\\gamma(g_{m2} + g_{m3})$. Flicker noise of M2 and M3 adds to the input current in the same way, and a diode-connected bias reference adds noise too unless filtered (see the current mirror page)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Source follower"
+    },
+    {
+      "type": "prose",
+      "text": "The input impedance is high, so only the voltage source matters. With current-source bias M2:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{V_{n,in}^2} = 4kT\\gamma\\left(\\frac{1}{g_{m1}} + \\frac{g_{m2}}{g_{m1}^2}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "the same as a CS stage with a current-source load, but with a gain below one; followers are avoided in low-noise signal paths."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Cascode"
+    },
+    {
+      "type": "prose",
+      "text": "At low frequencies the cascode device adds almost nothing: its noise current must flow back through itself (M1's drain impedance is high), or, using the lemma, its gate noise sees little gain through the high impedance at node X. So $\\overline{V_{n,in}^2} \\approx 4kT(\\gamma/g_{m1} + 1/(g_{m1}^2R_D))$. At high frequencies the capacitance $C_X$ gives M2's noise a path: $V_{n,out}/V_{n2} \\approx -R_D/[1/g_{m2} + 1/(C_Xs)]$, while $C_X$ also steals signal current, so the input-referred noise rises. With a very high load resistance (a cascode load) the gain from M2's gate noise grows, but the signal gain grows more, so it stays negligible."
     },
     {
       "type": "heading",
@@ -54,28 +123,55 @@
     },
     {
       "type": "prose",
-      "text": "To compare a real filter or amplifier with an ideal one, define the noise bandwidth as the width of a brick-wall filter with the same total noise. For a single-pole filter with pole at fp, the noise bandwidth is (pi/2)*fp = 1.57*fp, a little above the -3 dB bandwidth."
+      "text": "To compare circuits with the same low-frequency noise but different roll-offs, use the noise bandwidth: the width of a brick-wall filter with the same total noise. For one pole it is $(\\pi/2)f_p$. See the noise-power and bandwidth page."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
     },
     {
       "type": "problem",
       "title": "CS stage input noise",
-      "text": "gm = 2 mS, RD = 10 kohm, gamma = 2/3. Find the input-referred thermal noise density at 300 K.",
+      "text": "$g_m = 2\\text{ mS}$, $R_D = 10\\text{ k}\\Omega$, $\\gamma = 2/3$. Find the input-referred thermal noise density at 300 K.",
       "solution": [
-        "4kT = 4 * 1.38e-23 * 300 = 1.656e-20 J.",
-        "gamma/gm = 0.667 / 2e-3 = 333 ohm. 1/(gm^2 * RD) = 1/(4e-6 * 1e4) = 25 ohm.",
-        "Vn,in^2 = 1.656e-20 * 358 = 5.93e-18 V^2/Hz, so Vn,in = 2.4 nV/sqrt(Hz)."
+        "$4kT = 4 \\times 1.38 \\times 10^{-23} \\times 300 = 1.656 \\times 10^{-20}$ J.",
+        "$\\gamma/g_m = 0.667/(2 \\times 10^{-3}) = 333\\ \\Omega$; $1/(g_m^2R_D) = 1/(4 \\times 10^{-6} \\times 10^4) = 25\\ \\Omega$.",
+        "$\\overline{V_{n,in}^2} = 1.656 \\times 10^{-20} \\times 358 = 5.93 \\times 10^{-18}\\ \\text{V}^2/\\text{Hz}$, so $V_{n,in} = 2.4\\text{ nV}/\\sqrt{\\text{Hz}}$."
       ],
-      "answer": "About 2.4 nV/sqrt(Hz), mostly from the transistor."
+      "answer": "About $2.4\\text{ nV}/\\sqrt{\\text{Hz}}$, mostly from the transistor."
     },
     {
       "type": "problem",
-      "title": "Integrated noise",
-      "text": "White noise of 10 nV/sqrt(Hz) is applied to a one-pole low-pass filter with pole at 1 MHz. Find the total rms output noise.",
+      "title": "Load choice",
+      "text": "An input device has $g_{m1} = 4\\text{ mS}$ and $\\gamma = 1$. Compare the input thermal noise with (a) a PMOS current-source load of $g_{m2} = 1\\text{ mS}$, (b) the same PMOS driven as a complementary stage.",
       "solution": [
-        "Noise bandwidth = (pi/2) * 1 MHz = 1.57 MHz.",
-        "Vrms = 10 nV * sqrt(1.57e6) = 10e-9 * 1253 = 12.5 uV."
+        "(a) $4kT(1/g_{m1} + g_{m2}/g_{m1}^2) = 4kT(250 + 62.5)\\ \\Omega$, so $2.27\\text{ nV}/\\sqrt{\\text{Hz}}$.",
+        "(b) $4kT/(g_{m1} + g_{m2}) = 4kT \\times 200\\ \\Omega$, so $1.82\\text{ nV}/\\sqrt{\\text{Hz}}$.",
+        "M1 alone would give $2.03\\text{ nV}/\\sqrt{\\text{Hz}}$: the passive load adds noise, the driven one removes some."
       ],
-      "answer": "About 12.5 uV rms."
+      "answer": "2.27 against 1.82 nV/$\\sqrt{\\text{Hz}}$."
+    },
+    {
+      "type": "problem",
+      "title": "Integrated noise and SNR",
+      "text": "A resistively loaded CS stage has $g_m = 5\\text{ mS}$, $R_D = 2\\text{ k}\\Omega$, $C_L = 0.5\\text{ pF}$, $\\gamma = 1$. Find the bandwidth, the total output noise, the input-referred total, and the SNR for a 10 mV peak input sinusoid.",
+      "solution": [
+        "Bandwidth $1/(2\\pi R_DC_L) = 159\\text{ MHz}$; gain $g_mR_D = 10$.",
+        "$\\overline{V_{n,out,tot}^2} = (1 + \\gamma g_mR_D)kT/C_L = 11 \\times 4.14 \\times 10^{-21}/5 \\times 10^{-13} = 9.1 \\times 10^{-8}\\ \\text{V}^2$, i.e. $302\\ \\mu\\text{V}$ rms. Divided by the gain: $30\\ \\mu\\text{V}$ at the input.",
+        "Signal power at the output: $(10 \\times 10\\text{ mV})^2/2 = 5 \\times 10^{-3}\\ \\text{V}^2$. SNR $= 5 \\times 10^{-3}/9.1 \\times 10^{-8} = 5.5 \\times 10^4$, or 47.4 dB."
+      ],
+      "answer": "159 MHz; 302 µV rms out (30 µV input-referred); SNR 47 dB."
+    },
+    {
+      "type": "problem",
+      "title": "Common-gate noise current",
+      "text": "A CG stage has $g_m = 5\\text{ mS}$, $g_m + g_{mb} = 6\\text{ mS}$, $R_D = 2\\text{ k}\\Omega$, $\\gamma = 1$, and a bias device with $g_{m2} = 2\\text{ mS}$. Find $V_{n,in}$ and $I_{n,in}$.",
+      "solution": [
+        "$\\overline{V_{n,in}^2} = 4kT(5 \\times 10^{-3} + 5 \\times 10^{-4})/(6 \\times 10^{-3})^2 = 4kT \\times 153\\ \\Omega$, so $1.59\\text{ nV}/\\sqrt{\\text{Hz}}$.",
+        "$\\overline{I_{n,in}^2} = 4kT/R_D + 4kT\\gamma g_{m2} = 4kT(5 \\times 10^{-4} + 2 \\times 10^{-3})$, so $6.43\\text{ pA}/\\sqrt{\\text{Hz}}$ (2.88 pA/$\\sqrt{\\text{Hz}}$ without the bias device)."
+      ],
+      "answer": "$1.6\\text{ nV}/\\sqrt{\\text{Hz}}$ and $6.4\\text{ pA}/\\sqrt{\\text{Hz}}$."
     }
   ]
 }

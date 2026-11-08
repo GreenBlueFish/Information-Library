@@ -1,0 +1,155 @@
+{
+  "title": "Device Models and Process Corners",
+  "intro": "The SPICE MOS models from Level 1 to BSIM, how charge and temperature are modelled, and how process corners bound the spread (Razavi, Sections 17.3 and 17.4).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a model is judged by"
+    },
+    {
+      "type": "prose",
+      "text": "Accuracy in every region and for every geometry the designer uses, ease of extracting its parameters, and simulation speed. Analog design stresses the parts digital design ignores: the output conductance, the transitions between regions and the derivatives of current, which set gain and distortion."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Level 1 (Shichman-Hodges)"
+    },
+    {
+      "type": "math",
+      "tex": "I_D = \\frac{1}{2}K_P\\frac{W}{L - 2L_D}\\left[2(V_{GS}-V_{TH})V_{DS} - V_{DS}^2\\right](1 + \\lambda V_{DS})",
+      "caption": "Triode; in saturation the bracket becomes $(V_{GS}-V_{TH})^2$."
+    },
+    {
+      "type": "prose",
+      "text": "with $K_P = \\mu C_{ox}$ and $V_{TH} = V_{TH0} + \\gamma(\\sqrt{2\\phi_B - V_{BS}} - \\sqrt{2\\phi_B})$. No subthreshold conduction and no short-channel effects; reasonable for $L$ down to about 4 µm but poor for output impedance. Its capacitances avoid the abrupt jump at the triode edge (which upsets convergence) by blending:"
+    },
+    {
+      "type": "math",
+      "tex": "C_{GS} = \\frac{2}{3}WLC_{ox}\\left\\{1 - \\frac{(V_{GS}-V_{DS}-V_{TH})^2}{[2(V_{GS}-V_{TH}) - V_{DS}]^2}\\right\\} + WC_{ov}"
+    },
+    {
+      "type": "math",
+      "tex": "C_{GD} = \\frac{2}{3}WLC_{ox}\\left\\{1 - \\frac{(V_{GS}-V_{TH})^2}{[2(V_{GS}-V_{TH}) - V_{DS}]^2}\\right\\} + WC_{ov}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Levels 2 and 3"
+    },
+    {
+      "type": "prose",
+      "text": "Level 2 integrates the channel charge with a threshold that varies along the channel (the depletion charge grows toward the drain), so the current falls below the square law at large $V_{DS}$ and depends on $\\gamma$ even at $V_{BS} = 0$. It computes $\\lambda$ from the depletion width beyond pinch-off (with a patched formula to avoid discontinuities), includes vertical-field mobility reduction, threshold dependence on $L$ and velocity saturation, and models subthreshold current exponentially below a voltage $V_{on}$, with a slope kink at the joint. It is reasonable for wide, short devices around 0.7 µm, poor for narrow or long ones and for $r_O$."
+    },
+    {
+      "type": "prose",
+      "text": "Level 3 simplifies Level 2 with empirical constants for lengths near 1 µm: a threshold expression with short-channel, narrow-channel and DIBL terms, and a mobility with both vertical and lateral field factors, $\\mu_1 = \\mu_{eff}/(1 + \\mu_{eff}V_{DS}/(v_{max}L))$. Its derivative of $I_D$ is discontinuous at the triode edge, so $r_O$ is badly predicted there."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "BSIM and later models"
+    },
+    {
+      "type": "prose",
+      "text": "BSIM gave up on purely physical equations and added many fitting parameters, with a geometry rule for each parameter:"
+    },
+    {
+      "type": "math",
+      "tex": "P = P_0 + \\frac{\\alpha_P}{L_{eff}} + \\frac{\\beta_P}{W_{eff}}"
+    },
+    {
+      "type": "list",
+      "items": [
+        "BSIM (about 50 parameters): continuous currents and first derivatives between weak and strong inversion, substrate-dependent mobility, non-uniform doping. Weak for narrow, short devices; can predict negative $r_O$ at high $V_{DS}$.",
+        "BSIM2 (about 70): better $r_O$ through channel-length modulation and DIBL, but kinks in short, narrow devices.",
+        "BSIM3 (about 180 in version 3): back to physics-based equations; good to 0.25 µm in subthreshold and strong inversion, still weak on $r_O$.",
+        "BSIM4: fixes many of these and serves processes down to the 40 nm and 28 nm generations.",
+        "HSPICE Level 28 expresses parameters relative to a measured reference device, plus a cross term in $1/L$ and $1/W$.",
+        "EKV takes the bulk as the reference for all voltages, treats source and drain symmetrically, and uses a single current equation from weak to strong inversion."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Charge and capacitance"
+    },
+    {
+      "type": "prose",
+      "text": "The simple (Meyer) capacitance model does not conserve charge: a simulator that integrates capacitor currents can slowly lose charge, so a MOS capacitor in a divider driven by a square wave shows a droop that is not real. Charge-based models compute the channel and depletion charges first and then partition them among the terminals. The fixed 2/3, 1/2 partitions are also poor for short channels; BSIM offers 40/60, 50/50 and 0/100 source/drain partitions."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Temperature"
+    },
+    {
+      "type": "prose",
+      "text": "Threshold, junction built-in potential, $n_i$, bandgap and mobility all vary with temperature, mostly through empirical fits, for example:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mu = \\mu_0\\left(\\frac{300\\text{ K}}{T}\\right)^{3/2}, \\qquad E_g = 1.16 - \\frac{7.02\\times10^{-4}\\,T^2}{T + 1108}\\ \\text{eV}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Process corners"
+    },
+    {
+      "type": "prose",
+      "text": "MOS parameters vary much more from wafer to wafer and lot to lot than bipolar ones, and gate delay can vary 2:1 with process and temperature. Foundries guarantee an envelope: they discard wafers whose NMOS or PMOS test structures fall outside a rectangle of speed, and supply models for its corners. Fast means thinner oxide and lower threshold."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/sce-process-corners.svg",
+      "alt": "A rectangle on axes of NMOS speed and PMOS speed with corners labelled SS, SF, FS, FF and TT in the centre.",
+      "caption": "Corners: TT, FF, SS, and the skewed FS and SF."
+    },
+    {
+      "type": "prose",
+      "text": "Designers simulate every corner with supply and temperature extremes. Corners are built around digital speed, so analog quantities (offsets, matching) need separate statistical models."
+    },
+    {
+      "type": "problem",
+      "title": "Capacitance continuity",
+      "text": "Show that the Level 1 blended expressions give the familiar values at the edge of saturation and at $V_{DS} = 0$.",
+      "solution": [
+        "Edge ($V_{GS} - V_{DS} = V_{TH}$): $C_{GS}$'s fraction vanishes, giving $\\frac{2}{3}WLC_{ox} + WC_{ov}$; for $C_{GD}$ the denominator equals $V_{ov}^2$, so the bracket is 0 and $C_{GD} = WC_{ov}$.",
+        "$V_{DS} = 0$: both brackets are $1 - V_{ov}^2/(4V_{ov}^2) = 3/4$, so $C_{GS} = C_{GD} = \\frac{1}{2}WLC_{ox} + WC_{ov}$, the deep-triode split."
+      ],
+      "answer": "Both limits match the simple model."
+    },
+    {
+      "type": "problem",
+      "title": "Geometry scaling of a parameter",
+      "text": "A BSIM mobility has $\\mu_0 = 400$, $\\alpha_\\mu = -20\\ \\mu\\text{m}$ and $\\beta_\\mu = -10\\ \\mu\\text{m}$ (in cm²/V·s units). Find $\\mu$ for $W/L = 10/0.5$ and $10/2$ µm.",
+      "solution": [
+        "$10/0.5$: $400 - 20/0.5 - 10/10 = 400 - 40 - 1 = 359$.",
+        "$10/2$: $400 - 10 - 1 = 389$."
+      ],
+      "answer": "359 and 389 cm²/V·s."
+    },
+    {
+      "type": "problem",
+      "title": "Mobility at temperature",
+      "text": "How much does mobility fall from 300 K to 400 K, and what does that do to $g_m$ at fixed current in the square law?",
+      "solution": [
+        "$(300/400)^{1.5} = 0.65$.",
+        "$g_m = \\sqrt{2\\mu C_{ox}(W/L)I_D}$ scales as $\\sqrt{\\mu}$: down to 0.81 of its room-temperature value."
+      ],
+      "answer": "Mobility 0.65x; $g_m$ 0.81x."
+    },
+    {
+      "type": "problem",
+      "title": "Picking corners",
+      "text": "A ring oscillator's frequency and a CMOS op amp's phase margin are to be verified. Which corners and conditions are worst for each?",
+      "solution": [
+        "Ring: lowest frequency at SS, low supply, high temperature; highest at FF, high supply, low temperature (check both ends of the tuning range).",
+        "Phase margin: usually worst where the non-dominant poles move down relative to the unity-gain frequency, often FF (higher $g_m$, higher bandwidth) or a skewed corner; simulate all five corners at temperature and supply extremes rather than guess."
+      ],
+      "answer": "Ring: SS/FF with supply and temperature; op amp: all corners, often FF or skewed."
+    }
+  ]
+}

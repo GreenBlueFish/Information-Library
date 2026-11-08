@@ -1,0 +1,93 @@
+{
+  "title": "Cascode Frequency Response",
+  "intro": "The cascode was invented for speed: the CG device on top holds the drain of the input device nearly still, so $C_{GD1}$ is barely Miller-multiplied, while the input keeps the high impedance of a CS stage.",
+  "blocks": [
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-cascode-caps.svg",
+      "alt": "Cascode: Vin drives node A (gate of M1) through RS; CGS1 from A to ground and CGD1 from A to node X. M1's drain is node X, which has capacitance CX to ground and is the source of M2. M2's gate is at Vb; its drain is the output node Y with capacitance CY to ground and RD to VDD.",
+      "caption": "Three nodes, three poles."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three poles"
+    },
+    {
+      "type": "prose",
+      "text": "The gain from A to X is about $-g_{m1}/(g_{m2} + g_{mb2})$, roughly $-1$ for similar devices, so $C_{GD1}$ is multiplied by about 2 instead of $1 + g_m R_D$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{p,A} = \\frac{1}{R_S\\left[C_{GS1} + \\left(1 + \\frac{g_{m1}}{g_{m2} + g_{mb2}}\\right)C_{GD1}\\right]}"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{p,X} = \\frac{g_{m2} + g_{mb2}}{2C_{GD1} + C_{DB1} + C_{SB2} + C_{GS2}}, \\qquad \\omega_{p,Y} = \\frac{1}{R_D(C_{DB2} + C_L + C_{GD2})}"
+    },
+    {
+      "type": "prose",
+      "text": "$\\omega_{p,X}$ is about half of $\\omega_T$ of M2 once the extra capacitances are counted, usually well above the other two. Which of A and Y dominates depends on $R_S$ and the load."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "High-impedance load"
+    },
+    {
+      "type": "prose",
+      "text": "With a current-source (or cascode) load, the resistance looking up into M2's source is large at DC, which would suggest a low pole at X and a large Miller factor for $C_{GD1}$. In practice the transfer function hardly changes. Modelling M1 as a current $I_{in}$ into X and an ideal load:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{I_{in}} = -\\frac{g_{m2}r_{o2} + 1}{C_X s}\\cdot\\frac{1}{1 + (1 + g_{m2}r_{o2})\\frac{C_Y}{C_X} + C_Y r_{o2}s} \\approx -\\frac{g_{m2}}{C_X s}\\cdot\\frac{1}{\\frac{C_Y}{C_X}g_{m2} + C_Y s}"
+    },
+    {
+      "type": "prose",
+      "text": "so $V_{out}/V_{in} \\approx -\\frac{g_{m1}g_{m2}}{C_X C_Y s}\\cdot\\frac{1}{g_{m2}/C_X + s}$ and the pole at X is still $g_{m2}/C_X$. By the time frequencies approach that pole, $C_Y$ has shorted the output and the high resistance at X is gone. The same argument keeps the Miller factor of $C_{GD1}$ near 2 when $C_L$ is large."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Cascode current source at high frequency"
+    },
+    {
+      "type": "prose",
+      "text": "Looking into the drain of M2 with $Z_X = r_{o1} \\parallel (1/C_X s)$:"
+    },
+    {
+      "type": "math",
+      "tex": "Z_{out} = (1 + g_{m2}r_{o2})Z_X + r_{o2}"
+    },
+    {
+      "type": "prose",
+      "text": "The output impedance has a pole at $1/(r_{o1}C_X)$, which is low because $r_{o1}$ is large; above it the high output impedance (and the gain it provides) fades."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Cascode against CS",
+      "text": "$R_S = 2\\text{ k}\\Omega$, $C_{GS1} = 100\\text{ fF}$, $C_{GD1} = 20\\text{ fF}$, $g_{m1} = g_{m2} = 4\\text{ mS}$ (ignore $g_{mb}$), $C_{DB1} = C_{SB2} = 30\\text{ fF}$, $C_{GS2} = 100\\text{ fF}$, $R_D = 5\\text{ k}\\Omega$, total output capacitance 150 fF. Find the three poles, and the input pole of a plain CS stage with the same gain $g_m R_D = 20$.",
+      "solution": [
+        "A: $C = 100 + 2 \\times 20 = 140\\text{ fF}$, $f = 1/(2\\pi \\cdot 2\\text{ k}\\Omega \\cdot 140\\text{ fF}) = 568\\text{ MHz}$.",
+        "X: $C_X = 40 + 30 + 30 + 100 = 200\\text{ fF}$, $f = 4\\text{ mS}/(2\\pi \\cdot 200\\text{ fF}) = 3.18\\text{ GHz}$.",
+        "Y: $f = 1/(2\\pi \\cdot 5\\text{ k}\\Omega \\cdot 150\\text{ fF}) = 212\\text{ MHz}$ (dominant).",
+        "CS: $C_{in} = 100 + 21 \\times 20 = 520\\text{ fF}$, $f = 1/(2\\pi \\cdot 2\\text{ k}\\Omega \\cdot 520\\text{ fF}) = 153\\text{ MHz}$."
+      ],
+      "answer": "Cascode: 568 MHz, 3.18 GHz, 212 MHz. CS input pole: 153 MHz."
+    },
+    {
+      "type": "problem",
+      "title": "Where the cascode current source fades",
+      "text": "In a cascode current source $r_{o1} = 20\\text{ k}\\Omega$ and $C_X = 100\\text{ fF}$. Above what frequency does $Z_{out}$ start to fall?",
+      "solution": [
+        "$f = 1/(2\\pi r_{o1}C_X) = 1/(2\\pi \\cdot 20\\text{ k}\\Omega \\cdot 100\\text{ fF}) = 79.6\\text{ MHz}$."
+      ],
+      "answer": "About 80 MHz."
+    }
+  ]
+}

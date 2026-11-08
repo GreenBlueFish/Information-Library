@@ -1,0 +1,178 @@
+{
+  "title": "Bode, Blackman and Loop-Gain Methods",
+  "intro": "Bode's method computes exact closed-loop quantities without ever breaking the loop, by singling out one transistor's controlled source. Blackman's theorem does the same for impedances. Together with the asymptotic-gain and Middlebrook forms, they handle circuits the two-port recipe cannot (Razavi, Sections 8.6 to 8.9).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The idea: keep the controlled source symbolic"
+    },
+    {
+      "type": "prose",
+      "text": "Pick one transistor and draw it as its controlled current source $I_1$, which really equals $g_m V_1$ where $V_1$ is its gate-source voltage. Temporarily pretend $I_1$ is an independent source. The circuit is linear in its two excitations, $V_{in}$ and $I_1$, so both the output and the controlling voltage are linear combinations:"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/feedback-bode-dependent-source.svg",
+      "alt": "Small-signal degenerated common-source stage: the input drives the gate G; between the drain and source node is a downward current source labelled I1, with rO in parallel; RD goes from the drain to VDD and RS from the source to ground. The output is at the drain.",
+      "caption": "Bode's method applied to a degenerated common-source stage: the transistor's $g_m V_1$ source is replaced by $I_1$."
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = A\\,V_{in} + B\\,I_1, \\qquad V_1 = C\\,V_{in} + D\\,I_1"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$A$ and $C$: the responses at $V_{out}$ and $V_1$ to $V_{in}$ with the transistor disabled ($g_m = 0$, so $I_1 = 0$). $A$ is direct feedthrough.",
+        "$B$ and $D$: the responses at $V_{out}$ and $V_1$ to $I_1$ with $V_{in} = 0$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Now impose $I_1 = g_m V_1$ and eliminate $V_1$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = A + \\frac{g_m B C}{1 - g_m D}",
+      "caption": "Bode's closed-loop formula: exact, no loop broken."
+    },
+    {
+      "type": "prose",
+      "text": "For the degenerated common-source stage, disabling the transistor leaves no path from gate to drain, so $A = 0$ and $C = 1$; with $V_{in} = 0$ a current $I_1$ gives $B = -r_O R_D/(R_D + r_O + R_S)$ and $D = -r_O R_S/(R_D + r_O + R_S)$. Then"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = \\frac{-g_m r_O R_D}{R_D + R_S + r_O + g_m r_O R_S}"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Return ratio and loop gain"
+    },
+    {
+      "type": "prose",
+      "text": "The quantity $-g_m D$ is Bode's return ratio for that source: zero the input, replace the source by an independent one, and see how much comes back to control it. Writing $T = -g_m D$, the formula reads $A + g_m BC/(1 + T)$, which has the form $A_0/(1 + \\beta A_0)$ plus feedthrough, so $T$ plays the role of loop gain. It equals the true loop gain when the circuit has a single feedback mechanism and the loop passes through the chosen transistor. If the transistor is outside the loop its return ratio is zero; if there are local and global loops, different transistors give different return ratios (in a two-stage amplifier with a divider to the first source, $M_1$'s return ratio includes the local degeneration and $M_2$'s does not), and none is uniquely 'the' loop gain."
+    },
+    {
+      "type": "prose",
+      "text": "Two cautions. The derivation divides by $B$ and $D$, so it can fail when one of them is infinite (an ideal current-source load can make the return ratio infinite). And a positive return ratio does not prove negative feedback when two mechanisms of opposite sign are present."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Blackman's impedance theorem"
+    },
+    {
+      "type": "prose",
+      "text": "Treat a test current into the port of interest as the input and the port voltage as the output, and apply the same algebra. With $Z_0$ the port impedance when the chosen source is disabled ($g_m = 0$):"
+    },
+    {
+      "type": "math",
+      "tex": "Z_{port} = Z_0\\,\\frac{1 + T_{sc}}{1 + T_{oc}}",
+      "caption": "Blackman's theorem"
+    },
+    {
+      "type": "prose",
+      "text": "$T_{sc}$ is the return ratio with the port shorted and $T_{oc}$ with the port open. If $T_{sc} \\approx 0$ the impedance is divided by $1 + T_{oc}$ (shunt connection at that port); if $T_{oc} \\approx 0$ it is multiplied by $1 + T_{sc}$ (series connection). In general it is neither, so 'divide or multiply by one plus the loop gain' is only a special case."
+    },
+    {
+      "type": "prose",
+      "text": "Output impedance of a degenerated common-source stage (no $R_D$): with $g_m = 0$, $Z_0 = r_O + R_S$. With the port open, no current flows in $R_S$, so $V_1 = 0$ and $T_{oc} = 0$. With the drain shorted, $I_1$ splits between $r_O$ and $R_S$, giving $V_1 = -I_1 (r_O \\parallel R_S)$ and $T_{sc} = g_m (r_O \\parallel R_S)$. Hence"
+    },
+    {
+      "type": "math",
+      "tex": "R_{out} = (r_O + R_S)\\left[1 + g_m (r_O \\parallel R_S)\\right] = r_O + R_S + g_m r_O R_S"
+    },
+    {
+      "type": "prose",
+      "text": "The theorem also handles non-canonical circuits. If an amplifier $A_1$ senses the source of $M_1$ and drives its gate (a regulated cascode), the same steps give $R_{out} = (r_O + R_S)[1 + g_m (R_S \\parallel r_O) A_1]$: the usual $g_m r_O$ boost multiplied again by $A_1$. Its limits mirror Bode's: $Z_0$ must be finite (a source follower's output with $g_m = 0$ is an open circuit) and the return ratios must be computable. Adding a resistor across the port and letting it go to infinity at the end usually rescues such cases."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Asymptotic-gain and double-null forms"
+    },
+    {
+      "type": "prose",
+      "text": "Bode's result can be rearranged around two limits: $H_0$, the gain with the source disabled ($g_m = 0$, direct feedthrough), and $H_\\infty$, the gain if the source were infinitely strong ($g_m \\to \\infty$, which forces $V_1 \\to 0$ exactly like a virtual ground). With $T$ the return ratio:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = H_\\infty \\frac{T}{1 + T} + H_0 \\frac{1}{1 + T}",
+      "caption": "Asymptotic-gain form"
+    },
+    {
+      "type": "prose",
+      "text": "$H_\\infty$ is the ideal gain an infinite loop gain would give; the first term approaches it as $T$ grows, while feedthrough is suppressed by $1 + T$. It is an excellent mental model, though for small circuits direct analysis may be quicker."
+    },
+    {
+      "type": "prose",
+      "text": "Blackman's form also generalizes to transfer functions: $V_{out}/V_{in} = A(1 + T_{out,0})/(1 + T_{in,0})$, where $T_{in,0}$ is the return ratio with the input nulled and $T_{out,0}$ the return ratio when $V_{in}$ and $I_1$ are chosen to null the output. A non-zero $T_{out,0}$ reveals an internal loop still active when the output is held at zero. The form fails when $A = 0$, which happens even for a simple degenerated common-source stage."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Middlebrook's method"
+    },
+    {
+      "type": "prose",
+      "text": "Middlebrook's general feedback theorem injects both a series voltage $V_t$ and a shunt current $I_t$ at one point inside the loop, without opening it, so loading is automatically right. Nulling combinations of the resulting four signals yields an ideal gain $H_\\infty$ and forward and reverse loop gains. With no reverse transmission the forward voltage and current loop gains combine like parallel resistors; a reverse loop gain near unity degrades the effective loop gain even when the forward one is large. The method reveals non-unilateral behaviour but is more laborious than Bode's, and it relies on injecting at the 'error' point inside the major loop, which is not always well defined."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where to break a loop"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Break at a MOS gate. The gate draws no current at low frequency, so the previous stage's load is unchanged. Every negative-feedback loop has at least one gate in it, because only the common-source configuration inverts.",
+        "At high frequency, break after $C_{GS}$ (keep the gate capacitance attached to the driving stage) so the loading is still correct.",
+        "For current injection, replace the transistor's controlled source by an independent current $I_t$ and measure the returned $V_{GS}$; the loop gain is $-g_m V_F/I_t$. This works even with degeneration, and it is exactly the return ratio.",
+        "Breaking at a resistor end or a drain usually changes the loading (a resistor no longer draws current from the previous stage, a drain no longer swings), giving a wrong value.",
+        "With several feedback mechanisms, or bilateral loops, different break points and injection methods give different answers; the exact loop gain of such circuits is beyond simple recipes."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Bode's method on a CS stage",
+      "text": "A degenerated common-source stage has $g_m = 2$ mS, $r_O = 50\\text{ k}\\Omega$, $R_D = 10\\text{ k}\\Omega$ and $R_S = 1\\text{ k}\\Omega$. Find the voltage gain and the return ratio of the transistor.",
+      "solution": [
+        "$D = -r_O R_S/(R_D + r_O + R_S) = -50\\text{ k}\\cdot 1\\text{ k}/61\\text{ k}$, so $T = -g_m D = 100/61 = 1.64$.",
+        "$A_v = -g_m r_O R_D/(R_D + R_S + r_O + g_m r_O R_S) = -10^6/(61\\text{ k} + 100\\text{ k}) = -6.21$."
+      ],
+      "answer": "$A_v = -6.21$; return ratio 1.64."
+    },
+    {
+      "type": "problem",
+      "title": "Blackman on a degenerated device",
+      "text": "Using the same transistor ($g_m = 2$ mS, $r_O = 50\\text{ k}\\Omega$) with $R_S = 1\\text{ k}\\Omega$, find the impedance looking into the drain.",
+      "solution": [
+        "$Z_0 = r_O + R_S = 51\\text{ k}\\Omega$; $T_{oc} = 0$; $T_{sc} = g_m (r_O \\parallel R_S) = 2\\text{ mS} \\times 980\\;\\Omega = 1.96$.",
+        "$R_{out} = 51\\text{ k} \\times 2.96 = 151\\text{ k}\\Omega$, matching $r_O + R_S + g_m r_O R_S$."
+      ],
+      "answer": "About 151 k$\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Asymptotic gain",
+      "text": "A feedback amplifier has $H_\\infty = 10$, return ratio $T = 100$ and a direct feedthrough $H_0 = 0.01$. What is the gain? Which term matters?",
+      "solution": [
+        "$H = 10 \\times 100/101 + 0.01/101 = 9.901 + 0.0001$.",
+        "The feedthrough contributes $10^{-4}$, negligible; the loop-gain error $1/(1+T)$ dominates."
+      ],
+      "answer": "9.901; feedthrough is negligible here."
+    },
+    {
+      "type": "problem",
+      "title": "Regulated cascode via Blackman",
+      "text": "A transistor with $g_m = 2$ mS and $r_O = 20\\text{ k}\\Omega$ has $R_S = 2\\text{ k}\\Omega$ in its source, and an amplifier of gain $A_1 = 20$ senses the source and drives the gate. Estimate the output resistance, and compare with no amplifier.",
+      "solution": [
+        "Without $A_1$: $r_O + R_S + g_m r_O R_S = 20 + 2 + 80 = 102\\text{ k}\\Omega$.",
+        "With $A_1$: $T_{sc} = g_m (R_S \\parallel r_O) A_1 = 2\\text{ mS} \\times 1.82\\text{ k}\\Omega \\times 20 = 72.7$, so $R_{out} = 22\\text{ k} \\times 73.7 = 1.62\\text{ M}\\Omega$."
+      ],
+      "answer": "About 1.6 M$\\Omega$ versus 102 k$\\Omega$."
+    }
+  ]
+}

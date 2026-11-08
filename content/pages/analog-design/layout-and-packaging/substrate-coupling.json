@@ -1,0 +1,89 @@
+{
+  "title": "Substrate Coupling",
+  "intro": "How switching digital circuits disturb analog circuits through the shared substrate, and how to limit the damage (Razavi, Section 19.3).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mechanism"
+    },
+    {
+      "type": "prose",
+      "text": "Many CMOS processes use a heavily doped (low-resistivity, around 0.1 Ω·cm) substrate against latch-up, which also makes it a good conductor of noise. A digital gate's drain swings couple through its junction capacitance into the substrate; the substrate's connection to ground is a bond wire with inductance, so the substrate voltage bounces. An analog transistor then sees this bounce on its body, and through body effect its threshold moves exactly like an input signal."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/layout-substrate-coupling.svg",
+      "alt": "A switching NMOS M2 with a resistor load, its drain coupled through junction capacitance CDB2 to a substrate node Vsub. Vsub goes to ground through a bond-wire inductance Lb and connects to the body of an analog common-source transistor M1.",
+      "caption": "Substrate coupling from a digital driver to an analog stage."
+    },
+    {
+      "type": "prose",
+      "text": "Thousands of gates switching at a clock edge can move the substrate by hundreds of millivolts, and big output buffers make it worse. On a heavily doped substrate distance helps little, because the substrate behaves like a low-resistance plane at nearly one potential everywhere; and in mixed-signal blocks such as an ADC slice, the comparators and logic cannot be pulled apart without long wires anyway."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Remedies"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use differential circuits throughout, so substrate noise is mostly common-mode.",
+        "Distribute digital signals and clocks in complementary pairs so their injections partly cancel.",
+        "Do the critical operations (sampling, charge transfer) well after clock edges, once the substrate has settled.",
+        "Minimize the inductance of the substrate connection (see Packaging).",
+        "Prefer PMOS input pairs in op amps: their well can be tied to their common source, isolating them from the substrate.",
+        "On lightly doped substrates, guard rings of substrate contacts around sensitive circuits sink the injected carriers, and a deep n-well ring blocks surface currents."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ground and substrate bounce together"
+    },
+    {
+      "type": "prose",
+      "text": "If the chip's ground and the substrate bounce together, a transistor whose source and body both move sees no change. So tie the substrate to the on-chip ground and bring both out through the same connection. Mixed-signal chips separate analog and digital grounds, though, and the substrate can connect to only one of them (connecting to both would short them through the substrate):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Tied to analog ground: the substrate noise current flows through the analog ground's inductance, but the analog ground and substrate move together, so analog devices see little source-body noise. Usually preferred.",
+        "Tied to digital ground: the substrate inherits the large digital ground noise."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Simulation of the whole environment, package included, decides. A remaining problem is the reference for inputs: if the on-chip ground bounces relative to the board ground, a single-ended input arrives corrupted even when ground and substrate move together. Differential inputs suffer far less, though asymmetries still convert some common-mode noise to differential."
+    },
+    {
+      "type": "problem",
+      "title": "How big is the bounce?",
+      "text": "Digital logic draws a 20 mA current step from the substrate in 0.5 ns through a 2 nH substrate bond wire. Estimate the substrate bounce and its effect on an analog NMOS with $g_{mb} = 0.2g_m$ whose source is grounded separately.",
+      "solution": [
+        "$\\Delta V = L\\,\\Delta I/\\Delta t = 2\\text{ nH} \\times 20\\text{ mA}/0.5\\text{ ns} = 80\\text{ mV}$.",
+        "Through body effect the drain current changes as if the gate moved by $(g_{mb}/g_m) \\times 80 = 16\\text{ mV}$: a large input-referred disturbance."
+      ],
+      "answer": "About 80 mV; equivalent to 16 mV at the gate."
+    },
+    {
+      "type": "problem",
+      "title": "Which ground?",
+      "text": "Explain why tying the substrate to the analog ground usually injects less noise into an analog transistor than tying it to the digital ground, even though the substrate current then flows through the analog ground bond wire.",
+      "solution": [
+        "What matters to the transistor is its source-to-body voltage. With the substrate tied to analog ground, the source (on analog ground) and the body (substrate) move together, so their difference is small. With the substrate on digital ground, the body follows the large digital bounce while the source stays on analog ground, and the difference appears through body effect."
+      ],
+      "answer": "Source and body move together."
+    },
+    {
+      "type": "problem",
+      "title": "Timing the sample",
+      "text": "A clock edge disturbs the substrate, which then settles with a time constant of 0.3 ns. How long after the edge should a sampling switch open for the residue to be below 1% of the initial disturbance?",
+      "solution": [
+        "$e^{-t/0.3\\text{ ns}} = 0.01$ gives $t = 0.3 \\times 4.6 = 1.4\\text{ ns}$."
+      ],
+      "answer": "About 1.4 ns."
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "title": "Op Amp Performance and One-Stage Op Amps",
-  "intro": "An operational amplifier is a high-gain differential amplifier designed to be used in feedback. The specifications decide the topology.",
+  "intro": "The specifications that matter, and the simplest op amps that meet them: the differential pair with an active load and the telescopic cascode (Razavi, Sections 9.1 and 9.2.1 to 9.2.3).",
   "blocks": [
     {
       "type": "heading",
@@ -8,58 +8,197 @@
       "text": "Performance parameters"
     },
     {
-      "type": "list",
-      "items": [
-        "Gain (open-loop, DC): 40 to 100+ dB, set by gm*ro stages.",
-        "Small-signal bandwidth and unity-gain frequency (GBW), as in the frequency chapter.",
-        "Large-signal behaviour: slew rate and output swing.",
-        "Linearity, noise, input offset (random mismatch, plus systematic).",
-        "CMRR and PSRR: rejection of common-mode and supply variations.",
-        "Power dissipation and supply voltage."
-      ]
-    },
-    {
       "type": "heading",
-      "level": 2,
-      "text": "Single-stage topologies"
+      "level": 3,
+      "text": "Gain"
     },
     {
-      "type": "list",
-      "items": [
-        "Telescopic cascode: highest gain (about (gm*ro)^2/2), lowest noise and power, fast, but smallest swing and an input common-mode range that must sit high.",
-        "Folded cascode: the input pair and the cascode have opposite polarity so the input common-mode range can include the supply or ground; more current and noise, but wider swing.",
-        "Basic five-transistor OTA with active load: gain only gm*(ro||ro) (25 to 50), the simplest and best-behaved.",
-        "Gain of cascode stage: Av = gm1 * Rout where Rout is the parallel of the two cascode output resistances."
-      ]
+      "type": "prose",
+      "text": "The open-loop gain sets the precision of the closed loop. For a non-inverting stage with nominal gain $1 + R_1/R_2$ and op amp gain $A_1$,"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} \\approx \\left(1 + \\frac{R_1}{R_2}\\right)\\left[1 - \\left(1 + \\frac{R_1}{R_2}\\right)\\frac{1}{A_1}\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "so the relative gain error is the nominal closed-loop gain divided by $A_1$: a gain of 10 with 1% error needs $A_1 > 1000$. An open-loop common-source stage with nominal gain $g_m R_D = 10$ typically varies by more than 20% with process and temperature. Linearity requirements often demand even more open-loop gain than the gain error does."
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "Design procedure"
+      "text": "Small-signal bandwidth and settling"
     },
     {
       "type": "prose",
-      "text": "Pick the load capacitance and the required GBW to find gm1 = 2*pi*GBW*CL. The current for each device follows from gm and Vov. Check swing, then gain. If gain falls short, increase L or switch to a cascode."
+      "text": "Speed is specified by the unity-gain frequency $f_u$ (several GHz in modern CMOS) and sometimes $f_{3dB}$. For a one-pole op amp in a loop with feedback factor $\\beta$, the closed loop is also one-pole with time constant"
+    },
+    {
+      "type": "math",
+      "tex": "\\tau = \\frac{1}{\\beta A_0 \\omega_0} = \\frac{1}{\\beta\\,\\omega_u}, \\qquad t_{settle} = \\tau \\ln\\frac{1}{\\epsilon}"
+    },
+    {
+      "type": "prose",
+      "text": "where $\\epsilon$ is the allowed relative error (1% settling takes $4.6\\tau$, 0.1% takes $6.9\\tau$). The required bandwidth therefore grows with both the accuracy and the closed-loop gain $1/\\beta$. Swapping the op amp inputs turns the loop positive and puts a pole in the right half plane: the output runs away until it saturates."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Large-signal behaviour, swing, linearity"
+    },
+    {
+      "type": "prose",
+      "text": "A large step momentarily drives the input pair far out of its linear range, so large-signal settling (slewing, and bias points moving during the transient) must be checked in simulation. Output swing matters because signals can span orders of magnitude; fully differential outputs roughly double it. Swing trades against speed and noise through device sizes and overdrives. Linearity is improved by differential operation (even harmonics cancel) and by enough open-loop gain."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Noise, offset, supply rejection"
+    },
+    {
+      "type": "prose",
+      "text": "Noise and offset set the smallest usable signal. At least four devices contribute input noise in any op amp: the two input transistors and the two load devices. There is a noise-swing trade: lowering a current source's overdrive to save headroom raises its $g_m$ and with it its noise current. Op amps often share supplies with digital logic, so rejection of supply noise, especially at high frequency, matters; fully differential circuits are preferred for this."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simple one-stage op amps"
+    },
+    {
+      "type": "prose",
+      "text": "A differential pair with an active load is already an op amp. Its gain is $g_{mN}(r_{ON} \\parallel r_{OP})$, often barely above 10 in nanometer processes, and its bandwidth is set by the load capacitance. The single-ended version (current-mirror load) has a mirror pole; the fully differential version does not, which matters for stability."
+    },
+    {
+      "type": "prose",
+      "text": "Used as a unity-gain buffer, the input range is limited by the tail source and by the input pair entering triode:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{in,min} = V_{ISS} + V_{GS1}, \\qquad V_{in,max} = V_{DD} - |V_{GS3}| + V_{TH1}"
+    },
+    {
+      "type": "prose",
+      "text": "In the buffer the closed-loop output resistance is the open-loop $r_{ON} \\parallel r_{OP}$ divided by $1 + g_{mN}(r_{ON} \\parallel r_{OP})$, about $1/g_{mN}$. It barely depends on the open-loop output resistance, which is why high-$R_{out}$ (high-gain) op amps still make good buffers; with a load $C_L$ the closed-loop pole is near $g_{mN}/C_L$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Telescopic cascode op amps"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/operational-amplifiers-telescopic.svg",
+      "alt": "Fully differential telescopic cascode op amp. Between VDD and a tail transistor M9 there are two identical columns, each with a PMOS current source (M7, M8), a PMOS cascode (M5, M6), an NMOS cascode (M3, M4) and an NMOS input transistor (M1, M2). The outputs are taken between the PMOS and NMOS cascodes. Gates are biased at Vb1 to Vb4; inputs at M1 and M2.",
+      "caption": "Fully differential telescopic cascode. Cascoding both the input pair and the load gives roughly $(g_m r_O)^2$ gain."
+    },
+    {
+      "type": "math",
+      "tex": "A_v \\approx g_{m1}\\left[(g_{m3} r_{O3} r_{O1}) \\parallel (g_{m5} r_{O5} r_{O7})\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "The price is swing. With $V_{OD}$ the overdrive of each device and $V_{ISS}$ the minimum voltage across the tail,"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out,pp,diff} = 2\\left[V_{DD} - (V_{OD1} + V_{OD3} + V_{ISS} + |V_{OD5}| + |V_{OD7}|)\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "and even that requires the input CM level at $V_{GS1} + V_{ISS}$, $V_{b1} = V_{GS3} + (V_{in,CM} - V_{TH1})$ and $V_{b2} = V_{DD} - |V_{OD7}| - |V_{GS5}|$, so these must be tightly controlled. A single-ended version (cascode current-mirror load) adds a mirror pole and wastes a PMOS threshold of swing unless a low-voltage cascode mirror is used."
+    },
+    {
+      "type": "prose",
+      "text": "Shorting output to input is awkward. In a unity-gain telescopic buffer, $M_2$ and the cascode $M_4$ are both saturated only for"
+    },
+    {
+      "type": "math",
+      "tex": "V_b - V_{TH4} \\le V_{out} \\le V_b - V_{GS4} + V_{TH2}"
+    },
+    {
+      "type": "prose",
+      "text": "a window of one threshold minus one overdrive. Below it $M_4$ is in triode (low gain); above it $M_1$-$M_2$ enter triode. Switched-capacitor circuits that short inputs to outputs in one phase hit the same limit: for symmetric swing, set the output CM at $V_b - (V_{GS3} - V_{TH1})$, giving about $\\pm(V_{TH} - V_{OD})$ per output."
+    },
+    {
+      "type": "prose",
+      "text": "To make $V_{b1}$ follow the input common-mode level, derive it from the tail node: a small current through a weak (narrow, long) diode-connected device $M_{b1}$ sitting on node P gives $V_{b1} = V_P + V_{GS,b1}$, and $V_P$ already tracks $V_{in,CM}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A design procedure"
+    },
+    {
+      "type": "prose",
+      "text": "Work with five quantities per device: $I_D$, $V_{GS} - V_{TH}$, $W/L$, $g_m$ and $r_O$. Start from the power budget, which fixes currents. Then split the supply among the overdrives so that the required swing fits, giving more overdrive to the device with the most current (the tail) and to low-mobility PMOS devices, and less to the input pair. The square law (or simulated curves) then gives $W/L$; start at minimum length. Finally check the gain. Since"
+    },
+    {
+      "type": "math",
+      "tex": "g_m r_O = \\frac{\\sqrt{2\\mu C_{ox}(W/L)I_D}}{\\lambda I_D} \\propto \\sqrt{\\frac{WL}{I_D}}",
+      "caption": "($\\lambda \\propto 1/L$)"
+    },
+    {
+      "type": "prose",
+      "text": "gain is raised by lengthening devices (widening them in proportion to keep the overdrive). Lengthen the load devices (PMOS cascodes and sources) first: they are off the signal path, so their extra capacitance hurts least. Each overdrive has only a narrow sensible range; moving it by more than a few tens of millivolts makes widths explode. Remember the CM feedback a fully differential design needs."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Linear scaling"
+    },
+    {
+      "type": "prose",
+      "text": "Doubling every width at fixed length (and so every current) doubles power and $g_m$, halves $r_O$, and leaves overdrives, swings and gain unchanged: it is like placing two copies in parallel. Scaling down by 10 saves power but divides every $g_m$ by 10, so the output pole drops tenfold and the input-referred noise voltage rises by $\\sqrt{10}$."
     },
     {
       "type": "problem",
-      "title": "Folded-cascode gain",
-      "text": "gm1 = 2 mS. The output resistance looking into the NMOS cascode branch is 3 Mohm and into the PMOS cascode branch is 3 Mohm. Find the gain.",
+      "title": "Gain for a given accuracy",
+      "text": "A non-inverting stage with $1 + R_1/R_2 = 10$ must have a gain error below 0.5%. What op amp gain is needed?",
       "solution": [
-        "Rout = 3 Mohm || 3 Mohm = 1.5 Mohm.",
-        "Av = gm1 * Rout = 2 mS * 1.5 Mohm = 3000, or 69.5 dB."
+        "Relative error $\\approx (1 + R_1/R_2)/A_1 = 10/A_1 < 0.005$."
       ],
-      "answer": "Av = 3000 (69.5 dB)."
+      "answer": "$A_1 > 2000$ (66 dB)."
     },
     {
       "type": "problem",
-      "title": "Sizing for bandwidth",
-      "text": "A single-stage op amp must have GBW = 100 MHz driving CL = 1 pF. What gm does the input pair need? If Vov = 0.15 V, what current per side?",
+      "title": "Bandwidth for settling",
+      "text": "A one-pole op amp is used with $\\beta = 0.25$ (closed-loop gain 4) and must settle to 0.1% within 10 ns. What unity-gain frequency does it need?",
       "solution": [
-        "GBW = gm / (2*pi*CL), so gm = 2*pi * 100e6 * 1e-12 = 0.628 mS.",
-        "ID = gm * Vov / 2 = 0.628 mS * 0.15 V / 2 = 47 uA per side (about 94 uA for the pair)."
+        "$t = \\tau \\ln 1000 = 6.91\\tau$, so $\\tau = 1.45$ ns.",
+        "$\\omega_u = 1/(\\beta\\tau) = 4/1.45\\text{ ns} = 2.76 \\times 10^9$ rad/s, so $f_u = 440$ MHz."
       ],
-      "answer": "gm = 0.63 mS, ID = 47 uA per side."
+      "answer": "$f_u \\approx 440$ MHz."
+    },
+    {
+      "type": "problem",
+      "title": "Buffer input range",
+      "text": "A five-transistor OTA (NMOS pair, PMOS mirror) is used as a unity-gain buffer with $V_{DD} = 1.2$ V. Every device has $|V_{TH}| = 0.4$ V and an overdrive of 0.15 V. Find the allowed input range.",
+      "solution": [
+        "$V_{in,min} = V_{ISS} + V_{GS1} = 0.15 + 0.55 = 0.70$ V.",
+        "$V_{in,max} = V_{DD} - |V_{GS3}| + V_{TH1} = 1.2 - 0.55 + 0.4 = 1.05$ V."
+      ],
+      "answer": "0.70 V to 1.05 V, a 0.35 V range."
+    },
+    {
+      "type": "problem",
+      "title": "Telescopic gain and swing",
+      "text": "In a fully differential telescopic op amp at $V_{DD} = 1.8$ V, $g_{m1} = 2$ mS, $g_{m3}r_{O3} = 30$, $r_{O1} = 20\\text{ k}\\Omega$, $g_{m5}r_{O5} = 20$, $r_{O7} = 15\\text{ k}\\Omega$. Overdrives are 0.15 V for $M_1$ and $M_3$, 0.2 V for $M_5$, $M_7$ and the tail. Find the gain and the differential swing.",
+      "solution": [
+        "NMOS side: $30 \\times 20\\text{ k} = 600\\text{ k}\\Omega$; PMOS side: $20 \\times 15\\text{ k} = 300\\text{ k}\\Omega$; parallel: $200\\text{ k}\\Omega$.",
+        "$A_v = 2\\text{ mS} \\times 200\\text{ k}\\Omega = 400$ (52 dB).",
+        "Swing $= 2[1.8 - (0.15 + 0.15 + 0.2 + 0.2 + 0.2)] = 1.8\\text{ V}_{pp}$ differential."
+      ],
+      "answer": "Gain 400; 1.8 V peak-to-peak differential."
+    },
+    {
+      "type": "problem",
+      "title": "Scaling for power",
+      "text": "A finished op amp is scaled by halving every width and bias current (lengths fixed). What happens to gain, swing, output pole and input-referred noise voltage?",
+      "solution": [
+        "Overdrives are unchanged, so swing is unchanged; $g_m$ halves and $r_O$ doubles, so the gain is unchanged.",
+        "The output pole $\\propto g_m/C_L$ halves for the same load. Noise power $\\propto 1/g_m$ doubles, so the noise voltage rises by $\\sqrt{2}$."
+      ],
+      "answer": "Same gain and swing; half the speed; $\\sqrt{2}$ more noise."
     }
   ]
 }

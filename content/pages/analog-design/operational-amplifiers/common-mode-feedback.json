@@ -1,0 +1,119 @@
+{
+  "title": "Common-Mode Feedback",
+  "intro": "A high-gain fully differential amplifier cannot set its own output common-mode level: a tiny mismatch between the top and bottom current sources pushes it to a rail. Common-mode feedback senses that level, compares it with a reference and corrects a bias current (Razavi, Sections 9.7.1 to 9.7.3).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why it is needed"
+    },
+    {
+      "type": "prose",
+      "text": "With resistor loads the output CM level is simply $V_{DD} - I_{SS}R_D/2$. Replace the resistors by PMOS current sources to get gain, and each output node now has a p-type source trying to supply $I_P$ while an n-type path sinks $I_N$. Any difference flows into the very high output resistance:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta V_{out,CM} = (I_P - I_N)(R_P \\parallel R_N)"
+    },
+    {
+      "type": "prose",
+      "text": "A few microamps into hundreds of kilohms is volts, so in practice either the PMOS loads or the tail falls into triode until the currents balance. Rule of thumb: if you cannot read the output CM level off the schematic and need device parameters to compute it, it is not defined. Two classic mistakes: assuming differential feedback around the amplifier fixes the CM level (it does not; it only acts on differences), and trimming $V_b$ in simulation to land the outputs at mid-supply (random mismatch on silicon will undo it)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sensing the common-mode level"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Resistive divider: $V_{out,CM} = (R_1 V_{out2} + R_2 V_{out1})/(R_1 + R_2)$, the average for $R_1 = R_2$. The resistors must be far larger than the op amp's output resistance or they cut the gain, which means megaohms of area and parasitic capacitance.",
+        "Source followers before the resistors remove the loading but shift the sensed level down by $V_{GS}$ and cost about one threshold of swing at each output; the follower bias and resistors must also be large enough that a big differential swing does not starve one follower.",
+        "Capacitive sensing avoids DC loading altogether and is common in switched-capacitor circuits (Chapter 13).",
+        "Triode transistors: two identical devices in deep triode, gates driven by the two outputs, in parallel. Their total resistance depends only on $V_{out1} + V_{out2}$: $R_{tot} = 1/[\\mu_n C_{ox}(W/L)(V_{out1} + V_{out2} - 2V_{TH})]$. It fails once an output swings low enough to push its device out of deep triode, so swing is limited.",
+        "Differential pairs comparing each output with $V_{REF}$ and summing their currents: for small signals the current is proportional to $V_{out1} + V_{out2}$, but the pairs' nonlinearity makes the sensed level drift with large differential swings."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Whatever the method, the sensed value must not depend on the differential signal. A symptom in simulation: in a closed-loop step response, the two outputs move asymmetrically because the sensed CM level changes with the differential output."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Comparing and returning the correction"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/operational-amplifiers-cmfb.svg",
+      "alt": "Left: a differential pair M1, M2 with tail current ISS and PMOS current-source loads M3, M4 whose gates are labelled VCMFB. Right: the outputs Vout1 and Vout2 are averaged by equal resistors R1 and R2; the midpoint goes to the plus input of an error amplifier whose minus input is VREF and whose output is VCMFB.",
+      "caption": "A complete CMFB loop: resistive averaging, an error amplifier and correction through the PMOS loads."
+    },
+    {
+      "type": "prose",
+      "text": "An error amplifier compares the sensed level with $V_{REF}$ and drives a bias current in the right direction: if the outputs rise, the correction must pull them down. It can act on the NMOS or PMOS current sources, or (in a folded cascode) on the input pair's tail, where more tail current lowers the current left for the cascode branches. Often only part of a current source is controlled (split the device into a fixed part and a controlled part) to tune the loop's settling. With high CM loop gain the output CM level converges to $V_{REF}$."
+    },
+    {
+      "type": "prose",
+      "text": "With triode sensing, the sensing devices can directly set the bias: put them in the sources of the NMOS current sources, or under the input pair's tail. The output CM level then depends on device parameters, the triode drop eats swing, and the wide triode devices add output capacitance. The CM level's sensitivity to the bias voltage $V_b$ in that scheme is about"
+    },
+    {
+      "type": "math",
+      "tex": "\\left|\\frac{dV_{out,CM}}{dV_b}\\right| \\approx \\frac{V_{GS7,8} - V_{TH7,8}}{V_{DS7,8}}",
+      "caption": "Triode-sensing CMFB: sensing devices' overdrive over their drain-source voltage"
+    },
+    {
+      "type": "prose",
+      "text": "so a larger triode $V_{DS}$ helps, at the cost of loop gain. Generating $V_b$ from a replica (a current mirror whose reference branch contains a triode device sized as the sum of the two sensing devices, gated by $V_{REF}$) forces the output CM to $V_{REF}$ independent of device parameters; matching the replica's drain voltage to the real one removes the channel-length-modulation error."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Self-biased loads"
+    },
+    {
+      "type": "prose",
+      "text": "For low-gain stages a simpler fix exists: connect a resistor pair between the outputs and tie its midpoint to the gates of the PMOS loads. For differential signals the midpoint is a virtual ground and the loads are current sources, so the gain is $g_{m1,2}(r_{O1,2} \\parallel r_{O3,4} \\parallel R_F)$; for CM they act as diodes, so the output CM is $V_{DD} - |V_{GS3,4}|$. Each output can swing from two overdrives above ground up to $V_{DD} - |V_{GS3,4} - V_{TH3,4}|$. Drawing a small current $I_1$ out of the resistors' midpoint raises the outputs by $I_1 R_F/2$ above the gates, letting the loads sit at the edge of saturation and the supply drop to about three overdrives. Replacing the tail current source with triode devices driven by the outputs does not work: the resulting CM gain is near unity, so input CM errors pass straight to the output."
+    },
+    {
+      "type": "problem",
+      "title": "How bad is the mismatch?",
+      "text": "Each output of a fully differential op amp sees 500 k$\\Omega$. The PMOS loads supply 101 $\\mu$A each while the tail sinks 200 $\\mu$A. Without CMFB, what happens?",
+      "solution": [
+        "The excess is $2 \\times 101 - 200 = 2\\;\\mu$A, or 1 $\\mu$A per side, into 500 k$\\Omega$: a 0.5 V shift.",
+        "With a 1% larger mismatch (3 $\\mu$A per side) the shift would be 1.5 V, more than the headroom: the outputs rise until the PMOS loads enter triode and their current falls to the tail's."
+      ],
+      "answer": "The CM level is set by mismatch; it drifts by volts and devices leave saturation."
+    },
+    {
+      "type": "problem",
+      "title": "Sensing resistors",
+      "text": "An op amp's output resistance is 400 k$\\Omega$ per side and its gain is 2000. Resistive CM sensing with $R_1 = R_2 = R$ is added. What $R$ keeps the gain loss below 10%?",
+      "solution": [
+        "For differential signals the midpoint is a virtual ground, so each output is loaded by $R$. The gain scales by $R/(R + 400\\text{ k})$; for at least 0.9, $R \\ge 3.6\\text{ M}\\Omega$.",
+        "This is why plain resistive sensing is impractical on chip, and source followers or capacitive sensing are used."
+      ],
+      "answer": "$R \\ge 3.6\\text{ M}\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Triode sensing sensitivity",
+      "text": "In a triode-sensing CMFB, the output CM level is 0.9 V and $V_{TH} = 0.4$ V, so the sensing devices' overdrive is 0.5 V. With $V_{DS} = 0.1$ V across them, how sensitive is the output CM to $V_b$? What if $V_{DS} = 0.25$ V?",
+      "solution": [
+        "$|dV_{out,CM}/dV_b| \\approx 0.5/0.1 = 5$: a 10 mV error in $V_b$ moves the outputs by 50 mV.",
+        "With 0.25 V: $0.5/0.25 = 2$, but the loop gain falls and the swing shrinks by the extra 0.15 V."
+      ],
+      "answer": "5, then 2."
+    },
+    {
+      "type": "problem",
+      "title": "Self-biased load gain",
+      "text": "A differential pair with self-biased PMOS loads has $g_{m1} = 1$ mS, $r_{O1} = r_{O3} = 50\\text{ k}\\Omega$ and $R_F = 100\\text{ k}\\Omega$ (each half). Find the differential gain.",
+      "solution": [
+        "$r_{O1} \\parallel r_{O3} = 25\\text{ k}\\Omega$; with $R_F$: $25\\text{ k} \\parallel 100\\text{ k} = 20\\text{ k}\\Omega$.",
+        "$A_v = 1\\text{ mS} \\times 20\\text{ k}\\Omega = 20$."
+      ],
+      "answer": "20."
+    }
+  ]
+}

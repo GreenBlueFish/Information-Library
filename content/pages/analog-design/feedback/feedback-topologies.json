@@ -1,62 +1,186 @@
 {
   "title": "Feedback Topologies",
-  "intro": "What the feedback network senses (voltage or current) and what it returns (voltage or current) decides what kind of amplifier you build.",
+  "intro": "What the feedback network senses at the output (voltage or current) and what it returns to the input (voltage or current) decides what kind of amplifier you build and which way each impedance moves (Razavi, Sections 8.1.3 to 8.3).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Four topologies"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Voltage-voltage (series-shunt): senses output voltage, returns a voltage. A voltage amplifier: high Rin, low Rout. Example: non-inverting op-amp with resistive divider.",
-        "Current-voltage (series-series): senses output current, returns a voltage. A transconductance amplifier: high Rin, high Rout.",
-        "Voltage-current (shunt-shunt): senses output voltage, returns a current. A transimpedance amplifier: low Rin, low Rout. Example: inverting op-amp.",
-        "Current-current (shunt-series): senses output current, returns a current. A current amplifier: low Rin, high Rout."
-      ]
+      "text": "Sensing and returning"
     },
     {
       "type": "prose",
-      "text": "In each case the feedback stabilises the quantity that is sensed and the quantity that is returned: sensing voltage lowers Rout, sensing current raises it; returning a voltage in series raises Rin, returning a current in shunt lowers it."
+      "text": "To sense a voltage, connect across the port, ideally drawing no current: a resistive or capacitive divider in parallel with the output. This is called shunt sensing. To sense a current, insert something in series with the current path, ideally with zero resistance; in practice a small resistor whose voltage drop measures the current. This is series sensing."
+    },
+    {
+      "type": "prose",
+      "text": "To add or subtract voltages, put them in series; a differential pair does it, and so does a single transistor whose gate gets one signal and source the other, since its current depends on $V_{in} - V_F$. To add currents, tie them to one node. A handy test: voltage subtraction uses two distinct nodes (gate and source, or two gates); current subtraction uses a single node."
+    },
+    {
+      "type": "prose",
+      "text": "The naming convention lists the sensed quantity first: voltage-current feedback senses a voltage and returns a current. The older names list the input connection first, so voltage-voltage feedback is also called series-shunt."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Analysing with loading"
+      "text": "The four topologies"
     },
     {
-      "type": "prose",
-      "text": "The simple A/(1 + A*beta) formula assumes the feedback network does not load the amplifier and the amplifier does not load the network. In practice the network draws current and the amplifier's source and load resistances matter. The standard fix is to model the feedback network as a two-port and include its input and output resistances in A (forward gain) and beta, taking each topology's rules for how to represent the loading."
+      "type": "list",
+      "items": [
+        "Voltage-voltage (series-shunt): voltage amplifier $A_0$, dimensionless $\\beta$. Closed-loop gain $A_0/(1 + \\beta A_0)$; $R_{in}$ multiplied and $R_{out}$ divided by $1 + \\beta A_0$. A good buffer. Example: non-inverting op-amp stage.",
+        "Current-voltage (series-series): transconductance amplifier $G_m$, feedback factor $R_F$ in ohms. Closed-loop $G_m/(1 + G_m R_F)$; both $R_{in}$ and $R_{out}$ multiplied by $1 + G_m R_F$. The forward stage must be terminated by a finite load so its current can flow.",
+        "Voltage-current (shunt-shunt): transimpedance amplifier $R_0$, feedback factor $g_{mF}$ in siemens. Closed-loop $R_0/(1 + g_{mF} R_0)$; both $R_{in}$ and $R_{out}$ divided by $1 + g_{mF} R_0$. Example: inverting op-amp stage, photodiode front end.",
+        "Current-current (shunt-series): current amplifier $A_I$, current-ratio $\\beta$. Closed-loop $A_I/(1 + \\beta A_I)$; $R_{in}$ divided and $R_{out}$ multiplied by $1 + \\beta A_I$."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Rule of thumb: sensing a voltage lowers $R_{out}$, sensing a current raises it; returning a voltage raises $R_{in}$, returning a current lowers it. In every case the factor is one plus the loop gain."
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "Bode's method and loop gain"
+      "text": "Voltage-voltage feedback"
     },
     {
       "type": "prose",
-      "text": "When loading is messy, compute the loop gain directly: break the loop at one point, inject a test signal and measure the returned signal. Bode's method writes a transfer function in terms of the loop gain T of one chosen dependent source and the gain with that source set to zero or infinity. Blackman's theorem gives impedances: Z = Z0 * (1 + T_sc)/(1 + T_oc), where T_sc and T_oc are the loop gains with the port shorted or open."
+      "text": "The network sits in parallel with the output and in series with the input, so an ideal one has infinite input and zero output impedance. With $V_F = \\beta V_{out}$ and $V_{out} = A_0(V_{in} - V_F)$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{A_0}{1 + \\beta A_0}, \\qquad R_{out,closed} = \\frac{R_{out}}{1 + \\beta A_0}, \\qquad R_{in,closed} = R_{in}(1 + \\beta A_0)"
+    },
+    {
+      "type": "prose",
+      "text": "A useful consequence: in a differential pair with a current-mirror load closed into a capacitive divider, the open-loop gain is $g_{m1}(r_{O2} \\parallel r_{O4})$ and the open-loop output resistance is $r_{O2} \\parallel r_{O4}$, so for a large loop gain"
+    },
+    {
+      "type": "math",
+      "tex": "R_{out,closed} \\approx \\frac{r_{O2} \\parallel r_{O4}}{g_{m1}(r_{O2} \\parallel r_{O4})\\frac{C_1}{C_1+C_2}} = \\frac{1}{g_{m1}}\\left(1 + \\frac{C_2}{C_1}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "which does not depend on $r_O$ at all. This is why high-gain op amps can have very high open-loop output resistance and still drive loads well in feedback."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Current-voltage feedback"
+    },
+    {
+      "type": "prose",
+      "text": "Sense the output current with a small resistor and return the voltage across it. A charger for a rechargeable battery is the classic case: it must deliver a constant current derived from a reference voltage."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/feedback-current-regulator.svg",
+      "alt": "A PMOS transistor M1 with source at VDD drives a load ZL, which returns to ground through a small sense resistor rM. Node P between ZL and rM goes to the plus input of amplifier A1; reference Vb goes to the minus input. A1 drives the gate of M1.",
+      "caption": "Current sensing with a series resistor $r_M$: the loop forces $I_{out} r_M \\approx V_b$."
+    },
+    {
+      "type": "prose",
+      "text": "Loop gain is $A_1 g_m r_M$. With it large, $I_{out} \\approx V_b/r_M$; more exactly $I_{out} = A_1 g_m V_b/(1 + A_1 g_m r_M)$. The impedance the load sees, measured by breaking the output current path, is"
+    },
+    {
+      "type": "math",
+      "tex": "Z_{out} = (1 + A_1 g_m r_M)(r_O + r_M)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Voltage-current feedback"
+    },
+    {
+      "type": "prose",
+      "text": "Here a voltage is measured at the output and converted into a current that is pulled from the input node. The simplest example is a resistor $R_F$ from drain to gate of a common-source stage driven by a current. Breaking the loop at the gate gives a loop gain $g_m R_D$ (for $R_F \\gg R_D$), so"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/feedback-shunt-shunt-cs.svg",
+      "alt": "An NMOS common-source stage with RD to VDD. A current source Iin drives the gate node, and a resistor RF connects the drain back to the gate.",
+      "caption": "Shunt-shunt feedback: $R_F$ returns a current proportional to $V_{out}$ to the input node."
+    },
+    {
+      "type": "math",
+      "tex": "R_{in} = \\frac{R_F}{1 + g_m R_D}, \\qquad R_{out} = \\frac{R_D}{1 + g_m R_D}, \\qquad \\frac{V_{out}}{I_{in}} \\approx -R_F"
+    },
+    {
+      "type": "prose",
+      "text": "$R_{in}$ is just Miller's result for $R_F$ across an inverting gain of $-g_m R_D$, and $R_{out}$ equals $R_D \\parallel 1/g_m$: the stage looks like a diode-connected load at its output. One subtlety: the canonical loop requires the input to be a current. If the same circuit is driven by an ideal voltage source, zeroing the input shorts the gate and the 'loop gain' looks like zero, yet the impedance seen by that source is still changed; such cases need Bode's or Blackman's method."
+    },
+    {
+      "type": "prose",
+      "text": "Optical receivers use exactly this to read a photodiode. A plain resistor $R_1$ converts the diode current to a voltage, but the diode's junction capacitance $C_D$ limits the bandwidth to $1/(2\\pi R_1 C_D)$. Put $R_1$ around an inverting amplifier of gain $A$ instead: the input impedance drops to $R_1/(1 + A)$, the output is still about $-R_1 I_{D}$, and the bandwidth rises to $(1 + A)/(2\\pi R_1 C_D)$ if the amplifier itself is fast."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Current-current feedback"
+    },
+    {
+      "type": "prose",
+      "text": "A small resistor $R_S$ in the source of the output device senses its current (source and drain currents are equal at low frequency), and $R_F$ returns a fraction of it to the input node. The closed-loop current gain is $A_I/(1 + \\beta A_I)$, with input impedance divided and output impedance multiplied by $1 + \\beta A_I$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Noise in feedback circuits"
+    },
+    {
+      "type": "prose",
+      "text": "In all four topologies a noiseless feedback network leaves the input-referred noise voltage and current unchanged. Noise is only reduced relative to signal if the open-loop circuit was quieter to begin with."
     },
     {
       "type": "problem",
       "title": "Which topology?",
-      "text": "An inverting op-amp configuration with Rin from the source and Rf from output to the inverting input: which feedback topology is it, and what happens to Rin and Rout?",
+      "text": "An inverting op-amp stage has $R_1$ from the source to the inverting input and $R_2$ from the output to the inverting input. Which feedback type is it, and what happens to the input resistance at the summing node and the output resistance?",
       "solution": [
-        "Rf takes the output voltage and feeds a current back to the input node, so it is voltage-current (shunt-shunt) feedback: a transimpedance-like amplifier.",
-        "Input resistance at the summing node falls by (1 + A*beta) toward zero (a virtual ground), and Rout also falls by the same factor."
+        "$R_2$ measures $V_{out}$ and feeds a current back into the summing node: voltage-current (shunt-shunt) feedback.",
+        "The resistance at the summing node falls by $1 + \\beta A$ toward zero (the virtual ground), and the output resistance also falls by $1 + \\beta A$."
       ],
-      "answer": "Shunt-shunt: both Rin (at the virtual ground) and Rout decrease."
+      "answer": "Shunt-shunt; both resistances decrease."
     },
     {
       "type": "problem",
       "title": "Non-inverting gain",
-      "text": "A non-inverting op-amp stage has R1 = 1 kohm from the inverting input to ground and R2 = 19 kohm from output to inverting input, with A = 2000. Find the closed-loop gain.",
+      "text": "A non-inverting stage has $R_1 = 1\\text{ k}\\Omega$ from the inverting input to ground and $R_2 = 19\\text{ k}\\Omega$ from output to inverting input, with $A = 2000$. Find the closed-loop gain.",
       "solution": [
-        "beta = R1/(R1 + R2) = 1/20 = 0.05, so 1/beta = 20.",
-        "Af = 2000 / (1 + 2000 * 0.05) = 2000 / 101 = 19.8."
+        "$\\beta = R_1/(R_1 + R_2) = 0.05$, so $1/\\beta = 20$.",
+        "$A_{CL} = 2000/(1 + 100) = 19.8$."
       ],
-      "answer": "Af = 19.8 (ideal 20)."
+      "answer": "19.8 (ideal 20)."
+    },
+    {
+      "type": "problem",
+      "title": "Shunt-shunt stage",
+      "text": "In the $R_F$ feedback stage, $g_m = 5$ mS, $R_D = 2\\text{ k}\\Omega$ and $R_F = 20\\text{ k}\\Omega$. Using the simple loop gain $g_m R_D$, estimate $R_{in}$, $R_{out}$ and $V_{out}/I_{in}$.",
+      "solution": [
+        "Loop gain $g_m R_D = 10$.",
+        "$R_{in} = 20\\text{ k}\\Omega/11 = 1.82\\text{ k}\\Omega$; $R_{out} = 2\\text{ k}\\Omega/11 = 182\\;\\Omega$.",
+        "$V_{out}/I_{in} \\approx -R_F \\cdot 10/11 = -18.2\\text{ k}\\Omega$."
+      ],
+      "answer": "$R_{in} \\approx 1.8\\text{ k}\\Omega$, $R_{out} \\approx 180\\;\\Omega$, transimpedance $\\approx -18\\text{ k}\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Current regulator",
+      "text": "In the regulated current source, $V_b = 0.2$ V, $r_M = 10\\;\\Omega$, $A_1 = 100$, $g_m = 50$ mS and $r_O = 5\\text{ k}\\Omega$. Find $I_{out}$ and the impedance seen by the load.",
+      "solution": [
+        "Loop gain $A_1 g_m r_M = 100 \\times 0.05 \\times 10 = 50$.",
+        "$I_{out} = A_1 g_m V_b/(1 + 50) = 1.0/51 = 19.6$ mA (ideal $V_b/r_M = 20$ mA).",
+        "$Z_{out} = 51 \\times (5000 + 10) \\approx 256\\text{ k}\\Omega$."
+      ],
+      "answer": "$I_{out} \\approx 19.6$ mA; $Z_{out} \\approx 256\\text{ k}\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Photodiode front end",
+      "text": "A photodiode with $C_D = 1$ pF is read with $R_1 = 10\\text{ k}\\Omega$. Find the bandwidth with $R_1$ alone, and with $R_1$ around a wideband inverting amplifier of gain 9.",
+      "solution": [
+        "Alone: $1/(2\\pi \\cdot 10\\text{ k}\\Omega \\cdot 1\\text{ pF}) = 15.9$ MHz.",
+        "With feedback the input resistance is $R_1/(1 + A) = 1\\text{ k}\\Omega$, so the bandwidth is $10 \\times 15.9 = 159$ MHz, still with about 10 k$\\Omega$ of transimpedance."
+      ],
+      "answer": "15.9 MHz versus 159 MHz."
     }
   ]
 }

@@ -1,0 +1,117 @@
+{
+  "title": "Passive Devices",
+  "intro": "Resistors and capacitors available in CMOS processes, their typical values and the imperfections that limit analog circuits (Razavi, Section 18.7.2).",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "Mainstream CMOS processes target digital logic and offer only transistors at first; an 'analog process' with good passives can follow a year or two later. Structures borrowed from a digital flow vary a lot from wafer to wafer because nobody optimized them."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Resistors"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Silicide-block poly: one extra mask keeps the silicide off part of a poly line, leaving doped poly of fifty to a few hundred ohms per square; silicided ends give low, reproducible contact resistance. Low capacitance to the substrate (about 90 aF/µm² plus 100 aF/µm fringe), quite linear, especially when long, but ±20% from wafer to wafer.",
+        "n-well: about 1 kΩ/□ but varying by tens of percent, with large capacitance to the substrate and a value that depends on the well-substrate voltage. Good where the exact value does not matter, for example a large isolating resistor in a bias network.",
+        "Metal: 30 mΩ/□ (top) to 100 mΩ/□ (lower layers), too low for most analog resistors."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "An n-well resistor's capacitance is distributed and nonuniform; a rough model puts half of it at each end. As the voltage on it changes, the depletion region under it changes, and so does its resistance: a nonlinearity."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Capacitors"
+    },
+    {
+      "type": "prose",
+      "text": "The figures of merit are density (capacitance per area), the bottom-plate parasitic to the substrate and linearity."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "MOS capacitors"
+    },
+    {
+      "type": "prose",
+      "text": "A MOSFET with source and drain tied together is the densest capacitor available, since the gate oxide is the thinnest layer; its bottom-plate (junction) parasitic is only 10 to 20%. But its capacitance swings from a small value (no channel: oxide and depletion in series) to $C_{ox}WL$ once the voltage exceeds $V_{TH}$, and it varies even in strong inversion."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/cmos-mos-cap-cv.svg",
+      "alt": "Capacitance against voltage for a MOS capacitor: low and flat below threshold, rising steeply around the threshold voltage to a flat level equal to Cox times WL. A dashed horizontal line marks a linear metal capacitor of lower value.",
+      "caption": "A MOS capacitor is dense but voltage-dependent."
+    },
+    {
+      "type": "prose",
+      "text": "In a switched-capacitor gain stage, a nonlinear sampling capacitor transfers charge $\\int C\\,dV$ rather than $CV$, so the output is distorted: $V_{out} \\approx V_{in} + \\frac{1}{C_2}\\int_0^{V_{in}}C_1\\,dV$."
+    },
+    {
+      "type": "prose",
+      "text": "Its channel also adds series resistance. Seeing the channel from both ends gives about $R_{tot}/4$, with $R_{tot} = 1/[\\mu C_{ox}(W/L)V_{ov}]$, so"
+    },
+    {
+      "type": "math",
+      "tex": "\\tau = \\frac{R_{tot}}{4}C_{ch} = \\frac{L^2}{4\\mu(V_{GS}-V_{TH})}",
+      "caption": "The distributed RC actually gives a third of this."
+    },
+    {
+      "type": "prose",
+      "text": "Short channels keep $\\tau$ small: build MOS capacitors from many wide, short fingers rather than a square block (at the cost of more junction capacitance and area). A rule of thumb asks for $R_S < 0.1/(C\\omega)$, a Q above 10."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Linear capacitors"
+    },
+    {
+      "type": "prose",
+      "text": "Stacks of metal (and poly) layers give linear capacitors. Inter-metal dielectrics are thick, so density is modest, and the bottom-plate parasitic is 5 to 10% of the main capacitance. The layout chapter compares the options."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Coupling capacitors cost speed"
+    },
+    {
+      "type": "prose",
+      "text": "AC-coupling a stage with input capacitance $C_{in}$ through $C_C$ attenuates by $C_C/(C_C + C_{in})$, and the bottom-plate parasitic $C_P$ of $C_C$ must be put on the driving side; on the amplifier side it adds directly to the divider and can make the target attenuation impossible."
+    },
+    {
+      "type": "problem",
+      "title": "Coupling capacitor",
+      "text": "A stage with $C_{in} = 100\\text{ fF}$ is AC-coupled from a driver with $R_{out} = 1\\text{ k}\\Omega$, allowing 10% signal loss. $C_P = 0.1C_C$. (a) Find $C_C$ and the time constant with $C_P$ at the driver. (b) What $C_C$ is needed with $C_P$ at the amplifier?",
+      "solution": [
+        "(a) $C_C/(C_C + C_{in}) \\ge 0.9$ gives $C_C \\ge 9C_{in} = 900\\text{ fF}$. The driver sees $C_P + C_CC_{in}/(C_C + C_{in}) = 90 + 90 = 180\\text{ fF}$: $\\tau = 180\\text{ ps}$, against 100 ps without the coupling capacitor.",
+        "(b) $C_C/(1.1C_C + C_{in}) \\ge 0.9$ gives $0.01C_C \\ge 0.9C_{in}$, so $C_C \\ge 90C_{in} = 9\\text{ pF}$: impractical. Put the bottom plate on the driver side."
+      ],
+      "answer": "(a) 900 fF, 180 ps. (b) 9 pF."
+    },
+    {
+      "type": "problem",
+      "title": "MOS capacitor quality",
+      "text": "A MOS capacitor finger has $L = 1\\ \\mu\\text{m}$, $\\mu = 400\\text{ cm}^2/\\text{V·s}$ and $V_{ov} = 0.5\\text{ V}$. Find $\\tau$ from the simple formula and its Q at 1 GHz. What if $L$ were 4 µm?",
+      "solution": [
+        "$\\tau = (10^{-6})^2/(4 \\times 0.04 \\times 0.5) = 12.5\\text{ ps}$ (about 4 ps with the distributed correction).",
+        "$Q = 1/(\\omega R_SC) = 1/(\\omega\\tau) = 1/(6.28\\times10^9 \\times 12.5\\times10^{-12}) = 12.7$.",
+        "$\\tau \\propto L^2$: at 4 µm it is 16 times larger and $Q \\approx 0.8$, useless at 1 GHz."
+      ],
+      "answer": "12.5 ps, $Q \\approx 13$; 16x worse at 4 µm."
+    },
+    {
+      "type": "problem",
+      "title": "Choosing a resistor",
+      "text": "You need a 20 kΩ resistor whose value is not critical (it only isolates a bias node) and a 2 kΩ resistor that must match a reference within 1% and be linear. Which structures?",
+      "solution": [
+        "20 kΩ, value uncritical: an n-well resistor, about 20 squares at 1 kΩ/□, small area despite its ±tens of percent spread and parasitics.",
+        "2 kΩ precise: silicide-block poly (e.g. 10 squares at 200 Ω/□), laid out as matched units next to the reference."
+      ],
+      "answer": "n-well for the 20 kΩ; silicide-block poly for the 2 kΩ."
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "title": "Common-Gate Frequency Response",
+  "intro": "A CG stage has no capacitor between input and output (with $r_o$ neglected), so there is no Miller multiplication and each node gives a clean pole. Its weak points are a low input impedance, a low input DC level, and sensitivity to resistance in series with the gate.",
+  "blocks": [
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-cg-caps.svg",
+      "alt": "Common-gate stage: Vin drives the source node X through RS; capacitor CS from X to ground. The gate is at a bias Vb. The drain connects to VDD through RD, with capacitor CD from the drain output to ground.",
+      "caption": "CG stage: $C_S = C_{GS} + C_{SB}$ at the input, $C_D = C_{GD} + C_{DB}$ at the output."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Poles with $\\lambda = 0$"
+    },
+    {
+      "type": "prose",
+      "text": "The input node sees $R_S$ in parallel with $1/(g_m + g_{mb})$; the output node sees $R_D$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{(g_m + g_{mb})R_D}{1 + (g_m + g_{mb})R_S}\\cdot\\frac{1}{\\left(1 + \\frac{s}{\\omega_{in}}\\right)\\left(1 + \\frac{s}{\\omega_{out}}\\right)}"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{in} = \\frac{1}{C_S\\left(R_S \\parallel \\frac{1}{g_m + g_{mb}}\\right)}, \\qquad \\omega_{out} = \\frac{1}{R_D C_D}"
+    },
+    {
+      "type": "prose",
+      "text": "Because the input resistance is low, the input pole is usually very high. The stage is used where a low input impedance is wanted and, above all, as the upper device of a cascode."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "With channel-length modulation"
+    },
+    {
+      "type": "prose",
+      "text": "With finite $r_o$ the input impedance depends on the load $Z_L = R_D \\parallel (1/C_D s)$, so the nodes interact:"
+    },
+    {
+      "type": "math",
+      "tex": "Z_{in} \\approx \\frac{Z_L}{(g_m + g_{mb})r_o} + \\frac{1}{g_m + g_{mb}}"
+    },
+    {
+      "type": "prose",
+      "text": "For a current-source load with capacitance $C_L$ and input capacitance $C_{in}$, the exact result is second order:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{1 + g_m r_o}{r_o C_L C_{in} R_S s^2 + \\left[r_o C_L + C_{in}R_S + (1 + g_m r_o)C_L R_S\\right]s + 1}"
+    },
+    {
+      "type": "prose",
+      "text": "(replace $g_m$ by $g_m + g_{mb}$ to include body effect). Here $Z_{in} = 1/(g_m + g_{mb}) + 1/[C_L s\\,(g_m + g_{mb})r_o]$: at high frequency $C_L$ shorts the output, the gain collapses, and $Z_{in}$ falls to $1/(g_m + g_{mb})$, giving an input pole of $1/[C_{in}(R_S \\parallel \\frac{1}{g_m + g_{mb}})]$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Resistance in series with the gate"
+    },
+    {
+      "type": "prose",
+      "text": "The gate bias network has some resistance $R_G$. Keeping only $C_{GS}$ (and $\\lambda = \\gamma = 0$), KVL around the input loop gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{g_m R_D}{(R_G + R_S)C_{GS}s + 1 + g_m R_S}, \\qquad \\omega_p = \\frac{1 + g_m R_S}{(R_G + R_S)C_{GS}}"
+    },
+    {
+      "type": "prose",
+      "text": "$R_G$ adds directly to $R_S$ and lowers the pole. With $C_{GD}$ instead, the resistance it sees grows to $R_D + (1 + \\frac{g_m R_D}{1 + g_m R_S})R_G$ (see the time-constant page). Keep the gate of a CG stage firmly bypassed. With a large source impedance the output impedance of a CG stage also falls at high frequency, which shows up in cascodes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Poles of a CG stage",
+      "text": "A CG stage has $g_m + g_{mb} = 5\\text{ mS}$, $R_S = 1\\text{ k}\\Omega$, $C_S = 150\\text{ fF}$, $R_D = 2\\text{ k}\\Omega$, $C_D = 100\\text{ fF}$, $\\lambda = 0$. Find the gain and both poles.",
+      "solution": [
+        "Gain: $(g_m + g_{mb})R_D/[1 + (g_m + g_{mb})R_S] = 10/6 = 1.67$.",
+        "Input: $R_S \\parallel 200\\ \\Omega = 167\\ \\Omega$, so $f_{in} = 1/(2\\pi \\cdot 167\\ \\Omega \\cdot 150\\text{ fF}) = 6.37\\text{ GHz}$.",
+        "Output: $f_{out} = 1/(2\\pi \\cdot 2\\text{ k}\\Omega \\cdot 100\\text{ fF}) = 796\\text{ MHz}$."
+      ],
+      "answer": "Gain 1.67; poles at 6.4 GHz and 0.8 GHz."
+    },
+    {
+      "type": "problem",
+      "title": "Cost of an unbypassed gate",
+      "text": "A CG stage has $g_m = 5\\text{ mS}$, $R_S = 1\\text{ k}\\Omega$, $C_{GS} = 100\\text{ fF}$. Find the input pole with $R_G = 0$ and with $R_G = 2\\text{ k}\\Omega$ (only $C_{GS}$ considered).",
+      "solution": [
+        "$1 + g_m R_S = 6$.",
+        "$R_G = 0$: $\\omega_p = 6/(1\\text{ k}\\Omega \\cdot 100\\text{ fF}) = 6 \\times 10^{10}\\text{ rad/s}$, $f_p = 9.55\\text{ GHz}$.",
+        "$R_G = 2\\text{ k}\\Omega$: $\\omega_p = 6/(3\\text{ k}\\Omega \\cdot 100\\text{ fF}) = 2 \\times 10^{10}\\text{ rad/s}$, $f_p = 3.18\\text{ GHz}$."
+      ],
+      "answer": "9.5 GHz falls to 3.2 GHz: a factor of 3."
+    }
+  ]
+}

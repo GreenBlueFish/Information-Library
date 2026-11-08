@@ -1,0 +1,105 @@
+{
+  "title": "Gain Boosting",
+  "intro": "Gain boosting raises the output resistance of a cascode, and hence the gain of a one-stage op amp, by regulating the cascode with an auxiliary amplifier instead of stacking more transistors (Razavi, Section 9.4).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two views of the same trick"
+    },
+    {
+      "type": "prose",
+      "text": "View 1, a super-transistor: put a voltage amplifier $A_1$ in front of a transistor's gate. The combination behaves like a device with transconductance about $A_1 g_m$ and the same $r_O$. Used as the cascode device, the boosted transconductance multiplies the output resistance while the headroom stays that of a single device."
+    },
+    {
+      "type": "prose",
+      "text": "View 2, regulation: in a degenerated transistor a drain voltage change leaks to the source through $r_O$ and changes the current. Hold the source node P fixed by comparing it with $V_b$ and feeding the error to the gate: then the voltage across the degeneration, and so the current, stays constant. With $A_1$ large, P is pinned and $I_D = V_b/R_S$ no matter what the drain does. Small-signal, the amplifier moves the gate so that the intrinsic current change almost exactly cancels the current through $r_O$. This is the regulated cascode."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/operational-amplifiers-regulated-cascode.svg",
+      "alt": "Regulated cascode. Input transistor M1 at the bottom, cascode M2 above it, and a current source I1 from VDD to the output at M2's drain. Node P between M1 and M2 goes to the minus input of amplifier A1, Vb goes to its plus input, and A1's output drives the gate of M2.",
+      "caption": "The regulated cascode: $A_1$ pins node P to $V_b$, multiplying the cascode's effective $g_m$ by about $A_1 + 1$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Results"
+    },
+    {
+      "type": "prose",
+      "text": "For a degenerated stage with resistor $R_S$, the boosted output resistance and the transconductance are"
+    },
+    {
+      "type": "math",
+      "tex": "R_{out} = (A_1 + 1)g_m r_O R_S + r_O + R_S, \\qquad G_m = \\frac{A_1 g_m}{1 + (A_1 + 1)g_m R_S}"
+    },
+    {
+      "type": "prose",
+      "text": "against $g_m r_O R_S + r_O + R_S$ without $A_1$: the cascode's $g_m$ is in effect multiplied by $A_1 + 1$. Replacing $R_S$ by the input transistor $M_1$:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{out} \\approx r_{O2} + (A_1 + 1)g_{m2}r_{O2}r_{O1} + r_{O1}, \\qquad |A_v| \\approx g_{m1}R_{out}"
+    },
+    {
+      "type": "prose",
+      "text": "The short-circuit transconductance stays about $g_{m1}$ because the resistance looking into the boosted cascode's source is only about $1/[(A_1 + 1)g_{m2}]$. Similarly, the resistance seen at the source of a boosted transistor with drain load $R_D$ is $(R_D + r_O)/[1 + (A_1 + 1)g_m r_O]$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building the auxiliary amplifier"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A simple NMOS common-source stage ($|A_1| = g_{m3}r_{O3}$) gives triple-cascode gain, $g_{m1}r_{O1}g_{m2}r_{O2}(g_{m3}r_{O3} + 1)$, but node P must sit at $V_{GS3}$ rather than an overdrive above ground, costing swing.",
+        "A PMOS common-source stage lets P go down to $V_{OD1}$, but now the gate of $M_2$ (about $V_{GS2} + V_{OD1}$) is too high for the PMOS drain: if $V_{GS2} > |V_{TH3}|$ the PMOS is in triode.",
+        "Inserting an NMOS common-gate level shifter after the PMOS stage fixes this: the auxiliary amplifier becomes a folded cascode. $V_b$ then has a comfortable range, from $V_{GS4} + V_{I1}$ up to $V_{GS2} + V_P + V_{TH4}$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "In a differential cascode op amp, the two single-ended boosters become one differential amplifier sensing nodes X and Y. An NMOS-input booster raises the minimum level at X and Y to $V_{OD3} + V_{GS5} + V_{ISS2}$; a PMOS-input folded-cascode booster, whose input CM can reach ground, avoids that, leaving the minimum at $V_{OD1,2} + V_{ISS1}$. The output resistance then resembles a quadruple cascode, $g_{m3}r_{O3}r_{O1}\\,g_{m5}R_{out1}$, where $R_{out1}$ is the booster's own output resistance. Boosting the PMOS load cascodes too (with NMOS-input folded-cascode boosters) gives very high gain."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequency response"
+    },
+    {
+      "type": "prose",
+      "text": "A gain-boosted op amp is still essentially one-stage: most of the signal goes straight through the cascode, and the booster only processes a small error. Let the booster have one pole, $A_1(s) = A_0/(1 + s/\\omega_0)$. If $A_1$ were frequency-independent the stage would have one pole; with the booster's pole the transfer function becomes second order, with a left-half-plane zero (from the path through $A_1$) near the booster's unity-gain bandwidth, a dominant pole close to the boosted output pole $1/[(A_0 + 1)g_{m2}r_{O2}r_{O1}C_L]$, and a second pole set by the booster's speed, roughly $A_0\\omega_0$ above the unboosted cascode's bandwidth. The booster must therefore be fast, and its closely spaced pole-zero pair (a doublet) can leave a slow tail in the step response if placed carelessly."
+    },
+    {
+      "type": "problem",
+      "title": "How much boost",
+      "text": "A cascode has $g_{m2} = 2$ mS and $r_{O1} = r_{O2} = 20\\text{ k}\\Omega$, with an ideal current-source load and $g_{m1} = 2$ mS. Find $R_{out}$ and the gain with and without a booster of gain $A_1 = 30$.",
+      "solution": [
+        "Plain: $r_{O2} + g_{m2}r_{O2}r_{O1} + r_{O1} = 20\\text{ k} + 800\\text{ k} + 20\\text{ k} = 840\\text{ k}\\Omega$; gain $2\\text{ mS} \\times 840\\text{ k} = 1680$ (64.5 dB).",
+        "Boosted: $40\\text{ k} + 31 \\times 800\\text{ k} = 24.8\\text{ M}\\Omega$; gain $\\approx 49{,}700$ (94 dB)."
+      ],
+      "answer": "840 k$\\Omega$ (64.5 dB) versus 24.8 M$\\Omega$ (94 dB)."
+    },
+    {
+      "type": "problem",
+      "title": "Pinned node",
+      "text": "In a regulated cascode with $A_1 = 30$, $g_m r_O = 40$ for the cascode device, the output moves by 1 V. Roughly how much does node P move?",
+      "solution": [
+        "With a large loop gain, P moves by about $\\Delta V_{out}/[(A_1 + 1)g_m r_O] = 1/(31 \\times 40) = 0.8$ mV, against about $1/40 = 25$ mV without the booster (for a degeneration much larger than $1/g_m$)."
+      ],
+      "answer": "About 0.8 mV."
+    },
+    {
+      "type": "problem",
+      "title": "Which booster?",
+      "text": "A gain-boosted NMOS telescopic cascode must let its output nodes swing down to about 0.3 V. Should the booster use an NMOS or a PMOS input pair?",
+      "solution": [
+        "An NMOS-input booster needs its input CM (nodes X, Y) above $V_{GS} + V_{ISS}$ plus the cascode's overdrive, typically well above 0.5 V.",
+        "A PMOS-input folded-cascode booster accepts inputs near ground, leaving the minimum at $V_{OD1,2} + V_{ISS1}$."
+      ],
+      "answer": "A PMOS-input (folded-cascode) booster."
+    }
+  ]
+}

@@ -1,28 +1,115 @@
 {
-  "title": "Offset, PSRR and Noise of Op Amps",
-  "intro": "Real op amps have a floor on precision set by offset, supply sensitivity and noise.",
+  "title": "Input Range, PSRR, Noise and Offset",
+  "intro": "The accuracy floor of an op amp: how far its input common-mode level can move, how well it rejects supply noise, how much noise and offset it adds (Razavi, Sections 9.8, 9.11 and 9.12).",
   "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Input common-mode range"
+    },
+    {
+      "type": "prose",
+      "text": "Differential input swings are tiny (the output divided by the open-loop gain), but the input common-mode level may have to travel, as in a unity-gain buffer where the input follows the output. There the input pair, not the output stage, limits swing: $V_{in,min} \\approx V_{GS1,2} + V_{ISS}$, about a threshold above what the output devices allow. Below it the tail source enters triode, the tail current and $g_m$ fall, and the amplifier degrades."
+    },
+    {
+      "type": "prose",
+      "text": "The standard fix is complementary input pairs: an NMOS and a PMOS pair in parallel, each feeding a folded cascode. Near ground the NMOS pair dies but the PMOS pair works, and near $V_{DD}$ the reverse. The total transconductance then varies with input CM, roughly doubling in the middle, so gain, speed and noise vary too; more elaborate circuits hold the total $g_m$ constant."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/operational-amplifiers-rail-to-rail-gm.svg",
+      "alt": "Plot of transconductance against input common-mode level from 0 to VDD. The PMOS pair's gm is constant at low levels and falls to zero near VDD; the NMOS pair's is zero near ground and rises to constant. Their sum is g near both rails and 2g in the middle.",
+      "caption": "Complementary input pairs keep the stage alive from rail to rail, but the total $g_m$ is not constant."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Offset"
+    },
+    {
+      "type": "prose",
+      "text": "A mismatch between the two halves produces an output with zero differential input; referred to the input it is a random part of a few millivolts plus any systematic part (for example unequal drain voltages in a mirror load). The random part of a pair scales roughly as $1/\\sqrt{WL}$, so large input devices reduce it, at the price of capacitance. Offset and its drift are treated in the chapter on nonlinearity and mismatch."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Power supply rejection"
+    },
+    {
+      "type": "prose",
+      "text": "PSRR is a ratio of two gains: how strongly the input reaches the output, over how strongly $V_{DD}$ does. In a five-transistor OTA with a current-mirror load, the diode-connected PMOS clamps its gate to $V_{DD}$ minus a nearly constant $V_{GS}$; by symmetry the output follows the same way, so the gain from $V_{DD}$ to the output is close to one and"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{PSRR} \\approx g_{mN}(r_{OP} \\parallel r_{ON})"
+    },
+    {
+      "type": "prose",
+      "text": "Closing a feedback loop around the op amp lowers the supply gain and the input gain by the same factor, $1 + $ loop gain, so it does not improve PSRR. At high frequencies capacitances couple the supply to internal nodes and PSRR degrades; fully differential circuits help because supply noise appears as a common-mode disturbance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Noise"
+    },
+    {
+      "type": "prose",
+      "text": "A quick way to find the noise contributors: imagine wiggling each transistor's gate and ask whether the output moves. Cascode devices barely matter at low frequency (their noise current mostly circulates through themselves), leaving the input pair and the current-source loads."
+    },
     {
       "type": "list",
       "items": [
-        "Input offset: a mismatch between the two sides produces an output at zero differential input; referred to the input it is a few mV random plus systematic offset. Large input devices reduce random offset (about 1/sqrt(W*L)).",
-        "Input common-mode range: the pair and the tail source must stay saturated. A rail-to-rail input uses parallel NMOS and PMOS pairs.",
-        "PSRR: the ratio of the gain from input to output to the gain from supply to output. It degrades at high frequency because capacitances couple the supply into the output; a fully differential design improves it.",
-        "Noise: input-referred thermal noise is dominated by the first stage and falls as 1/gm1; flicker noise by device area."
+        "Telescopic: $M_1$-$M_2$ and the PMOS sources $M_7$-$M_8$. Thermal part $\\overline{V_n^2} = 8kT\\gamma\\left(\\frac{1}{g_{m1,2}} + \\frac{g_{m7,8}}{g_{m1,2}^2}\\right)$, flicker part $\\frac{2K_N}{(WL)_{1,2}C_{ox}f} + \\frac{2K_P}{(WL)_{7,8}C_{ox}f}\\frac{g_{m7,8}^2}{g_{m1,2}^2}$.",
+        "Folded cascode: the input pair plus two sets of current sources, the PMOS loads $M_7$-$M_8$ and the folding sources $M_9$-$M_{10}$, all of which move the output. $\\overline{V_n^2} = 8kT\\gamma\\left(\\frac{1}{g_{m1,2}} + \\frac{g_{m7,8} + g_{m9,10}}{g_{m1,2}^2}\\right)$. So it is noisier than a telescopic op amp; for low flicker noise use a PMOS input pair.",
+        "Two-stage: the second stage's noise is divided by the first stage's gain when referred to the input, $\\overline{V_n^2}\\big|_{M5-8} = \\frac{8kT\\gamma(g_{m5} + g_{m7})}{g_{m1}^2(r_{O1} \\parallel r_{O3})^2g_{m5}^2}$, usually negligible; the first stage dominates."
       ]
     },
     {
       "type": "prose",
-      "text": "These specifications together determine the 'resolution' of a signal chain; a 12-bit converter's front end, for example, needs input noise well below one LSB, and an offset that is either small compared with one LSB or calibrated out."
+      "text": "Current sources contribute in proportion to their $g_m$, so swing and noise trade: lowering a source's overdrive to free headroom raises $g_m = 2I_D/V_{OD}$ and its noise. Power and noise also trade through linear scaling: halving all widths and currents halves power and doubles $\\overline{V_n^2}$, with gain and swing unchanged."
+    },
+    {
+      "type": "prose",
+      "text": "These specifications together set the resolution of a signal chain. A 12-bit converter's front end, for example, needs input noise well below one LSB and an offset that is either small next to one LSB or calibrated out."
     },
     {
       "type": "problem",
       "title": "Offset and area",
-      "text": "A pair has random offset of 4 mV for W*L = 10 um^2. What area gives 1 mV?",
+      "text": "A pair has a random offset of 4 mV for $WL = 10\\;\\mu\\text{m}^2$. What area gives 1 mV?",
       "solution": [
-        "Offset scales as 1/sqrt(W*L). To cut it by 4 times, area must grow by 16: 160 um^2."
+        "Offset scales as $1/\\sqrt{WL}$. Cutting it by 4 requires 16 times the area: $160\\;\\mu\\text{m}^2$."
       ],
-      "answer": "160 um^2."
+      "answer": "$160\\;\\mu\\text{m}^2$."
+    },
+    {
+      "type": "problem",
+      "title": "Low-frequency PSRR",
+      "text": "A five-transistor OTA has $g_{mN} = 1$ mS and $r_{ON} \\parallel r_{OP} = 50\\text{ k}\\Omega$. Estimate its low-frequency PSRR.",
+      "solution": [
+        "Supply gain $\\approx 1$; differential gain $= 1\\text{ mS} \\times 50\\text{ k}\\Omega = 50$.",
+        "PSRR $\\approx 50$, or 34 dB."
+      ],
+      "answer": "About 34 dB."
+    },
+    {
+      "type": "problem",
+      "title": "First-stage noise",
+      "text": "A differential pair with current-source loads has $g_{m1} = 2$ mS and $g_{m3} = 1$ mS (loads), $\\gamma = 2/3$, $T = 300$ K. Find the input-referred thermal noise density.",
+      "solution": [
+        "$\\overline{V_n^2} = 8kT\\gamma(g_{m1} + g_{m3})/g_{m1}^2 = 8 \\times 4.14 \\times 10^{-21} \\times 0.667 \\times 3\\text{ mS}/(4 \\times 10^{-6}) = 1.66 \\times 10^{-17}\\text{ V}^2/\\text{Hz}$.",
+        "Square root: 4.1 nV/$\\sqrt{\\text{Hz}}$."
+      ],
+      "answer": "About 4.1 nV/$\\sqrt{\\text{Hz}}$."
+    },
+    {
+      "type": "problem",
+      "title": "Folded versus telescopic noise",
+      "text": "For the same input pair ($g_{m1} = 2$ mS) and PMOS loads ($g_{m7} = 1$ mS), a folded cascode adds folding sources with $g_{m9} = 2$ mS. By how much does its thermal noise power exceed the telescopic version's?",
+      "solution": [
+        "Telescopic: proportional to $1/g_{m1} + g_{m7}/g_{m1}^2 = 500 + 250 = 750\\;\\Omega$.",
+        "Folded: $500 + (1 + 2)\\text{ mS}/(2\\text{ mS})^2 = 500 + 750 = 1250\\;\\Omega$, a ratio of 1.67 (2.2 dB)."
+      ],
+      "answer": "About 1.7 times the noise power."
     }
   ]
 }

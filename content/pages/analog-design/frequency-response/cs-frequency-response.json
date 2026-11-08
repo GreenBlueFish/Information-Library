@@ -1,20 +1,95 @@
 {
   "title": "Frequency Response of the CS Stage",
-  "intro": "The CS stage has two nodes with capacitance, giving two poles, plus a zero from the bridging capacitor CGD.",
+  "intro": "A CS stage driven from a source resistance $R_S$ has three capacitors but only two independent ones (they form a loop), so its response is second order: two poles and a right-half-plane zero from $C_{GD}$.",
   "blocks": [
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-cs-caps.svg",
+      "alt": "Common-source stage: Vin drives the gate node X through RS. CGS goes from X to ground, CGD from X to the drain, and CDB from the drain output to ground. RD connects the drain to VDD.",
+      "caption": "The CS stage with the capacitances that set its speed. A load capacitance simply adds to $C_{DB}$."
+    },
     {
       "type": "heading",
       "level": 2,
-      "text": "Poles and zero"
-    },
-    {
-      "type": "code",
-      "lang": "text",
-      "source": "Input pole:  1/[ RS * ( CGS + (1 + gm*RD)*CGD ) ]\nOutput pole: 1/[ RD * ( CL + CGD ) ]\nZero (RHP):  s = gm / CGD"
+      "text": "Quick estimate: one pole per node"
     },
     {
       "type": "prose",
-      "text": "The zero at gm/CGD is in the right half plane; it adds phase lag rather than lead and is usually well above the poles, but it matters in high-speed designs. The input pole is usually dominant when RS is large because of the Miller multiplication. In that case the bandwidth is set by RS and the Miller capacitance."
+      "text": "With $\\lambda = 0$ and the low-frequency gain $A_v = -g_m R_D$, Miller's approximation puts $C_{GS} + (1 + g_m R_D)C_{GD}$ at the gate and about $C_{DB} + C_{GD}$ at the drain:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{in} = \\frac{1}{R_S\\left[C_{GS} + (1 + g_m R_D)C_{GD}\\right]}, \\qquad \\omega_{out} \\approx \\frac{1}{R_D (C_{DB} + C_{GD})}"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} \\approx \\frac{-g_m R_D}{\\left(1 + \\frac{s}{\\omega_{in}}\\right)\\left(1 + \\frac{s}{\\omega_{out}}\\right)}"
+    },
+    {
+      "type": "prose",
+      "text": "This misses the zero and assumes the gain seen by $C_{GD}$ is flat. $r_o$ and a load capacitance are easily folded in ($R_D \\to R_D \\parallel r_o$, $C_{DB} \\to C_{DB} + C_L$)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Exact transfer function"
+    },
+    {
+      "type": "prose",
+      "text": "Writing KCL at the gate and the drain and eliminating $V_X$ gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} = \\frac{(C_{GD}s - g_m)R_D}{R_S R_D \\xi s^2 + \\left[R_S(1 + g_m R_D)C_{GD} + R_S C_{GS} + R_D(C_{GD} + C_{DB})\\right]s + 1}",
+      "caption": "with $\\xi = C_{GS}C_{GD} + C_{GS}C_{DB} + C_{GD}C_{DB}$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Dominant-pole approximation"
+    },
+    {
+      "type": "prose",
+      "text": "If $\\omega_{p1} \\ll \\omega_{p2}$, the denominator $(1 + s/\\omega_{p1})(1 + s/\\omega_{p2})$ has an $s$ coefficient of about $1/\\omega_{p1}$ and an $s^2$ coefficient of $1/(\\omega_{p1}\\omega_{p2})$. Reading them off:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{p1} \\approx \\frac{1}{R_S(1 + g_m R_D)C_{GD} + R_S C_{GS} + R_D(C_{GD} + C_{DB})}"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{p2} \\approx \\frac{R_S(1 + g_m R_D)C_{GD} + R_S C_{GS} + R_D(C_{GD} + C_{DB})}{R_S R_D(C_{GS}C_{GD} + C_{GS}C_{DB} + C_{GD}C_{DB})}"
+    },
+    {
+      "type": "prose",
+      "text": "$\\omega_{p1}$ is the Miller input pole plus one extra term, $R_D(C_{GD} + C_{DB})$, so the Miller estimate of the input pole is good. The 'output pole' estimate $1/[R_D(C_{GD}+C_{DB})]$ is only right when $C_{GS}$ dominates the $s$ coefficient; otherwise the real second pole can be much higher (second problem below). Check $\\omega_{p1} \\ll \\omega_{p2}$ before trusting either."
+    },
+    {
+      "type": "prose",
+      "text": "A tempting mistake is to multiply $C_{GD}$ by the gain at the pole frequency ($1 + g_m R_D/\\sqrt{2}$). The gain that matters is from gate to drain, which rolls off only at $1/(R_D C_{GD})$, well above $\\omega_{p1}$; so the full low-frequency factor is right."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The right-half-plane zero"
+    },
+    {
+      "type": "prose",
+      "text": "At $s_z$ the output is zero, so no current flows in $R_D$; the current through $C_{GD}$ must then equal the transistor current: $V_1 C_{GD}s_z = g_m V_1$. Hence"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_z = +\\frac{g_m}{C_{GD}}"
+    },
+    {
+      "type": "prose",
+      "text": "The zero comes from the input feeding through $C_{GD}$ directly to the output, out of phase with the amplified path. It lies beyond $f_T$ (since $C_{GD} < C_{GS}$), so it rarely matters in a plain CS stage, but it moves down when a large capacitor is added from gate to drain, as in Miller compensation. Above it the slope eases from $-40$ to $-20$ dB/decade while the phase keeps falling. Two first-order paths in parallel generally produce a zero this way."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-cs-bode.svg",
+      "alt": "Bode magnitude plot from 1 MHz to 1 THz. The exact curve starts at 26 dB, bends down at fp1 near 17 MHz, steepens after fp2 near 510 MHz, and eases again past the zero fz at 10.6 GHz. The dashed Miller estimate matches at the first pole but falls off earlier because it places its second pole too low.",
+      "caption": "Exact response versus the two-pole Miller estimate for the values in the second problem below."
     },
     {
       "type": "widget",
@@ -86,19 +161,83 @@
     },
     {
       "type": "prose",
-      "text": "Increase RS: the dominant input pole drops quickly and the Miller curve parts from the 'no Miller' curve, which shows how much bandwidth the multiplication costs. Reduce RS to make the output pole dominant instead."
+      "text": "Increase $R_S$: the dominant input pole drops quickly and the Miller curve parts from the 'no Miller' curve, which shows how much bandwidth the multiplication costs. Reduce $R_S$ to make the output pole dominant instead."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Special case: current-source load"
+    },
+    {
+      "type": "prose",
+      "text": "With $R_D \\to \\infty$ (an ideal current-source load) the DC gain is infinite and one pole moves to the origin. The other is"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{p2} \\approx \\frac{(1 + g_m R_S)C_{GD} + C_{DB}}{R_S(C_{GS}C_{GD} + C_{GS}C_{DB} + C_{GD}C_{DB})} \\to \\frac{1}{R_S(C_{GS} + C_{GD})} \\text{ for large } C_{DB}"
+    },
+    {
+      "type": "prose",
+      "text": "A large output capacitance kills the gate-to-drain gain at high frequency, so $C_{GD}$ is no longer multiplied. Using the low-frequency gain for Miller here would be badly wrong."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Input impedance"
+    },
+    {
+      "type": "prose",
+      "text": "At moderate frequencies the input is the Miller capacitance, $Z_{in} \\approx 1/\\{[C_{GS} + (1 + g_m R_D)C_{GD}]s\\}$. Including the output capacitance, the impedance looking through $C_{GD}$ is"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_X}{I_X} = \\frac{1 + R_D(C_{GD} + C_{DB})s}{C_{GD}s\\,(1 + g_m R_D + R_D C_{DB}s)}",
+      "caption": "in parallel with $1/(C_{GS}s)$."
+    },
+    {
+      "type": "prose",
+      "text": "At high frequency this has a real part: a large $C_{GD}$ almost shorts gate to drain, and the input sees roughly $(1/g_m) \\parallel R_D$. A heavy load capacitance instead lowers the gain and leaves just $C_{GD}$. A complementary (NMOS plus PMOS) CS stage behaves the same way with the two devices' $g_m$ and capacitances added."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
     },
     {
       "type": "problem",
       "title": "Poles of a stage",
-      "text": "gm = 2 mS, RD = 10 kohm, RS = 10 kohm, CGS = 100 fF, CGD = 30 fF, CL = 200 fF. Find the two poles.",
+      "text": "$g_m = 2\\text{ mS}$, $R_D = 10\\text{ k}\\Omega$, $R_S = 10\\text{ k}\\Omega$, $C_{GS} = 100\\text{ fF}$, $C_{GD} = 30\\text{ fF}$, $C_L = 200\\text{ fF}$. Estimate the two poles node by node.",
       "solution": [
-        "Gain gm*RD = 20.",
-        "C_in = 100 + 21 * 30 = 730 fF. f_in = 1/(2*pi * 10 kohm * 730 fF) = 21.8 MHz.",
-        "C_out = 200 + 30 * (1 + 1/20) = 231.5 fF. f_out = 1/(2*pi * 10 kohm * 231.5 fF) = 68.8 MHz.",
-        "The input pole is dominant; the bandwidth is about 22 MHz."
+        "Gain $g_m R_D = 20$.",
+        "$C_{in} = 100 + 21 \\times 30 = 730\\text{ fF}$, so $f_{in} = \\frac{1}{2\\pi \\cdot 10\\text{ k}\\Omega \\cdot 730\\text{ fF}} = 21.8\\text{ MHz}$.",
+        "$C_{out} = 200 + 30(1 + 1/20) = 231.5\\text{ fF}$, so $f_{out} = \\frac{1}{2\\pi \\cdot 10\\text{ k}\\Omega \\cdot 231.5\\text{ fF}} = 68.8\\text{ MHz}$.",
+        "The input pole is dominant; the bandwidth is about 22 MHz by this estimate."
       ],
-      "answer": "Poles at 21.8 MHz and 68.8 MHz."
+      "answer": "Poles at 21.8 MHz and 68.8 MHz (node-by-node estimate)."
+    },
+    {
+      "type": "problem",
+      "title": "Exact poles for the same stage",
+      "text": "For the stage above ($g_m = 2\\text{ mS}$, $R_S = R_D = 10\\text{ k}\\Omega$, $C_{GS} = 100\\text{ fF}$, $C_{GD} = 30\\text{ fF}$, $C_{DB} = 200\\text{ fF}$, treating $C_L$ as $C_{DB}$), use the dominant-pole formulas and find the zero.",
+      "solution": [
+        "$s$ coefficient: $R_S(1+g_m R_D)C_{GD} = 6.3\\text{ ns}$, $R_S C_{GS} = 1.0\\text{ ns}$, $R_D(C_{GD}+C_{DB}) = 2.3\\text{ ns}$; total $9.6\\text{ ns}$, so $f_{p1} = 1/(2\\pi \\cdot 9.6\\text{ ns}) = 16.6\\text{ MHz}$.",
+        "$\\xi = (3 + 20 + 6) \\times 10^{-27} = 2.9 \\times 10^{-26}\\text{ F}^2$, so $R_S R_D \\xi = 2.9 \\times 10^{-18}\\text{ s}^2$ and $f_{p2} = 9.6\\text{ ns}/(2\\pi \\cdot 2.9 \\times 10^{-18}) = 527\\text{ MHz}$.",
+        "Zero: $g_m/(2\\pi C_{GD}) = 10.6\\text{ GHz}$, right half plane.",
+        "Solving the quadratic exactly gives 17.1 MHz and 510 MHz. The node-by-node output pole (69 MHz) was far off because $C_{GS}$ does not dominate here."
+      ],
+      "answer": "About 17 MHz and 510 MHz, zero at +10.6 GHz."
+    },
+    {
+      "type": "problem",
+      "title": "Large load on a current-source-loaded stage",
+      "text": "A CS stage with an ideal current-source load has $g_m = 1\\text{ mS}$, $R_S = 20\\text{ k}\\Omega$, $C_{GS} = 50\\text{ fF}$, $C_{GD} = 10\\text{ fF}$ and a total output capacitance of 2 pF. Find the non-zero pole and compare with $1/[2\\pi R_S(C_{GS} + C_{GD})]$.",
+      "solution": [
+        "$\\xi = 50 \\cdot 10 + 50 \\cdot 2000 + 10 \\cdot 2000 = 1.205 \\times 10^{5}\\text{ fF}^2 = 1.205 \\times 10^{-25}\\text{ F}^2$.",
+        "Numerator: $(1 + g_m R_S)C_{GD} + C_{DB} = 21 \\times 10 + 2000 = 2210\\text{ fF}$.",
+        "$\\omega_{p2} = 2.21 \\times 10^{-12}/(2 \\times 10^{4} \\times 1.205 \\times 10^{-25}) = 9.17 \\times 10^{8}\\text{ rad/s}$, so $f_{p2} = 146\\text{ MHz}$.",
+        "Limit: $1/[2\\pi \\cdot 20\\text{ k}\\Omega \\cdot 60\\text{ fF}] = 133\\text{ MHz}$. The Miller factor of 21 on $C_{GD}$ would instead predict about 31 MHz."
+      ],
+      "answer": "146 MHz, close to the 133 MHz no-Miller limit."
     }
   ]
 }

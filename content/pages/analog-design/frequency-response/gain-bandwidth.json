@@ -1,6 +1,6 @@
 {
   "title": "Gain-Bandwidth Trade-Offs",
-  "intro": "For a one-pole amplifier, raising gain lowers bandwidth by the same factor. The product stays constant and is a better figure of merit than either alone.",
+  "intro": "For a one-pole amplifier, raising gain lowers bandwidth by the same factor. The product stays constant and is a better figure of merit than either alone. Cascading stages raises the product but shrinks the bandwidth.",
   "blocks": [
     {
       "type": "heading",
@@ -9,44 +9,98 @@
     },
     {
       "type": "prose",
-      "text": "A CS stage with a load capacitance CL has the pole 1/(RD*CL) and DC gain gm*RD. Their product is the gain-bandwidth product: GBW = gm / (2*pi*CL). Doubling RD doubles the gain but halves the bandwidth."
+      "text": "A CS stage with a current-source load and load capacitance $C_L$ has DC gain $A_0 = g_{m1}(r_{o1} \\parallel r_{o2})$ and output pole $\\omega_p = 1/[(r_{o1} \\parallel r_{o2})C_L]$. The output resistance cancels in their product:"
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "GBW = gm / (2*pi*CL)    (independent of RD)"
+      "type": "math",
+      "tex": "\\mathrm{GBW} = A_0 \\cdot \\frac{\\omega_p}{2\\pi} = \\frac{g_{m1}}{2\\pi C_L}"
     },
     {
       "type": "prose",
-      "text": "The only ways to raise GBW are more gm (more current or width) or less CL. This simple formula is the heart of every speed-power trade-off in analog design."
+      "text": "For example $g_m = 1/(100\\ \\Omega)$ and $C_L = 50\\text{ fF}$ give 31.8 GHz. The unity-gain frequency follows from $A_0/\\sqrt{1 + (\\omega_u/\\omega_p)^2} = 1$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_u = \\sqrt{A_0^2 - 1}\\;\\omega_p \\approx A_0\\omega_p"
+    },
+    {
+      "type": "prose",
+      "text": "so for one pole the unity-gain bandwidth equals the GBW. Cascoding does not help: it multiplies $R_{out}$, and so $A_0$, by some factor $K$ and divides the pole by the same $K$. The only levers are more $g_m$ (current or width) or less $C_L$, the heart of the speed-power trade-off. In nanometer devices a CS stage loaded by an identical stage reaches a GBW of a few tens of GHz, well below $f_T$."
     },
     {
       "type": "heading",
-      "level": 3,
+      "level": 2,
       "text": "Multi-pole circuits"
     },
     {
       "type": "prose",
-      "text": "When there are several poles, adding them reduces the bandwidth beyond a single-pole estimate; the bandwidth of N identical poles is approximately sqrt(2^(1/N) - 1) times that of one. More stages mean more gain but a lower product bandwidth than the individual stages."
+      "text": "Two identical stages in cascade (each $A_0$, pole $\\omega_p$) give $A_0^2/(1 + s/\\omega_p)^2$. Setting the magnitude to $A_0^2/\\sqrt{2}$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{-3\\mathrm{dB}} = \\sqrt{\\sqrt{2} - 1}\\;\\omega_p \\approx 0.64\\,\\omega_p, \\qquad \\mathrm{GBW} = 0.64\\,A_0^2\\,\\omega_p"
+    },
+    {
+      "type": "prose",
+      "text": "The product rises by $0.64A_0$ over a single stage (for twice the power), but the bandwidth itself falls. For $N$ identical stages"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_{-3\\mathrm{dB}} = \\sqrt{2^{1/N} - 1}\\;\\omega_p"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/frequency-response-cascade-bandwidth.svg",
+      "alt": "Normalised gain in dB against frequency over pole frequency for one, two, three and four identical cascaded poles. The minus 3 dB points move from 1 to 0.64, 0.51 and 0.43, and the roll-off steepens with N.",
+      "caption": "The bandwidth shrinks steadily as identical stages are cascaded."
+    },
+    {
+      "type": "prose",
+      "text": "Multiple poles also cost phase, which makes a cascade hard to stabilise inside a feedback loop."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
     },
     {
       "type": "problem",
       "title": "GBW",
-      "text": "gm = 2 mS and CL = 200 fF. Find GBW and the -3 dB bandwidth when the gain is 20.",
+      "text": "$g_m = 2\\text{ mS}$ and $C_L = 200\\text{ fF}$. Find GBW and the $-3$ dB bandwidth when the gain is 20.",
       "solution": [
-        "GBW = 2e-3 / (2*pi * 200e-15) = 1.59 GHz.",
-        "At a gain of 20 the bandwidth is 1.59 GHz / 20 = 80 MHz."
+        "$\\mathrm{GBW} = \\frac{2 \\times 10^{-3}}{2\\pi \\cdot 200 \\times 10^{-15}} = 1.59\\text{ GHz}$.",
+        "At a gain of 20 the bandwidth is $1.59\\text{ GHz}/20 = 80\\text{ MHz}$."
       ],
       "answer": "GBW = 1.6 GHz; bandwidth 80 MHz at gain 20."
     },
     {
       "type": "problem",
       "title": "Two identical poles",
-      "text": "What is the -3 dB bandwidth of two identical cascaded one-pole stages, each with pole fp?",
+      "text": "What is the $-3$ dB bandwidth of two identical cascaded one-pole stages, each with pole $f_p$?",
       "solution": [
-        "Total |H| = 1/(1 + (f/fp)^2). The -3 dB point satisfies 1 + (f/fp)^2 = sqrt(2), so f = fp * sqrt(sqrt(2) - 1) = 0.644 fp."
+        "Total $|H| = \\frac{1}{1 + (f/f_p)^2}$. The $-3$ dB point satisfies $1 + (f/f_p)^2 = \\sqrt{2}$, so $f = f_p\\sqrt{\\sqrt{2} - 1} = 0.644 f_p$."
       ],
-      "answer": "0.64 fp."
+      "answer": "$0.64 f_p$."
+    },
+    {
+      "type": "problem",
+      "title": "One stage or two?",
+      "text": "You need a gain of 100. Option A: one stage with GBW = 2 GHz. Option B: two stages, each with gain 10 and pole 200 MHz (each also has GBW = 2 GHz). Compare the bandwidths.",
+      "solution": [
+        "A: $2\\text{ GHz}/100 = 20\\text{ MHz}$.",
+        "B: $0.644 \\times 200\\text{ MHz} = 129\\text{ MHz}$, at twice the power."
+      ],
+      "answer": "20 MHz for one stage, 129 MHz for two."
+    },
+    {
+      "type": "problem",
+      "title": "Three stages",
+      "text": "Three identical stages each have a pole at 300 MHz. Find the overall $-3$ dB bandwidth.",
+      "solution": [
+        "$\\sqrt{2^{1/3} - 1} = \\sqrt{0.260} = 0.510$.",
+        "$0.510 \\times 300\\text{ MHz} = 153\\text{ MHz}$."
+      ],
+      "answer": "About 153 MHz."
     }
   ]
 }

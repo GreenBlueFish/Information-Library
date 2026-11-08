@@ -1,0 +1,120 @@
+{
+  "title": "Threshold Voltage Effects",
+  "intro": "Why the threshold voltage cannot scale freely, and how it depends on channel length and drain voltage in short devices (Razavi, Section 17.2.1).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why scaling departs from the ideal"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Supplies have not scaled as fast as dimensions, so fields grow.",
+        "The built-in potential of junctions neither scales nor is negligible.",
+        "Junction depth is hard to reduce.",
+        "Mobility falls as substrate doping rises.",
+        "The subthreshold slope does not scale."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Subthreshold slope"
+    },
+    {
+      "type": "prose",
+      "text": "Below threshold the drain current is exponential in $V_{GS}$ (and independent of $V_{DS}$ once $V_{DS}$ exceeds a few $V_T$). Its slope on a log scale defines the subthreshold slope:"
+    },
+    {
+      "type": "math",
+      "tex": "S = 2.3\\,V_T\\left(1 + \\frac{C_d}{C_{ox}}\\right)\\ \\text{V/dec}, \\qquad V_T = \\frac{kT}{q}"
+    },
+    {
+      "type": "prose",
+      "text": "$C_d$ is the depletion capacitance under the gate. At room temperature $2.3V_T \\approx 60$ mV, so $S$ is 60 mV/dec at best and about 100 mV/dec for $C_d = 0.67C_{ox}$. To switch a device off by lowering $V_{GS}$ below $V_{TH}$, the gate must swing several times $S$: at 80 mV/dec, five decades of on/off ratio need about 400 mV of threshold. Add about −1 mV/K of temperature coefficient (50 mV over 0 to 50 °C, with $S$ also worsening when hot) and about 50 mV of process spread, and $V_{TH}$ cannot go much below a few hundred millivolts. Its upper limit is roughly $V_{DD}/4$ for digital speed."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/sce-subthreshold-dibl.svg",
+      "alt": "Log of drain current against gate voltage: straight lines at low gate voltage bending over in strong inversion. The large drain voltage curve lies to the left of the small drain voltage curve. A small triangle marks S millivolts per decade.",
+      "caption": "Subthreshold slope, and the left shift caused by DIBL."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Threshold roll-off with channel length"
+    },
+    {
+      "type": "prose",
+      "text": "In short devices the source and drain depletion regions reach well into the channel, so part of the depletion charge under the gate is terminated by the junctions rather than the gate. The gate needs less voltage to invert the surface, and $V_{TH}$ falls as $L$ shrinks. Because $L$ itself varies in fabrication, this adds threshold spread. For analog design: lengthening a device to raise $r_O$ can raise its $V_{TH}$ by 100 to 200 mV."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Drain-induced barrier lowering"
+    },
+    {
+      "type": "prose",
+      "text": "In a short device the drain's field reaches the source end of the channel and, like the gate, raises the surface potential (it acts through a capacitance $C_d'$). The barrier that keeps electrons in the source drops, so $V_{TH}$ falls as $V_{DS}$ rises and the log-current curve shifts left at high $V_{DS}$. Its main circuit cost is a lower output resistance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reverse short-channel effect"
+    },
+    {
+      "type": "prose",
+      "text": "Modern devices use halo (pocket) implants: heavily doped regions hugging the source and drain to stop the drain depletion region from punching into the channel. The doping along the channel is then non-uniform, high near the ends. Averaging the local threshold along the channel, a shorter device is a larger fraction halo, so its average doping and threshold are higher: $V_{TH}$ first rises as $L$ shrinks from long values, before the classic roll-off takes over at the shortest lengths."
+    },
+    {
+      "type": "math",
+      "tex": "V_{TH} = \\Phi_{MS} + 2\\phi_F + \\frac{Q_{dep}}{C_{ox}}, \\qquad \\phi_F = \\frac{kT}{q}\\ln\\frac{N_{sub}}{n_i}, \\quad Q_{dep} = \\sqrt{4q\\epsilon_{si}|\\phi_F|N_{sub}}",
+      "caption": "Both doping-dependent terms grow with $N_{sub}$."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/sce-vth-vs-length.svg",
+      "alt": "Threshold voltage against effective channel length. One curve drops steeply at short lengths. A second curve with halo implants rises above the long-channel value at intermediate lengths before dropping at the shortest lengths.",
+      "caption": "Roll-off and the reverse short-channel effect."
+    },
+    {
+      "type": "problem",
+      "title": "Subthreshold slope",
+      "text": "A device has $C_d = 0.5C_{ox}$ at 300 K. Find $S$, and estimate how much lower the current is at $V_{GS} = 0$ than at $V_{GS} = V_{TH} = 0.35\\text{ V}$ (treating the whole range as exponential).",
+      "solution": [
+        "$S = 2.3 \\times 25.9\\text{ mV} \\times 1.5 = 89\\text{ mV/dec}$.",
+        "$0.35/0.089 = 3.9$ decades, a factor of about 8000."
+      ],
+      "answer": "89 mV/dec; about 8000x."
+    },
+    {
+      "type": "problem",
+      "title": "Hot chip",
+      "text": "The same device runs at 373 K, where $V_{TH}$ has dropped by 75 mV (−1 mV/K). Repeat the estimate.",
+      "solution": [
+        "$S$ scales with $T$: $89 \\times 373/300 = 111\\text{ mV/dec}$.",
+        "$V_{TH} = 0.275\\text{ V}$: $0.275/0.111 = 2.5$ decades, a factor of about 300. Leakage rose almost 30-fold."
+      ],
+      "answer": "About 300x; leakage up roughly 30-fold."
+    },
+    {
+      "type": "problem",
+      "title": "Lower bound on threshold",
+      "text": "With $S = 80\\text{ mV/dec}$ an off current five decades below the current at threshold is required. Add 100 mV of margin for temperature and process. What is the minimum nominal $V_{TH}$?",
+      "solution": [
+        "$5 \\times 80 = 400\\text{ mV}$, plus 100 mV: about 0.5 V."
+      ],
+      "answer": "About 0.5 V."
+    },
+    {
+      "type": "problem",
+      "title": "DIBL in numbers",
+      "text": "Raising $V_{DS}$ from 0.1 V to 1 V lowers $V_{TH}$ by 30 mV in a device with $S = 89\\text{ mV/dec}$. By what factor does the subthreshold current rise?",
+      "solution": [
+        "$10^{30/89} = 10^{0.34} = 2.2$. The same mechanism shows up above threshold as a lower $r_O$."
+      ],
+      "answer": "About 2.2x."
+    }
+  ]
+}
