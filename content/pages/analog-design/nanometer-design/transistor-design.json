@@ -1,61 +1,146 @@
 {
   "title": "Designing with Modern Transistors",
-  "intro": "Short-channel transistors no longer obey the square law accurately, so nanometer design is done with simulated curves and the gm/ID methodology.",
+  "intro": "In a 40 nm process the square law can be off by a large factor, so devices are sized from simulated curves of a reference transistor and then scaled. This page covers the short-channel effects behind that, how $g_m$ can be raised, and a systematic sizing procedure (Razavi, Sections 11.1 to 11.4).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Why the square law is not enough"
+      "text": "Why the square law fails"
     },
     {
       "type": "prose",
-      "text": "In nanometer technologies, velocity saturation, mobility degradation and DIBL change the I/V curve so much that sizing by the square law can be off by 30 percent or more. Designers therefore extract curves from simulation of the foundry model and use them to choose sizes."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "The gm/ID method"
-    },
-    {
-      "type": "prose",
-      "text": "Instead of Vov, use the ratio gm/ID as the design variable. In strong inversion gm/ID = 2/Vov; in weak inversion it saturates near 1/(zeta*VT), about 25 to 28 V^-1. A device with high gm/ID is efficient (lots of gm per microamp) but slow and large; one with low gm/ID is fast but power-hungry."
-    },
-    {
-      "type": "list",
-      "items": [
-        "Pick gm/ID from the requirement: high gain and low noise per power favour 15 to 25; high speed favours 5 to 10.",
-        "The required gm sets ID = gm / (gm/ID).",
-        "Look up the current density ID/W at that gm/ID (it is nearly independent of W) and find W.",
-        "Read off the intrinsic gain gm*ro and the transit frequency fT from the same simulated curves for this L, to check the trade-off."
-      ]
+      "text": "For a 5 µm/40 nm NMOS, a best-fit square-law model and the real BSIM characteristics diverge visibly, the curves have no clean saturation region, and for overdrives from 50 to 350 mV the knee sits below $V_{DS} = 0.2$ V. Two mobility effects are mainly responsible."
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "Design flow"
+      "text": "Velocity saturation"
     },
     {
       "type": "prose",
-      "text": "Typical op amp design: choose L for the needed intrinsic gain, then gm/ID for each device by its role (input pair high gm/ID for noise, mirrors lower to save area, bias devices small), compute widths, then simulate and iterate. Corners and mismatch are checked at the end."
+      "text": "Carrier velocity stops rising with the lateral field above about 1 V/µm (velocities near $10^7$ cm/s); a 40 nm channel at 1 V is well beyond that. In the extreme case where carriers travel at $v_{sat}$ from the source onward, $I = Q_d v$ with $Q_d = WC_{ox}(V_{GS} - V_{TH})$ gives"
+    },
+    {
+      "type": "math",
+      "tex": "I_D = WC_{ox}\\left(V_{GS} - V_{TH}\\right)v_{sat}, \\qquad g_m = WC_{ox}v_{sat}"
+    },
+    {
+      "type": "prose",
+      "text": "The current is linear in overdrive and independent of $L$, saturation arrives at a $V_{DS}$ below the overdrive, and $g_m$ is roughly constant with bias."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Mobility degradation"
+    },
+    {
+      "type": "prose",
+      "text": "A stronger vertical field also lowers mobility. Model it as $\\mu = \\mu_0/[1 + \\theta(V_{GS} - V_{TH})]$; then"
+    },
+    {
+      "type": "math",
+      "tex": "g_m = \\mu_0C_{ox}\\frac{W}{L}\\cdot\\frac{\\frac{\\theta}{2}(V_{GS} - V_{TH})^2 + (V_{GS} - V_{TH})}{\\left[1 + \\theta(V_{GS} - V_{TH})\\right]^2}"
+    },
+    {
+      "type": "prose",
+      "text": "For $\\theta(V_{GS} - V_{TH}) \\ll 1$ this is the square-law $g_m$; for large overdrive it flattens to $\\frac{1}{2}\\mu_0C_{ox}(W/L)/\\theta$."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nanometer-design-gm-mobility.svg",
+      "alt": "Plot of normalized transconductance against overdrive from 0 to 0.6 V. The square-law line rises straight to 0.6. Curves for theta of 1, 2 and 4 per volt bend over and level off at about 0.3, 0.2 and 0.11.",
+      "caption": "Larger $\\theta$, flatter $g_m$: raising the overdrive stops buying transconductance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ways to raise $g_m$"
+    },
+    {
+      "type": "prose",
+      "text": "From $g_m = \\mu C_{ox}(W/L)(V_{GS} - V_{TH}) = \\sqrt{2\\mu C_{ox}(W/L)I_D} = 2I_D/(V_{GS} - V_{TH})$, fix one of $W/L$, overdrive or $I_D$ and vary the other two. Raising $W/L$ and $I_D$ together at constant overdrive scales $g_m$ and $I_D$ linearly for any device law, because a $K$ times wider device carrying $K$ times the current is just $K$ copies in parallel; the current density $I_D/W$, the overdrive and $g_m/I_D$ stay put. Raising $W/L$ at constant current lowers the overdrive and helps until the device reaches subthreshold, where $g_m \\to I_D/(\\xi V_T)$ no matter the width. Raising $I_D$ at fixed $W/L$ raises the overdrive and eats headroom."
+    },
+    {
+      "type": "prose",
+      "text": "With a 1 V supply the overdrive is capped at a few hundred millivolts, so the usual sequence is: widen while it helps, add current when width stops helping, and widen again when the overdrive limit is hit, i.e. scale width and current together."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The reference-transistor method"
+    },
+    {
+      "type": "prose",
+      "text": "Simulate one reference device, e.g. $W_{REF}/L_{min} = 5\\,\\mu$m/40 nm, once: $I_D$-$V_{DS}$ curves for overdrives from about 50 to 600 mV in 50 mV steps, $g_m$ against overdrive and against $I_D$, and $r_O$ against $I_D$. Every transistor of that length is then a scaled copy. Design problems specify two of $I_D$, $V_{DS,min}$ (taken equal to the overdrive) and $g_m$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Given $I_D$ and $V_{DS,min}$: read the reference current at $V_{GS} - V_{TH} = V_{DS} = V_{DS,min}$, scale the width by $I_D/I_{D,REF}$, and scale $g_m$ (and divide $r_O$) by the same factor. If $g_m$ is too small, raise $I_D$ and $W$. Choosing the overdrive equal to $V_{DS,min}$ (not higher) maximises $g_m$ for a given current, since $g_m = 2I_D/(V_{GS} - V_{TH})$, even though the device gets wider.",
+        "Given $g_m$ and $I_D$: first check that $g_m < I_D/(\\xi V_T)$, otherwise it is impossible at that current. On the $g_m$-$I_D$ plot draw a line from the origin through the target; it crosses the reference curve at the reference bias point (its slope is $g_m/I_D$, so the overdrive is fixed along it). Scale $W$ by the ratio of the two points. If the resulting overdrive is too large for the headroom, pick a lower overdrive point on the curve and scale to the full current; $g_m$ then comes out above the target.",
+        "Given $g_m$ and $V_{DS,min}$: read $g_{m,REF}$ and $I_{D,REF}$ at that overdrive and scale both by $g_m/g_{m,REF}$. If the current is too high, fall back to the previous case.",
+        "Given only $g_m$: pick a reasonable overdrive (say 200 mV), read the reference point, scale; if the current is excessive, try 150 mV."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nanometer-design-gm-id-scaling.svg",
+      "alt": "Plot of gm against ID up to 1.2 mA. A blue curve for the reference width rises steeply then flattens to about 5 mS. A dashed red line from the origin marks the weak-inversion limit. A black line from the origin passes through the reference curve at about 195 microamps and 1.9 millisiemens and continues to a target point at 1 mA and 10 mS.",
+      "caption": "Scaling along a constant-$g_m/I_D$ line. Points above the weak-inversion line cannot be reached at any width."
+    },
+    {
+      "type": "prose",
+      "text": "This is the $g_m/I_D$ method in a graphical form. In strong inversion $g_m/I_D = 2/(V_{GS} - V_{TH})$; it saturates near $1/(\\xi V_T)$, about 25 V⁻¹, in weak inversion. High $g_m/I_D$ (15 to 25 V⁻¹) gives the most transconductance per microamp, for low-noise and high-gain devices, but is slow and large; low $g_m/I_D$ (5 to 10 V⁻¹) is fast but costs current."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing the channel length"
+    },
+    {
+      "type": "prose",
+      "text": "If the $r_O$ obtained is too low, lengthen the device and widen it in proportion. The scaling is not exact, because the effective length grows from $L_{min} - 2L_D$ to $2L_{min} - 2L_D$ when the drawn length doubles (more than double the effective length), and $V_{TH}$ shifts with $L$; so the reference curves are simulated for a few lengths, e.g. 60, 80 and 100 nm. Minimum length stays in the signal path wherever speed matters."
     },
     {
       "type": "problem",
-      "title": "gm/ID sizing",
-      "text": "An input pair needs gm = 1 mS. How much current per device at gm/ID = 10 and at gm/ID = 20?",
+      "title": "Sizing for a power budget and a swing",
+      "text": "A resistively loaded CS stage at $V_{DD} = 1$ V may draw 0.6 mW and must stay saturated down to $V_{DS} = 0.2$ V. Simulations of the 5 µm/40 nm reference at $V_{GS} - V_{TH} = V_{DS} = 0.2$ V give $I_D = 100\\,\\mu$A, $g_m = 1.5$ mS and $r_O = 8$ kΩ. Size the device and find its $g_m$ and $r_O$.",
       "solution": [
-        "ID = gm / (gm/ID). At 10: 1 mS / 10 = 100 uA. At 20: 50 uA.",
-        "Higher gm/ID halves the current but needs a considerably larger transistor, and has lower fT."
+        "Current: $0.6\\text{ mW}/1\\text{ V} = 600\\,\\mu$A, so scale by 6: $W = 30\\,\\mu$m.",
+        "$g_m = 6 \\times 1.5 = 9$ mS; $r_O = 8\\text{ k}\\Omega/6 = 1.33$ kΩ."
       ],
-      "answer": "100 uA versus 50 uA."
+      "answer": "$W = 30\\,\\mu$m, $g_m = 9$ mS, $r_O \\approx 1.3$ kΩ."
     },
     {
       "type": "problem",
-      "title": "Overdrive from gm/ID",
-      "text": "In strong inversion what Vov corresponds to gm/ID = 10 V^-1?",
+      "title": "Given $g_m$ and $I_D$",
+      "text": "A device needs $g_m = 6$ mS at $I_D = 0.5$ mA. Is it possible ($\\xi = 1.5$, $V_T = 26$ mV)? If the reference curve passes through (150 µA, 1.8 mS), how wide must it be?",
       "solution": [
-        "gm/ID = 2/Vov, so Vov = 2/10 = 0.2 V."
+        "Upper limit: $0.5\\text{ mA}/(1.5 \\times 26\\text{ mV}) = 12.8$ mS > 6 mS, so it is possible.",
+        "Target $g_m/I_D = 12\\text{ V}^{-1}$; the reference point also has $1.8/0.15 = 12\\text{ V}^{-1}$, so it lies on the same line.",
+        "Scale by $0.5/0.15 = 3.33$: $W = 16.7\\,\\mu$m."
       ],
-      "answer": "Vov = 0.2 V."
+      "answer": "Yes; about 17 µm."
+    },
+    {
+      "type": "problem",
+      "title": "Overdrive from $g_m/I_D$",
+      "text": "In strong inversion, what overdrive corresponds to $g_m/I_D = 10\\text{ V}^{-1}$? How much current gives 1 mS at $g_m/I_D = 10$ and at 20?",
+      "solution": [
+        "$V_{GS} - V_{TH} = 2/(g_m/I_D) = 0.2$ V.",
+        "$I_D = g_m/(g_m/I_D)$: 100 µA at 10, 50 µA at 20 (the latter in moderate inversion, wider and slower)."
+      ],
+      "answer": "0.2 V; 100 µA versus 50 µA."
+    },
+    {
+      "type": "problem",
+      "title": "Mobility degradation",
+      "text": "A device has $\\mu_0C_{ox}W/L = 10$ mA/V² and $\\theta = 2\\text{ V}^{-1}$. Find $g_m$ at an overdrive of 0.2 V, the square-law value, and the large-overdrive limit.",
+      "solution": [
+        "$g_m = 10\\text{ m} \\times (1 \\times 0.04 + 0.2)/(1 + 0.4)^2 = 10\\text{ m} \\times 0.24/1.96 = 1.22$ mS.",
+        "Square law: $10\\text{ m} \\times 0.2 = 2$ mS. Limit: $\\frac{1}{2} \\times 10\\text{ m}/2 = 2.5$ mS."
+      ],
+      "answer": "1.22 mS (versus 2 mS); limit 2.5 mS."
     }
   ]
 }

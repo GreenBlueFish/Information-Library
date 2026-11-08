@@ -1,16 +1,7 @@
 {
   "title": "Sampling Switches",
-  "intro": "Switched-capacitor circuits sample voltages on capacitors with MOS switches. The switch's imperfections set their accuracy.",
+  "intro": "The simplest sampler is a MOS switch and a capacitor: the output tracks the input while the clock is high and freezes when it falls. The switch's on-resistance depends on the signal, which sets the usable swing and the speed (Razavi, Sections 13.2.1 and 13.2.2).",
   "blocks": [
-    {
-      "type": "list",
-      "items": [
-        "On-resistance Ron: with sampling capacitance C the sampling bandwidth is 1/(2*pi*Ron*C). To settle to N bits takes t = (N + 1) * ln(2) * Ron * C.",
-        "Charge injection: when the switch turns off, its channel charge W*L*Cox*Vov is split between the source and the capacitor, creating an error voltage on the capacitor. Reduce it with small switches, dummy devices or bottom-plate sampling.",
-        "Clock feedthrough: overlap capacitance couples the clock edge onto the sampled node.",
-        "Nonlinear Ron: Ron depends on the input voltage through VGS - VTH, making the sampling distortion signal-dependent. Bootstrapped switches keep VGS constant."
-      ]
-    },
     {
       "type": "figure",
       "src": "assets/figures/analog-design/sample-and-hold.svg",
@@ -18,27 +9,97 @@
       "caption": "A switch and a capacitor make the simplest sample-and-hold circuit."
     },
     {
+      "type": "heading",
+      "level": 2,
+      "text": "The MOS transistor as a switch"
+    },
+    {
       "type": "prose",
-      "text": "A transmission gate (NMOS plus PMOS in parallel) keeps Ron lower over the signal range, and its charge injection partly cancels."
+      "text": "A MOSFET can be on while carrying no current, which is exactly what a sampler needs. It conducts in both directions, the terminal at the lower potential (for NMOS) acting as source. If $C_H$ starts at $V_{DD}$ and the input is at 0, the device first saturates and then discharges $C_H$ in the triode region all the way to 0; if the input is above the stored value it charges $C_H$ up to the input. Once settled, input and output are equal: the switch has no DC offset, unlike a bipolar sampler. Near the end of settling it behaves as a resistor:"
+    },
+    {
+      "type": "math",
+      "tex": "R_{on} = \\frac{1}{\\mu_n C_{ox}\\frac{W}{L}\\left(V_{DD} - V_{in} - V_{TH}\\right)}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The input range of a single switch"
+    },
+    {
+      "type": "prose",
+      "text": "If the input approaches $V_{DD}$, the overdrive vanishes as the output rises: with $V_{in} = V_{DD}$ the device stays saturated and the output creeps toward $V_{DD} - V_{TH}$ ever more slowly (only subthreshold current finishes the job). In general $R_{on}$ blows up as $V_{in} \\to V_{DD} - V_{TH}$, and the threshold, raised further by body effect, eats directly into the swing. A PMOS switch fails in the mirror-image way, as the input falls toward $|V_{THP}|$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Speed"
+    },
+    {
+      "type": "prose",
+      "text": "Speed must be quoted with an accuracy: the time for the output to come within a band $\\Delta V$ of a full-scale step. With one time constant $\\tau = R_{on}C_H$, settling to a fraction $\\epsilon$ takes $\\tau\\ln(1/\\epsilon)$; for half an LSB of an $N$-bit system, $t = (N+1)\\ln 2\\,\\tau$. A large $W/L$ and a small $C_H$ are fast, but $R_{on}$ is largest for the highest input, so that sets the time constant. Allowing $R_{on}$ to vary by at most 4:1 limits the input to"
+    },
+    {
+      "type": "math",
+      "tex": "V_{in,max} = \\frac{3}{4}\\left(V_{DD} - V_{TH}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "which is close to $V_{DD}/2$: a severe limit set by the threshold, not by an overdrive."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Complementary switches"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/switched-capacitor-circuits-switch-ron.svg",
+      "alt": "Plot of on-resistance against input voltage from 0 to 1.8 V. The NMOS curve starts near 185 ohms and rises steeply toward 1.3 V. The PMOS curve falls from very high values above 0.5 V. The parallel combination stays between about 400 and 1250 ohms over the whole range.",
+      "caption": "NMOS, PMOS and the transmission gate. The combination is far flatter than either device."
+    },
+    {
+      "type": "prose",
+      "text": "An NMOS in parallel with a PMOS, driven by complementary clocks, covers rail-to-rail inputs. Where both conduct,"
+    },
+    {
+      "type": "math",
+      "tex": "R_{on,eq} = \\frac{1}{\\mu_n C_{ox}(W/L)_N (V_{DD} - V_{THN}) - \\left[\\mu_n C_{ox}(W/L)_N - \\mu_p C_{ox}(W/L)_P\\right]V_{in} - \\mu_p C_{ox}(W/L)_P |V_{THP}|}"
+    },
+    {
+      "type": "prose",
+      "text": "If $\\mu_n C_{ox}(W/L)_N = \\mu_p C_{ox}(W/L)_P$ the $V_{in}$ term cancels and $R_{on,eq}$ is flat (body effect spoils this somewhat). The two devices must turn off at the same instant: if the NMOS opens $\\Delta t$ early, the PMOS keeps tracking for $\\Delta t$ with a large, signal-dependent time constant, which distorts the sample. A simple fix for moderate accuracy derives the two clocks so that the delay of the inverter making $\\overline{CK}$ is matched by a pass gate in the $CK$ path. (Bootstrapped switches, which hold $V_{GS}$ constant by riding the gate on the input, are the common high-linearity alternative.)"
+    },
+    {
+      "type": "problem",
+      "title": "On-resistance over the swing",
+      "text": "An NMOS switch has $\\mu_n C_{ox} = 200\\,\\mu$A/V², $W/L = 20$, $V_{TH} = 0.45$ V and its gate at $V_{DD} = 1.8$ V. Find $R_{on}$ at $V_{in} = 0$, 0.3 V and 0.6 V, and the largest input that keeps $R_{on}$ within 4:1 of its minimum.",
+      "solution": [
+        "$\\mu_n C_{ox}W/L = 4$ mA/V² and $V_{DD} - V_{TH} = 1.35$ V.",
+        "$R_{on} = 1/(4\\text{ mA/V}^2 \\times 1.35) = 185$ Ω at 0; $1/(4\\text{m} \\times 1.05) = 238$ Ω at 0.3 V; $1/(4\\text{m} \\times 0.75) = 333$ Ω at 0.6 V.",
+        "$V_{in,max} = 0.75 \\times 1.35 = 1.01$ V."
+      ],
+      "answer": "185, 238 and 333 Ω; about 1.0 V."
     },
     {
       "type": "problem",
       "title": "Settling time",
-      "text": "A sampling switch has Ron = 1 kohm driving C = 1 pF. How long to settle to within half an LSB of a 10-bit converter?",
+      "text": "A sampling switch has $R_{on} = 1$ kΩ driving $C = 1$ pF. How long to settle to within half an LSB of a 10-bit converter?",
       "solution": [
-        "tau = Ron * C = 1 ns.",
-        "Error below 1/2 LSB of 10 bits means exp(-t/tau) < 2^-11, so t = 11 * ln 2 * tau = 7.6 ns."
+        "$\\tau = R_{on}C = 1$ ns.",
+        "Error below half an LSB of 10 bits means $e^{-t/\\tau} < 2^{-11}$, so $t = 11\\ln 2\\,\\tau = 7.6$ ns."
       ],
       "answer": "About 7.6 ns."
     },
     {
       "type": "problem",
-      "title": "Switch noise",
-      "text": "What noise voltage is sampled on C = 1 pF, regardless of Ron?",
+      "title": "A flat transmission gate",
+      "text": "A complementary switch has $\\mu_n C_{ox}(W/L)_N = \\mu_p C_{ox}(W/L)_P = 2$ mA/V², $V_{DD} = 1.8$ V and both thresholds 0.5 V. Find $R_{on,eq}$ for inputs where both devices are on, and the range over which that holds.",
       "solution": [
-        "kT/C noise: sqrt(kT/C) = 64 uV rms at 300 K."
+        "With equal factors, $R_{on,eq} = 1/[k(V_{DD} - V_{THN} - |V_{THP}|)] = 1/(2\\text{ mA/V}^2 \\times 0.8\\text{ V}) = 625$ Ω.",
+        "Both are on for $|V_{THP}| < V_{in} < V_{DD} - V_{THN}$, i.e. 0.5 V to 1.3 V; outside it one device alone conducts with lower resistance."
       ],
-      "answer": "64 uV rms."
+      "answer": "625 Ω, for 0.5 V to 1.3 V."
     }
   ]
 }

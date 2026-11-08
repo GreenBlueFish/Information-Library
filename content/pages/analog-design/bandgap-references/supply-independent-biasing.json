@@ -1,0 +1,102 @@
+{
+  "title": "Supply-Independent Biasing",
+  "intro": "A current mirror is only as good as the current it copies. This page shows how to make that reference current independent of the supply by letting the circuit bias itself, and why every such circuit needs a start-up device (Razavi, Section 12.2).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Resistor biasing is not enough"
+    },
+    {
+      "type": "prose",
+      "text": "Feeding a diode-connected mirror input from $V_{DD}$ through a resistor $R_1$ gives a current that moves almost one-for-one with the supply. A supply step $\\Delta V_{DD}$ divides across $R_1$ and $1/g_{m1}$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta I_{out} = \\frac{\\Delta V_{DD}}{R_1 + 1/g_{m1}} \\cdot \\frac{(W/L)_2}{(W/L)_1}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bootstrapping the reference to the output"
+    },
+    {
+      "type": "prose",
+      "text": "The fix is to derive the reference current from the output current itself. Two mirrors in a loop, an NMOS pair and a PMOS pair, copy each branch's current into the other. Each diode-connected device is fed by a current source, so neither branch current depends much on $V_{DD}$. But with ideal saturated devices the loop only states $I_{out} = K I_{REF}$ and $I_{REF} = I_{out}$ (or a ratio of them), which any current satisfies. A second constraint is needed."
+    },
+    {
+      "type": "prose",
+      "text": "Make the NMOS output device $K$ times wider and put a resistor $R_S$ in its source. Equal PMOS devices force equal branch currents, so the two NMOS gate-source voltages must differ by exactly $I_{out} R_S$. Writing $V_{GS1} = V_{GS2} + I_{out} R_S$ with square-law devices (body effect ignored):"
+    },
+    {
+      "type": "math",
+      "tex": "\\sqrt{\\frac{2 I_{out}}{\\mu_n C_{ox}(W/L)_N}}\\left(1 - \\frac{1}{\\sqrt{K}}\\right) = I_{out} R_S"
+    },
+    {
+      "type": "math",
+      "tex": "I_{out} = \\frac{2}{\\mu_n C_{ox}(W/L)_N} \\cdot \\frac{1}{R_S^2}\\left(1 - \\frac{1}{\\sqrt{K}}\\right)^2",
+      "caption": "Set by $R_S$, $K$ and device parameters; $V_{DD}$ does not appear."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/bandgap-references-self-biased.svg",
+      "alt": "Schematic. Two PMOS transistors M4 (left) and M3 (right) hang from VDD with their gates tied; M3 is diode-connected. Below them NMOS M1 (left, diode-connected) and M2 (right, K times wider, with resistor RS from its source to ground) have their gates tied. A diode-connected NMOS M5 connects the PMOS gate line to the NMOS gate line.",
+      "caption": "The $R_S$-defined self-biased reference with start-up transistor $M_5$. The current is still a function of temperature and process, but not of the supply."
+    },
+    {
+      "type": "prose",
+      "text": "The source of $M_2$ sits $I_{out}R_S$ above ground, so its threshold differs from that of $M_1$ by body effect; putting the resistor in the PMOS branch instead, with each PMOS bulk tied to its own source, removes this error. Channel-length modulation is what reintroduces supply dependence, so all four devices use long channels (which also lowers their flicker noise). A small-signal analysis that keeps $r_O$ shows the residual sensitivity $\\partial I_{out}/\\partial V_{DD}$ falls to zero as $r_{O4} \\to \\infty$ (Razavi, Example 12.1); because coupling capacitances raise it at high frequency, the core is often powered from a locally regulated supply."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Degenerate operating points and start-up"
+    },
+    {
+      "type": "prose",
+      "text": "The derivation divided by $\\sqrt{I_{out}}$, quietly discarding the second solution $I_{out} = 0$. That solution is real: if every device is off at power-up, nothing turns them on and the loop stays dead. A start-up circuit must push current into the loop at power-up and then get out of the way."
+    },
+    {
+      "type": "prose",
+      "text": "In the figure, diode-connected $M_5$ opens a path $V_{DD} \\to M_3 \\to M_5 \\to M_1 \\to$ ground when all currents are zero; once $M_1$ conducts, $M_2$ and the mirrors follow. Two conditions must hold, one so that it fires and one so that it then turns off:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{TH1} + V_{TH5} + |V_{TH3}| < V_{DD} \\qquad\\text{and}\\qquad V_{GS1} + V_{TH5} + |V_{GS3}| > V_{DD}"
+    },
+    {
+      "type": "prose",
+      "text": "Start-up has to be verified in simulation by ramping the supply slowly from zero (a fast transient can start the circuit through parasitic capacitance and hide the problem) and in a separate transient; complex references can have more than one degenerate point."
+    },
+    {
+      "type": "problem",
+      "title": "The $R_S$-defined current",
+      "text": "In the self-biased reference, $\\mu_n C_{ox}(W/L)_N = 1$ mA/V², $K = 4$ and $R_S = 2$ kΩ. Find $I_{out}$ and check it by computing both gate-source overdrives.",
+      "solution": [
+        "$I_{out} = \\frac{2}{10^{-3}\\text{ A/V}^2} \\cdot \\frac{1}{(2\\text{ k}\\Omega)^2}\\left(1 - \\frac{1}{2}\\right)^2 = 2000 \\times 2.5\\times 10^{-7} \\times 0.25 = 125\\,\\mu$A.",
+        "Check: $M_1$ overdrive $= \\sqrt{2 \\times 125\\,\\mu\\text{A}/1\\text{ mA/V}^2} = 0.5$ V; $M_2$ (four times wider) $= 0.25$ V. The difference, 0.25 V, equals $I_{out}R_S = 125\\,\\mu\\text{A} \\times 2\\text{ k}\\Omega$."
+      ],
+      "answer": "$I_{out} = 125\\,\\mu$A."
+    },
+    {
+      "type": "problem",
+      "title": "Resistor bias versus self-bias",
+      "text": "A mirror is fed from $V_{DD}$ through $R_1 = 20$ kΩ, and its input device has $1/g_{m1} = 2$ kΩ; the mirror ratio is 1. How much does the output current move for a 100 mV supply step? What does the self-biased circuit ideally give?",
+      "solution": [
+        "$\\Delta I_{out} = \\frac{0.1\\text{ V}}{22\\text{ k}\\Omega} = 4.5\\,\\mu$A.",
+        "The self-biased loop ideally gives zero change; only the finite $r_O$ of the devices leaves a small residue."
+      ],
+      "answer": "About 4.5 µA; ideally zero."
+    },
+    {
+      "type": "problem",
+      "title": "Will the start-up device let go?",
+      "text": "With $V_{TH1} = V_{TH5} = 0.4$ V, $|V_{TH3}| = 0.45$ V, and in normal operation $V_{GS1} = 0.6$ V, $|V_{GS3}| = 0.7$ V, check both start-up conditions for $V_{DD} = 1.8$ V and for $V_{DD} = 1.5$ V.",
+      "solution": [
+        "Firing condition: $0.4 + 0.4 + 0.45 = 1.25$ V, below both supplies, so $M_5$ conducts at power-up in both cases.",
+        "Turn-off condition: $0.6 + 0.4 + 0.7 = 1.7$ V. At 1.8 V this is less than $V_{DD}$, so $M_5$ stays on after start-up and corrupts the currents. At 1.5 V it exceeds $V_{DD}$ and $M_5$ turns off."
+      ],
+      "answer": "Works at 1.5 V; at 1.8 V M5 never turns off."
+    }
+  ]
+}

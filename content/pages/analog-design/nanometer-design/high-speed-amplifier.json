@@ -1,0 +1,154 @@
+{
+  "title": "High-Speed Amplifier Design",
+  "intro": "The second study: a differential gain-of-4 amplifier with at most 1% gain error, 1 Vpp differential output, 1 pF loads, and settling to 0.5% within 5 ns from a 1 V supply, at the lowest power. It is the kind of stage a pipelined ADC needs (Razavi, Section 11.6).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From specs to a topology"
+    },
+    {
+      "type": "prose",
+      "text": "A 1% gain error needs a gain defined by passive ratios, i.e. a closed loop, and the open-loop gain must then be large; with the 1 V swing, that means a two-stage op amp. With resistors,"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} \\approx -\\frac{R_2}{R_1}\\left[1 - \\left(1 + \\frac{R_2}{R_1}\\right)\\frac{1}{A_0}\\right]",
+      "caption": "Gain 4 with under 1% error needs $A_0 \\ge 500$ (ignoring loading)."
+    },
+    {
+      "type": "prose",
+      "text": "Feedback lowers the output resistance and raises the bandwidth by the loop gain $\\beta A_0 \\approx A_0/5$. But large resistors would again put a pole at the op-amp input, so the feedback is made capacitive:"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nanometer-design-cap-feedback.svg",
+      "alt": "Schematic. Vin drives capacitor C1 into node X, the op amp's minus input, which also has Cin to ground. C2 connects X to the output. The output has load CL to ground. The plus input is grounded.",
+      "caption": "Single-ended view of the capacitive-feedback amplifier, including the op-amp input capacitance."
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{V_{out}}{V_{in}} \\approx -\\frac{C_1}{C_2}\\left(1 - \\frac{C_1 + C_2 + C_{in}}{C_2}\\cdot\\frac{1}{A_0}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "Capacitors add no pole of their own: $C_2$ in series with $C_1 + C_{in}$ simply loads the output. The response is not high-pass, since X has no resistive path; but X then has no defined DC level either (gate leakage drifts it to a rail). Large resistors $R_F$ across $C_2$ fix the level at the price of a high-pass corner $1/(2\\pi R_FC_2)$; in a sampled system a reset switch does the job (see the switched-capacitor chapter). Note that $C_{in}$ raises the gain error: if $C_{in} \\approx (C_1 + C_2)/5$ the op amp needs 20% more gain, so $C_1 + C_2 \\gg C_{in}$ is preferred, at a cost in speed."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From settling time to poles"
+    },
+    {
+      "type": "prose",
+      "text": "For a single pole, settling to 0.5% takes $t_s = -\\tau\\ln 0.005 = 5.3\\tau$, so 5 ns needs $\\tau \\le 0.94$ ns, a closed-loop bandwidth of at least 170 MHz. Modelling the op amp as $G_m$ with large $G_mR_{out}$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\tau = \\frac{C_L(C_1 + C_{in}) + C_LC_2 + C_2(C_1 + C_{in})}{G_mC_2} = \\frac{C_1 + C_2 + C_{in}}{C_2}\\cdot\\frac{C_L + \\dfrac{C_2(C_1 + C_{in})}{C_1 + C_2 + C_{in}}}{G_m}"
+    },
+    {
+      "type": "prose",
+      "text": "That is, $G_m$ reduced by the feedback factor $\\beta = C_2/(C_1 + C_2 + C_{in})$, driving $C_L$ plus the series combination of $C_2$ and $C_1 + C_{in}$. A real two-stage op amp also has its internal pole, so compensate it for the actual feedback factor: the loop gain $|\\beta H|$, not $|H|$, must fall to one at the second pole $\\omega_{p2}$ (about 45° margin)."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nanometer-design-beta-compensation.svg",
+      "alt": "Log-log Bode plot. The open-loop gain starts at 500 and rolls off from a dominant pole at 0.01 times omega p2. The loop gain is the same curve shifted down by a factor of 5, reaching about one at omega p2. A dashed closed-loop curve is flat at 5 and rolls off near omega p2.",
+      "caption": "Compensating for $\\beta = 0.2$: the dominant pole can sit five times higher than for unity feedback."
+    },
+    {
+      "type": "math",
+      "tex": "\\omega'_{p1} \\approx \\frac{\\omega_{p2}}{\\beta A_0}"
+    },
+    {
+      "type": "prose",
+      "text": "The closed-loop response is flat at $1/\\beta$ until about $\\beta A_0\\omega'_{p1} \\approx \\omega_{p2}$, so the second pole must be at the required closed-loop bandwidth (170 MHz), and the dominant pole near $170\\text{ MHz}/\\beta A_0$, a little over 1 MHz. The two-stage op amp of the previous page has most of the right properties; relaxing its compensation by about $1/\\beta = 5$ means $C_c$ from 4.5 pF to 0.9 pF and $R_z$ up fivefold (950 Ω) so the zero stays on the second pole. Here the feedback capacitors also load the output, lowering $\\omega_{p2}$, so the cut is not pushed further yet."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Closed-loop tuning"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Values: $C_1 = 1$ pF, $C_2 = 0.25$ pF, $C_{in} \\approx 50$ fF, so 1% needs $A_0 > 520$. For transient tests $R_F C_2 > 10\\,\\mu$s keeps the droop negligible, i.e. $R_F = 40$ MΩ (a switch would be used in practice).",
+        "A 25 mV step settled to 98.82 mV instead of about 99: not enough gain. Lengthening the input pair would add $C_{in}$; instead the NMOS cascodes (which set the first-stage gain, while the much higher PMOS-side impedance barely matters) are doubled in W and L.",
+        "The step was overdamped, so $C_c$ and $R_z$ were tuned down to 0.3 pF and 700 Ω: settling fell from 5.8 ns to 0.8 ns, far better than needed."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Trading the spare speed for power: linear scaling"
+    },
+    {
+      "type": "prose",
+      "text": "Divide every width and bias current by $\\alpha$: gains and headroom stay the same and power falls by $\\alpha$. The load capacitance does not scale, so:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The output resistance of the second stage rises by $\\alpha$, so the output pole $\\omega_{p2}$ falls by $\\alpha$.",
+        "For the same phase margin the compensated dominant pole must also fall by $\\alpha$.",
+        "The first stage's output resistance rises by $\\alpha$ too, so $C_c$ stays the same.",
+        "The zero must follow $\\omega_{p2}/\\alpha$, so $R_z$ is multiplied by $\\alpha$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Scaling by 2 gave 2.5 ns settling; by 8 the response was heavily overdamped, and retuning to $C_c = 0.15$ pF, $R_z = 9$ kΩ brought it to 4.5 ns, an eightfold power saving with almost no redesign. Noise and offset grow with the scaling."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Large-signal behaviour"
+    },
+    {
+      "type": "prose",
+      "text": "With the full $\\pm 0.5$ V swing the stages' gains drop (first stage 39.5 instead of 46.3, second 10.2 instead of 11.2), so the open-loop gain falls from 518 to 403 and the gain error exceeds 1%. Doubling W and L of the NMOS cascodes and the second-stage NMOS sources restores the gain but slows settling: the pole at the cascode sources (about 200 fF against $1/g_m \\approx 690$ Ω in weak inversion) lands near 1.15 GHz, close to the unity-gain frequency. Adding cascode compensation brought the large-signal settling under 5 ns at 370 µW."
+    },
+    {
+      "type": "problem",
+      "title": "Gain error with capacitive feedback",
+      "text": "With $C_1 = 2$ pF, $C_2 = 0.5$ pF and $C_{in} = 0.1$ pF, what op-amp gain gives at most 0.5% gain error?",
+      "solution": [
+        "Error $= (C_1 + C_2 + C_{in})/(C_2A_0) = 2.6/(0.5A_0) \\le 0.005$.",
+        "$A_0 \\ge 1040$."
+      ],
+      "answer": "At least about 1040."
+    },
+    {
+      "type": "problem",
+      "title": "Settling time constant",
+      "text": "With $G_m = 10$ mS, $C_1 = 1$ pF, $C_2 = 0.25$ pF, $C_{in} = 50$ fF and $C_L = 1$ pF, find $\\beta$, $\\tau$ and the 0.5% settling time (single-pole model).",
+      "solution": [
+        "$\\beta = 0.25/1.3 = 0.192$.",
+        "Numerator $= 1 \\times 1.05 + 1 \\times 0.25 + 0.25 \\times 1.05 = 1.5625$ pF²; $\\tau = 1.5625\\text{ pF}^2/(10\\text{ mS} \\times 0.25\\text{ pF}) = 0.625$ ns.",
+        "$t_s = 5.3 \\times 0.625 = 3.3$ ns."
+      ],
+      "answer": "$\\beta \\approx 0.19$, $\\tau \\approx 0.63$ ns, $t_s \\approx 3.3$ ns."
+    },
+    {
+      "type": "problem",
+      "title": "Scaling a compensated op amp",
+      "text": "An op amp with $C_c = 0.3$ pF and $R_z = 700$ Ω is linearly scaled down by $\\alpha = 4$. What should $C_c$ and $R_z$ become, and what happens to power, the output pole and noise?",
+      "solution": [
+        "$C_c$ stays 0.3 pF; $R_z$ becomes 2.8 kΩ.",
+        "Power falls by 4, the output pole falls by 4 (fixed load), and input-referred noise power rises by about 4."
+      ],
+      "answer": "$C_c = 0.3$ pF, $R_z = 2.8$ kΩ."
+    },
+    {
+      "type": "problem",
+      "title": "Cascode-node pole",
+      "text": "A cascode device at 56.5 µA in weak inversion ($\\xi = 1.5$, $V_T = 26$ mV) sees 200 fF at its source. Estimate the pole.",
+      "solution": [
+        "$g_m = 56.5\\,\\mu\\text{A}/(1.5 \\times 26\\text{ mV}) = 1.45$ mS, i.e. $1/(690\\,\\Omega)$.",
+        "$f = 1.45\\text{ mS}/(2\\pi \\times 200\\text{ fF}) = 1.15$ GHz."
+      ],
+      "answer": "About 1.15 GHz."
+    }
+  ]
+}

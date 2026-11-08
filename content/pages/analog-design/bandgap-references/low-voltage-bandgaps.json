@@ -1,0 +1,126 @@
+{
+  "title": "Low-Voltage Bandgaps",
+  "intro": "A classic bandgap produces about 1.2 V, which does not fit under a 1 V supply. Summing currents instead of voltages removes the limit (Razavi, Sections 12.7 and 12.8).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sum currents, not voltages"
+    },
+    {
+      "type": "prose",
+      "text": "The 1.2 V comes from adding about $17.4V_T$ to one $V_{BE}$. Instead, form a PTAT current $V_T\\ln n/R$ and a CTAT current $V_{BE}/R'$, add them with the right weight so the sum has zero TC, and convert the sum to a voltage with any resistor you like. The output can then be any value, even a few hundred millivolts."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The current-mode (Banba) bandgap"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/bandgap-references-low-voltage.svg",
+      "alt": "Schematic. PMOS M3, M4 and M5 share a gate line driven by op amp A1. M3 feeds node X, which goes to the emitter of unit pnp Q1 and through R3 to ground. M4 feeds node Y, which goes through R1 to pnp Q2 (n units) and through R2 to ground. X is the op amp's minus input and Y its plus input. M5 drives the output VBG, with R4 to ground.",
+      "caption": "Resistors $R_3$ and $R_2$ in parallel with the junction branches add a CTAT current to the PTAT one. $M_5$ copies the total into $R_4$."
+    },
+    {
+      "type": "prose",
+      "text": "The op amp holds $V_X = V_Y = |V_{BE1}|$. With $R_2 = R_3$ the resistor currents are equal, so the collector currents stay equal and $|V_{BE1}| = |V_{BE2}| + I_{C2}R_1$ still gives $I_{C2} = V_T\\ln n/R_1$. Each mirror branch carries"
+    },
+    {
+      "type": "math",
+      "tex": "|I_{D4}| = \\frac{V_T\\ln n}{R_1} + \\frac{|V_{BE1}|}{R_2} = \\frac{1}{R_2}\\left(|V_{BE1}| + \\frac{R_2}{R_1}V_T\\ln n\\right)"
+    },
+    {
+      "type": "math",
+      "tex": "V_{BG} = \\frac{R_4}{R_2}\\left(|V_{BE1}| + \\frac{R_2}{R_1}V_T\\ln n\\right)",
+      "caption": "Zero TC when $(R_2/R_1)\\ln n \\approx 17.4$; the level is scaled by $R_4/R_2$."
+    },
+    {
+      "type": "prose",
+      "text": "The supply only has to hold one $V_{BE}$ plus one PMOS $|V_{DS}|$: with large pnps at about 10 µA, $V_{BE} \\approx 0.7$ V, and wide PMOS devices need about 50 mV, so roughly 0.75 V. An op-amp offset now enters as"
+    },
+    {
+      "type": "math",
+      "tex": "V_{BG} = \\frac{R_4}{R_2}\\left[|V_{BE1}| + \\frac{R_2}{R_1}V_T\\ln n - \\left(1 + \\frac{R_2}{R_1}\\right)V_{OS}\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "i.e. it is amplified by $R_4/(R_1\\parallel R_2)$, and only a large $n$ reduces its relative effect. The op-amp's input noise is amplified by the same factor, the PMOS mirror noise is multiplied if their current is copied into a larger branch, and $R_4$ tends to be large (tens of kilohms) and noisy, so the output is usually bypassed."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Implementation notes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A five-transistor OTA suffices: large devices for low offset and flicker noise, lengths chosen for a loop gain of about 5 to 10, and its input $V_{GS}$ plus tail headroom must fit under $|V_{BE1}|$.",
+        "Start-up is required: with $V_X = V_Y = 0$ the OTA and the mirror are all off. Because the OTA tail node starts above X and ends below it at low supply, a diode-connected NMOS between the two nodes (or between X and $V_{DD}$) kicks the loop on and then shuts off."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Scaling a standard bandgap down"
+    },
+    {
+      "type": "prose",
+      "text": "Another route starts from the PTAT-current bandgap ($M_5$ into $R_2$ and $Q_3$) and adds a resistor $R_3$ from the output to ground. Part of the copied current now bypasses the junction, and the result is the standard bandgap voltage scaled by a divider:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = \\frac{R_3}{R_2 + R_3}\\left(|V_{BE3}| + \\frac{R_2}{R_1}V_T\\ln n\\right)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A precision case study"
+    },
+    {
+      "type": "prose",
+      "text": "A high-precision reference reported in the literature (Brooks and Westwick, cited by Razavi) shows what a production design adds to these cores:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Two stacked junctions per branch to dilute MOS mismatch, with equal collector currents enforced by PMOS mirrors.",
+        "Cascoded mirrors to remove channel-length-modulation supply dependence, using a self-biased cascode (resistors in the diode branches create the cascode bias) so no extra bias voltages are needed.",
+        "A floating output: one current proportional to $V_{BE}$ and one to $V_T\\ln n$ flow through two resistors, giving $V_{out} = (R_4/R_6)V_{BE4} + 2(R_5/R_1)V_T\\ln n$.",
+        "Supply regulation: the core and op amp run from a local supply set by a bandgap voltage derived inside the core itself and a resistor ratio.",
+        "Result: a 2.00 V output from a 5 V supply at 2.2 mW, with 94 dB of supply rejection at low frequency and 58 dB at 100 kHz."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Designing a 0.5 V reference",
+      "text": "Design the current-mode bandgap for $V_{BG} = 0.5$ V with $n = 8$, $R_1 = 5$ kΩ and $|V_{BE1}| = 0.70$ V. Find $R_2$, the mirror current and $R_4$.",
+      "solution": [
+        "Zero TC: $R_2/R_1 = 17.4/\\ln 8 = 8.37$, so $R_2 = R_3 = 41.9$ kΩ.",
+        "PTAT part: $53.7\\text{ mV}/5\\text{ k}\\Omega = 10.7\\,\\mu$A; CTAT part: $0.70/41.9\\text{ k}\\Omega = 16.7\\,\\mu$A; total $27.5\\,\\mu$A.",
+        "$R_4 = 0.5\\text{ V}/27.5\\,\\mu\\text{A} = 18.2$ kΩ. Check: $(18.2/41.9)(0.70 + 8.37 \\times 0.0537) = 0.434 \\times 1.15 = 0.50$ V."
+      ],
+      "answer": "$R_2 = R_3 \\approx 41.9$ kΩ, $I \\approx 27.5\\,\\mu$A, $R_4 \\approx 18.2$ kΩ."
+    },
+    {
+      "type": "problem",
+      "title": "Offset gain",
+      "text": "For the design above, how much does a 2 mV op-amp offset move $V_{BG}$?",
+      "solution": [
+        "$R_1 \\parallel R_2 = (5 \\times 41.9)/(46.9) = 4.47$ kΩ.",
+        "Gain $= R_4/(R_1\\parallel R_2) = 18.2/4.47 = 4.07$, so the error is 8.1 mV (1.6% of 0.5 V)."
+      ],
+      "answer": "About 8 mV."
+    },
+    {
+      "type": "problem",
+      "title": "Minimum supply",
+      "text": "In the current-mode bandgap, $|V_{BE1}| = 0.68$ V at the coldest corner and the PMOS mirror needs $|V_{DS}| \\ge 60$ mV. What is the lowest supply? Why does the classic op-amp core not work at this supply?",
+      "solution": [
+        "$V_{DD,min} \\approx 0.68 + 0.06 = 0.74$ V.",
+        "The classic core's output itself is about 1.2 V, so it needs a supply above that plus the op-amp headroom."
+      ],
+      "answer": "About 0.74 V."
+    }
+  ]
+}

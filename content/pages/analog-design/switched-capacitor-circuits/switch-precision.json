@@ -1,0 +1,134 @@
+{
+  "title": "Switch Precision",
+  "intro": "Three things happen when a MOS switch opens: its channel charge spills out, the clock edge couples through the overlap capacitance, and the thermal noise of its resistance is frozen on the capacitor. Each sets a trade-off between speed and accuracy (Razavi, Sections 13.2.3 and 13.2.4).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Channel charge injection"
+    },
+    {
+      "type": "prose",
+      "text": "An on NMOS switch with $V_{in} \\approx V_{out}$ holds a channel charge"
+    },
+    {
+      "type": "math",
+      "tex": "Q_{ch} = WLC_{ox}\\left(V_{DD} - V_{in} - V_{TH}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "When it turns off, this charge leaves through source and drain. The part going to the input source does no harm; the part going to $C_H$ appears as a negative pedestal on the held voltage. How it splits depends on the impedances on each side and the clock edge rate, and no reliable rule exists (simulators get it wrong too), so the safe estimate is that all of it lands on $C_H$:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} \\approx V_{in}\\left(1 + \\frac{WLC_{ox}}{C_H}\\right) - \\frac{WLC_{ox}}{C_H}\\left(V_{DD} - V_{TH}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "That is a gain error (slightly above one, since a higher input means less charge) and an offset. Body effect makes $V_{TH}$ depend on $V_{in}$ through a square root, adding nonlinearity. Gain error and offset can often be tolerated or calibrated; the nonlinearity cannot."
+    },
+    {
+      "type": "prose",
+      "text": "The speed-precision trade-off is captured by a figure of merit: with $\\tau = R_{on}C_H$ and the error $\\Delta V = WLC_{ox}(V_{DD} - V_{in} - V_{TH})/C_H$,"
+    },
+    {
+      "type": "math",
+      "tex": "F = \\frac{1}{\\tau\\,\\Delta V} = \\frac{\\mu_n}{L^2}",
+      "caption": "To first order neither $W$ nor $C_H$ helps: only a shorter channel or a faster carrier does."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Clock feedthrough"
+    },
+    {
+      "type": "prose",
+      "text": "The gate-drain or gate-source overlap capacitance $WC_{ov}$ couples the falling clock step $V_{CK}$ onto $C_H$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta V = V_{CK}\\,\\frac{WC_{ov}}{WC_{ov} + C_H}"
+    },
+    {
+      "type": "prose",
+      "text": "This is independent of the input, so it is a pure offset, but it trades with speed in the same way."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "$kT/C$ noise"
+    },
+    {
+      "type": "prose",
+      "text": "The thermal noise of $R_{on}$, filtered by $C_H$, is frozen on the capacitor at the instant the switch opens. The sampled noise has the same rms value as for a resistor charging a capacitor, independent of $R_{on}$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\overline{v_n^2} = \\frac{kT}{C_H}"
+    },
+    {
+      "type": "prose",
+      "text": "Low noise therefore needs a large capacitor, which loads the driver and slows everything down. This, not matching, is often what sets capacitor sizes in high-resolution converters."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Cancelling charge injection"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/switched-capacitor-circuits-dummy-switch.svg",
+      "alt": "Schematic. Vin feeds the left terminal of horizontal NMOS switch M1, gate clock CK. Its right terminal is the output node with capacitor CH to ground. A second NMOS M2 of half the width, gate driven by the complementary clock, has both its source and drain tied to the output node, which continues to Vout.",
+      "caption": "A dummy switch $M_2$ of half width absorbs the charge $M_1$ injects, if that charge splits evenly."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Dummy switch: a transistor with source and drain shorted to the output, clocked by $\\overline{CK}$, needs a channel exactly when $M_1$ releases one. If half of $M_1$'s charge goes to $C_H$, a dummy with $W_2 = W_1/2$ and $L_2 = L_1$ cancels it. Equal splitting is rarely true, so injection cancellation is imperfect, but the same sizing cancels clock feedthrough exactly, because the dummy's two overlaps ($2W_2C_{ov}$) couple an equal and opposite step.",
+        "Complementary switch: the NMOS injects electrons and the PMOS holes, but the two charges are equal only at one input level ($W_1L_1C_{ox}(V_{CK} - V_{in} - V_{THN}) = W_2L_2C_{ox}(V_{in} - |V_{THP}|)$), and NMOS and PMOS overlaps differ.",
+        "Differential sampling: the injection becomes a common-mode error for equal inputs, so the offset disappears and, since the body-effect nonlinearity now appears in both halves, only odd-order distortion is left. For differential signals the two charges still differ.",
+        "Bottom-plate sampling: open a switch at the virtual-ground side first, whose charge does not depend on the signal, so that later switches cannot change the stored charge. This is the technique used in the SC amplifiers and integrators that follow."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Pedestal size",
+      "text": "An NMOS switch has $W = 5\\,\\mu$m, $L = 0.18\\,\\mu$m, $C_{ox} = 8.5$ fF/µm², $V_{TH} = 0.45$ V and samples $V_{in} = 0.5$ V onto $C_H = 1$ pF with a 1.8 V clock. Estimate the error if half the channel charge lands on $C_H$, and the worst case.",
+      "solution": [
+        "$WLC_{ox} = 5 \\times 0.18 \\times 8.5 = 7.65$ fF; overdrive $= 1.8 - 0.5 - 0.45 = 0.85$ V; $Q_{ch} = 6.5$ fC.",
+        "Half on 1 pF: 3.3 mV. All of it: 6.5 mV."
+      ],
+      "answer": "About 3.3 mV (6.5 mV worst case)."
+    },
+    {
+      "type": "problem",
+      "title": "Clock feedthrough",
+      "text": "The same switch has $C_{ov} = 0.3$ fF/µm. Estimate the feedthrough error from a 1.8 V clock edge, and say how a half-size dummy changes it.",
+      "solution": [
+        "$WC_{ov} = 1.5$ fF, so $\\Delta V = 1.8 \\times 1.5/(1.5 + 1000) = 2.7$ mV.",
+        "The dummy has total overlap $2W_2C_{ov} = W_1C_{ov}$ driven by the opposite edge, so the two couplings cancel."
+      ],
+      "answer": "About 2.7 mV; cancelled by the dummy."
+    },
+    {
+      "type": "problem",
+      "title": "Capacitor size from noise",
+      "text": "A 12-bit sampler has a 1 V full scale. How large must $C_H$ be so that its $kT/C$ noise equals the quantization noise $\\mathrm{LSB}/\\sqrt{12}$ at 300 K?",
+      "solution": [
+        "LSB $= 1/4096 = 244\\,\\mu$V, so the target is $244/\\sqrt{12} = 70.5\\,\\mu$V rms.",
+        "$C_H = kT/v^2 = 4.14\\times 10^{-21}/(70.5\\times 10^{-6})^2 = 0.83$ pF."
+      ],
+      "answer": "About 0.83 pF."
+    },
+    {
+      "type": "problem",
+      "title": "Shorter channel",
+      "text": "Moving a switch from $L = 0.18\\,\\mu$m to $L = 0.09\\,\\mu$m, by how much does the figure of merit $F$ improve? If you keep $\\tau$ fixed, what happens to the charge-injection error?",
+      "solution": [
+        "$F \\propto 1/L^2$, so it improves fourfold.",
+        "At constant $\\tau$ the error $\\Delta V = 1/(F\\tau)$ drops to a quarter."
+      ],
+      "answer": "4× better; error falls to 1/4."
+    }
+  ]
+}

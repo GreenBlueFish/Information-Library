@@ -1,38 +1,164 @@
 {
   "title": "Mismatch",
-  "intro": "Two nominally identical transistors differ by small random amounts. This mismatch sets offsets, CMRR and converter accuracy.",
+  "intro": "Two transistors drawn identically differ in threshold, mobility, oxide and dimensions by small random amounts. This sets the offset of every differential circuit, limits the accuracy of current copies, and lets even-order distortion and common-mode signals leak through (Razavi, Section 14.2).",
   "blocks": [
     {
-      "type": "prose",
-      "text": "Random mismatch has a standard deviation inversely proportional to the square root of device area (Pelgrom's law):"
-    },
-    {
-      "type": "code",
-      "lang": "text",
-      "source": "sigma(Delta-VTH) = A_VT / sqrt(W*L)         sigma(Delta-beta / beta) = A_beta / sqrt(W*L)"
+      "type": "heading",
+      "level": 2,
+      "text": "Why bigger devices match better"
     },
     {
       "type": "prose",
-      "text": "A_VT is a process constant, typically 1 to 5 mV*um. To halve the mismatch you must quadruple the area, which raises capacitance. Systematic mismatch from gradients and layout asymmetry is separate and is addressed in layout (common-centroid, same orientation)."
+      "text": "Edges of the gate are rough on a microscopic scale, and dopant counts under the gate fluctuate. A wide device behaves like $n$ narrow ones in parallel, each with an independent length error $\\Delta L_0$; their average has error $\\Delta L_0/\\sqrt{n}$. The same averaging applies to $V_{TH}$ and $\\mu C_{ox}$ when a large device is viewed as many small ones in series and parallel, so all mismatches fall with area. Measured data follow"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta V_{TH} = \\frac{A_{VTH}}{\\sqrt{WL}}, \\qquad \\Delta\\left(\\mu C_{ox}\\frac{W}{L}\\right) = \\frac{A_K}{\\sqrt{WL}}",
+      "caption": "Standard deviations; $A_{VTH}$ and $A_K$ come from measurement (Pelgrom's law)."
+    },
+    {
+      "type": "prose",
+      "text": "Halving the mismatch costs four times the area, and with it four times the gate capacitance: matching trades directly against speed. Capacitor ratios match to about 0.1%, a measured rather than fundamental figure. Systematic errors from gradients and asymmetric layout are separate and are handled by layout (common centroid, same orientation, dummies)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Offset of a differential pair"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nonlinearity-and-mismatch-offset-model.svg",
+      "alt": "Schematic. A resistively loaded differential pair M1, M2 with tail source ISS (arrow down). Both gates are effectively grounded, but a voltage source VOS sits in series with the gate of M1. The output, between the drains, reads zero.",
+      "caption": "The input-referred offset is the voltage that, placed in series with one input, returns the output to zero."
+    },
+    {
+      "type": "prose",
+      "text": "With $V_{in} = 0$, mismatches make $V_{out} \\ne 0$. It is more useful to refer this to the input: $|V_{OS,in}| = |V_{OS,out}|/A_v$, the input that nulls the output. It limits, for example, the smallest difference a comparator can resolve, and in a chain of DC-coupled gain stages it can saturate the later ones. Let the loads differ by $\\Delta R_D$, the sizes by $\\Delta(W/L)$ and the thresholds by $\\Delta V_{TH}$. Requiring $I_{D1}R_1 = I_{D2}R_2$ and expanding to first order:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{OS,in} = \\frac{V_{GS} - V_{TH}}{2}\\left[\\frac{\\Delta R_D}{R_D} + \\frac{\\Delta(W/L)}{W/L}\\right] - \\Delta V_{TH}"
+    },
+    {
+      "type": "prose",
+      "text": "Threshold mismatch goes straight to the input; size and load mismatch are scaled by half the overdrive, so a low overdrive (low current or wide devices) helps. The terms are independent random variables and add in power:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{OS,in}^2 = \\left(\\frac{V_{GS} - V_{TH}}{2}\\right)^2\\left[\\left(\\frac{\\Delta R_D}{R_D}\\right)^2 + \\left(\\frac{\\Delta(W/L)}{W/L}\\right)^2\\right] + \\Delta V_{TH}^2"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Offset of the five-transistor OTA"
+    },
+    {
+      "type": "prose",
+      "text": "Model each pair's mismatch as a source in series with one gate. The NMOS input pair contributes its own term directly. The PMOS mirror's offset produces a current error $g_{mP}V_{OS,P}$ that the input pair must cancel, so it is divided by $g_{mN}$ when referred to the input, exactly as with noise:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{OS,in}^2 = V_{OS,N}^2 + \\left(\\frac{g_{mP}}{g_{mN}}\\right)^2V_{OS,P}^2, \\qquad V_{OS,X} = \\frac{(V_{GS} - V_{TH})_X}{2}\\left[\\frac{\\Delta(W/L)}{W/L}\\right]_X + \\Delta V_{TH,X}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Current-source mismatch"
+    },
+    {
+      "type": "prose",
+      "text": "Two current sources sharing a gate voltage: take the total differential of $I_D = \\frac{1}{2}\\mu_nC_{ox}(W/L)(V_{GS} - V_{TH})^2$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\Delta I_D}{I_D} = \\frac{\\Delta(W/L)}{W/L} - \\frac{2\\,\\Delta V_{TH}}{V_{GS} - V_{TH}}"
+    },
+    {
+      "type": "prose",
+      "text": "Here a large overdrive helps, the opposite of the input-pair rule, because a given threshold error is a smaller fraction of a large overdrive. Noise shows the same split: a pair's input noise voltage rises with overdrive at fixed current, a current source's output noise current rises with $g_m$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Even-order distortion and thermal asymmetry"
+    },
+    {
+      "type": "prose",
+      "text": "Odd symmetry kills even harmonics only if the halves match. With paths $y_1 = \\alpha_1x + \\alpha_2x^2 + \\alpha_3x^3$ and $y_2 = \\beta_1x + \\beta_2x^2 + \\beta_3x^3$ driven by $\\pm x$, the differential output keeps $(\\alpha_2 - \\beta_2)x^2$, giving a second harmonic of amplitude $(\\alpha_2 - \\beta_2)A^2/2$. Phase mismatch at high frequency does the same, and a power-hungry block next to one device of a pair creates a temperature difference that shifts its $V_{TH}$ and mobility."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Offset view of CMRR"
+    },
+    {
+      "type": "prose",
+      "text": "A change in input common mode that shifts the differential output can be read as a change in output offset. Referring to the input,"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{CMRR} = \\frac{\\Delta V_{CM,in}}{\\Delta V_{OS,in}}"
+    },
+    {
+      "type": "prose",
+      "text": "This makes some choices obvious. A PMOS input pair in its own n-well with source tied to bulk has thresholds independent of the input CM; with the bulk at $V_{DD}$, body effect makes the thresholds move with the CM, and any mismatch in body-effect coefficients turns into a CM-dependent offset, i.e. worse CMRR."
     },
     {
       "type": "problem",
       "title": "Pelgrom's law",
-      "text": "A_VT = 5 mV*um. Find sigma(Delta-VTH) for W*L = 1 um^2 and 25 um^2.",
+      "text": "$A_{VTH} = 5$ mV·µm. Find $\\sigma(\\Delta V_{TH})$ for $WL = 1\\,\\mu\\text{m}^2$ and $25\\,\\mu\\text{m}^2$.",
       "solution": [
-        "sigma = 5 mV*um / sqrt(1 um^2) = 5 mV.",
-        "sigma = 5 / sqrt(25) = 1 mV."
+        "$5/\\sqrt{1} = 5$ mV.",
+        "$5/\\sqrt{25} = 1$ mV."
       ],
       "answer": "5 mV and 1 mV."
     },
     {
       "type": "problem",
-      "title": "Effect on a current mirror",
-      "text": "Two mirror transistors have Vov = 0.2 V and sigma(Delta-VTH) = 2 mV. What current mismatch results (to first order)?",
+      "title": "Sizing for offset",
+      "text": "In a process with $A_{VTH} = 3.5$ mV·µm, an input pair uses $L = 0.1\\,\\mu$m. What width keeps $\\sigma(\\Delta V_{TH}) \\le 1$ mV?",
       "solution": [
-        "Delta-I / I = 2 * Delta-VTH / Vov = 2 * 2 mV / 0.2 V = 2 percent."
+        "$W = A_{VTH}^2/(L\\,\\Delta V_{TH}^2) = 12.25/(0.1 \\times 1) = 122.5\\,\\mu$m."
       ],
-      "answer": "About 2 percent."
+      "answer": "About 120 µm."
+    },
+    {
+      "type": "problem",
+      "title": "Differential-pair offset",
+      "text": "A resistively loaded pair has $V_{GS} - V_{TH} = 0.2$ V, $\\sigma(\\Delta R/R) = 1\\%$, $\\sigma(\\Delta(W/L)/(W/L)) = 1\\%$ and $\\sigma(\\Delta V_{TH}) = 2$ mV. Find $\\sigma(V_{OS,in})$.",
+      "solution": [
+        "$(0.1)^2(10^{-4} + 10^{-4}) = 2\\times 10^{-6}\\text{ V}^2$; $\\Delta V_{TH}^2 = 4\\times 10^{-6}\\text{ V}^2$.",
+        "$\\sqrt{6\\times 10^{-6}} = 2.45$ mV."
+      ],
+      "answer": "About 2.4 mV."
+    },
+    {
+      "type": "problem",
+      "title": "OTA offset",
+      "text": "In a five-transistor OTA the NMOS pair contributes $V_{OS,N} = 1.5$ mV and the PMOS mirror $V_{OS,P} = 2$ mV, with $g_{mP}/g_{mN} = 0.5$. Find the input-referred offset.",
+      "solution": [
+        "$\\sqrt{1.5^2 + (0.5 \\times 2)^2} = \\sqrt{3.25} = 1.80$ mV."
+      ],
+      "answer": "About 1.8 mV."
+    },
+    {
+      "type": "problem",
+      "title": "Current mirror",
+      "text": "Mirror devices have $V_{GS} - V_{TH} = 0.2$ V, $\\sigma(\\Delta V_{TH}) = 2$ mV and $\\sigma(\\Delta(W/L)/(W/L)) = 0.5\\%$. Find $\\sigma(\\Delta I/I)$. What overdrive would halve the threshold part?",
+      "solution": [
+        "Threshold part: $2 \\times 2\\text{ mV}/0.2\\text{ V} = 2\\%$; total $\\sqrt{2^2 + 0.5^2} = 2.06\\%$.",
+        "Doubling the overdrive to 0.4 V halves the threshold part to 1%."
+      ],
+      "answer": "About 2.1%; 0.4 V."
+    },
+    {
+      "type": "problem",
+      "title": "CMRR from offset drift",
+      "text": "An amplifier's input-referred offset changes by 0.5 mV when its input common mode moves by 1 V. What is its CMRR?",
+      "solution": [
+        "$\\mathrm{CMRR} = 1\\text{ V}/0.5\\text{ mV} = 2000$, i.e. 66 dB."
+      ],
+      "answer": "66 dB."
     }
   ]
 }

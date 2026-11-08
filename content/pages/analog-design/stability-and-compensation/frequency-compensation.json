@@ -1,67 +1,225 @@
 {
   "title": "Frequency Compensation",
-  "intro": "Compensation reshapes the loop gain so that the phase margin is adequate.",
+  "intro": "Compensation reshapes the open-loop response so the gain crosses unity well before the phase reaches $-180^{\\circ}$. One-stage op amps are compensated at their output node; two-stage op amps use the Miller effect, which splits the poles (Razavi, Sections 10.4 and 10.5).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Basic idea"
+      "text": "Poles of a one-stage op amp"
     },
     {
       "type": "prose",
-      "text": "Place a dominant pole far below all others, so the gain falls through 0 dB at -90 degrees phase, before the second pole contributes much. The price is lower bandwidth. For a single-stage op amp the load capacitor does this job automatically; the bandwidth is gm1/(2*pi*CL)."
+      "text": "Take a telescopic cascode with a single-ended output (a PMOS cascode current mirror converts to single-ended). Its signal paths contain: the output pole, poles at the sources of the NMOS cascodes (X, Y), the mirror pole at the diode node A, and a pole at the PMOS cascode's source (N). Because the output resistance is far higher than any other node resistance, the output pole is dominant. The mirror pole is usually the first non-dominant one: node A carries $C_{GS}$ of both mirror devices plus drain capacitances and sees about $1/g_{m5}$, a low-$g_m$ PMOS. Node N comes next: wider PMOS devices give it more capacitance than X. The mirror path also has a left-half-plane zero at twice the mirror pole."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Miller compensation of two-stage op amps"
+      "text": "Dominant-pole compensation"
     },
     {
       "type": "prose",
-      "text": "A capacitor CC from the output of the second stage back to the first stage's output uses the Miller effect to put a large capacitance at the first stage's output, which pushes the first pole down. It also pushes the second pole up (this is called pole splitting):"
+      "text": "Assume the non-dominant poles (the phase above about $10\\omega_{p,out}$) are fixed. Lowering the dominant pole, by adding load capacitance, changes the magnitude curve without touching the critical part of the phase curve, because a pole far below GX contributes almost exactly $-90^{\\circ}$ wherever it is. The recipe: find the frequency where $\\angle\\beta H = -180^{\\circ} + PM$, and draw a $-20$ dB/dec line from 0 dB at that frequency back to the DC gain. Where it meets the DC gain is the new dominant pole."
     },
     {
-      "type": "code",
-      "lang": "text",
-      "source": "p1  =  1 / [ gm6 * R1 * R2 * CC ]       (dominant)\np2  =  gm6 / CL                         (approximately)\nGBW =  gm1 / CC\nz   =  gm6 / CC                         (right half plane)"
+      "type": "figure",
+      "src": "assets/figures/analog-design/stability-and-compensation-dominant-pole.svg",
+      "alt": "Bode magnitude plot. The original curve is flat at 60 dB to 1 MHz then rolls off, crossing 0 dB beyond the first non-dominant pole at 50 MHz. The compensated curve is flat only to 50 kHz and then falls at 20 dB per decade, reaching 0 dB at the 50 MHz non-dominant pole.",
+      "caption": "Moving the dominant pole down so the gain crosses 0 dB at the first non-dominant pole $\\omega_{p,A}$ (about 45° margin if the next pole is far)."
     },
     {
-      "type": "list",
-      "items": [
-        "The RHP zero adds phase lag; it is at gm6/CC, which is only a few times above GBW if gm6 is not much larger than gm1.",
-        "Put a resistor RZ in series with CC. With RZ = 1/gm6 the zero moves to infinity; with RZ larger it moves into the left half plane where it adds phase lead and can cancel p2.",
-        "For about 60 degrees phase margin the second pole must sit at least 2.2 times above GBW, so gm6/CL > 2.2*gm1/CC. Without a nulling resistor the RHP zero must also be kept well away, which in practice needs gm6 around ten times gm1."
-      ]
+      "type": "prose",
+      "text": "For 45° margin with the other poles far away, GX lands on the first non-dominant pole, so"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega'_{p,out} = \\frac{\\omega_{p,A}}{\\beta A_0}, \\qquad \\omega_u \\approx \\omega_{p,A}"
+    },
+    {
+      "type": "prose",
+      "text": "The fundamental result: the compensated unity-gain bandwidth cannot exceed the first non-dominant pole (for $PM \\ge 45^{\\circ}$). For a fast feedback amplifier, push that pole as high as possible, so mirror poles are bad news. Raising $R_{out}$ does not compensate: it raises the low-frequency gain and lowers $\\omega_{p,out}$ together, leaving the high-frequency magnitude unchanged. Moving a non-dominant pole down makes things worse."
+    },
+    {
+      "type": "prose",
+      "text": "If the amplifier only ever runs with $\\beta < 1$, compensate for that $\\beta$: the uncompensated $|\\beta H|$ is $20\\log(1/\\beta)$ lower, so the dominant pole can be $1/\\beta$ times higher and the compensation capacitor about $1/\\beta$ times smaller. The closed-loop bandwidth, about $\\beta A_0\\omega''_{p1} \\approx A_0\\omega'_{p1}$, comes out roughly the same: weaker feedback extends bandwidth proportionally less. (Switched-capacitor circuits change $\\beta$ between phases; compensate for the worst.)"
     },
     {
       "type": "heading",
       "level": 3,
-      "text": "Slewing in two-stage op amps"
+      "text": "Fully differential one-stage op amps"
     },
     {
       "type": "prose",
-      "text": "In large-signal operation the first stage sources ISS into CC, so SR = ISS/CC. This limit is independent of the second stage unless the second stage cannot supply (CC + CL)*SR."
+      "text": "A fully differential telescopic cascode has no mirror pole. And the PMOS cascode's internal node N does not add a pole: the impedance looking into the cascode, $(1 + g_{m5}r_{O5})Z_N + r_{O5}$ with $Z_N = r_{O7} \\parallel (C_N s)^{-1}$, combines with $C_L$ into a single time constant $(1 + g_{m5}r_{O5})r_{O7}C_L + r_{O7}C_N$: the output pole is lowered slightly and nothing else. Only the NMOS cascode source (X, Y) remains as a non-dominant pole, at high frequency thanks to the NMOS $g_m$. Such op amps often need little or no added compensation; the load capacitance itself does the job."
+    },
+    {
+      "type": "prose",
+      "text": "Cancelling a non-dominant pole with a zero (for example a fast low-gain path in parallel) is tempting, but any mismatch leaves a closely spaced pole-zero pair, a doublet, which adds a slow settling component."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two-stage op amps: Miller compensation"
+    },
+    {
+      "type": "prose",
+      "text": "In a two-stage op amp, both the first-stage output (high resistance) and the second-stage output (large $C_L$) produce low-frequency poles, so the phase nears $-180^{\\circ}$ well before the third pole. Lowering one of them with a grounded capacitor would limit the bandwidth to the other low pole and need a huge capacitor. Instead, connect $C_C$ across the second stage. The Miller effect makes it look like $(1 + A_{v2})C_C$ at the first-stage output E, so a modest capacitor creates a very low pole."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/stability-and-compensation-miller-two-stage.svg",
+      "alt": "Two-stage op amp: NMOS input pair M1, M2 with PMOS current-mirror load M3, M4 and tail ISS. The first-stage output X drives the gate of PMOS common-source transistor M6, loaded by NMOS current source M7. A resistor RZ in series with capacitor CC connects X to the output, which also drives a load capacitor CL.",
+      "caption": "A single-ended two-stage op amp with Miller compensation $C_C$ and nulling resistor $R_Z$."
+    },
+    {
+      "type": "prose",
+      "text": "Better still, $C_C$ moves the output pole up: this is pole splitting. Model the second stage by its transconductance $g_{m9}$ (Razavi's numbering; $M_6$ in the figure), load $R_L$ and $C_L$, driven from the first-stage resistance $R_S$ with node capacitance $C_E$. With widely separated poles,"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega'_{p1} \\approx \\frac{1}{R_S\\left[(1 + g_{m9}R_L)(C_C + C_{GD9}) + C_E\\right] + R_L(C_C + C_{GD9} + C_L)} \\approx \\frac{1}{g_{m9}R_L R_S C_C}"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega'_{p2} \\approx \\frac{g_{m9}(C_C + C_{GD9})}{(C_C + C_{GD9})(C_E + C_L) + C_E C_L} \\approx \\frac{g_{m9}}{C_E + C_L} \\approx \\frac{g_{m9}}{C_L}"
+    },
+    {
+      "type": "prose",
+      "text": "Before compensation the output pole was about $1/(R_L C_L)$; afterwards it is about $g_{m9}/C_L$, a factor of $g_{m9}R_L$ higher. Intuitively, at high frequency $C_C$ shorts the gate and drain of the output device, so $C_L$ sees roughly $1/g_{m9}$; or, $C_C$ provides feedback that lowers the output resistance. Both poles move, so choosing $C_C$ takes some iteration."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/stability-and-compensation-pole-splitting.svg",
+      "alt": "Bode magnitude plot of a two-stage op amp. Before compensation, two poles near 1 and 3 MHz make the gain drop at 40 dB per decade and cross 0 dB far beyond them. After Miller compensation the first pole sits at a few kHz and the second near 100 MHz, so the gain falls at 20 dB per decade to 0 dB before the second pole.",
+      "caption": "Pole splitting: $C_C$ pushes the first-stage pole down and the output pole up."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A first estimate of $C_C$"
+    },
+    {
+      "type": "prose",
+      "text": "With $\\beta = 1$ the DC loop gain is $g_{m1}R_S g_{m9}R_L$. For 45° margin the gain must reach unity at $\\omega'_{p2}$; neglecting $\\omega'_{p2}$'s own effect on the magnitude, $g_{m1}R_S g_{m9}R_L\\,\\omega'_{p1}/\\omega'_{p2} = 1$, which gives"
+    },
+    {
+      "type": "math",
+      "tex": "C_C = \\frac{g_{m1}}{g_{m9}}\\,C_L \\qquad \\left(\\text{or } \\frac{g_{m1}}{\\sqrt{2}\\,g_{m9}}C_L \\text{ including } \\omega'_{p2}\\text{'s magnitude roll-off}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "Equivalently, the unity-gain frequency $g_{m1}/C_C$ equals the output pole $g_{m9}/C_L$. A larger $C_C$ is needed for more margin; a closed-loop gain of 2 or more allows a smaller one."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The right-half-plane zero"
+    },
+    {
+      "type": "prose",
+      "text": "$C_C$ (with $C_{GD9}$) also forms a feedforward path from the first-stage output to the output, creating a zero at"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_z = \\frac{g_{m9}}{C_C + C_{GD9}}"
+    },
+    {
+      "type": "prose",
+      "text": "in the right half plane. Its factor $(1 - s/\\omega_z)$ adds phase lag like a pole, while flattening the magnitude like a zero: PX moves down and GX moves up, both bad. Typically $\\omega'_{p1} < \\omega_z < \\omega'_{p2}$, and since $g_{m9}$ is modest while $C_C$ must be large, the zero is close. Choosing $C_C = C_L$ to 'cancel' $\\omega'_{p2} \\approx g_{m9}/C_L$ with $\\omega_z \\approx g_{m9}/C_C$ fails: one is in each half plane, so both still act."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Nulling resistor"
+    },
+    {
+      "type": "prose",
+      "text": "A resistor $R_Z$ in series with $C_C$ moves the zero to"
+    },
+    {
+      "type": "math",
+      "tex": "\\omega_z = \\frac{1}{C_C\\left(g_{m9}^{-1} - R_Z\\right)}"
+    },
+    {
+      "type": "prose",
+      "text": "With $R_Z = 1/g_{m9}$ the zero goes to infinity; with larger $R_Z$ it moves into the left half plane, where it adds phase lead, and it can be placed on the output pole, $-g_{m9}/C_L$, when"
+    },
+    {
+      "type": "math",
+      "tex": "R_Z = \\frac{C_L + C_C}{g_{m9}C_C}"
+    },
+    {
+      "type": "prose",
+      "text": "$R_Z$ adds a third pole, but for moderate values it is far out. Two practical problems: the cancellation needs a known, fixed $C_L$ (in switched-capacitor circuits it changes between phases, and mismatch leaves a doublet); and $R_Z$ is usually a triode MOSFET whose resistance changes as the output swing couples through $C_C$, hurting large-signal settling. To make $R_Z$ track $1/g_{m9}$, bias its gate from a replica: diode-connected devices in series with a current $I_1$ chosen so that their $V_{GS}$ matches the output device's make the triode device's resistance a fixed ratio of $1/g_{m}$, set by aspect ratios ($(W/L)_{15} = \\sqrt{(W/L)_{14}(W/L)_9}\\sqrt{(I_{D9}/I_{D14})\\,C_C/(C_C + C_L)}$ for cancellation). Alternatively use a real resistor for $R_Z$ and bias the output device from a constant-$g_m$ circuit referenced to a matched resistor, so $g_{m9} \\propto 1/R_S$. Both rely on square-law behaviour, which short-channel devices only roughly follow."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Sensitivity to the load"
+    },
+    {
+      "type": "prose",
+      "text": "A two-stage op amp gets less stable as $C_L$ grows: its dominant pole is internal, so a larger load lowers the non-dominant output pole $g_{m9}/C_L$ and eats margin. A one-stage op amp does the opposite: its dominant pole is at the output, so a larger load improves the margin (at the cost of speed)."
+    },
+    {
+      "type": "problem",
+      "title": "Moving the dominant pole",
+      "text": "A one-stage op amp has $A_0 = 1000$, its output pole at 1 MHz (set by $C_L = 1$ pF) and a mirror pole at 50 MHz; other poles are far higher. As a unity-gain buffer, what $C_L$ gives about 45° margin? About 60°?",
+      "solution": [
+        "45°: GX at 50 MHz, so the dominant pole must be $50\\text{ MHz}/1000 = 50$ kHz, 20 times lower: $C_L = 20$ pF.",
+        "60°: GX where the mirror pole contributes $30^{\\circ}$: $50\\text{ MHz} \\times \\tan 30^{\\circ} = 28.9$ MHz, so the dominant pole is 28.9 kHz and $C_L \\approx 35$ pF."
+      ],
+      "answer": "About 20 pF for 45°, 35 pF for 60°."
     },
     {
       "type": "problem",
       "title": "Compensating a two-stage amp",
-      "text": "gm1 = 1 mS and CC = 1 pF. Find GBW. The second stage has gm6 = 4 mS and CL = 2 pF. Estimate p2 and the phase margin (ignoring the zero).",
+      "text": "$g_{m1} = 1$ mS and $C_C = 1$ pF. Find GBW. The second stage has $g_{m6} = 4$ mS and $C_L = 2$ pF. Estimate the output pole and the phase margin, ignoring the zero.",
       "solution": [
-        "GBW = gm1/(2*pi*CC) = 1e-3 / (2*pi * 1e-12) = 159 MHz.",
-        "p2 = gm6/(2*pi*CL) = 4e-3 / (2*pi * 2e-12) = 318 MHz, twice GBW.",
-        "PM = 90 - arctan(GBW/p2) = 90 - arctan(0.5) = 63 degrees."
+        "GBW $= g_{m1}/(2\\pi C_C) = 159$ MHz.",
+        "$\\omega'_{p2}/2\\pi = g_{m6}/(2\\pi C_L) = 318$ MHz, twice GBW.",
+        "$PM = 90^{\\circ} - \\tan^{-1}(0.5) = 63^{\\circ}$."
       ],
-      "answer": "GBW = 159 MHz, p2 = 318 MHz, PM about 63 degrees."
+      "answer": "GBW 159 MHz, output pole 318 MHz, PM about 63°."
     },
     {
       "type": "problem",
       "title": "The RHP zero",
-      "text": "In the amp above, where is the RHP zero? Is it important?",
+      "text": "In the amplifier above, where is the right-half-plane zero and what does it cost? What $R_Z$ removes it?",
       "solution": [
-        "z = gm6/(2*pi*CC) = 4e-3 / (2*pi * 1e-12) = 637 MHz, four times GBW.",
-        "A zero at 4x the unity-gain frequency adds arctan(1/4) = 14 degrees of phase lag, which would lower the phase margin to about 49 degrees; a nulling resistor RZ = 1/gm6 = 250 ohm removes it."
+        "$\\omega_z/2\\pi = g_{m6}/(2\\pi C_C) = 637$ MHz, four times GBW.",
+        "It adds $\\tan^{-1}(1/4) = 14^{\\circ}$ of lag, cutting the margin to about 49°.",
+        "$R_Z = 1/g_{m6} = 250\\;\\Omega$ moves it to infinity."
       ],
-      "answer": "z = 637 MHz; costs about 14 degrees of phase unless nulled with RZ = 250 ohm."
+      "answer": "637 MHz, about 14° lost; $R_Z = 250\\;\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "First-cut $C_C$",
+      "text": "A two-stage op amp has $g_{m1} = 1$ mS, $g_{m9} = 5$ mS and $C_L = 2$ pF. Estimate $C_C$ for 45° margin at unity gain.",
+      "solution": [
+        "$C_C = (g_{m1}/g_{m9})C_L = 0.2 \\times 2\\text{ pF} = 0.4$ pF.",
+        "Including the output pole's effect on the magnitude: $0.4/\\sqrt{2} = 0.28$ pF. Use more for 60°."
+      ],
+      "answer": "About 0.3 to 0.4 pF (minimum)."
+    },
+    {
+      "type": "problem",
+      "title": "Zero on the pole",
+      "text": "With $g_{m9} = 5$ mS, $C_C = 1$ pF and $C_L = 2$ pF, what $R_Z$ places the zero on the output pole?",
+      "solution": [
+        "$R_Z = (C_L + C_C)/(g_{m9}C_C) = 3\\text{ pF}/(5\\text{ mS} \\times 1\\text{ pF}) = 600\\;\\Omega$, three times $1/g_{m9}$."
+      ],
+      "answer": "600 $\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Heavier load",
+      "text": "A two-stage op amp has $g_{m1}/C_C$ at 159 MHz and $g_{m9} = 5$ mS. Find the phase margin (zero nulled) for $C_L = 2$ pF and for $C_L = 4$ pF.",
+      "solution": [
+        "$C_L = 2$ pF: output pole $5\\text{ mS}/(2\\pi \\times 2\\text{ pF}) = 398$ MHz; $PM = 90^{\\circ} - \\tan^{-1}(159/398) = 68^{\\circ}$.",
+        "$C_L = 4$ pF: 199 MHz; $PM = 90^{\\circ} - \\tan^{-1}(0.80) = 51^{\\circ}$."
+      ],
+      "answer": "68° falls to 51°."
     }
   ]
 }

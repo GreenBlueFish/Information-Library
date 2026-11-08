@@ -1,35 +1,107 @@
 {
   "title": "Stability and Phase Margin",
-  "intro": "A feedback system is stable if its poles are in the left half plane. The Bode plot of the loop gain tells you how close it is to the edge.",
+  "intro": "A feedback system is stable if its closed-loop poles are in the left half plane. The Bode plot of the loop gain shows how close it is to the edge (Razavi, Sections 10.1 to 10.3).",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Barkhausen condition"
+      "text": "Barkhausen's conditions"
     },
     {
       "type": "prose",
-      "text": "A feedback loop oscillates when at some frequency the loop gain has magnitude 1 and phase -180 degrees, so that negative feedback becomes positive. A stable design keeps |A*beta| below 1 whenever the phase reaches -180 degrees."
+      "text": "Write the closed loop as $Y/X = H/(1 + \\beta H)$. At a frequency where"
+    },
+    {
+      "type": "math",
+      "tex": "|\\beta H(j\\omega_1)| = 1, \\qquad \\angle\\beta H(j\\omega_1) = -180^{\\circ}"
+    },
+    {
+      "type": "prose",
+      "text": "the gain is infinite and the circuit amplifies its own noise into an oscillation at $\\omega_1$. These conditions involve only the loop transmission, not where the input and output are. The negative-feedback subtraction already gives $180^{\\circ}$; the loop's own $180^{\\circ}$ makes $360^{\\circ}$, so the returning signal reinforces the original, and a loop gain of at least one lets it grow. Either view is useful: too much gain at the frequency where the phase hits $-180^{\\circ}$, or too much phase at the frequency where the gain falls to one."
+    },
+    {
+      "type": "prose",
+      "text": "Two frequencies matter: the gain crossover (GX), where $|\\beta H| = 1$, and the phase crossover (PX), where $\\angle\\beta H = -180^{\\circ}$. A stable design has GX well below PX. For $\\beta = 1$, GX equals the op amp's unity-gain bandwidth."
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "Phase margin and gain margin"
+      "level": 3,
+      "text": "Bode-plot reminders"
     },
     {
       "type": "list",
       "items": [
-        "Gain crossover frequency: where |A*beta| = 1 (0 dB).",
-        "Phase margin (PM): 180 degrees + phase(A*beta) at the gain crossover. PM of 45 degrees is the bare minimum; 60 degrees is a common target.",
-        "Gain margin: how much |A*beta| can rise at the -180 degree frequency before it reaches 1.",
-        "A low PM shows up as peaking in the closed-loop frequency response and ringing in the step response."
+        "Each pole bends the magnitude by $-20$ dB/dec, each zero by $+20$ dB/dec.",
+        "A pole's phase starts falling about a decade below it, is $-45^{\\circ}$ at the pole and nears $-90^{\\circ}$ a decade above. A zero does the opposite in the left half plane.",
+        "So poles and zeros affect phase at much lower frequencies than they affect magnitude: an extra high-frequency pole moves PX much more than GX.",
+        "Do not confuse the loop-gain plot with the closed-loop response: if GX and PX coincide, the closed loop has infinite gain there even though $|\\beta H|$ looks ordinary."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Poles in the s-plane"
+    },
+    {
+      "type": "prose",
+      "text": "A closed-loop pole $s_p = \\sigma_p + j\\omega_p$ contributes a term $e^{(\\sigma_p + j\\omega_p)t}$ to the impulse response. With $\\sigma_p > 0$ (right half plane) it grows; on the $j\\omega$ axis it oscillates steadily; in the left half plane it decays. Plotting how the poles move as the loop gain rises is the root locus."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One, two and three poles"
+    },
+    {
+      "type": "prose",
+      "text": "One pole, $H = A_0/(1 + s/\\omega_0)$: the phase never exceeds $-90^{\\circ}$, so the loop is stable for any $\\beta \\ge 0$. The closed-loop pole is real at $-\\omega_0(1 + \\beta A_0)$ and moves left as the loop gain grows."
+    },
+    {
+      "type": "prose",
+      "text": "Two poles: the phase approaches but never reaches $-180^{\\circ}$, so the loop is stable, though its phase margin can be small. The closed-loop poles solve"
+    },
+    {
+      "type": "math",
+      "tex": "s^2 + (\\omega_{p1} + \\omega_{p2})s + (1 + \\beta A_0)\\,\\omega_{p1}\\omega_{p2} = 0"
+    },
+    {
+      "type": "prose",
+      "text": "They start at $-\\omega_{p1}$ and $-\\omega_{p2}$, move toward each other, meet when $(\\omega_{p1} + \\omega_{p2})^2 = 4(1 + \\beta A_0)\\omega_{p1}\\omega_{p2}$, then split vertically into a complex pair with constant real part $-(\\omega_{p1} + \\omega_{p2})/2$. They never cross into the right half plane, but they become very underdamped."
+    },
+    {
+      "type": "prose",
+      "text": "Three poles: the third pole's phase pulls PX down to a finite frequency, below which GX may now lie or not. Weaker feedback (smaller $\\beta$) moves GX down while PX stays, so amplifiers built for higher closed-loop gain are more stable."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Phase margin"
+    },
+    {
+      "type": "math",
+      "tex": "PM = 180^{\\circ} + \\angle\\beta H(\\omega_1), \\qquad |\\beta H(\\omega_1)| = 1"
+    },
+    {
+      "type": "prose",
+      "text": "How the closed loop behaves at GX follows directly: $Y/X = (1/\\beta)\\,\\beta H/(1 + \\beta H)$ with $|\\beta H| = 1$ and phase $-180^{\\circ} + PM$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "PM = 5°: $|1 + \\beta H| = 0.087$, an 11-fold peak; the step response rings for a long time.",
+        "PM = 45° (GX at the second pole of a two-pole loop): $|1 + \\beta H| = 0.765$, a 30% peak at GX.",
+        "PM = 60°: $|1 + \\beta H| = 1$, so the closed-loop gain at GX is exactly $1/\\beta$; little ringing and fast settling. This is the usual target.",
+        "Larger PM: more stable, but the response is overdamped and slower."
       ]
     },
     {
       "type": "figure",
-      "src": "assets/figures/analog-design/bode-phase-margin.svg",
-      "alt": "Two stacked Bode plots of a loop gain with two poles. The top plot shows the magnitude falling from 60 dB, crossing 0 dB near 1 MHz. The bottom plot shows the phase falling toward minus 180 degrees. A vertical dotted line links the 0 dB crossing to the phase curve, and an arrow marks the phase margin, the gap between the phase at that frequency and minus 180 degrees, about 55 degrees.",
-      "caption": "The phase margin is read at the unity-gain frequency, as the distance of the phase from -180 degrees."
+      "src": "assets/figures/analog-design/stability-and-compensation-phase-margin-response.svg",
+      "alt": "Two panels. Left: closed-loop magnitude against normalized frequency for phase margins of 30, 45, 60 and 75 degrees; lower margins show higher peaks near the crossover. Right: the corresponding step responses; 30 degrees overshoots about 40 percent and rings, 45 about 23 percent, 60 under 10 percent, and 75 rises without overshoot.",
+      "caption": "A two-pole loop (dominant pole near the origin) closed with unity feedback, for several phase margins."
+    },
+    {
+      "type": "prose",
+      "text": "In a two-pole loop with the first pole far below GX, the margin is set by the second pole: $PM = 90^{\\circ} - \\tan^{-1}(\\omega_u/\\omega_{p2})$. GX at the second pole gives 45°; for any useful margin the unity-gain bandwidth must stay below the op amp's second pole."
     },
     {
       "type": "widget",
@@ -65,26 +137,60 @@
     },
     {
       "type": "prose",
-      "text": "The slider sets the second pole relative to the loop's unity-gain frequency. At 1 the phase margin is 45 degrees, with substantial overshoot; at 2 it is 63 degrees and the response is well damped; at 0.5 it is 27 degrees and rings badly."
+      "text": "The slider sets the second pole relative to the loop's unity-gain frequency. At 1 the margin is 45° with substantial overshoot; at 2 it is 63° and well damped; at 0.5 it is 27° and rings badly."
+    },
+    {
+      "type": "callout",
+      "text": "Phase margin is a small-signal concept. A large step makes the op amp slew and moves its bias points, shifting poles and zeros during the transient, so large-signal settling can ring even with 65° of small-signal margin. Check large-signal behaviour with transient simulations."
     },
     {
       "type": "problem",
       "title": "Phase margin of a two-pole loop",
       "text": "A loop has a dominant pole and a second pole at twice the unity-gain frequency. Find the phase margin.",
       "solution": [
-        "The first pole gives -90 degrees at crossover (well above it). The second pole gives -arctan(wu/wp2) = -arctan(0.5) = -26.6 degrees.",
-        "PM = 180 - 90 - 26.6 = 63.4 degrees."
+        "The first pole gives $-90^{\\circ}$ at crossover. The second gives $-\\tan^{-1}(0.5) = -26.6^{\\circ}$.",
+        "$PM = 180 - 90 - 26.6 = 63.4^{\\circ}$."
       ],
-      "answer": "PM = 63 degrees."
+      "answer": "About 63°."
     },
     {
       "type": "problem",
       "title": "Choosing the second pole",
-      "text": "What second-pole location gives a phase margin of 45 degrees?",
+      "text": "What second-pole location gives a phase margin of 45°?",
       "solution": [
-        "PM = 90 - arctan(wu/wp2) = 45 requires arctan(wu/wp2) = 45 degrees, so wp2 = wu."
+        "$90^{\\circ} - \\tan^{-1}(\\omega_u/\\omega_{p2}) = 45^{\\circ}$ requires $\\omega_{p2} = \\omega_u$."
       ],
-      "answer": "wp2 = unity-gain frequency."
+      "answer": "$\\omega_{p2} = \\omega_u$."
+    },
+    {
+      "type": "problem",
+      "title": "Peaking at 45°",
+      "text": "For a loop with 45° phase margin, by how much does the closed-loop gain at the gain crossover exceed $1/\\beta$?",
+      "solution": [
+        "$\\beta H = e^{-j135^{\\circ}}$, so $1 + \\beta H = 1 - 0.707 - j0.707$, with magnitude 0.765.",
+        "$|Y/X| = (1/\\beta)/0.765 = 1.31/\\beta$."
+      ],
+      "answer": "About 31% above $1/\\beta$."
+    },
+    {
+      "type": "problem",
+      "title": "When do the poles go complex?",
+      "text": "A two-pole loop has $\\omega_{p1} = 1$ Mrad/s and $\\omega_{p2} = 100$ Mrad/s. Above what loop gain $\\beta A_0$ do the closed-loop poles become complex?",
+      "solution": [
+        "Complex when $(\\omega_{p1} + \\omega_{p2})^2 < 4(1 + \\beta A_0)\\omega_{p1}\\omega_{p2}$: $101^2 < 400(1 + \\beta A_0)$.",
+        "$1 + \\beta A_0 > 25.5$, so $\\beta A_0 > 24.5$."
+      ],
+      "answer": "$\\beta A_0 > 24.5$."
+    },
+    {
+      "type": "problem",
+      "title": "Weaker feedback",
+      "text": "An op amp is compensated for 60° margin as a unity-gain buffer (dominant pole effectively at the origin, second pole at $1.73\\,\\omega_u$). What is the margin with $\\beta = 0.5$?",
+      "solution": [
+        "Halving $\\beta$ lowers $|\\beta H|$ by 6 dB; on a $-20$ dB/dec slope GX moves to $\\omega_u/2$.",
+        "$PM = 90^{\\circ} - \\tan^{-1}(0.5/1.73) = 73.9^{\\circ}$."
+      ],
+      "answer": "About 74°."
     }
   ]
 }

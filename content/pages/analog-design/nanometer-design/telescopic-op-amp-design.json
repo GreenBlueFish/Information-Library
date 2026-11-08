@@ -1,0 +1,130 @@
+{
+  "title": "Telescopic Op Amp Design",
+  "intro": "The first design target: differential swing 1 V peak-to-peak, gain 500, 2 mW, 1 V supply. A telescopic cascode turns out unable to meet it, but working the design through shows every step of a real op-amp design (Razavi, Section 11.5.1).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Budgets first"
+    },
+    {
+      "type": "prose",
+      "text": "Of 2 mA, about 100 µA goes to bias references and 0.95 mA to each side of the pair. A 0.5 V single-ended swing leaves 0.5 V for the five stacked devices (tail, input pair, NMOS cascode, PMOS cascode, PMOS source), so each gets about 100 mV of $V_{DS}$, PMOS included despite their lower mobility."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nanometer-design-telescopic.svg",
+      "alt": "Schematic of a telescopic cascode op amp. From VDD down on each side: PMOS current source (M7, M8) with gate bias Vb3, PMOS cascode (M5, M6) with Vb2, output node (X, Y), NMOS cascode (M3, M4) with Vb1, input device (M1, M2) with inputs Vin1 and Vin2. The input sources join at a tail transistor M9 with gate bias Vb4.",
+      "caption": "Telescopic cascode: the outputs X and Y sit between the NMOS and PMOS cascodes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Feasibility before sizing"
+    },
+    {
+      "type": "prose",
+      "text": "At 40 nm, $g_mr_O$ is about 7 to 10 for NMOS and 5 to 7 for PMOS (hard to push past 10 without long, slow devices). With $g_m \\approx 2I_D/(V_{GS} - V_{TH}) = 2 \\times 0.95\\text{ mA}/100\\text{ mV} = 19$ mS and $g_mr_O \\approx 10$, $r_O \\approx 530$ Ω. Even with a perfect PMOS side, the NMOS cascode gives $R_{out} \\approx (g_{m3}r_{O3})r_{O1} \\approx 5.3$ kΩ and a gain $g_{m1}R_{out} \\approx 100$, five times short of 500. The design is continued only to learn from it."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Sizing from curves"
+    },
+    {
+      "type": "prose",
+      "text": "Simulate NMOS (300 mV $V_{GS}$) and PMOS ($-400$ mV) references at 40 and 80 nm and check where the knee falls relative to $|V_{DS}| = 100$ mV. The 40 nm PMOS behaves almost like a resistor (DIBL), so 80 nm is used for the cascode and source devices. At 100 mV a 10 µm/80 nm NMOS gives 16 µA and $r_O = 22.8$ kΩ; scaled to 950 µA, $r_O$ is only 385 Ω (PMOS: 290 Ω). The scaled widths come out at hundreds of micrometres, a direct consequence of squeezing $V_{DS}$ to 100 mV. A DC sweep of the differential input then shows each node's bias and a differential gain of only about 30, and the gain at the cascode sources is around 3: with low $g_mr_O$, the impedance looking into a cascode source (its drain impedance divided by $g_mr_O$) is far above $1/g_m$. Widening the NMOS cascodes raises the gain to about 54, still with limited swing."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bias circuits"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Tail current: a mirror from a 25 µA reference into a 600 µm/40 nm tail device. Its reference-side device must see the same 100 mV $V_{DS}$, and that $V_{DS}$ must track the input common mode, so the reference device's drain is set by a scaled replica pair driven by the actual inputs instead of a fixed resistor drop.",
+        "Cascode gate $V_{b1}$: must equal $V_{GS3,4} + V_{DS1,2} + V_P$. A diode-connected device (matched to the cascode $V_{GS}$) stacked on a device that reproduces $V_{DS1,2}$, fed by a small current (15 µA) and referenced to the tail node P, does this and makes $V_{b1}$ follow the input common mode, so $V_{DS1,2}$ stays constant.",
+        "PMOS biases $V_{b3}$ and $V_{b2}$: a scaled low-voltage cascode bias branch, with $V_{b2} = V_{DD} - |V_{DS7,8}| - |V_{GS5,6}|$ produced by a diode-connected device on top of a $V_{DS}$ replica.",
+        "With only ~100 mV margins, any mismatch between bias replicas and the core (e.g. $V_{GS}$ of the cascode replica) can push a device below its knee. The remaining ideal currents would be copied from a bandgap."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Common-mode feedback"
+    },
+    {
+      "type": "prose",
+      "text": "The PMOS sources never exactly equal $I_{SS}/2$, so the output common mode runs to a rail without CMFB. Sensing options: resistors would have to be huge to avoid loading this high-impedance output; triode devices lack the precision the tiny margins demand; source followers stop working when an output swings low and their current source collapses. The fix is to sense with both NMOS and PMOS followers: NMOS followers give $V_1 = V_{CM} - V_{GS,N}$, PMOS followers $V_2 = V_{CM} + |V_{GS,P}|$, and resistors $R_N$ (on the NMOS side) and $R_P$ (PMOS side) combine them:"
+    },
+    {
+      "type": "math",
+      "tex": "V_{tot} = V_{CM} + \\frac{R_N|V_{GS,P}| - R_PV_{GS,N}}{R_N + R_P}",
+      "caption": "The $V_{GS}$ terms cancel when $R_N/R_P = V_{GS,N}/|V_{GS,P}|$."
+    },
+    {
+      "type": "prose",
+      "text": "$V_{tot}$ is compared with $V_{ref}$ by a five-transistor error amplifier (PMOS input, gain about 10) whose output steers a fraction of the tail current (about 20% if 20% mismatch is expected), the rest being fixed. Its output level suits the tail's gate because the amplifier is loaded by a diode whose $V_{GS}$ matches. The loop then holds the CM within a few millivolts across the output range and corrects a 10% current mismatch."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Stability of the CM loop"
+    },
+    {
+      "type": "prose",
+      "text": "A closed-loop step test showed the CM oscillating: the CM loop has poles at the error-amplifier input and output, at the tail node, at the cascode sources and at the outputs. Its loop gain must be measured with the differential feedback in place, because the differential network changes the CM loop's poles; the loop is broken at the error-amplifier output with a dummy load replicating the tail device. Its phase reached $-190°$ at unity gain. The error amplifier is non-inverting, so Miller compensation is not available, and loading X and Y would also hit the differential path; a 3 pF capacitor from the error-amplifier output to ground gives about 50° of CM phase margin. A heavy load capacitance $C_L$ helps the differential margin but hurts the CM one, so then the compensation capacitor must grow or the output pole must dominate the CM loop too."
+    },
+    {
+      "type": "prose",
+      "text": "The differential path then still rang because the large feedback resistors and the op-amp input capacitance form a low-frequency pole; 7 fF across each feedback resistor cancels it."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What the exercise teaches"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Allocate $V_{DS}$ by swing and current by power; characterise and scale devices for those values.",
+        "Estimate the achievable gain before drawing anything.",
+        "Use DC sweeps to check every node and the nonlinearity.",
+        "Design bias generators that track the core (replicas, level shifters, low-voltage cascode bias).",
+        "Design and compensate CMFB, and verify both CM and differential stability with closed-loop transients."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Gain estimate",
+      "text": "A telescopic stage runs 0.5 mA per side at 100 mV overdrive, with $g_mr_O = 8$ for NMOS and 6 for PMOS (all devices with $g_m$ equal to the input pair's). Estimate the differential gain.",
+      "solution": [
+        "$g_m = 2 \\times 0.5\\text{ mA}/0.1\\text{ V} = 10$ mS; $r_{ON} = 0.8$ kΩ, $r_{OP} = 0.6$ kΩ.",
+        "NMOS side: $8 \\times 0.8 = 6.4$ kΩ; PMOS side: $6 \\times 0.6 = 3.6$ kΩ; $R_{out} = 6.4 \\parallel 3.6 = 2.3$ kΩ.",
+        "Gain $= 10\\text{ mS} \\times 2.3\\text{ k}\\Omega = 23$."
+      ],
+      "answer": "About 23."
+    },
+    {
+      "type": "problem",
+      "title": "CM detector weights",
+      "text": "In the complementary-follower CM detector, $V_{GS,N} = 0.45$ V and $|V_{GS,P}| = 0.5$ V. Choose $R_N/R_P$. With $R_N = 18$ kΩ, $R_P = 20$ kΩ and $V_{CM} = 0.5$ V, check $V_{tot}$.",
+      "solution": [
+        "$R_N/R_P = 0.45/0.5 = 0.9$.",
+        "$V_{tot} = 0.5 + (18 \\times 0.5 - 20 \\times 0.45)/38 = 0.5 + (9 - 9)/38 = 0.5$ V."
+      ],
+      "answer": "$R_N/R_P = 0.9$; $V_{tot} = V_{CM}$."
+    },
+    {
+      "type": "problem",
+      "title": "Scaled output resistance",
+      "text": "A 10 µm/80 nm NMOS at the operating point gives 16 µA and $r_O = 22.8$ kΩ. What width and $r_O$ result when it is scaled to 0.95 mA at the same voltages?",
+      "solution": [
+        "Factor $950/16 = 59.4$: $W \\approx 594\\,\\mu$m.",
+        "$r_O = 22.8\\text{ k}\\Omega/59.4 = 384$ Ω."
+      ],
+      "answer": "About 590 µm and 385 Ω."
+    }
+  ]
+}

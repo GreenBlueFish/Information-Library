@@ -1,0 +1,136 @@
+{
+  "title": "Linearization Techniques",
+  "intro": "Global feedback linearizes well but costs speed and stability margin. These local techniques make a stage's transconductance depend less on its bias current, which is what linearity really requires (Razavi, Section 14.1.6).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Resistive source degeneration"
+    },
+    {
+      "type": "prose",
+      "text": "A resistor $R_S$ in the source takes part of the input swing off $V_{GS}$, and the stage's transconductance tends to a constant:"
+    },
+    {
+      "type": "math",
+      "tex": "G_m = \\frac{g_m}{1 + g_mR_S} \\to \\frac{1}{R_S}\\quad\\text{for } g_mR_S \\gg 1"
+    },
+    {
+      "type": "prose",
+      "text": "What counts is $g_mR_S$, not $R_S$ alone. The price is gain (for the same $R_D$), noise from $R_S$, and power or headroom to keep $g_m$ high. With large swings such as 0.5 V peak-to-peak, even a gain of 2 at 1% nonlinearity is hard in a degenerated CS stage."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Degenerating a differential pair"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nonlinearity-and-mismatch-degenerated-pair.svg",
+      "alt": "Schematic. A differential pair M1 and M2 with drain resistors RD to VDD and outputs at the drains. A resistor 2RS connects the two sources, and each source has its own current source ISS/2 to ground, arrows pointing down.",
+      "caption": "Split tail with $2R_S$ between the sources: no DC drop across the resistor."
+    },
+    {
+      "type": "prose",
+      "text": "Two arrangements: a resistor $R_S$ in each source with one shared tail, or a single $2R_S$ between the sources with two tail sources of $I_{SS}/2$. The first drops $I_{SS}R_S/2$ of headroom; the second drops nothing at balance, but its two tail sources now contribute differential noise and offset. If each source has noise current $\\overline{I_n^2}$, the split version's input-referred noise is higher by $2\\overline{I_n^2}R_S^2$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "MOSFETs as degeneration"
+    },
+    {
+      "type": "prose",
+      "text": "A triode MOSFET between the sources replaces the resistor, but it leaves the deep triode region for large swings, and its gate must track the input common mode to keep $R_{on}$ defined. A better variant uses two triode devices, each from one source to the other input's gate: as the input moves one of them may saturate while the other stays in triode, which widens the linear range. A ratio $(W/L)_{1,2} \\approx 7(W/L)_{3,4}$ is a reported optimum (Krummenacher and Joehl)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Offset pairs"
+    },
+    {
+      "type": "prose",
+      "text": "A width mismatch in a differential pair shifts its $G_m$ curve sideways. Build two pairs with deliberate opposite shifts (one with widths $W$ and $2W$, the other $2W$ and $W$), short their drains so the currents and the $G_m$ curves add, and the sum is flat over a wider input range. The 2:1 ratio is illustrative; it is tuned for the flattest sum."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Triode input devices"
+    },
+    {
+      "type": "prose",
+      "text": "In triode, $I_D = \\frac{1}{2}\\mu C_{ox}(W/L)\\left[2(V_{GS} - V_{TH})V_{DS} - V_{DS}^2\\right]$ is linear in $V_{GS}$ if $V_{DS}$ is held constant. Put the input devices in triode and hold their drains at $V_b$ with cascodes driven by auxiliary amplifiers. Drawbacks: the transconductance $\\mu C_{ox}(W/L)V_{DS}$ is small because $V_{DS}$ must be small, the input common mode must be tightly controlled and track $V_b$, and the cascodes and amplifiers add a lot of noise."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Post-correction"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/nonlinearity-and-mismatch-post-correction.svg",
+      "alt": "Schematic. A differential pair M1, M2 with a tail current source ISS to ground (arrow down). Its loads are NMOS transistors M3 and M4 whose gates and drains connect to VDD and whose sources are the outputs Vout1 and Vout2 at the drains of M1 and M2.",
+      "caption": "Square-root nonlinearity in, square-law nonlinearity out: the two cancel."
+    },
+    {
+      "type": "prose",
+      "text": "View a voltage amplifier as a V-to-I stage $I = f(V_{in})$ followed by an I-to-V stage. If the second is $f^{-1}$, the cascade is linear. A square-law differential pair produces currents from $V_{in}$ through $V_{GS1} - V_{GS2}$; diode-connected square-law loads turn those currents back into $V_{GS3} - V_{GS4}$. The bias currents cancel:"
+    },
+    {
+      "type": "math",
+      "tex": "A_v = \\sqrt{\\frac{(W/L)_{1,2}}{(W/L)_{3,4}}}"
+    },
+    {
+      "type": "prose",
+      "text": "In practice body effect and short-channel behaviour leave residual nonlinearity, and once an input device approaches subthreshold the square law no longer holds and the gain collapses."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Local feedback: a linear transconductor"
+    },
+    {
+      "type": "prose",
+      "text": "Add feedback around a degenerated pair: devices $M_3$ and $M_4$ sense the pair's drains and return current to its sources so that the input devices' currents, hence their $V_{GS}$, stay constant. With constant $V_{GS1}$ and $V_{GS2}$, the whole input appears across $R_S$, and the signal current through $R_S$, supplied entirely by $M_3$ and $M_4$, is $I_{sig} = V_{in}/R_S$, linear in the input. Copying the $M_3$/$M_4$ currents into load resistors gives"
+    },
+    {
+      "type": "math",
+      "tex": "V_{out} = \\frac{2R_D}{R_S}\\,V_{in}"
+    },
+    {
+      "type": "prose",
+      "text": "The many devices in the signal path, and both sets of current sources, make it noisy, and the $V_{DS}$-dependence of $r_O$ in short-channel output devices adds some nonlinearity."
+    },
+    {
+      "type": "problem",
+      "title": "Degeneration and gain variation",
+      "text": "A CS stage's drain current swings from $0.6I_1$ to $1.4I_1$. Compare the variation of its small-signal transconductance without degeneration and with $g_mR_S = 4$ (at $I_1$). Assume square law.",
+      "solution": [
+        "Without: $g_m \\propto \\sqrt{I_D}$, ratio $\\sqrt{1.4/0.6} = 1.53$, a 53% swing.",
+        "With: $\\frac{G_{m,high}}{G_{m,low}} = \\sqrt{\\frac{1.4}{0.6}}\\cdot\\frac{1 + 4\\sqrt{0.6}}{1 + 4\\sqrt{1.4}} = 1.528 \\times \\frac{4.10}{5.73} = 1.09$.",
+        "The variation drops from 53% to 9%."
+      ],
+      "answer": "Ratio 1.53 without, 1.09 with degeneration."
+    },
+    {
+      "type": "problem",
+      "title": "Post-correction gain",
+      "text": "In the post-corrected pair, $(W/L)_{1,2} = 40$ and $(W/L)_{3,4} = 10$. What is the gain, and what happens to it if the tail current doubles?",
+      "solution": [
+        "$A_v = \\sqrt{40/10} = 2$.",
+        "Unchanged: the currents cancel out of the ratio (as long as all devices stay in square-law saturation)."
+      ],
+      "answer": "2, independent of the tail current."
+    },
+    {
+      "type": "problem",
+      "title": "Linear transconductor",
+      "text": "The local-feedback transconductor uses $R_S = 5$ kΩ and output resistors $R_D = 10$ kΩ. Find the voltage gain and the signal current in $R_S$ for a 100 mV differential input.",
+      "solution": [
+        "$A_v = 2R_D/R_S = 4$.",
+        "$I_{sig} = 100\\text{ mV}/5\\text{ k}\\Omega = 20\\,\\mu$A."
+      ],
+      "answer": "Gain 4; 20 µA."
+    }
+  ]
+}
