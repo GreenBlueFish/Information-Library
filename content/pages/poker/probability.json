@@ -1,0 +1,175 @@
+{
+  "title": "Cards, Combinations and Probability",
+  "intro": "Poker probability is mostly counting. A deck has 52 cards, every unseen card is equally likely to come, and the chance of anything is the number of ways it can happen divided by the number of ways the cards can fall. This page builds the counts a player uses at the table: starting hands and combinations, outs and how often a draw comes in, and how often one hand beats another.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Counting starting hands"
+    },
+    {
+      "type": "prose",
+      "text": "Two hole cards from 52 can be dealt in $\\binom{52}{2} = \\frac{52 \\times 51}{2} = 1{,}326$ ways. Each specific pair of cards (say AsKd) is a combination, or combo. Because suits don't rank, the 1,326 combos fall into 169 kinds of starting hand, which differ in how many combos each has:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A pocket pair (such as 77) has $\\binom{4}{2} = 6$ combos: two of the four sevens.",
+        "A suited hand (such as AKs) has 4 combos, one per suit.",
+        "An offsuit hand (such as AKo) has $4 \\times 3 = 12$ combos.",
+        "So AK in all has 16 combos, three times as many as a pair like QQ."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/poker/starting-hands.svg",
+      "alt": "A 13 by 13 grid with ranks A to 2 along the top and side. The diagonal from AA to 22 is red (pairs). The cells above the diagonal, such as AKs and 32s, are blue (suited hands). The cells below it, such as AKo and 32o, are light grey (offsuit hands). A legend gives 13 pairs times 6 combos, 78 suited hands times 4 and 78 offsuit hands times 12: 1,326 combos in all.",
+      "caption": "Every starting hand on one grid, the standard way to draw a range. A range chart colours in the cells a player plays."
+    },
+    {
+      "type": "prose",
+      "text": "Some quick consequences: the chance of being dealt a pocket pair is $78/1326 = 1/17$, about 5.9%; of any one pair such as aces, $6/1326 = 1/221$, about 0.45%; of a suited hand, $312/1326$, about 23.5%. Range sizes are often given as a percentage of the 1,326 combos: a 15% range is about 200 combos."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Card removal and blockers"
+    },
+    {
+      "type": "prose",
+      "text": "The cards you can see change how many combos an opponent can hold. With an ace in your hand there are only three aces left, so AA has $\\binom{3}{2} = 3$ combos instead of 6, and AK has $3 \\times 4 = 12$ instead of 16. Holding a card that cuts an opponent's strong combos is called blocking them, and the card is a blocker. Holding the ace of the suit on a three-flush board, for example, means no opponent can have the nut flush. Blockers matter most on the river, when choosing which hands to bluff with and which to call with (see #/poker/game-theory)."
+    },
+    {
+      "type": "problem",
+      "title": "Counting combos",
+      "text": "An opponent's range is AA, KK and AK. How many combos is that? You hold As Qd, and the board shows no ace or king. How many combos are left, and what share of them is AK?",
+      "hint": "Count each hand's combos with what you can see removed.",
+      "solution": [
+        "Unblocked: AA 6, KK 6, AK 16, 28 combos.",
+        "With one ace in your hand: AA has 3 combos, KK still 6, AK $3 \\times 4 = 12$. That is 21 combos, of which AK is $12/21$, about 57%."
+      ],
+      "answer": "28 combos unblocked; 21 when you hold an ace, 57% of them AK"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Outs"
+    },
+    {
+      "type": "prose",
+      "text": "A hand that is behind but can improve is on a draw. The cards that would make it the best hand are its outs. Common draws on the flop:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Draw                                      Outs  Next card  By the river (flop, 2 cards)\nGutshot (inside) straight draw              4     8.5%      16.5%\nTwo overcards (e.g. AK on 8-6-2)            6    12.8%      24.1%\nOpen-ended straight draw (OESD)             8    17.0%      31.5%\nFlush draw                                  9    19.1%      35.0%\nFlush draw + gutshot                       12    25.5%      45.0%\nFlush draw + open-ended (a combo draw)     15    31.9%      54.1%"
+    },
+    {
+      "type": "prose",
+      "text": "On the flop there are 47 unseen cards (52, less your two and the three on the board; opponents' cards count as unseen because you don't know them). The exact chance of hitting at least one of $n$ outs on the turn or river is one minus the chance of missing twice:"
+    },
+    {
+      "type": "math",
+      "tex": "P(\\text{hit by river}) = 1 - \\frac{47-n}{47} \\cdot \\frac{46-n}{46}",
+      "caption": "Two cards to come from the flop. With one card to come it is just $n/46$ on the turn."
+    },
+    {
+      "type": "prose",
+      "text": "The rule of 4 and 2 is the shortcut used at the table: on the flop, with two cards to come, multiply your outs by 4 for a rough percentage; on the turn, with one, multiply by 2. Nine outs gives 36% (exact 35.0%) and 18% (exact 19.6%). The rule of 4 overestimates when there are many outs (15 outs gives 60% against the true 54%); subtracting the number of outs above 8 fixes most of that ($4n - (n - 8)$)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Chance of hitting a draw",
+        "params": [
+          {
+            "key": "unseen",
+            "label": "unseen cards on the flop",
+            "control": "range",
+            "min": 40,
+            "max": 50,
+            "step": 1,
+            "default": 47
+          }
+        ],
+        "config": {
+          "sim": "outs-odds",
+          "xLabel": "outs",
+          "yLabel": "chance of hitting (%)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Outs need care. Some cards that make your hand also make a better one for the opponent: a flush card that pairs the board can give them a full house, and a card that completes your straight may also complete a flush. Those are dirty outs, and you should discount them. A two-card draw on the turn and river, such as two more cards of a suit to make a backdoor (runner-runner) flush, is worth about one out: $\\frac{10}{47} \\cdot \\frac{9}{46} \\approx 4.2\\%$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Useful frequencies"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A pocket pair flops three of a kind (a set) or better about 11.8% of the time, about 1 in 8.5: $1 - \\binom{48}{3}/\\binom{50}{3}$.",
+        "Two unpaired cards flop at least a pair with one of them 32.4% of the time, about one flop in three.",
+        "Two suited cards flop a flush draw (exactly two more of the suit) 10.9% of the time and a made flush 0.84%; they make a flush by the river about 6.4% of the time.",
+        "When you hold KK, the chance that one of 8 opponents has AA is about 4%: each has 6 AA combos among the $\\binom{50}{2} = 1{,}225$ they could hold, about 0.49%, and eight of them make about 3.9%."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How hands fare against each other"
+    },
+    {
+      "type": "prose",
+      "text": "Equity is a hand's share of the pot if the hand were played to the end with no more betting: its chance of winning plus half its chance of tying. Equities preflop for some classic all-in match-ups (rounded; they shift by a point or two with the exact suits):"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Match-up                                     Example       Equity of the first\nHigher pair against lower pair              AA v KK       about 82%\nPair against two overcards (\"a coin flip\")  22 v AKo      about 53%\nPair against one overcard and one under     KK v A7o      about 71%\nPair against two undercards                 KK v 72o      about 87%\nTwo overcards against two undercards        AKo v 87o     about 62%\nDominated: same top card, worse kicker      AQo v AKo     about 26%\nOverpair against a suited connector         AA v JTs      about 78%"
+    },
+    {
+      "type": "prose",
+      "text": "Dominated hands are the costly ones: AQ against AK mostly wins only when a queen comes without a king; when an ace comes, or neither hand pairs, AK's kicker wins. This is why hands such as KJo and AT are trouble against a tight player's raise: when they make a pair, the better hands they're up against have made a better one."
+    },
+    {
+      "type": "callout",
+      "text": "Equity is not the same as winning in practice. A hand with 40% equity on the flop may not get to see the turn and river for free; it may be bet off its equity. How much of its equity a hand actually wins, given the betting to come, is its equity realization, covered on #/poker/game-theory."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Probability reasoning at the table"
+    },
+    {
+      "type": "prose",
+      "text": "Reading hands is updating probabilities as new evidence arrives, which is Bayes' theorem. Start with the combos in an opponent's range (the prior). Each action they take is more likely with some hands than with others, so it shifts the weights: a big river raise is much more likely with a very strong hand than with a medium one. Weight each combo by the chance they would act this way with it, and the result is the range they hold now. Players rarely do the arithmetic exactly, but counting combos (how many sets, how many flushes, how many bluffs are possible here) and weighting them by plausibility is the practical form of it."
+    },
+    {
+      "type": "problem",
+      "title": "A flush draw on the turn",
+      "text": "You hold Ah 5h on a board of Kh 9h 4c 2s. How many outs do you have to the nut flush, and what is your chance of making it on the river?",
+      "hint": "Count the hearts unseen, then divide by the unseen cards on the turn.",
+      "solution": [
+        "13 hearts, less your two and the two on the board: 9 outs.",
+        "Unseen cards on the turn: 52 - 2 - 4 = 46. Chance $9/46 \\approx 19.6\\%$. The rule of 2 gives 18%."
+      ],
+      "answer": "9 outs, about 19.6%"
+    },
+    {
+      "type": "problem",
+      "title": "Flopping a set",
+      "text": "You call before the flop with 66 in the hope of making a set. How often do you flop one, and what are the odds against?",
+      "hint": "Count the flops with no six; the remaining two sixes are among 50 unseen cards.",
+      "solution": [
+        "Flops with no six: $\\binom{48}{3} = 17{,}296$ out of $\\binom{50}{3} = 19{,}600$. So $P(\\text{set or better}) = 1 - 17296/19600 \\approx 11.8\\%$.",
+        "Odds against are $88.2 : 11.8$, about 7.5 to 1. Set-mining only pays when you can win much more than the call when you hit: the implied odds of #/poker/pot-odds-and-ev."
+      ],
+      "answer": "about 11.8%, or 7.5 to 1 against"
+    }
+  ]
+}

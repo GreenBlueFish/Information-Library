@@ -15,6 +15,7 @@ import * as foundations from "./foundations.js";
 import * as columns from "./columns.js";
 import * as analog from "./analog.js";
 import * as racing from "./racing.js";
+import * as poker from "./poker.js";
 
 export const SIMS = {
   lif: neurons.lif,
@@ -79,4 +80,10 @@ export const SIMS = {
   "tyre-curve": racing.tyreCurve,
   "cornering-speed": racing.corneringSpeed,
   "weight-transfer": racing.weightTransfer,
+  "outs-odds": poker.outsOdds,
+  "call-ev": poker.callEv,
+  "bet-sizing": poker.betSizing,
+  "risk-of-ruin": poker.ruin,
+  "winrate-confidence": poker.winrateConfidence,
+  "icm-equity": poker.icmEquity,
 };

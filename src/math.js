@@ -43,7 +43,7 @@ const UPRIGHT_IDENT = new Set(["Gamma", "Delta", "Theta", "Lambda", "Xi", "Pi", 
 const OPS = {
   cdot: "·", times: "×", div: "÷", pm: "±", mp: "∓", ast: "∗", star: "⋆", circ: "∘",
   bullet: "∙", approx: "≈", sim: "∼", simeq: "≃", cong: "≅", equiv: "≡", propto: "∝",
-  ne: "≠", neq: "≠", le: "≤", leq: "≤", ge: "≥", geq: "≥", ll: "≪", gg: "≫",
+  ne: "≠", neq: "≠", mid: "∣", le: "≤", leq: "≤", ge: "≥", geq: "≥", ll: "≪", gg: "≫",
   lt: "<", gt: ">", in: "∈", notin: "∉", subset: "⊂", subseteq: "⊆", cup: "∪", cap: "∩",
   to: "→", rightarrow: "→", leftarrow: "←", Rightarrow: "⇒", Leftarrow: "⇐",
   leftrightarrow: "↔", Leftrightarrow: "⇔", mapsto: "↦", uparrow: "↑", downarrow: "↓",
@@ -282,6 +282,11 @@ function parseCommand(p) {
       const d = parseArg(p);
       return { t: "frac", n, d };
     }
+    case "binom": case "dbinom": case "tbinom": {
+      const n = parseArg(p);
+      const d = parseArg(p);
+      return { t: "fenced", open: "(", close: ")", b: { t: "frac", n, d, binom: true } };
+    }
     case "sqrt": {
       skipWs(p);
       let index = null;
@@ -363,7 +368,8 @@ function build(doc, n, variant) {
       }
       return build(doc, n.b, n.variant);
     }
-    case "frac": return mml(doc, "mfrac", [build(doc, n.n, variant), build(doc, n.d, variant)]);
+    case "frac":
+      return mml(doc, "mfrac", [build(doc, n.n, variant), build(doc, n.d, variant)], n.binom ? { linethickness: "0" } : undefined);
     case "sqrt":
       return n.i
         ? mml(doc, "mroot", [build(doc, n.b, variant), build(doc, n.i, variant)])
