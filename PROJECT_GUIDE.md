@@ -230,9 +230,10 @@ sign as `\$`. `code` blocks are never touched.
 
 - Subscripts and superscripts: `V_{GS}`, `g_m`, `r_o^2`, `e^{-t/\tau}`. A
   run of letters in a script (`V_{GS}`, `C_{ox}`) is drawn upright as a label.
-- Fractions and roots: `\frac{g_m}{C_L}`, `\sqrt{LC}`, `\sqrt[3]{x}`.
+- Fractions and roots: `\frac{g_m}{C_L}`, `\sqrt{LC}`, `\sqrt[3]{x}`; binomial
+  coefficients `\binom{52}{2}`.
 - Greek and symbols: `\mu`, `\omega`, `\Delta`, `\approx`, `\le`, `\cdot`,
-  `\times`, `\propto`, `\to`, `\infty`, `\parallel` (for `R_1 \parallel R_2`).
+  `\times`, `\propto`, `\to`, `\mid`, `\infty`, `\parallel` (for `R_1 \parallel R_2`).
 - Functions: `\exp`, `\ln`, `\log`, `\sin`, `\max`, `\lim`; operators `\sum`,
   `\int`, `\prod` with limits; `\left( ... \right)` for tall brackets.
 - Words and units: `\text{ mV}`, `\mathrm{GBW}`; spaces `\,` `\;` `\quad`.

@@ -214,3 +214,61 @@ describe("widgets/sims (mushroom body)", () => {
     expect(Math.abs(total - 1200 * 9.81 / 1000) < 1e-6).toBe(true);
   });
 });
+
+describe("widgets/sims (poker)", () => {
+  it("outs-odds: exact draw odds match the combinatorics (9 outs: 35.0% by the river, 19.1% next card)", () => {
+    const [twoCards, rule4, oneCard, rule2] = SIMS["outs-odds"]({}, {});
+    const at = (s, o) => s.points.find((p) => p.x === o).y;
+    expect(Math.abs(at(twoCards, 9) - 34.97) < 0.01).toBe(true);
+    expect(Math.abs(at(oneCard, 9) - (100 * 9) / 47) < 1e-9).toBe(true);
+    expect(at(rule4, 9)).toBe(36);
+    expect(at(rule2, 9)).toBe(18);
+    expect(at(twoCards, 0)).toBe(0);
+  });
+
+  it("call-ev: EV crosses zero at the pot-odds equity b/(p + 2b), and implied odds only add", () => {
+    const [plain, implied] = SIMS["call-ev"]({}, { pot: 100, bet: 50, implied: 40 });
+    const cross = plain.points.find((p) => Math.abs(p.x - 25) < 1e-9);
+    expect(Math.abs(cross.y) < 1e-9).toBe(true);
+    expect(implied.points.every((p, i) => p.y >= plain.points[i].y)).toBe(true);
+  });
+
+  it("bet-sizing: a pot-sized bet needs a 50% bluff, 50% defence and 33% caller equity", () => {
+    const [bluff, mdf, caller] = SIMS["bet-sizing"]({}, { maxSize: 200, rake: 0 });
+    const at = (s) => s.points.find((p) => Math.abs(p.x - 100) < 1e-9).y;
+    expect(Math.abs(at(bluff) - 50) < 1e-9).toBe(true);
+    expect(Math.abs(at(mdf) - 50) < 1e-9).toBe(true);
+    expect(Math.abs(at(caller) - 100 / 3) < 1e-9).toBe(true);
+    const [, , raked] = SIMS["bet-sizing"]({}, { maxSize: 200, rake: 5 });
+    expect(at(raked) > at(caller)).toBe(true);
+  });
+
+  it("risk-of-ruin: exp(-2wB/sd^2), and half the win rate means more risk", () => {
+    const [full, half] = SIMS["risk-of-ruin"]({}, { winrate: 5, sd: 90 });
+    const at = (s, bi) => s.points.find((p) => Math.abs(p.x - bi) < 1e-9).y;
+    expect(Math.abs(at(full, 30) - 100 * Math.exp((-2 * 5 * 3000) / 8100)) < 1e-9).toBe(true);
+    expect(at(half, 30) > at(full, 30)).toBe(true);
+    expect(at(full, 0)).toBe(100);
+  });
+
+  it("winrate-confidence: the band is mean +/- 1.96 sd sqrt(N/100), in buy-ins against thousands of hands", () => {
+    const [mean, high, low] = SIMS["winrate-confidence"]({}, { winrate: 5, sd: 90, hands: 100 });
+    const last = mean.points.length - 1;
+    expect(mean.points[last].x).toBe(100);
+    expect(Math.abs(mean.points[last].y - 50) < 1e-9).toBe(true);
+    expect(Math.abs(high.points[last].y - 50 - (1.96 * 90 * Math.sqrt(1000)) / 100) < 1e-9).toBe(true);
+    expect(Math.abs(mean.points[last].y - low.points[last].y - (high.points[last].y - mean.points[last].y)) < 1e-6).toBe(true);
+  });
+
+  it("icm: the textbook 50/30/20 example, equities sum to the pool, and big stacks are worth less than their chips", async () => {
+    const { icm } = await import("../../../src/widgets/sims/poker.js");
+    const eq = icm([5000, 3000, 2000], [0.5, 0.3, 0.2]);
+    expect(eq.map((x) => Math.round(x * 1000))).toEqual([384, 328, 289]);
+    expect(Math.abs(icm([4, 3, 2, 1], [0.5, 0.3, 0.2]).reduce((a, b) => a + b, 0) - 1) < 1e-12).toBe(true);
+    const [curveIcm] = SIMS["icm-equity"]({}, { players: 4, payouts: "50/30/20" });
+    const at = (s) => s.points.find((p) => Math.abs(p.x - 60) < 1e-9).y;
+    expect(at(curveIcm) < 60).toBe(true);
+    const [wta] = SIMS["icm-equity"]({}, { players: 5, payouts: "winner takes all" });
+    expect(Math.abs(at(wta) - 60) < 1e-9).toBe(true);
+  });
+});

@@ -1,0 +1,186 @@
+{
+  "title": "Tournaments and ICM",
+  "intro": "In a cash game a chip is worth exactly its face value. In a tournament it isn't: prizes are paid for finishing places, not for chips, so the last chips a player wins are worth less than the first ones they could lose. This page explains the Independent Chip Model that puts a money value on tournament stacks, how it changes calling and shoving decisions near the money, how to play a short stack, and how bounties change the arithmetic.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How a tournament works"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Everyone pays the same buy-in (often plus a fee to the house) and starts with the same stack of chips. The buy-ins, less fees, make the prize pool.",
+        "Blinds (and usually antes) rise at set intervals, the blind levels, so stacks shrink relative to the blinds and the tournament has to end.",
+        "Players who lose all their chips are knocked out (busted). As players go, tables are merged; the last table is the final table.",
+        "Usually the top 10 to 20% of the field are paid, with most of the prize pool going to the top few places. The point just before the paid places, where one more elimination puts everyone left in the money, is the bubble.",
+        "Variants: freezeouts (one entry each), re-entry and rebuy events, turbos and hyper-turbos (fast blind levels), sit-and-gos (a single table that starts when full), satellites (the prizes are seats in a bigger event) and bounty tournaments (a prize for each player you knock out)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why chips are not money"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose three players remain, prizes are 50%, 30% and 20% of the pool, and one player has all but a handful of chips. Doubling their stack cannot double their prize: the most they can win is 50%, and they have already locked up at least 20%. A player's share of the chips overstates the big stack's prize equity and understates the short stack's, because the short stack still gets paid for every player who busts before them. Chip EV (chipEV) is the expected change in chips; money EV (prize EV, written \\$EV) is the expected change in prize money. In a tournament it is \\$EV that matters."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Independent Chip Model"
+    },
+    {
+      "type": "prose",
+      "text": "The Independent Chip Model (ICM), developed from Harville's 1973 formula for horse-race placings and introduced to poker by Mason Malmuth, turns stacks into prize equity. It assumes each player's chance of finishing first is their share of the chips. Given who finishes first, each remaining player's chance of finishing second is their share of the chips left, and so on down. A player's equity is the sum, over every finishing order, of its probability times the prize they get in it:"
+    },
+    {
+      "type": "math",
+      "tex": "P(i \\text{ first}) = \\frac{s_i}{\\sum_j s_j}, \\qquad P(i \\text{ second} \\mid k \\text{ first}) = \\frac{s_i}{\\sum_{j \\ne k} s_j}",
+      "caption": "and so on down the paid places, where $s_i$ is player $i$'s stack."
+    },
+    {
+      "type": "prose",
+      "text": "For example, with stacks of 50%, 30% and 20% of the chips and prizes of 50/30/20, the ICM equities are about 38.4%, 32.8% and 28.9% of the pool. The chip leader holds half the chips but only 38% of the money; the short stack holds a fifth of the chips but 29% of the money."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "ICM: prize equity against chip share",
+        "params": [
+          {
+            "key": "players",
+            "label": "players left",
+            "control": "range",
+            "min": 2,
+            "max": 9,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "payouts",
+            "label": "payouts (% of the pool)",
+            "control": "select",
+            "options": [
+              "50/30/20",
+              "65/35",
+              "winner takes all",
+              "40/25/20/15"
+            ],
+            "default": "50/30/20"
+          }
+        ],
+        "config": {
+          "sim": "icm-equity",
+          "xLabel": "your share of the chips (%)",
+          "yLabel": "your share of the prize pool (%)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The curve bows above the diagonal for small stacks and below it for big ones: each extra chip is worth less than the one before. With winner-takes-all payouts the model is exactly chip-proportional, and so is a cash game."
+    },
+    {
+      "type": "list",
+      "items": [
+        "ICM ignores skill and position: it values two equal stacks equally even if one belongs to a much better player or sits in the blinds next hand. Future game simulation (FGS) refines it by simulating a few hands ahead.",
+        "Deals: when the last few players agree to split the remaining money, an ICM chop pays each their ICM equity, while a chip chop pays by chip share, which favours the leader."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bubble factor and risk premium"
+    },
+    {
+      "type": "prose",
+      "text": "Because losing chips costs more prize equity than winning the same chips gains, a call or shove near the money needs more equity than its chip odds suggest. The bubble factor is the ratio of what a player loses in prize equity by losing a confrontation to what they gain by winning it:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{BF} = \\frac{\\text{equity lost if you lose}}{\\text{equity gained if you win}}, \\qquad \\text{required equity} = \\frac{\\mathrm{BF}}{1 + \\mathrm{BF}} \\text{ for an even-money all-in}",
+      "caption": "In chip terms a bubble factor of 1 needs 50%; a bubble factor of 2 needs 67%."
+    },
+    {
+      "type": "prose",
+      "text": "The extra equity needed over the chip-EV figure is the risk premium. It is largest for middle stacks on the bubble facing a big stack (who can bust them) and smallest for the big stack itself, which is why big stacks put relentless pressure on the bubble and medium stacks fold hands they would happily get in with in a cash game. In satellites, where every seat is worth the same, risk premiums near the bubble become extreme: a player who has nearly locked a seat should fold almost everything, even aces."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Short stacks and push-or-fold"
+    },
+    {
+      "type": "prose",
+      "text": "With a short stack there is no room to raise, see a flop and fold. Below about 15 big blinds, the best strategy is close to push-or-fold: either go all in or fold. Shoving wins the blinds and antes whenever everyone folds, and when called it still has equity. A shove's EV, relative to folding, against one opponent who calls with frequency $c$:"
+    },
+    {
+      "type": "math",
+      "tex": "EV(\\text{shove}) = (1 - c) \\cdot P_0 + c \\cdot \\left[ e \\cdot P_c - S \\right]",
+      "caption": "$P_0$ is what is in the middle before the shove, $P_c$ the whole pot once called, $S$ the chips you put in with the shove, and $e$ your equity against the calling range."
+    },
+    {
+      "type": "prose",
+      "text": "Solving this for both players at once gives Nash push-fold charts: for each stack depth, which hands to shove and which to call with. They are close to an equilibrium for the last few big blinds of a tournament (in chip EV; ICM tightens the calling ranges near the money). With 10 big blinds on the button, an equilibrium shoves a large share of hands, roughly 40% or more, and more with antes."
+    },
+    {
+      "type": "list",
+      "items": [
+        "M ratio (Harrington): stack divided by the cost of one round of blinds and antes, the number of orbits a player could survive without playing a hand. Harrington named zones from green (M above 20, play normally) through yellow and orange down to red (M below 5, shove or fold).",
+        "Big blinds (bb) are now the more common measure. With antes in play, the pot is bigger relative to the blinds, so it pays to shove wider.",
+        "Effective stacks decide everything: a 10 bb shove into a 50 bb big blind risks 10 bb either way."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bounty tournaments"
+    },
+    {
+      "type": "prose",
+      "text": "In a bounty (knockout) tournament part of each buy-in is a prize for whoever eliminates that player. In a progressive knockout (PKO), half of a busted player's bounty is paid out at once and the other half is added to the winner's own bounty, so bounties grow on the players who knock others out. A bounty adds money to a pot that you can only win by busting the opponent, so it pays to call all-ins wider against players you cover. To use it in the arithmetic, convert the bounty into chips at the tournament's exchange rate (the chips you started with per unit of the prize pool part of the buy-in) and add it to the pot when working out pot odds."
+    },
+    {
+      "type": "callout",
+      "text": "ICM pressure is strongest near the bubble and at final tables, where the jumps between prizes are largest. Early in a big tournament, with the money far off, chip EV and \\$EV are nearly the same and cash-game play is close to right."
+    },
+    {
+      "type": "problem",
+      "title": "ICM by hand",
+      "text": "Three players remain with stacks of 5,000, 3,000 and 2,000 chips. Prizes are 50, 30 and 20. What is the short stack's chance of finishing first, and of finishing second given that the big stack finishes first?",
+      "hint": "Each player finishes first with their share of the chips; the second place is shared in proportion to the chips that remain.",
+      "solution": [
+        "First: $2000/10000 = 20\\%$.",
+        "Second given the 5,000 stack is first: $2000/(3000 + 2000) = 40\\%$.",
+        "Summing over every order gives the short stack $0.2 \\times 50 + $ its second-place chances $\\times 30 + $ its third-place chances $\\times 20 \\approx 28.9$ of the prizes, against the 20 that its chip share would suggest."
+      ],
+      "answer": "20% to win; 40% to be second after the big stack wins"
+    },
+    {
+      "type": "problem",
+      "title": "The bubble",
+      "text": "Four players remain, three are paid (50/30/20), and all have equal stacks. You are all in against one other player for your whole stack. If you win, you hold half the chips against two stacks of a quarter each. By ICM your equity is now 25% of the pool, 38.3% if you win, and 0 if you lose. What is your bubble factor, and what equity do you need to call?",
+      "hint": "Bubble factor = equity lost / equity gained; required equity = BF / (1 + BF).",
+      "solution": [
+        "Lost if you lose: $25$. Gained if you win: $38.3 - 25 = 13.3$. $\\mathrm{BF} = 25/13.3 \\approx 1.88$.",
+        "Required equity $= 1.88/2.88 \\approx 65\\%$, against 50% in a cash game. Even AK against a random hand (about 65%) is barely a call; most of the profit goes to the two players who sit out."
+      ],
+      "answer": "about 1.9; you need about 65% equity"
+    },
+    {
+      "type": "problem",
+      "title": "A short-stack shove",
+      "text": "You have 10 bb on the button, the small blind folds, and the big blind (who has you covered) will call a shove 20% of the time. Against that calling range your hand has 40% equity. There are no antes. Is the shove better than folding?",
+      "hint": "The pot before the shove is 1.5 bb. If called, the final pot is $10 + 10 + 0.5$ bb, of which you put in 10.",
+      "solution": [
+        "When the big blind folds (80%): you win 1.5 bb.",
+        "When called (20%): the pot is 20.5 bb, so the EV relative to folding is $0.4 \\times 20.5 - 10 = -1.8$ bb.",
+        "$EV = 0.8 \\times 1.5 + 0.2 \\times (-1.8) = 1.2 - 0.36 = +0.84$ bb, better than folding (0). Fold equity does most of the work."
+      ],
+      "answer": "yes, about +0.84 bb in chips"
+    }
+  ]
+}

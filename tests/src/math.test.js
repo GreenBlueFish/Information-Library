@@ -39,6 +39,12 @@ describe("math › MathML", () => {
     expect(html("\\sqrt{x}").includes("<msqrt><mi>x</mi></msqrt>")).toBe(true);
     expect(html("\\sqrt[3]{x}").includes("<mroot><mi>x</mi><mn>3</mn></mroot>")).toBe(true);
   });
+  it("draws binomial coefficients as a bracketed fraction with no bar", () => {
+    const out = html("\\binom{52}{2}");
+    expect(/<mfrac linethickness="0">(<mrow>)?<mn>52<\/mn>(<\/mrow>)?(<mrow>)?<mn>2<\/mn>/.test(out)).toBe(true);
+    expect(out.includes(">(</mo>") && out.includes(">)</mo>")).toBe(true);
+    expect(html("a \\mid b").includes("<mo>∣</mo>")).toBe(true);
+  });
   it("knows Greek letters, operators, functions and text", () => {
     const out = html("\\tau \\approx 10\\,\\text{ms} \\cdot \\exp(-t)");
     for (const bit of ["<mi>τ</mi>", "<mo>≈</mo>", "<mtext>ms</mtext>", "<mo>·</mo>", "<mi>exp</mi>", "<mo>−</mo>"]) {
