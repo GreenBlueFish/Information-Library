@@ -241,6 +241,8 @@ describe("widgets/sims (poker)", () => {
     expect(Math.abs(at(caller) - 100 / 3) < 1e-9).toBe(true);
     const [, , raked] = SIMS["bet-sizing"]({}, { maxSize: 200, rake: 5 });
     expect(at(raked) > at(caller)).toBe(true);
+    const [rb, rm] = SIMS["bet-sizing"]({}, { maxSize: 200, rake: 5 });
+    expect(Math.abs(at(rb) + at(rm) - 100) < 1e-9).toBe(true);
   });
 
   it("risk-of-ruin: exp(-2wB/sd^2), and half the win rate means more risk", () => {
@@ -270,5 +272,8 @@ describe("widgets/sims (poker)", () => {
     expect(at(curveIcm) < 60).toBe(true);
     const [wta] = SIMS["icm-equity"]({}, { players: 5, payouts: "winner takes all" });
     expect(Math.abs(at(wta) - 60) < 1e-9).toBe(true);
+    // two players left of a four-prize payout: they share the top two prizes, all of the money left
+    const [two] = SIMS["icm-equity"]({}, { players: 2, payouts: "40/25/20/15" });
+    expect(Math.abs(two.points.find((p) => p.x === 50).y - 50) < 1e-9).toBe(true);
   });
 });

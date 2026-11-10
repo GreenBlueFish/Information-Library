@@ -35,6 +35,7 @@ export function hitChance(outs, unseen, draws) {
 export function outsOdds(config, state) {
   const unseen = Math.round(Math.min(50, Math.max(30, num(state, config, "unseen", 47))));
   const pct = (f) => (x) => 100 * f(Math.round(x));
+  // "next card" is the turn, from the same unseen cards (n / 47 heads-up)
   return [
     curve("exact, turn and river", pct((o) => hitChance(o, unseen, 2)), 0, 20, 21),
     curve("rule of 4 (4 × outs)", (o) => Math.min(100, 4 * Math.round(o)), 0, 20, 21),
@@ -45,8 +46,8 @@ export function outsOdds(config, state) {
 
 /**
  * Expected value (in big blinds) of calling a bet, relative to folding, for a
- * hand with equity `eq` (0-1): eq·(pot + bet + implied) - (1 - eq)·bet, where
- * `pot` includes the bet already made and `implied` is what more the caller
+ * hand with equity `eq` (0-1): eq·(pot + implied) - (1 - eq)·bet, where `pot`
+ * already includes the bet being called and `implied` is what more the caller
  * expects to win on later streets when they hit.
  */
 export function callEV(eq, pot, bet, implied = 0) {
@@ -69,12 +70,14 @@ export function callEv(config, state) {
  * What a bet of `b` into a pot of `p` demands, as fractions, with a share `r`
  * of the final pot taken as rake: how often a pure bluff must work, the
  * minimum defence frequency, and the equity a caller needs (which is also the
- * share of bluffs in a balanced, polarised river range when r = 0).
+ * share of bluffs in a balanced, polarised river range when r = 0). The MDF
+ * is 1 - alpha, so it moves with the rake too.
  */
 export function betThresholds(b, p, r = 0) {
+  const won = p * (1 - r); // what a bluff takes when it works
   return {
-    bluff: b / (p * (1 - r) + b),
-    mdf: p / (p + b),
+    bluff: b / (won + b),
+    mdf: won / (won + b),
     callerEquity: b / ((p + 2 * b) * (1 - r)),
   };
 }
@@ -182,12 +185,16 @@ export const PAYOUTS = {
 
 /**
  * One player's prize equity against their share of the chips, with the other
- * players splitting the rest evenly, beside the chip-proportional share.
+ * players splitting the rest evenly, beside the chip-proportional share. With
+ * fewer players left than prizes, the lowest prizes are already paid out, so
+ * the equity is a share of the top `players` prizes, the money still to win.
  */
 export function icmEquity(config, state) {
-  const payouts = PAYOUTS[str(state, config, "payouts", "50/30/20")] ?? PAYOUTS["50/30/20"];
-  // at least as many players as prizes, so the whole pool is still to be won
-  const players = Math.round(Math.min(9, Math.max(2, payouts.length, num(state, config, "players", 4))));
+  const players = Math.round(Math.min(9, Math.max(2, num(state, config, "players", 4))));
+  const all = PAYOUTS[str(state, config, "payouts", "50/30/20")] ?? PAYOUTS["50/30/20"];
+  const left = all.slice(0, players);
+  const total = left.reduce((a, b) => a + b, 0);
+  const payouts = left.map((x) => x / total);
   const hero = (share) => {
     const s = Math.min(0.999, Math.max(0.001, share / 100));
     const others = (1 - s) / (players - 1);
