@@ -1,0 +1,204 @@
+{
+  "title": "Pricing Options: Binomial, Black-Scholes and the Greeks",
+  "intro": "What is the right to buy a stock at \\$100 in three months worth? The answer, worked out by Fischer Black, Myron Scholes and Robert Merton in 1973, does not depend on how much the stock is expected to rise. It depends on the fact that an option can be copied with a changing mix of stock and borrowing. This page builds the idea with a one-step binomial tree, then gives the Black-Scholes formula, implied volatility, and the Greeks that measure an option's risks.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One step: pricing by replication"
+    },
+    {
+      "type": "prose",
+      "text": "A stock is at 100. In one year it will be 120 or 90. The interest rate is 5% (yearly). What is a call with strike 100 worth? Its payoff is 20 if the stock goes up, 0 if down. Build a portfolio of $\\Delta$ shares and $B$ dollars of bonds that pays the same in both cases:"
+    },
+    {
+      "type": "math",
+      "tex": "120\\Delta + 1.05B = 20, \\qquad 90\\Delta + 1.05B = 0"
+    },
+    {
+      "type": "prose",
+      "text": "Subtracting, $30\\Delta = 20$, so $\\Delta = 2/3$ and $B = -90 \\times (2/3)/1.05 \\approx -57.14$ (borrow \\$57.14). The portfolio costs $100 \\times 2/3 - 57.14 = 9.52$. Because it pays exactly what the call pays in every state, the call must cost 9.52, or there is a riskless profit to be made. Notice that we never needed the probability of an up move: the price is set by replication, not by forecasting."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Risk-neutral pricing"
+    },
+    {
+      "type": "prose",
+      "text": "The same answer comes from pretending that investors don't care about risk, so the stock is expected to grow at the risk-free rate. The risk-neutral probability $q$ of the up move satisfies $100 \\times 1.05 = 120q + 90(1 - q)$, so $q = 0.5$. Then the call is the discounted expected payoff under $q$:"
+    },
+    {
+      "type": "math",
+      "tex": "C = \\frac{q\\,C_u + (1 - q)\\,C_d}{1 + r} = \\frac{0.5 \\times 20 + 0.5 \\times 0}{1.05} \\approx 9.52, \\qquad q = \\frac{(1 + r) - d}{u - d}"
+    },
+    {
+      "type": "prose",
+      "text": "Here $u = 1.2$ and $d = 0.9$ are the up and down factors. This is a mathematical device, not a claim about real probabilities, and it is how almost all derivatives are priced. Many small steps make a binomial tree (Cox, Ross and Rubinstein, 1979) with $u = e^{\\sigma\\sqrt{\\Delta t}}$ and $d = 1/u$; working backward through the tree, checking at each node whether early exercise is better, prices American options. As the steps shrink the tree's answer converges to Black-Scholes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Black-Scholes formula"
+    },
+    {
+      "type": "prose",
+      "text": "If the stock follows a geometric Brownian motion with constant volatility $\\sigma$, interest rate $r$ is constant, and trading is continuous and costless, a European call on a non-dividend stock is worth"
+    },
+    {
+      "type": "math",
+      "tex": "C = S\\,N(d_1) - K e^{-rT} N(d_2)"
+    },
+    {
+      "type": "math",
+      "tex": "d_1 = \\frac{\\ln(S/K) + (r + \\sigma^2/2)T}{\\sigma\\sqrt{T}}, \\qquad d_2 = d_1 - \\sigma\\sqrt{T}"
+    },
+    {
+      "type": "prose",
+      "text": "$N(\\cdot)$ is the standard normal cumulative distribution. The put follows from put-call parity: $P = K e^{-rT} N(-d_2) - S\\,N(-d_1)$. Read the call formula as the replicating portfolio: hold $N(d_1)$ shares and borrow $K e^{-rT} N(d_2)$. $N(d_2)$ is the risk-neutral probability that the call ends in the money. Robert Merton extended the model (dividends enter by replacing $S$ with $S e^{-qT}$), and Scholes and Merton received the 1997 Nobel memorial prize for it (Black had died in 1995)."
+    },
+    {
+      "type": "prose",
+      "text": "Example: $S = K = 100$, $T = 1$, $r = 5\\%$, $\\sigma = 20\\%$. Then $d_1 = (0 + 0.07)/0.2 = 0.35$, $d_2 = 0.15$, $N(d_1) \\approx 0.6368$, $N(d_2) \\approx 0.5596$, and $C \\approx 63.68 - 95.12 \\times 0.5596 \\approx 10.45$. The put is about 5.57."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Implied volatility and the smile"
+    },
+    {
+      "type": "prose",
+      "text": "Every input to Black-Scholes is observable except volatility. Turn the formula around: given an option's market price, solve for the $\\sigma$ that produces it. That is the implied volatility (IV), and option traders quote prices in IV rather than dollars. If the model were exactly right, all options on the same stock and expiry would show the same IV. They don't: for stock indexes, low-strike puts have higher IV than at-the-money options, a pattern called the volatility skew or smile, which appeared after the 1987 crash. It reflects that markets crash down more often than up (fat tails, negative skew) and that investors pay up for crash insurance."
+    },
+    {
+      "type": "prose",
+      "text": "The model's assumptions all fail somewhat: volatility changes over time and jumps; prices gap; trading has costs; returns have fat tails. Practitioners still use Black-Scholes as a common language and correct for its errors through the IV surface, or use stochastic volatility models (Heston) and jump models."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Greeks"
+    },
+    {
+      "type": "prose",
+      "text": "The Greeks are the sensitivities of an option's value to its inputs. They tell you what risks a position carries and how to hedge them."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Delta $\\Delta = \\partial C/\\partial S$: change in option value per \\$1 move in the stock. Calls 0 to 1, puts −1 to 0; about 0.5 at the money. Also the hedge ratio: a market maker short one call holds $\\Delta$ shares to be delta-neutral. Traders use delta as a rough probability of finishing in the money.",
+        "Gamma $\\Gamma = \\partial^2 C/\\partial S^2$: how fast delta changes. Highest at the money near expiry. Long options have positive gamma (they gain from big moves either way); short options have negative gamma.",
+        "Theta $\\Theta = \\partial C/\\partial t$: value lost per day as time passes, all else equal. Long options pay theta; short options earn it. Gamma and theta are two sides of a coin: for a delta-hedged option, $\\Theta + \\tfrac12 \\sigma^2 S^2 \\Gamma \\approx rC$ (from the Black-Scholes equation), so you pay theta for the right to profit from movement.",
+        "Vega $\\nu = \\partial C/\\partial \\sigma$: change in value per one-point change in implied volatility. Largest for at-the-money, long-dated options.",
+        "Rho $\\rho = \\partial C/\\partial r$: sensitivity to interest rates; small for short-dated options."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta_{call} = N(d_1), \\quad \\Gamma = \\frac{N'(d_1)}{S\\sigma\\sqrt{T}}, \\quad \\nu = S\\,N'(d_1)\\sqrt{T}"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Black-Scholes value and Greeks against the stock price (strike 100)",
+        "params": [
+          {
+            "key": "measure",
+            "label": "what to plot",
+            "control": "select",
+            "options": [
+              "call value",
+              "put value",
+              "delta",
+              "gamma",
+              "vega (per vol point)",
+              "theta (per day)"
+            ],
+            "default": "call value"
+          },
+          {
+            "key": "vol",
+            "label": "volatility (%)",
+            "control": "range",
+            "min": 5,
+            "max": 100,
+            "step": 1,
+            "default": 25
+          },
+          {
+            "key": "rate",
+            "label": "interest rate (%)",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 0.25,
+            "default": 4
+          }
+        ],
+        "config": {
+          "sim": "option-greeks",
+          "xLabel": "stock price",
+          "yLabel": "value"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Step through the measures: as expiry nears, the value curve bends sharply toward the intrinsic-value 'hockey stick', delta becomes a step, gamma becomes a tall spike at the strike, and theta becomes most negative at the money. That is why short-dated at-the-money options are the most sensitive to every small move."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Delta hedging and what volatility is worth"
+    },
+    {
+      "type": "prose",
+      "text": "A trader who buys an option and continuously delta-hedges it ends up with a profit that depends only on whether the stock's realized volatility exceeds the implied volatility paid. Over each small interval the hedged position earns about $\\tfrac12 \\Gamma S^2(\\sigma_{realized}^2 - \\sigma_{implied}^2)\\Delta t$. Options are therefore bets on volatility, and the market for them is a market for volatility."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "Binomial call",
+      "text": "A stock is at 50 and in one period will be 60 or 40. The risk-free rate is 0 for the period. Price a call with strike 50 by replication and by risk-neutral probability.",
+      "solution": [
+        "Replication: $60\\Delta + B = 10$, $40\\Delta + B = 0$ ⇒ $\\Delta = 0.5$, $B = -20$. Cost $= 25 - 20 = 5$.",
+        "Risk-neutral: $50 = 60q + 40(1 - q) \\Rightarrow q = 0.5$; $C = 0.5 \\times 10 = 5$."
+      ],
+      "answer": "5"
+    },
+    {
+      "type": "problem",
+      "title": "Black-Scholes by hand",
+      "text": "Price a 6-month European call with $S = 50$, $K = 52$, $r = 4\\%$, $\\sigma = 30\\%$. You may use $N(0.0155) \\approx 0.5062$ and $N(-0.1966) \\approx 0.4221$.",
+      "solution": [
+        "$\\sigma\\sqrt{T} = 0.3 \\times 0.7071 = 0.2121$. $d_1 = (\\ln(50/52) + (0.04 + 0.045) \\times 0.5)/0.2121 = (-0.03922 + 0.0425)/0.2121 \\approx 0.0155$, and $d_2 = 0.0155 - 0.2121 = -0.1966$.",
+        "$C = 50 \\times 0.5062 - 52 e^{-0.02} \\times 0.4221 \\approx 25.31 - 21.51 \\approx 3.80$."
+      ],
+      "answer": "about \\$3.80"
+    },
+    {
+      "type": "problem",
+      "title": "Delta hedge",
+      "text": "You sell 10 call contracts (1,000 shares' worth) with delta 0.6. How many shares do you buy to be delta-neutral? If the stock rises \\$1 and gamma is 0.04, what is your new delta and what must you do?",
+      "solution": [
+        "Buy $0.6 \\times 1000 = 600$ shares.",
+        "New delta $\\approx 0.6 + 0.04 = 0.64$, so the short calls now act like −640 shares: buy 40 more. A short-gamma hedger buys after rises and sells after falls, paying away money in volatile markets."
+      ],
+      "answer": "600 shares; buy 40 more"
+    },
+    {
+      "type": "problem",
+      "title": "Theta and vega",
+      "text": "An option has theta −0.05 per day and vega 0.20 per vol point. Over a week, implied volatility rises from 25% to 28% while the stock is unchanged. Roughly how does the option's value change?",
+      "solution": [
+        "Theta: $7 \\times (-0.05) = -0.35$. Vega: $3 \\times 0.20 = +0.60$. Net about +0.25 (ignoring that theta and vega themselves shift)."
+      ],
+      "answer": "about +0.25"
+    }
+  ]
+}
