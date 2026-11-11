@@ -105,13 +105,15 @@ export function bondPriceYield(config, state) {
   const years = clamp(num(state, config, "maturity", 10), 0.5, 50);
   const y0 = num(state, config, "yield", 4) / 100;
   const { price: p0, modified: dm, convexity: cv } = bondRisk(c, y0, years);
+  const lo = Math.max(0, 100 * y0 - 3), hi = Math.min(15, 100 * y0 + 3);
   return [
     curve("price (per 100 face)", (y) => bondPrice(c, y / 100, years), 0, 15, 151),
-    curve(`duration only (D = ${dm.toFixed(2)})`, (y) => p0 * (1 - dm * (y / 100 - y0)), 0, 15, 2),
+    // the approximations are local: drawn only within 3 points of the chosen yield
+    curve(`duration only (D = ${dm.toFixed(2)})`, (y) => Math.max(0, p0 * (1 - dm * (y / 100 - y0))), lo, hi, 61),
     curve("duration + convexity", (y) => {
       const dy = y / 100 - y0;
-      return p0 * (1 - dm * dy + 0.5 * cv * dy * dy);
-    }, 0, 15, 151),
+      return Math.max(0, p0 * (1 - dm * dy + 0.5 * cv * dy * dy));
+    }, lo, hi, 61),
   ];
 }
 
@@ -141,7 +143,7 @@ export function dcf(config, state) {
   const n = clamp(Math.round(num(state, config, "years", 5)), 1, 20);
   const g2 = num(state, config, "terminal", 2.5) / 100;
   const lo = Math.max(g2 * 100 + 0.5, 4);
-  const cap = (v) => (Number.isFinite(v) ? Math.min(v, 2000) : 2000);
+  const cap = (v) => (Number.isFinite(v) ? Math.min(v, 400 * Math.abs(fcf)) : 400 * Math.abs(fcf));
   return [
     curve("total value", (r) => cap(dcfValue(fcf, g1, n, g2, r / 100).total), lo, 16, 121),
     curve("of which terminal value", (r) => cap(dcfValue(fcf, g1, n, g2, r / 100).terminal), lo, 16, 121),

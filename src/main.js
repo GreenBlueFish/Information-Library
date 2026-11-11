@@ -186,6 +186,7 @@ export async function boot() {
       } catch (err) {
         if (err instanceof ContentLoadError) {
           renderError(err, app);
+          lastRouteKey = null; // the next successful page opens at its top
           // The nav is already rendered above; stop this render here. The
           // lookup is installed ONCE in boot() on the persistent `#app`, so
           // this early return does not skip it — its delegated listeners stay
