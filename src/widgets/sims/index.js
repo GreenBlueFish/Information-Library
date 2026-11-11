@@ -16,6 +16,7 @@ import * as columns from "./columns.js";
 import * as analog from "./analog.js";
 import * as racing from "./racing.js";
 import * as poker from "./poker.js";
+import * as investing from "./investing.js";
 
 export const SIMS = {
   lif: neurons.lif,
@@ -86,4 +87,16 @@ export const SIMS = {
   "risk-of-ruin": poker.ruin,
   "winrate-confidence": poker.winrateConfidence,
   "icm-equity": poker.icmEquity,
+  "compound-growth": investing.compoundGrowth,
+  "volatility-drag": investing.volatilityDrag,
+  "bond-price-yield": investing.bondPriceYield,
+  dcf: investing.dcf,
+  "option-payoff": investing.optionPayoff,
+  "option-greeks": investing.optionGreeks,
+  frontier: investing.frontier,
+  diversification: investing.diversification,
+  sml: investing.sml,
+  "carry-trade": investing.carryTrade,
+  "leveraged-funds": investing.leveragedFunds,
+  withdrawal: investing.withdrawal,
 };

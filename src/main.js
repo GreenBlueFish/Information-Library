@@ -210,7 +210,20 @@ export async function boot() {
       setMountSink(null);
     }
     liveInstances = mounted;
+
+    // A move to another page (the pager arrows, a nav link, a card) starts at
+    // the top of the new page. Without this the browser keeps the old scroll
+    // offset, so the arrows at the foot of one page land the reader at the
+    // foot of the next.
+    const routeKey = (resolution?.path ?? []).join("/");
+    if (lastRouteKey !== null && routeKey !== lastRouteKey && typeof window !== "undefined" && typeof window.scrollTo === "function") {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+    lastRouteKey = routeKey;
   }
+
+  /** Route of the last render (null before the first), for scroll-to-top. */
+  let lastRouteKey = null;
 
   // Install the lookup interaction ONCE, on the persistent `#app` element,
   // before wiring navigation. Its dblclick/mouseup listeners are delegated on
