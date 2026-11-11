@@ -277,3 +277,86 @@ describe("widgets/sims (poker)", () => {
     expect(Math.abs(two.points.find((p) => p.x === 50).y - 50) < 1e-9).toBe(true);
   });
 });
+
+describe("widgets/sims (investing)", () => {
+  it("compound-growth: matches the closed form, and a fee only lowers the balance", async () => {
+    const { futureValue } = await import("../../../src/widgets/sims/investing.js");
+    expect(Math.abs(futureValue(10000, 0, 0.07, 10) - 10000 * Math.pow(1 + 0.07 / 12, 120)) < 1e-6).toBe(true);
+    expect(Math.abs(futureValue(0, 100, 0, 2) - 2400) < 1e-9).toBe(true);
+    const [gross, net] = SIMS["compound-growth"]({}, {});
+    expect(net.points.every((p, i) => p.y <= gross.points[i].y + 1e-9)).toBe(true);
+  });
+
+  it("volatility-drag: +50% then -50% compounds to -13.4% a year; zero volatility costs nothing", async () => {
+    const { geometricFromArithmetic } = await import("../../../src/widgets/sims/investing.js");
+    expect(Math.abs(geometricFromArithmetic(0, 0.5).exact - (Math.sqrt(0.75) - 1)) < 1e-12).toBe(true);
+    expect(Math.abs(geometricFromArithmetic(0.08, 0).exact - 0.08) < 1e-12).toBe(true);
+  });
+
+  it("bond-price-yield: a bond at a yield equal to its coupon prices at par; price falls as yield rises", async () => {
+    const { bondPrice, bondRisk } = await import("../../../src/widgets/sims/investing.js");
+    expect(Math.abs(bondPrice(0.05, 0.05, 10) - 100) < 1e-9).toBe(true);
+    expect(bondPrice(0.05, 0.06, 10) < 100).toBe(true);
+    // a zero-coupon bond's Macaulay duration is its maturity
+    expect(Math.abs(bondRisk(0, 0.04, 7).macaulay - 7) < 1e-9).toBe(true);
+    // duration predicts a small move well
+    const r = bondRisk(0.04, 0.04, 10);
+    const exact = bondPrice(0.04, 0.0401, 10) - 100;
+    expect(Math.abs(exact - -r.modified * 100 * 0.0001) < 0.002).toBe(true);
+  });
+
+  it("option models: Black-Scholes gives the textbook 10.4506 and satisfies put-call parity", async () => {
+    const { blackScholes, normCdf } = await import("../../../src/widgets/sims/investing.js");
+    expect(Math.abs(normCdf(0) - 0.5) < 1e-7).toBe(true);
+    expect(Math.abs(normCdf(1.96) - 0.975) < 1e-4).toBe(true);
+    const c = blackScholes(100, 100, 1, 0.05, 0.2, "call"), p = blackScholes(100, 100, 1, 0.05, 0.2, "put");
+    expect(Math.abs(c.price - 10.4506) < 1e-3).toBe(true);
+    expect(Math.abs(c.price - p.price - (100 - 100 * Math.exp(-0.05))) < 1e-6).toBe(true);
+    expect(Math.abs(c.delta - p.delta - 1) < 1e-9).toBe(true);
+  });
+
+  it("option-payoff: a long call loses its premium below the strike; a covered call is capped", async () => {
+    const { strategyProfit, blackScholes } = await import("../../../src/widgets/sims/investing.js");
+    const prem = blackScholes(100, 100, 60 / 365, 0.04, 0.25, "call").price;
+    expect(Math.abs(strategyProfit("long call", 100, 0.25, 60 / 365, 0.04, 80).atExpiry + prem) < 1e-9).toBe(true);
+    const a = strategyProfit("covered call", 100, 0.25, 60 / 365, 0.04, 130).atExpiry;
+    const b = strategyProfit("covered call", 100, 0.25, 60 / 365, 0.04, 150).atExpiry;
+    expect(Math.abs(a - b) < 1e-9).toBe(true);
+    for (const s of ["option-payoff", "option-greeks"]) {
+      expect(SIMS[s]({}, {}).every((ser) => ser.points.every((p) => Number.isFinite(p.y)))).toBe(true);
+    }
+  });
+
+  it("dcf: a constant-growth case matches the Gordon formula", async () => {
+    const { dcfValue } = await import("../../../src/widgets/sims/investing.js");
+    // growth equal in both stages: value = FCF (1 + g) / (r - g)
+    const v = dcfValue(10, 0.03, 5, 0.03, 0.08).total;
+    expect(Math.abs(v - (10 * 1.03) / 0.05) < 1e-9).toBe(true);
+  });
+
+  it("portfolio: two-asset risk, diversification floor and CAPM", async () => {
+    const { twoAsset, equalWeightVol, capm } = await import("../../../src/widgets/sims/investing.js");
+    expect(Math.abs(twoAsset(0.5, 0.1, 0.2, 0.1, 0.2, -1).vol) < 1e-12).toBe(true);
+    expect(Math.abs(twoAsset(0.5, 0.1, 0.2, 0.04, 0.1, 1).vol - 0.15) < 1e-12).toBe(true);
+    expect(Math.abs(equalWeightVol(1e9, 0.3, 0.25) - 0.15) < 1e-6).toBe(true);
+    expect(capm(4, 1.5, 5)).toBe(11.5);
+  });
+
+  it("carry-trade: breaks even when the funding currency rises by the rate gap", async () => {
+    const { carryReturn } = await import("../../../src/widgets/sims/investing.js");
+    expect(Math.abs(carryReturn(0.005, 0.045, 1.005 / 1.045 - 1, 5) - 0.005) < 1e-12).toBe(true);
+  });
+
+  it("withdrawal: the same returns in a worse order leave less money", () => {
+    const [badFirst, badLast] = SIMS["withdrawal"]({}, { rate: 5, real: 4 });
+    expect(badFirst.points.at(-1).y < badLast.points.at(-1).y).toBe(true);
+  });
+
+  it("every investing simulator returns finite points at its defaults", () => {
+    for (const s of ["compound-growth", "volatility-drag", "bond-price-yield", "dcf", "frontier", "diversification", "sml", "carry-trade", "leveraged-funds", "withdrawal"]) {
+      const out = SIMS[s]({}, {});
+      expect(out.length > 0).toBe(true);
+      expect(out.every((ser) => ser.points.length > 0 && ser.points.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y)))).toBe(true);
+    }
+  });
+});
