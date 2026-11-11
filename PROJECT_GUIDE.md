@@ -156,6 +156,8 @@ Additional rules:
 - The order of `children` is the reading order: the previous/next arrows at the
   foot of each page step through the tree in it, depth-first (a topic, then its
   subtopics, then its next sibling), the same order the sidebar lists them.
+  Moving to another page (an arrow, a nav link or a card) opens it scrolled to
+  its top (`render()` in `src/main.js`).
 
 Example (abridged from the real manifest):
 
