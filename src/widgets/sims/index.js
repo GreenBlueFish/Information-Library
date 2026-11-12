@@ -17,6 +17,7 @@ import * as analog from "./analog.js";
 import * as racing from "./racing.js";
 import * as poker from "./poker.js";
 import * as investing from "./investing.js";
+import * as pll from "./pll.js";
 
 export const SIMS = {
   lif: neurons.lif,
@@ -78,6 +79,10 @@ export const SIMS = {
   bandgap: analog.bandgap,
   "sc-integrator": analog.scIntegrator,
   "ring-oscillator": analog.ringOscillator,
+  "pfd-characteristic": pll.pfdCharacteristic,
+  "loop-filter-phase": pll.loopFilterPhase,
+  "pll-phase-noise": pll.pllPhaseNoise,
+  "vco-phase-noise": pll.vcoPhaseNoise,
   "tyre-curve": racing.tyreCurve,
   "cornering-speed": racing.corneringSpeed,
   "weight-transfer": racing.weightTransfer,

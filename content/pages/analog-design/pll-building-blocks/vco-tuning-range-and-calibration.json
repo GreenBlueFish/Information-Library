@@ -1,0 +1,146 @@
+{
+  "title": "VCO Tuning Range, Band Switching and Calibration",
+  "intro": "A VCO must cover its band at every process corner and temperature, with a gain small enough that control-line noise does not dominate. This page covers how LC VCOs split tuning into coarse bands and fine varactor tuning, how K_VCO varies across bands, and the calibrations that make it work.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How much range is needed"
+    },
+    {
+      "type": "prose",
+      "text": "The tuning range must cover the application band plus the spread of the free-running frequency. On-chip inductors and capacitors vary by several percent with process and temperature, so LC VCOs are typically designed for the band plus about 10 to 20% margin; rings, which vary far more, need much wider range. For an LC tank $f = 1/(2\\pi\\sqrt{LC})$, so the ratio of frequencies is the square root of the ratio of capacitances:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{f_{max}}{f_{min}} = \\sqrt{\\frac{C_{max}}{C_{min}}}"
+    },
+    {
+      "type": "prose",
+      "text": "A 2:1 capacitance ratio gives only a 1.41:1 frequency ratio (about 34% range around the centre), and fixed parasitics (transistors, inductor, wiring) are part of $C_{min}$. Tuning range and phase noise trade against each other: switched capacitors and varactors add loss, and a wide-range tank usually has lower $Q$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why not tune with varactors alone"
+    },
+    {
+      "type": "prose",
+      "text": "Covering a wide range with one varactor needs a large $K_{VCO}$. Every volt of noise on the control line (pump, resistor, leakage ripple, coupling) becomes frequency noise in proportion to $K_{VCO}$, the reference spur scales with it, and varactors convert amplitude noise into phase noise (AM-PM) in proportion to their slope. So LC VCOs split tuning: a digitally switched capacitor bank chooses one of many overlapping sub-bands, and a small varactor gives a modest $K_{VCO}$ within the chosen band."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-cap-bank.svg",
+      "alt": "Left: VCO frequency against control voltage for eight capacitor-bank codes, 0 at the top to 7 at the bottom; each curve rises with control voltage, neighbouring curves overlap, and the upper curves are steeper. Right: one bank unit, two capacitors C_u in series with an NMOS switch between them, gate driven by bit b_k.",
+      "caption": "Coarse bands from a capacitor bank, fine tuning by varactor."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Designing the bank"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Binary-weighted units (or thermometer-coded for the large bits, for monotonicity) with an NMOS switch between two capacitors, so the switch sits at the differential virtual ground and its on-resistance appears at half value in series.",
+        "Switch sizing: on-resistance $R_{on}$ lowers the unit's $Q = 2/(\\omega R_{on}C_u)$ when on (two $C_u$ in series with $R_{on}$); a wider switch has a larger off-capacitance, which is fixed capacitance that does not switch out and so shrinks the tuning ratio. A process's $R_{on}C_{off}$ product sets the trade-off.",
+        "Bias the switch's floating nodes through large resistors (to VDD when off, to ground when on) so the off-state junctions stay reverse-biased at large swing.",
+        "Overlap: adjacent bands must overlap by more than the frequency drift the VCO must track after calibration (temperature drift while locked), with margin for varactor-range variation. Overlaps of 30 to 50% of a band are common."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "K_VCO varies across bands"
+    },
+    {
+      "type": "prose",
+      "text": "With a fixed varactor swing $\\Delta C_{var}$, $\\Delta f/f = -\\Delta C/(2C)$, and $C \\propto 1/f^2$, so"
+    },
+    {
+      "type": "math",
+      "tex": "K_{VCO} \\propto \\frac{f}{2C}\\,\\frac{\\Delta C_{var}}{\\Delta V} \\propto f^3"
+    },
+    {
+      "type": "prose",
+      "text": "A VCO tuning from 2 to 2.8 GHz therefore has $(1.4)^3 = 2.7$ times more gain at the top of its range. Since loop bandwidth scales as $\\sqrt{I_PK_{VCO}/N}$ and $N$ also changes, the loop's bandwidth and damping drift across the band. Fixes: program $I_P$ by band (Charge-Pump Circuit Design page), split the varactor into switchable sections so a smaller part is used in the higher bands, or measure $K_{VCO}$ during calibration and set $I_P$ accordingly."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Varactor linearity"
+    },
+    {
+      "type": "prose",
+      "text": "Accumulation-mode MOS varactors have a steep capacitance change over a few hundred millivolts, so $K_{VCO}$ peaks in the middle of the control range and falls near the ends. Splitting the varactor into several units biased at staggered DC voltages ('distributed biasing') spreads the transition and makes $K_{VCO}$ flatter. A flatter $K_{VCO}$ keeps the loop dynamics constant and reduces AM-PM conversion."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Automatic frequency calibration"
+    },
+    {
+      "type": "prose",
+      "text": "Before the PLL closes, a calibration engine picks the band. A common method: hold $V_{cont}$ at mid-range, count VCO (or divided VCO) cycles over a fixed number of reference cycles, compare with the target count, and binary-search the bank code. Counting over a window $T_w$ resolves frequency to about $1/T_w$ at the counter input, so resolving 1 MHz at the VCO needs a 1 µs window (or $N$ times longer if counting after the divider, unless a faster prescaler output is counted); a 7-bit search then takes about 7 to 10 µs including settling. After calibration the analog loop closes and the varactor removes the residual error. Some designs re-run the search on a temperature change, or add a slow background loop that steps the bank when $V_{cont}$ approaches either end."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pushing, pulling and coupling"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Supply pushing ($\\partial f/\\partial V_{DD}$): converts supply noise and ripple into frequency noise. Regulate the VCO supply; tail-less and class-D cores push most.",
+        "Load pulling: the VCO frequency shifts with the impedance it drives; buffer it.",
+        "Injection pulling: a strong signal near the VCO frequency (for example a power amplifier's output at the same frequency) pulls it. Transmitters run the VCO at twice, or 4/3 or 3/2, of the carrier and divide or mix down.",
+        "Magnetic coupling between inductors of different VCOs, or from bond wires, causes spurs; keep spacing, use figure-8 inductors and guard structures."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Bank range",
+      "text": "A VCO for a 4.0 to 5.0 GHz band must tune from 3.6 to 5.4 GHz to leave margin for process and temperature. Its fixed capacitance is 0.6 pF with $L = 1$ nH. What maximum capacitance must the bank reach, and what tuning ratio does that need?",
+      "solution": [
+        "$C_{min} = 1/((2\\pi f_{max})^2L) = 1/((2\\pi\\times5.4\\times10^9)^2\\times10^{-9}) = 0.869$ pF total, so the switchable part can be at most 0.27 pF when all units are off.",
+        "$C_{max} = 1/((2\\pi\\times3.6\\times10^9)^2\\times10^{-9}) = 1.95$ pF, so the bank must add about 1.08 pF beyond $C_{min}$.",
+        "Capacitance ratio $1.95/0.869 = 2.25$, frequency ratio 1.5."
+      ],
+      "answer": "About 1.95 pF total at the low end, a 2.25:1 capacitance ratio."
+    },
+    {
+      "type": "problem",
+      "title": "Gain across the band",
+      "text": "In the previous VCO, the varactor gives $K_{VCO} = 2\\pi\\times60$ MHz/V at 3.6 GHz. Estimate $K_{VCO}$ at 5.4 GHz with the same varactor.",
+      "solution": [
+        "$K_{VCO}\\propto f^3$: ratio $(5.4/3.6)^3 = 3.375$.",
+        "$K_{VCO} \\approx 2\\pi\\times203$ MHz/V at the top of the range."
+      ],
+      "answer": "About 2 pi times 200 MHz/V."
+    },
+    {
+      "type": "problem",
+      "title": "Calibration time",
+      "text": "An AFC counts the VCO after a divide-by-4 prescaler at 5 GHz. To resolve 2 MHz at the VCO, how long must each count be, and how long does a 6-bit binary search take?",
+      "solution": [
+        "Resolving 2 MHz at the VCO is 0.5 MHz at the prescaler output, so $T_w \\approx 1/0.5\\text{ MHz} = 2\\ \\mu$s.",
+        "Six steps of 2 µs, plus a short settling time after each code change: about 12 to 15 µs."
+      ],
+      "answer": "About 2 µs per step, 12 to 15 µs in all."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Section 15.4.2 (varactors and LC tuning).",
+        "A. Kral, F. Behbahani and A. A. Abidi, 'RF-CMOS oscillators with switched tuning,' Proc. IEEE CICC, 1998.",
+        "T.-H. Lin and W. J. Kaiser, 'A 900-MHz 2.5-mA CMOS frequency synthesizer with an automatic SC tuning loop,' IEEE JSSC, vol. 36, no. 3, 2001.",
+        "J. Mira et al., 'Distributed MOS varactor biasing for VCO gain equalization in 0.13 µm CMOS technology,' Proc. IEEE RFIC, 2004."
+      ]
+    }
+  ]
+}

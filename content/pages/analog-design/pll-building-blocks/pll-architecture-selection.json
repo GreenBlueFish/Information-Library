@@ -1,0 +1,167 @@
+{
+  "title": "Selecting a PLL Architecture",
+  "intro": "How to choose among the main PLL architectures for a team design: what each offers, a decision procedure from the specification, the simulations that confirm the choice, and the mistakes that most often sink one.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The candidates"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "1. Integer-N charge-pump PLL with an LC VCO"
+    },
+    {
+      "type": "prose",
+      "text": "Tristate PFD, charge pump, passive second- or third-order filter, LC VCO with a capacitor bank, divider. The most mature and best-understood architecture; integrated jitter of roughly 100 to 500 fs is routine, reference spurs of $-60$ to $-80$ dBc with care. Frequency resolution equals $f_{ref}$, so a fine channel raster forces a low reference, a large $N$ and a narrow loop. Choose it for fixed-frequency clocks and coarse-raster synthesizers; it is the lowest-risk first design."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "2. Fractional-N charge-pump PLL"
+    },
+    {
+      "type": "prose",
+      "text": "The same blocks with a sigma-delta modulated divider, so $N$ may be fractional and the reference can be high. It adds quantization noise, which the loop must filter (pushing the loop narrower) or which must be cancelled; it makes PFD/CP linearity critical (offset pump or gated offset, matched pump) and adds fractional spurs. Choose it for RF synthesizers with fine channel spacing and for spread-spectrum clocks."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "3. Charge-pump PLL with a ring VCO"
+    },
+    {
+      "type": "prose",
+      "text": "Small and wide-range, but needs a wide loop to suppress the ring's noise, so a high reference frequency, and a clean regulated supply. Jitter typically one to a few picoseconds rms. Choose it for SoC and digital clocks where area matters more than jitter. Maneatis's self-biased loop keeps bandwidth proportional to frequency over a very wide range."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "4. Sub-sampling (or sampling) PLL with an LC VCO"
+    },
+    {
+      "type": "prose",
+      "text": "The reference samples the VCO directly, so in lock there is no divider and the detector noise is not multiplied by $N^2$. It gives the lowest in-band noise and jitter (tens of femtoseconds reported), but needs a frequency-locked loop for acquisition, attention to the sampler's kick-back spurs, and is integer-N unless a DTC is added. Choose it for very low-jitter clocks (high-speed links, data converters) when the team can absorb the extra design risk."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "5. Digital PLL (TDC or bang-bang plus DCO)"
+    },
+    {
+      "type": "prose",
+      "text": "A TDC or bang-bang detector, a digital loop filter and a digitally controlled oscillator (LC or ring). Small (no large capacitor), portable across nodes, easy to calibrate, reconfigure and test; in-band noise set by TDC resolution unless a DTC cancels the predictable part; limit cycles and DCO quantization need dithering. Choose it in fine-node SoCs and when the team is stronger in digital design and verification."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "6. Injection-locked ring or multiplying DLL"
+    },
+    {
+      "type": "prose",
+      "text": "A ring whose phase is reset by the reference every cycle. LC-like jitter at ring area, if the ring's free-running frequency is calibrated, otherwise reference spurs. Integer multiplication only. Choose it for multi-phase, low-area, low-jitter clocking when a clean, sharp reference is available."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A decision procedure"
+    },
+    {
+      "type": "list",
+      "items": [
+        "1. Fix the specification: output range, channel step, reference available, phase-noise mask or jitter and its integration band, spurs, lock time, power, area, supply, process.",
+        "2. Channel step finer than any practical reference: fractional-N (or a digital PLL with fractional division).",
+        "3. Required VCO FoM (Choosing a VCO page): above about 165 dBc/Hz, LC (or injection-locked ring); below, a ring is possible if the loop can be wide.",
+        "4. In-band requirement: compute $\\mathrm{FoM}_{1Hz} + 10\\log f_{PFD} + 20\\log N$ with a realistic $-220$ to $-230$ dBc/Hz pump. If that is too high, raise $f_{ref}$, consider a sub-sampling or sampling detector, or a fine TDC with DTC.",
+        "5. Loop bandwidth from the noise crossing, checked against $f_{ref}/10$, lock time and spur filtering (In-Band Noise widget, Loop Filter Design page).",
+        "6. Spur budget: estimate leakage and mismatch spurs (Charge-Pump Mismatch page) for the chosen $K_{VCO}$, $C_2$ and $f_{ref}$; choose the pump topology and filter order to meet it.",
+        "7. Risk and team: prefer the architecture whose difficult parts the team has done before and can verify with the tools it has."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Comparing the options at a glance"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Jitter (typical): sub-sampling and DTC-assisted digital tens of fs; integer-N LC and fractional-N LC about 100 to 500 fs; injection-locked ring or MDLL a few hundred fs; ring CP-PLL one to several ps.",
+        "Area: ring-based and digital smallest; LC VCO plus a large filter capacitor largest.",
+        "Tuning range: rings widest; LC with banks 10 to 50%.",
+        "Spurs: integer-N with a matched pump best understood; sub-sampling and injection-locked designs need specific spur fixes; fractional-N adds fractional spurs.",
+        "Design and verification effort: integer-N lowest; fractional-N and sub-sampling add noise and spur modelling; digital PLLs need mixed-signal behavioural models and good DCO design."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulations that confirm a choice"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Block noise: periodic steady-state (PSS) and periodic noise (Pnoise) for the VCO's phase noise and for the PFD/CP's output noise; transient noise as a cross-check.",
+        "Loop model: a phase-domain model (spreadsheet, Python or a PLL design tool) combining each block's noise with the loop response, swept over bands and corners.",
+        "Charge pump: $\\Delta I/I_P$ against $V_{out}$ at all corners, Monte Carlo for random mismatch, transient charge per cycle in lock.",
+        "Closed loop: transient lock from start-up (including calibration) at each corner, phase margin and bandwidth across bands with $K_{VCO}$ and $N$ varying, spur levels from a long locked transient.",
+        "VCO: tuning curves and band overlap at all corners and temperatures, pushing, start-up margin (loop gain at least 2 to 3 at the worst corner), amplitude regime."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mistakes that sink designs"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A dead zone at the slow corner because the reset pulse was set at typical.",
+        "Pump mismatch checked only at mid-supply: the spur is far worse at the ends of the control range, which is where the extreme channels and temperatures put it.",
+        "Thin-oxide MOS capacitors in the loop filter in a leaky process, so leakage spurs dominate.",
+        "$K_{VCO}$ assumed constant: the loop is underdamped or unstable in the top band, sluggish in the bottom.",
+        "Bands that do not overlap at the hot or cold corner, leaving unreachable frequencies, or no margin for drift after calibration.",
+        "A ring VCO on a shared digital supply.",
+        "A loop bandwidth too close to $f_{ref}$ for the continuous-time model to hold.",
+        "Reference buffer with slow edges, whose noise becomes the in-band floor."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Team decision",
+      "text": "Your team must deliver a 2.0 to 2.5 GHz synthesizer with 1 MHz channel steps from a 40 MHz crystal, $-115$ dBc/Hz at 1 MHz, reference spurs below $-65$ dBc, 5 mW total, in a 65 nm process. Which architecture, and what are the critical blocks?",
+      "solution": [
+        "1 MHz steps from 40 MHz need fractional-N (integer-N would need a 1 MHz reference, $N$ around 2250, and a loop narrower than 100 kHz).",
+        "VCO: $\\mathrm{FoM}_{req} = 115 + 20\\log_{10}2500 - 10\\log_{10}P_{VCO}$; with about 2 mW for the VCO, $115 + 68.0 - 3.0 = 180$ dBc/Hz: a conventional LC core suffices, with a capacitor bank and AFC.",
+        "In-band: $-225 + 76.0 + 35.9 = -113$ dBc/Hz at $N = 62$; the loop must be narrow enough to filter sigma-delta noise but wide enough not to need a huge capacitor, a few hundred kHz.",
+        "Critical blocks: a linear PFD/CP for fractional-N (offset or gated offset, active current matching), low-leakage filter capacitors and a third pole for spurs, and $I_P$ programmed by band for $K_{VCO}$ variation."
+      ],
+      "answer": "Fractional-N charge-pump PLL with an LC VCO; the critical block is a linear, well-matched charge pump."
+    },
+    {
+      "type": "problem",
+      "title": "When to take the risk",
+      "text": "A team with one previous integer-N PLL tape-out is asked for a 10 GHz clock with under 60 fs rms jitter. Which architecture would you propose, and what would you do to manage the risk?",
+      "solution": [
+        "60 fs at 10 GHz is near the limit of good charge-pump designs; a sub-sampling PLL with a class-C or class-F LC VCO is the natural choice (Choosing a VCO, case C).",
+        "Manage the risk: keep a conventional PFD/CP frequency-locked loop as the acquisition path (it is also a fallback mode), model the sampler's kick-back early, and include test modes to measure the VCO free-running and each loop separately."
+      ],
+      "answer": "A sub-sampling PLL with a high-FoM LC VCO, with a conventional loop kept as a fallback."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "B. Razavi, Design of CMOS Phase-Locked Loops: From Circuit Level to Architecture Level, Cambridge University Press, 2020.",
+        "X. Gao, E. Klumperink, M. Bohsali and B. Nauta, IEEE JSSC, 2009 (sub-sampling PLL).",
+        "R. B. Staszewski and P. T. Balsara, All-Digital Frequency Synthesizer in Deep-Submicron CMOS, Wiley, 2006.",
+        "J. G. Maneatis, IEEE JSSC, 1996 (self-biased PLL); R. Farjad-Rad et al., IEEE JSSC, 2002 (MDLL).",
+        "D. Banerjee, PLL Performance, Simulation and Design, 5th ed., Texas Instruments, 2017."
+      ]
+    }
+  ]
+}

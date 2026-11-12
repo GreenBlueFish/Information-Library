@@ -1,0 +1,124 @@
+{
+  "title": "Charge-Pump Circuit Design",
+  "intro": "From specification to transistor sizes: choosing the pump current, making the UP and DN currents match across the output range, and a worked design.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing the pump current"
+    },
+    {
+      "type": "prose",
+      "text": "$I_P$ sets the detector gain $I_P/2\\pi$, and with it, for a fixed loop bandwidth, the filter capacitance and resistance. Three things pull it in different directions:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Noise: pump phase noise falls as $1/I_P$ and resistor noise as $1/\\sqrt{I_P}$ (In-Band Noise page), so a larger current is quieter.",
+        "Area: at fixed bandwidth and damping the total filter capacitance grows in proportion to $I_P$. With 2 to 10 fF/µm² capacitors, hundreds of picofarads cost a significant fraction of a square millimetre.",
+        "Power and headroom: the pump's own current is small compared with a VCO's, but larger devices for the same matching add capacitance and slower switching."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Integrated PLLs typically use 50 µA to 1 mA; discrete synthesizers offer programmable pumps from a few hundred microamps to several milliamps. Making $I_P$ programmable is also how designs keep the loop bandwidth constant while $K_{VCO}$ and $N$ change across bands (VCO Tuning Range and Calibration page)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Active current matching"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-cp-matched.svg",
+      "alt": "Charge pump with a replica branch. The main branch has a PMOS current source, an UP switch, the output node V_cont, a DN switch and an NMOS current sink. Beside it a replica branch of the same sizes has always-on switches and a middle node X. An error amplifier compares V_X with V_cont and drives the gate of both NMOS sinks, so the sink current equals the source current at the present output voltage. The output drives a loop filter of R_P in series with C_P, with C_2 to ground.",
+      "caption": "Replica branch and error amplifier force I_DN = I_UP at any V_cont."
+    },
+    {
+      "type": "prose",
+      "text": "The circuit of Lee, Keel, Lim and Kim adds a replica of the pump whose switches are always on. An error amplifier drives the gate of the replica's NMOS sink, and of the main sink, until the replica's middle node equals $V_{cont}$. In the replica the PMOS and NMOS currents are equal by construction (they are in series), and since the main and replica devices see the same terminal voltages, the main UP and DN currents are equal too, at whatever voltage $V_{cont}$ has. The reported reference spur was below $-75$ dBc in 0.25 µm CMOS. The amplifier needs only low bandwidth (it tracks the slowly varying $V_{cont}$) but enough gain and low offset, since its offset maps directly to a $V_{DS}$ difference and so a current error; its input range must cover the whole control range, which often calls for a rail-to-rail input stage."
+    },
+    {
+      "type": "prose",
+      "text": "The same idea combines well with current steering: a unity-gain buffer holds the steering dummy nodes at $V_{cont}$, and the error amplifier matches the currents. Later papers add dynamic matching (refreshing the match during each cycle) and calibration loops that measure the phase offset with a time detector and correct $\\Delta I$ digitally."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Raising output resistance"
+    },
+    {
+      "type": "prose",
+      "text": "Matching over a wide range is easiest when the sources hardly depend on $V_{out}$: cascoding raises output resistance by about $g_mr_o$; a gain-boosted (regulated) cascode by another amplifier gain. Each cascode costs a $V_{dsat}$ of headroom at each rail, which is why active matching (which needs no extra headroom in the output path) is attractive at low supply voltages."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A sizing procedure"
+    },
+    {
+      "type": "list",
+      "items": [
+        "1. From the in-band noise target, pick $I_P$ and the source overdrive $V_{ov}$ (larger $V_{ov}$ is quieter and matches better, but eats headroom).",
+        "2. From the control range the VCO needs, check headroom: $V_{min} = V_{dsat,N}(+V_{dsat,casc}) + V_{sw}$ and $V_{max} = V_{DD} - V_{dsat,P}(-V_{dsat,casc}) - V_{sw}$.",
+        "3. Choose channel length for output resistance (systematic mismatch) and area for random mismatch: $\\sigma(\\Delta I/I) \\approx 2\\sigma_{V_T}/V_{ov}$.",
+        "4. Size switches so their on-resistance drop is a small part of the headroom, add half-size dummies, and match the UP and DN drive delays.",
+        "5. Choose the reset pulse for no dead zone at the slow corner with margin.",
+        "6. Simulate $\\Delta I/I_P$ against $V_{out}$ at all corners, the charge per cycle in lock (transient), the noise (periodic steady-state and periodic noise analysis), and the spur in a closed-loop transient."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A worked design"
+    },
+    {
+      "type": "prose",
+      "text": "Target: a 1.2 V, 2.4 GHz integer-N PLL with a 40 MHz reference, $K_{VCO} = 2\\pi\\times200$ MHz/V, a VCO control range of 0.3 to 0.9 V, reference spur below $-70$ dBc and an in-band floor no worse than $-100$ dBc/Hz at the output."
+    },
+    {
+      "type": "list",
+      "items": [
+        "In-band: $N = 60$ adds 35.6 dB, so the pump must stay below about $-136$ dBc/Hz at the reference; with $t_{on}/T_{ref} = 150\\text{ ps}/25\\text{ ns} = 0.006$, $\\gamma = 1.5$ and $V_{ov} = 0.2$ V the estimate $S_\\phi = 0.006\\times64\\pi^2kT\\gamma/(I_PV_{ov})$ is met with large margin even at 50 µA (about $-149$ dBc/Hz). Flicker noise and the rest of the loop will dominate, so choose $I_P = 100\\ \\mu\\text{A}$ for a filter that is still reasonable (Loop Filter Design page: about 200 pF for a 400 kHz bandwidth).",
+        "Headroom: $V_{dsat} = 0.2$ V sources and 0.05 V switches give 0.25 to 0.95 V without cascodes, which covers 0.3 to 0.9 V; cascodes would not fit, so use long channels plus active matching.",
+        "Matching: $L = 1\\ \\mu$m sources keep $\\lambda$ near $0.05\\ \\text{V}^{-1}$; a 1% random UP/DN match at $V_{ov} = 0.2$ V needs about $18\\ \\mu\\text{m}^2$ per mirror device for $A_{V_T} = 3$ mV·µm (two mirrors' errors add).",
+        "Reset: 150 ps (switches turn on in under 100 ps at the slow corner).",
+        "Spur check (bound): with a 3% residual mismatch, $i_1 \\le 2\\times3\\ \\mu\\text{A}\\times150\\text{ ps}\\times40\\text{ MHz} = 36$ nA; with $C_2 = 14$ pF this gives about $-92$ dBc, comfortably inside $-70$ dBc before any third pole."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Gain of the matching loop",
+      "text": "In the replica-matched pump, the error amplifier has an offset of 2 mV. The sinks have output resistance 200 kΩ at $I_P = 100\\ \\mu\\text{A}$. What current mismatch does the offset leave?",
+      "solution": [
+        "The replica node sits 2 mV away from $V_{cont}$, so the main sink sees a $V_{DS}$ 2 mV different from the replica's.",
+        "$\\Delta I \\approx 2\\text{ mV}/200\\text{ k}\\Omega = 10$ nA, 0.01% of $I_P$: negligible. The amplifier's offset only matters for low-resistance (short-channel) sources."
+      ],
+      "answer": "About 10 nA (0.01%)."
+    },
+    {
+      "type": "problem",
+      "title": "Programmable pump",
+      "text": "A synthesizer covers 2.0 to 2.8 GHz with a fixed 40 MHz reference, so $N$ goes from 50 to 70, while $K_{VCO}$ rises from $2\\pi\\times150$ to $2\\pi\\times300$ MHz/V across the band. By what factor must $I_P$ change to keep $\\omega_n$ constant?",
+      "solution": [
+        "$\\omega_n^2 \\propto I_PK_{VCO}/N$. At the low end $K_{VCO}/N = 150/50 = 3$; at the high end $300/70 = 4.29$ (MHz/V per unit $N$).",
+        "So $I_P$ must be $4.29/3 = 1.43$ times larger at the low end than at the high end. (Damping $\\propto R_P\\sqrt{I_PK_{VCO}C_P/N}$ then stays constant too.)"
+      ],
+      "answer": "About 1.4 times, larger at the low end of the band."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J.-S. Lee, M.-S. Keel, S.-I. Lim and S. Kim, 'Charge pump with perfect current matching characteristics in phase-locked loops,' Electronics Letters, vol. 36, no. 23, pp. 1907-1908, 2000.",
+        "Y.-S. Choi and D.-H. Han, 'Gain-boosting charge pump for current matching in phase-locked loop,' IEEE TCAS-II, 2006.",
+        "M. J. M. Pelgrom et al., 'Matching properties of MOS transistors,' IEEE JSSC, 1989.",
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Sections 16.2 and 16.3."
+      ]
+    }
+  ]
+}

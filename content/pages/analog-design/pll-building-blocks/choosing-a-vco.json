@@ -1,0 +1,127 @@
+{
+  "title": "Choosing a VCO",
+  "intro": "A procedure for picking the VCO family and core from a specification, with the numbers that decide it.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Step 1: turn the specification into a VCO requirement"
+    },
+    {
+      "type": "prose",
+      "text": "Write down the phase-noise mask (or the integrated jitter and its integration band), the reference spur limit, the output frequency range, the power and area budget and the supply. Outside the loop bandwidth the output noise is the VCO's own, so the mask at offsets well beyond the planned bandwidth is a direct VCO specification. Inside, the loop suppresses the VCO and the in-band floor rules (In-Band Noise page)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Step 2: compute the figure of merit it needs"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{FoM}_{req} = -\\mathcal{L}_{spec}(\\Delta f) + 20\\log_{10}\\frac{f_0}{\\Delta f} - 10\\log_{10}\\frac{P_{VCO}}{1\\text{ mW}}"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Above about 165 dBc/Hz: only an LC VCO (or an injection-locked ring or MDLL, where the reference does most of the work).",
+        "175 to 188 dBc/Hz: conventional LC cores (NMOS-only or complementary, with a tail capacitor) with a reasonable tank $Q$.",
+        "188 to 196 dBc/Hz: class-C, class-D, class-F, tail-filtered or coupled-core designs, good inductors and careful layout. Leave a few dB of margin for corners and for the bank's loss in its worst band.",
+        "Below about 160 dBc/Hz: a ring may do, if the loop bandwidth can be wide."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Step 3: check what the loop can do for a ring"
+    },
+    {
+      "type": "prose",
+      "text": "A ring's noise is acceptable only if the loop suppresses it, so the needed loop bandwidth must be allowed by the reference ($f_c \\le f_{ref}/10$). Use the In-Band Noise widget: set the ring's $\\mathcal{L}$ at 1 MHz, the reference and $N$, and see whether the jitter minimum lies at a bandwidth the reference permits."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Step 4: check range, area and the rest"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Tuning range: LC 10 to 50% with banks (wider with transformers or two VCOs); rings 2:1 or more.",
+        "Frequency: rings top out at a few to about 10 GHz in fine nodes; LC to 100 GHz and beyond (with falling capacitor $Q$).",
+        "Area: LC 0.05 to 0.3 mm² (inductor), rings a few hundred µm². Multi-PLL SoCs often favour rings or digital PLLs.",
+        "Phases: rings give many; LC gives two (or four with quadrature VCOs or a divide-by-2 from twice the frequency).",
+        "Supply: rings and class-D cores need clean regulated supplies; complementary cores need headroom; NMOS-only and class-C cores work from lower supplies."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three worked cases"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A: 2.4 GHz radio synthesizer"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose the specification is $-120$ dBc/Hz at 1 MHz and 2 mW for the VCO. $\\mathrm{FoM}_{req} = 120 + 67.6 - 3.0 = 184.6$ dBc/Hz: an LC VCO, conventional core with good inductor (FoM about 186 gives $-121.4$ dBc/Hz). A ring at FoM 160 would give about $-95$ dBc/Hz and, with a 32 MHz reference and $N = 75$, its jitter optimum lies at a natural frequency near 4.5 MHz (a bandwidth near 9 MHz), far beyond the reference's $f_{ref}/10$ limit; held to about 1.5 MHz it gives roughly 1.45 ps. The LC loop's optimum is near 200 kHz natural frequency (about 260 fs integrated from 1 kHz to 100 MHz with a $-225$ dBc/Hz pump), which also suits spur filtering."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "B: 1 GHz SoC clock, 5 ps rms budget, tiny area"
+    },
+    {
+      "type": "prose",
+      "text": "A ring with FoM 160 at 1 mW gives $-100$ dBc/Hz at 1 MHz. With a 100 MHz reference ($N = 10$), a $-220$ dBc/Hz pump and a natural frequency of 4.5 MHz (a bandwidth near 9 MHz, just inside $f_{ref}/10$), the widget's model predicts about 1.4 ps rms; at a 1 MHz natural frequency it would be about 2.4 ps. Comfortably inside 5 ps: choose a ring (or a ring-based digital PLL) with a regulated supply."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "C: 10 GHz clock for a high-speed link or ADC, under 100 fs rms"
+    },
+    {
+      "type": "prose",
+      "text": "An LC VCO with FoM 188 at 10 mW gives $-118$ dBc/Hz at 1 MHz. With a 200 MHz reference ($N = 50$) and a $-230$ dBc/Hz pump, the model's optimum is about 75 fs near 300 kHz natural frequency; a lower in-band floor ($-240$, as a sub-sampling or sampling detector can give) brings it to about 40 fs with a wider loop near 1 MHz. Choose an LC core with the best FoM affordable (class-C or class-F), a high reference frequency and a low-noise detector."
+    },
+    {
+      "type": "callout",
+      "text": "The widget model omits flicker noise, the reference's own noise and spurs. It is enough to choose a family and a bandwidth, not to sign off; that needs periodic-steady-state noise simulation of each block and a loop-level noise model."
+    },
+    {
+      "type": "problem",
+      "title": "Pick a family",
+      "text": "A 6 GHz VCO must give $-110$ dBc/Hz at 1 MHz from 1 mW. Ring or LC?",
+      "solution": [
+        "$\\mathrm{FoM}_{req} = 110 + 20\\log_{10}6000 - 0 = 110 + 75.6 = 185.6$ dBc/Hz.",
+        "LC: well above the ring bound of about 165."
+      ],
+      "answer": "LC (185.6 dBc/Hz required)."
+    },
+    {
+      "type": "problem",
+      "title": "Power for a spec",
+      "text": "A complementary LC core reaches FoM 187 dBc/Hz. What power does it need for $-125$ dBc/Hz at 1 MHz from 3.5 GHz?",
+      "solution": [
+        "$10\\log_{10}(P/1\\text{ mW}) = -\\mathcal{L} + 20\\log_{10}(f_0/\\Delta f) - \\mathrm{FoM} = 125 + 70.9 - 187 = 8.9$ dB.",
+        "$P \\approx 7.8$ mW."
+      ],
+      "answer": "About 8 mW."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "X. Gao, E. Klumperink, P. Geraedts and B. Nauta, IEEE TCAS-II, 2009 (PLL jitter-power trade-off).",
+        "R. Navid, T. H. Lee and R. W. Dutton, IEEE JSSC, 2005 (ring oscillator limit).",
+        "A. Mazzanti and P. Andreani, 'Class-C harmonic CMOS VCOs, with a general result on phase noise,' IEEE JSSC, 2008.",
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Chapters 15 and 16."
+      ]
+    }
+  ]
+}

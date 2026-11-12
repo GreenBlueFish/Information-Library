@@ -1,0 +1,194 @@
+{
+  "title": "Loop Filter Design",
+  "intro": "The loop filter turns the pump's charge into the VCO control voltage and fixes the loop's bandwidth, phase margin and spur rejection. This page gives closed-form design equations for the second-order passive filter, the third-order extension and the active filter, with a worked example.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The second-order passive filter"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-loop-filters.svg",
+      "alt": "Three loop filters. (a) Second order: the pump current I_CP enters node V_cont, which has C_2 to ground and, in parallel, a resistor R in series with C_1 to ground. (b) Third order: the same plus a series resistor R_3 and a shunt capacitor C_3 whose node drives the VCO. (c) Active: an op-amp whose inverting input receives the pump current and is held at V_ref, with R in series with C_1 from output to inverting input and C_2 in parallel with that branch; the output is V_cont.",
+      "caption": "Passive second- and third-order filters and an active filter."
+    },
+    {
+      "type": "prose",
+      "text": "The filter of the Charge-Pump PLLs page, $R$ in series with $C_1$ and $C_2$ in parallel, has transimpedance"
+    },
+    {
+      "type": "math",
+      "tex": "Z(s) = \\frac{1 + sRC_1}{s\\,(C_1 + C_2)\\left(1 + sR\\frac{C_1C_2}{C_1 + C_2}\\right)}, \\qquad \\omega_z = \\frac{1}{RC_1}, \\qquad \\omega_p = \\frac{C_1 + C_2}{RC_1C_2} = b\\,\\omega_z"
+    },
+    {
+      "type": "prose",
+      "text": "with $b = 1 + C_1/C_2$. The open-loop gain of the PLL is $G(s) = \\frac{I_P}{2\\pi}Z(s)\\frac{K_{VCO}}{Ns}$, so its phase is"
+    },
+    {
+      "type": "math",
+      "tex": "\\angle G(j\\omega) = -180^\\circ + \\arctan\\frac{\\omega}{\\omega_z} - \\arctan\\frac{\\omega}{\\omega_p}"
+    },
+    {
+      "type": "prose",
+      "text": "The phase rises from $-180^\\circ$, peaks at the geometric mean $\\omega = \\omega_z\\sqrt{b}$, and falls back. Putting the crossover $\\omega_c$ there gives the largest phase margin the capacitor ratio allows:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{PM} = \\arctan\\sqrt{b} - \\arctan\\frac{1}{\\sqrt{b}} = \\arctan\\frac{b - 1}{2\\sqrt{b}}"
+    },
+    {
+      "type": "prose",
+      "text": "So $C_1/C_2 = 9$ ($b = 10$) gives 54.9°, $b = 13.9$ gives 60°, $b = 16$ gives 61.9° and $b = 20.4$ gives 65°. Razavi's rule of $C_2 \\approx C_1/5$ to $C_1/10$ ($b$ = 6 to 11) corresponds to about 46° to 56°, if the crossover is placed optimally."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Design equations"
+    },
+    {
+      "type": "prose",
+      "text": "Given $\\omega_c$ and a phase margin, set $\\sqrt{b} = \\tan\\mathrm{PM} + \\sec\\mathrm{PM}$, then place $\\omega_z = \\omega_c/\\sqrt{b}$ and $\\omega_p = \\omega_c\\sqrt{b}$. Requiring $|G(j\\omega_c)| = 1$ gives the total capacitance; the zero and pole terms together contribute exactly $\\sqrt{b}$ at $\\omega_c$:"
+    },
+    {
+      "type": "math",
+      "tex": "C_1 + C_2 = \\frac{I_PK_{VCO}}{2\\pi N\\,\\omega_c^2}\\sqrt{b}, \\qquad C_2 = \\frac{C_1 + C_2}{b}, \\qquad R = \\frac{\\sqrt{b}}{\\omega_cC_1}"
+    },
+    {
+      "type": "prose",
+      "text": "These are exact for the continuous-time model. Banerjee's 'gamma optimisation' generalises them by letting the crossover sit off the phase peak (a factor $\\gamma$), which trades a little phase margin for faster lock or less capacitance."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Loop-gain phase and phase margin",
+        "params": [
+          {
+            "key": "ratio",
+            "label": "capacitor ratio C1 / C2",
+            "control": "range",
+            "min": 1,
+            "max": 40,
+            "step": 0.5,
+            "default": 15
+          },
+          {
+            "key": "pole3",
+            "label": "third pole / crossover frequency (0 = none)",
+            "control": "range",
+            "min": 0,
+            "max": 20,
+            "step": 0.5,
+            "default": 0
+          }
+        ],
+        "config": {
+          "sim": "loop-filter-phase",
+          "xLabel": "log10 of frequency / crossover frequency",
+          "yLabel": "loop-gain phase (degrees)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Raise the ratio and the phase bump becomes taller and wider; the label gives the margin at the designed crossover. Add a third pole at 3 times the crossover and see the margin fall by about 18°; at 10 times it costs under 6°."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing the bandwidth"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Noise: near the frequency where the VCO's free-running noise meets the in-band floor (In-Band Noise page). A noisy VCO wants a wide loop; a noisy reference or pump wants a narrow one.",
+        "Sampling limit: the continuous-time model holds only for $\\omega_c$ well below $\\omega_{ref}$. Gardner's analysis puts the stability limit near $\\omega_{ref}/\\pi$; designs keep $f_c$ at $f_{ref}/10$ to $f_{ref}/20$ or below.",
+        "Spurs and fractional-N noise: a narrower loop filters the reference spur and the sigma-delta quantization noise harder.",
+        "Settling: lock and channel-switching time scale roughly as a few to ten time constants of $1/(\\zeta\\omega_n)$, so faster settling needs a wider loop.",
+        "Area: total capacitance falls as $1/\\omega_c^2$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The third-order filter"
+    },
+    {
+      "type": "prose",
+      "text": "A series $R_3$ and shunt $C_3$ after the second-order filter add a pole $\\omega_3 = 1/(R_3C_3)$, about 20 dB per decade of extra attenuation at the reference. Keep $\\omega_3$ at least 5 to 10 times $\\omega_c$ (11° to 6° of margin lost) and $C_3$ small compared with $C_2$ (say below $C_2/2$) so it does not load the main filter; $R_3$ adds its own thermal noise, so keep it moderate. Fourth- and fifth-order filters follow the same pattern; above third order designers usually move to active filters or use simulation tools such as TI's PLLatinum Sim."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The active filter"
+    },
+    {
+      "type": "prose",
+      "text": "An op-amp integrator with $R$ and $C_1$ in series in the feedback path (and $C_2$ across them) gives the same $Z(s)$ but holds the pump's output at $V_{ref}$. Advantages: the pump always sees the same voltage, so mismatch no longer varies with frequency; the VCO control range is that of the op-amp output, rail to rail or higher. Drawbacks: op-amp noise (its input-referred noise appears at the control line amplified by the impedance ratio), power, an extra pole from its finite bandwidth (keep its unity-gain frequency well above $\\omega_c$), and a sign inversion."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "A 2.4 GHz integer-N loop: $f_{ref} = 40$ MHz ($N = 60$), $K_{VCO} = 2\\pi\\times200$ MHz/V, $I_P = 100\\ \\mu\\text{A}$, $f_c = 400$ kHz ($f_{ref}/100$), phase margin 60°."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\sqrt{b} = \\tan60^\\circ + \\sec60^\\circ = 1.732 + 2 = 3.732$, $b = 13.93$.",
+        "$C_1 + C_2 = \\frac{10^{-4}\\times1.257\\times10^9}{2\\pi\\times60\\times(2.513\\times10^6)^2}\\times3.732 = 197$ pF; $C_2 = 14.1$ pF, $C_1 = 182.8$ pF.",
+        "$R = 3.732/(2.513\\times10^6\\times182.8\\text{ pF}) = 8.12$ kΩ.",
+        "Zero at 107 kHz, pole at 1.49 MHz. A third pole at 4 MHz ($R_3 = 10$ kΩ, $C_3 = 4$ pF) adds 20 dB of attenuation at 40 MHz for 5.7° of margin.",
+        "Resistor noise: $\\sqrt{4kTR} = 11.6$ nV/√Hz on the control line, which with $K_{VCO} = 2\\pi\\times200$ MHz/V is a frequency noise of 2.3 Hz/√Hz; check it against the VCO's own noise near the loop bandwidth."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Phase margin from a ratio",
+      "text": "A design uses $C_1 = 100$ pF and $C_2 = 20$ pF. What is the best phase margin it can have, and where must the crossover be?",
+      "solution": [
+        "$b = 1 + 100/20 = 6$, $\\sqrt{b} = 2.449$: $\\mathrm{PM} = \\arctan(5/4.899) = 45.6^\\circ$.",
+        "The crossover must be at $\\omega_z\\sqrt{b} = 2.449/(RC_1)$."
+      ],
+      "answer": "45.6 degrees, at 2.45 times the zero frequency."
+    },
+    {
+      "type": "problem",
+      "title": "Halving the bandwidth",
+      "text": "In the worked example you halve the bandwidth to 200 kHz to reduce the reference spur. What happens to the capacitors and resistor?",
+      "solution": [
+        "Total capacitance scales as $1/\\omega_c^2$: four times larger, about 790 pF (or keep 197 pF and quarter $I_P$ to 25 µA, at a 6 dB noise penalty from the pump).",
+        "$R = \\sqrt{b}/(\\omega_cC_1)$: $\\omega_c$ halves and $C_1$ quadruples, so $R$ halves to about 4.1 kΩ."
+      ],
+      "answer": "Capacitors four times larger, resistor half as large."
+    },
+    {
+      "type": "problem",
+      "title": "Is the bandwidth too wide?",
+      "text": "A PLL with a 20 MHz reference is designed with a 3 MHz loop bandwidth. Is the continuous-time design trustworthy?",
+      "solution": [
+        "$f_c/f_{ref} = 0.15$, above the usual 1/10 limit and approaching the $1/\\pi$ stability limit of the sampled loop.",
+        "The real phase margin will be lower than the continuous model predicts; reduce $f_c$ to 1 to 2 MHz or check with a discrete-time model."
+      ],
+      "answer": "No: it is too close to the sampling limit."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Sections 16.2.4 to 16.3 (type II loop, C_2).",
+        "D. Banerjee, PLL Performance, Simulation and Design, 5th ed., Texas Instruments SNAA106C, 2017 (loop filter equations, gamma optimisation).",
+        "Texas Instruments, PLLatinum Sim user's guide, and SSZTAL3 on the gamma optimisation factor.",
+        "F. M. Gardner, 'Charge-pump phase-lock loops,' IEEE Trans. Communications, vol. 28, no. 11, 1980 (stability limit of the sampled loop)."
+      ]
+    }
+  ]
+}

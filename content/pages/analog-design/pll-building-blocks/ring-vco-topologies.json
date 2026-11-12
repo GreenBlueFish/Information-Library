@@ -1,0 +1,153 @@
+{
+  "title": "Ring VCO Topologies and When They Are Enough",
+  "intro": "Ring VCOs are small, tune over a very wide range and give many phases for free, but they are noisy and sensitive to supply. This page compares the ways to build and tune them, and the techniques that let a ring meet tighter jitter specs.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a ring offers"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Area: a few hundred square micrometres, against 0.05 to 0.3 mm² for an LC VCO with its inductor.",
+        "Tuning range: often 2:1 or wider, from one control, without switched banks.",
+        "Multiple phases: an $N$-stage ring gives $N$ (single-ended) or $2N$ (differential) evenly spaced phases, useful for clock and data recovery, phase interpolators, multiphase TDCs and time-interleaved converters.",
+        "No inductor, so no magnetic coupling to or from other blocks, and easy porting between processes.",
+        "Costs: phase noise 25 to 35 dB worse than LC at the same power (FoM 150 to 165 dBc/Hz), and a frequency that depends strongly on supply and temperature."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-ring-stages.svg",
+      "alt": "Two ring delay stages. (a) Current-starved inverter: from VDD, a PMOS whose gate is at V_bp, a PMOS whose gate is the input, the output node, an NMOS whose gate is the input, and an NMOS whose gate is V_cont, to ground; V_bp tracks V_cont through a mirror. (b) Symmetric-load differential stage: an NMOS differential pair with inputs V_in+ and V_in-, an NMOS tail source biased by V_BN, and at each drain a diode-connected PMOS in parallel with a PMOS biased at V_BP.",
+      "caption": "Current-starved inverter and symmetric-load (Maneatis) stage."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ways to tune a ring"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Current starving"
+    },
+    {
+      "type": "prose",
+      "text": "Series current-limiting transistors above and below each inverter set how fast it can charge its load: $t_d \\approx C_LV_{sw}/(2I)$, so $f \\approx I/(NC_LV_{DD})$ for rail-to-rail swing, and frequency is nearly proportional to the control current. Simple and wide-range; but the starved edges are slow, so each stage spends longer near its threshold, which raises noise sensitivity, and rise and fall must be matched (by mirroring the NMOS control to the PMOS) to keep the waveform symmetric and the flicker corner low."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Supply-controlled rings"
+    },
+    {
+      "type": "prose",
+      "text": "The simplest high-performance digital-friendly approach drives the ring's supply with a regulator whose output is the control voltage: the inverters run with full-swing, sharp edges, and frequency is roughly proportional to the ring supply. The regulator's bandwidth and power-supply rejection then decide how much supply noise reaches the ring, and its output pole appears in the PLL loop."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Differential stages with symmetric loads"
+    },
+    {
+      "type": "prose",
+      "text": "Maneatis's delay cell uses an NMOS differential pair whose loads are a diode-connected PMOS in parallel with an equal PMOS biased at $V_{BP}$. The pair is linear-ish over a swing from VDD down to $V_{BP}$, and the effective load resistance is $1/(2g_m)$ of the biased device, so delay is set by the control while the swing's symmetry gives good rejection of supply and common-mode noise. In his self-biased PLL the bias generator, charge pump and loop-filter resistor are all derived from the VCO's own bias, so the damping factor is fixed and the loop bandwidth is a constant fraction of the operating frequency: one design works over a very wide range (0.0025 to 550 MHz in the 0.5 µm prototype) without retuning."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Other methods"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Variable load capacitance: switched or varactor loads on each stage; good for coarse bands.",
+        "Delay interpolation: blend a fast and a slow path (VCOs and Ring-Oscillator Tuning page).",
+        "Feed-forward (multipath) rings: each stage is also driven by the stage two back, which makes the edges earlier and raises the maximum frequency, useful above a few GHz.",
+        "Digital control: a ring DCO tunes by switching numbers of parallel inverters or capacitors, with sigma-delta dithering for fine resolution."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Phase noise of rings"
+    },
+    {
+      "type": "prose",
+      "text": "Analyses by Hajimiri, Limotyrakis and Lee and by Abidi agree on a striking result: for inverter rings at a given frequency and power, phase noise hardly depends on the number of stages. More stages each switch less often but the same total charge must be moved per cycle. The only levers are power ($\\mathcal{L} \\propto 1/P$, so 10 dB needs ten times the power) and staying near the 165 dBc/Hz bound by using full-swing, sharp, symmetric edges. Differential rings generally show somewhat worse FoM than inverter rings, because their tail sources burn current without contributing swing, but reject supply and substrate noise better."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Supply sensitivity"
+    },
+    {
+      "type": "prose",
+      "text": "An inverter ring's frequency changes by roughly the same fraction as its supply, so a 1 GHz ring may push by about 1 GHz/V. 1 mV of supply noise is then 1 MHz of frequency error, integrated by the oscillator into phase. Rings in a PLL therefore need either a dedicated low-noise regulator with high PSRR at frequencies up to and beyond the loop bandwidth, a replica-biased or symmetric-load structure that rejects supply variation, or a wide loop that tracks it out."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Getting more out of a ring"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Wide loop bandwidth: the PLL suppresses VCO noise inside its bandwidth, so a ring PLL wants the widest bandwidth the reference allows, which in turn wants a high reference frequency (the bandwidth should stay below about $f_{ref}/10$).",
+        "Injection locking: inject the reference edge (or a pulse derived from it) into the ring every cycle so its phase is pulled back to the reference; jitter accumulation is reset every reference period. Injection-locked rings and the multiplying DLL (MDLL), which replaces one ring edge per reference cycle by the clean reference edge, reach jitter that rivals LC PLLs at a fraction of the area, provided the ring's free-running frequency is calibrated to $N f_{ref}$ (otherwise a periodic phase correction produces reference spurs).",
+        "Cascading: a low-bandwidth LC or crystal-based PLL cleans the reference, and a wide-bandwidth ring PLL multiplies it for local clocks."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When a ring is enough"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Digital and SoC clocks with jitter budgets of a few picoseconds rms, where area and portability matter most.",
+        "Clock and data recovery and multi-phase clocking at moderate rates.",
+        "Very wide range or programmable-frequency clocks.",
+        "Not for RF synthesizers with demanding phase-noise masks, or data-converter clocks below a few hundred femtoseconds, unless injection locking or an MDLL is used."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Current-starved frequency",
+      "text": "A five-stage current-starved ring has $C_L = 10$ fF per stage and a 1 V swing. What control current gives 1 GHz?",
+      "solution": [
+        "$f = 1/(2Nt_d)$ with $t_d = C_LV/(2I)$: $f = I/(NC_LV)$.",
+        "$I = fNC_LV = 10^9\\times5\\times10^{-14}\\times1 = 50\\ \\mu$A."
+      ],
+      "answer": "About 50 µA."
+    },
+    {
+      "type": "problem",
+      "title": "Supply noise into jitter",
+      "text": "A ring VCO has supply sensitivity $K_{DD} = 800$ MHz/V. A 1 mV peak, 1 MHz sinusoid sits on its supply. What peak phase deviation does it cause in the free-running ring?",
+      "solution": [
+        "Peak frequency deviation $= 0.8$ MHz. Phase deviation $= \\Delta f_{peak}/f_m = 0.8$ rad, huge.",
+        "Inside a PLL with a bandwidth well above 1 MHz most of it would be tracked out; with a 100 kHz loop it would pass almost unattenuated. Regulate the supply."
+      ],
+      "answer": "About 0.8 rad peak (free running)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. G. Maneatis, 'Low-jitter process-independent DLL and PLL based on self-biased techniques,' IEEE JSSC, vol. 31, no. 11, 1996.",
+        "A. Hajimiri, S. Limotyrakis and T. H. Lee, 'Jitter and phase noise in ring oscillators,' IEEE JSSC, vol. 34, no. 6, 1999.",
+        "A. A. Abidi, 'Phase noise and jitter in CMOS ring oscillators,' IEEE JSSC, vol. 41, no. 8, 2006.",
+        "R. Farjad-Rad et al., 'A low-power multiplying DLL for low-jitter multigigahertz clock generation in highly integrated digital chips,' IEEE JSSC, vol. 37, no. 12, 2002.",
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Sections 15.2 and 15.4.1."
+      ]
+    }
+  ]
+}
