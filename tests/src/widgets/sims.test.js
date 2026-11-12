@@ -360,3 +360,58 @@ describe("widgets/sims (investing)", () => {
     }
   });
 });
+
+describe("widgets/sims (PLL building blocks)", () => {
+  it("pfd-characteristic: linear with slope 1/(2 pi), a dead zone without reset pulses, wrap-around in the blind zone", async () => {
+    const { pfdAverage } = await import("../../../src/widgets/sims/pll.js");
+    // ideal: average current / I_P = phi / 2 pi
+    expect(Math.abs(pfdAverage(1, 0, 0, 0) - 1 / (2 * Math.PI)) < 1e-12).toBe(true);
+    // reset pulses alone give no net current when the pump is matched
+    expect(Math.abs(pfdAverage(0, 0.05, 0.01, 0)) < 1e-12).toBe(true);
+    // no reset pulse and a 1% minimum pulse: a 2 degree error (0.56%) is lost in the dead zone
+    expect(pfdAverage((2 * Math.PI) / 180, 0, 0.01, 0)).toBe(0);
+    // with reset pulses wider than the minimum, the same error is seen
+    expect(pfdAverage((2 * Math.PI) / 180, 0.05, 0.01, 0) > 0).toBe(true);
+    // 10% reset: an error of 1.95 pi (beyond 2 pi * 0.9) is read with the wrong sign
+    expect(pfdAverage(1.95 * Math.PI, 0.1, 0, 0) < 0).toBe(true);
+    // mismatch makes zero phase error give a net current of reset * mismatch
+    expect(Math.abs(pfdAverage(0, 0.05, 0, 0.1) - 0.005) < 1e-12).toBe(true);
+  });
+
+  it("loop-filter-phase: maximum phase margin is atan((b - 1) / (2 sqrt b)) and an extra pole only lowers it", async () => {
+    const { phaseMargin, loopPhase } = await import("../../../src/widgets/sims/pll.js");
+    for (const b of [4, 10, 16]) {
+      const pm = phaseMargin(b, 0);
+      expect(Math.abs(pm - (Math.atan((b - 1) / (2 * Math.sqrt(b))) * 180) / Math.PI) < 1e-9).toBe(true);
+      // the crossover is where the phase peaks
+      expect(loopPhase(0.05, b, 0) < loopPhase(0, b, 0)).toBe(true);
+      expect(loopPhase(-0.05, b, 0) < loopPhase(0, b, 0)).toBe(true);
+    }
+    expect(Math.abs(phaseMargin(10, 0) - 54.9) < 0.05).toBe(true);
+    expect(phaseMargin(16, 5) < phaseMargin(16, 0)).toBe(true);
+  });
+
+  it("pll-phase-noise: in-band floor is FoM + 10 log fref + 20 log N, and a wider loop trades VCO noise for floor", async () => {
+    const { pllNoise } = await import("../../../src/widgets/sims/pll.js");
+    const p = { fref: 50e6, n: 48, fom: -225, vco1M: -110, fn: 300e3, zeta: 0.707 };
+    const r = pllNoise(p);
+    const floorDb = -225 + 10 * Math.log10(50e6) + 20 * Math.log10(48);
+    expect(Math.abs(10 * Math.log10(r.ref(1e3)) - floorDb) < 0.05).toBe(true);
+    // far outside the loop the VCO's free-running noise comes through: -110 dBc/Hz at 1 MHz -> -150 at 100 MHz
+    expect(Math.abs(10 * Math.log10(r.vco(1e8)) + 150) < 0.01).toBe(true);
+    // jitter is in a sane range (tens to hundreds of fs) for these numbers
+    expect(r.jitter > 1e-14 && r.jitter < 1e-12).toBe(true);
+    const narrow = pllNoise({ ...p, fn: 30e3 });
+    expect(narrow.jitter > r.jitter).toBe(true);
+  });
+
+  it("vco-phase-noise: L(1 MHz) = -FoM + 20 log(f0 / 1 MHz) - 10 log P", async () => {
+    const { vcoL } = await import("../../../src/widgets/sims/pll.js");
+    // 2.4 GHz, 1 mW, FoM 190, no flicker: at 1 MHz offset L = -190 + 20 log 2400 = -122.4 dBc/Hz
+    expect(Math.abs(vcoL(1e6, 2.4e9, 1, 190, 0) - (-190 + 20 * Math.log10(2400))) < 1e-9).toBe(true);
+    // doubling the power buys 3 dB
+    expect(Math.abs(vcoL(1e6, 2.4e9, 2, 190, 0) - vcoL(1e6, 2.4e9, 1, 190, 0) + 10 * Math.log10(2)) < 1e-9).toBe(true);
+    // a flicker corner adds 3 dB at the corner
+    expect(Math.abs(vcoL(1e5, 2.4e9, 1, 190, 1e5) - vcoL(1e5, 2.4e9, 1, 190, 0) - 10 * Math.log10(2)) < 1e-9).toBe(true);
+  });
+});

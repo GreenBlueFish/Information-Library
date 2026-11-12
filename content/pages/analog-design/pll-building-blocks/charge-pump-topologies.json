@@ -1,0 +1,143 @@
+{
+  "title": "Charge-Pump Topologies",
+  "intro": "A charge pump looks like two current sources and two switches, but where the switches sit, whether the sources stay on, and whether the output is single-ended or differential decide its matching, speed, charge injection and output range. This page compares the common structures.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a charge pump must deliver"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Equal UP and DN currents, $I_{UP} = I_{DN} = I_P$, over the whole range of output voltages the VCO needs. Mismatch becomes static phase offset and reference spurs (next page).",
+        "Wide output compliance: the control voltage range sets how much of the VCO's tuning curve is usable. Every cascode and switch eats headroom.",
+        "Little charge injection and clock feedthrough onto the loop filter when the switches toggle, and equal amounts for UP and DN.",
+        "Fast, clean switching, so a short reset pulse is enough to avoid a dead zone.",
+        "Low noise during the on-time, and low leakage while off."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-cp-topologies.svg",
+      "alt": "Four charge-pump schematics. (a) Switches at the drain: a PMOS current source from VDD, an UP switch, the output, a DN switch and an NMOS current sink to ground. (b) Switches at the source: the UP switch sits between VDD and the PMOS source's source terminal and the DN switch between the NMOS source and ground, with the output between the current-source drains. (c) Current steering: each source always conducts and a switch pair steers it either to the output or to a dummy node held at the output voltage by a unity-gain buffer. (d) Differential: two outputs, each with UP and DN steering, and a common-mode feedback block.",
+      "caption": "Four ways to arrange the switches."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Switches at the drain"
+    },
+    {
+      "type": "prose",
+      "text": "The textbook form (Razavi Fig. 16.44): current sources $M_1$, $M_2$ biased at $I_P$, switches $M_3$, $M_4$ between them and the output. It needs the least headroom and switches fast. Its weaknesses are all at the output node: the switches' channel charge and gate-drain overlap capacitance dump charge straight onto the filter when they toggle; and while the switches are off, the source drains drift to the rails (the PMOS source's drain up to VDD, the NMOS sink's drain down to ground), so at each turn-on they share charge with the filter capacitor. The resulting jump depends on $V_{cont}$, so the error is not even constant."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Switches at the source (or at the gate)"
+    },
+    {
+      "type": "prose",
+      "text": "Moving each switch to the far side of its current-source transistor puts the source transistor, acting as a cascode, between the switching node and the output, so very little of the switching charge reaches the filter. The cost is speed: when the switch closes, the current source must re-establish its own $V_{GS}$ and drain current through its gate-source capacitance, so turn-on is slower and current overshoots or undershoots until it settles. Gate switching (toggling the current source's gate between its bias and the rail) is the extreme of this: the cleanest output but the slowest edges, because the large gate capacitance must slew. These forms need longer reset pulses, which brings back noise and mismatch charge."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Current steering"
+    },
+    {
+      "type": "prose",
+      "text": "Here the sources never turn off. Each is steered by a differential switch pair either into the output or into a dummy node, and a unity-gain buffer holds the dummy node at $V_{cont}$, so the source's drain voltage barely moves when it is steered (this is Razavi's 'bootstrapping', Fig. 16.47). Charge sharing disappears, the switching is fast because the source needs no time to start, and complementary switches partly cancel each other's injection. The price is static power (both sources always conduct), the buffer's power, and the buffer's offset, which appears as a small difference between the two drain voltages and therefore as a current mismatch through finite output resistance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Differential charge pumps"
+    },
+    {
+      "type": "prose",
+      "text": "Two outputs, each with UP and DN steering, drive a differential loop filter and a VCO with a differential control input (for example varactors driven from both sides). Common-mode effects cancel: equal charge injection on both sides, supply and substrate noise, and much of the leakage appear as common mode and do not move the differential control voltage. The output swing doubles for the same supply, which halves the $K_{VCO}$ needed for a given tuning range. The costs are a common-mode feedback loop (which must be fast enough and must not add noise), two filters or a floating filter, and a VCO that accepts a differential control. Differential pumps are favoured at low supply voltages and in noisy SoCs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Active-filter charge pumps"
+    },
+    {
+      "type": "prose",
+      "text": "An op-amp integrator after the pump (Loop Filter Design page) holds the pump's output node at a fixed voltage $V_{ref}$. Mismatch then no longer depends on the VCO control voltage, which can swing to the rails or even beyond the pump's supply (discrete synthesizers drive varactors with 20 V or more this way). The op-amp's noise and offset are added inside the loop, it costs power and needs its own stability margin, and it inverts the sign, so UP and DN are swapped."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Better current sources"
+    },
+    {
+      "type": "prose",
+      "text": "Matching against output voltage depends on the output resistance of the sources (next page). Cascoding, regulated or gain-boosted cascodes, and long channels raise it. A gain-boosted charge pump uses an amplifier around the cascode to multiply the output resistance; the matched charge pump of Lee, Keel, Lim and Kim (Charge-Pump Circuit Design page) goes further and servos the DN current to equal the UP current at the present output voltage."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Switch details that matter"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Use complementary switches or a dummy transistor of half the width, driven by the inverse signal, to cancel channel-charge injection.",
+        "Match the UP and DN switch drive delays, as for the PFD outputs. A transmission gate in one path balances an inverter in the other.",
+        "Size switches for small on-resistance compared with what the current source can tolerate, but no larger: injection grows with width.",
+        "Keep the switching node's capacitance small and its voltage pinned (steering, bootstrapping) so it does not share charge."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing a topology"
+    },
+    {
+      "type": "list",
+      "items": [
+        "General integrated PLL, moderate spur spec (around $-60$ dBc): drain-switched pump with cascoded sources, dummy switches and matched drivers.",
+        "Tight spur spec ($-70$ dBc or better) or fractional-N: current-steering pump with a bootstrap buffer plus active current matching.",
+        "Low supply (1 V or less), noisy SoC: differential pump with CMFB.",
+        "Very wide VCO control range or a high-voltage varactor: active loop filter."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Headroom",
+      "text": "A 1.0 V supply; current sources need $V_{dsat} = 0.15$ V each, cascodes another 0.15 V each, and switches drop 0.05 V. What is the output compliance range for a drain-switched pump with and without cascodes?",
+      "solution": [
+        "Without cascodes: from $0.15 + 0.05 = 0.2$ V to $1.0 - 0.2 = 0.8$ V, a 0.6 V range.",
+        "With cascodes: from 0.35 V to 0.65 V, only 0.3 V. The VCO would need twice the $K_{VCO}$ for the same tuning range, which raises its noise sensitivity; a differential pump would give back the swing."
+      ],
+      "answer": "0.2 to 0.8 V without cascodes, 0.35 to 0.65 V with them."
+    },
+    {
+      "type": "problem",
+      "title": "Charge sharing",
+      "text": "In a drain-switched pump, the PMOS source's drain node has $C_X = 50$ fF and sits at VDD = 1.2 V while off; the output is at 0.6 V. The filter capacitor at the instant of switching is effectively $C_2 = 10$ pF. Estimate the jump on $V_{cont}$ when the switch closes, ignoring the NMOS side.",
+      "solution": [
+        "Charge redistributes: $\\Delta V \\approx C_X (1.2 - 0.6)/(C_X + C_2) = 50\\text{ fF} \\times 0.6/10.05\\text{ pF} \\approx 3$ mV.",
+        "The NMOS side's node (at ground while off) pulls the other way by an amount set by its own 0.6 V difference; at 0.6 V the two nearly cancel, but at $V_{cont} = 0.9$ V they differ by about 3 mV. This is the $V_{cont}$-dependent error that bootstrapping removes."
+      ],
+      "answer": "About 3 mV per side, cancelling only at mid-supply."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Section 16.3.1 (Figs. 16.44 to 16.47).",
+        "W. Rhee, 'Design of high-performance CMOS charge pumps in phase-locked loops,' Proc. IEEE ISCAS, 1999 (comparison of drain, source, gate and steering switches).",
+        "J.-S. Lee, M.-S. Keel, S.-I. Lim and S. Kim, 'Charge pump with perfect current matching characteristics in phase-locked loops,' Electronics Letters, vol. 36, no. 23, 2000.",
+        "Y.-S. Choi and D.-H. Han, 'Gain-boosting charge pump for current matching in phase-locked loop,' IEEE TCAS-II, 2006."
+      ]
+    }
+  ]
+}

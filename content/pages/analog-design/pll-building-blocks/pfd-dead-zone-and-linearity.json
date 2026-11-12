@@ -1,0 +1,172 @@
+{
+  "title": "Dead Zone, Reset Pulses and PFD Linearity",
+  "intro": "How the PFD and charge pump behave for very small phase errors: why a PFD needs reset pulses, how wide to make them, the static phase offset that mismatch then causes, and why linearity near zero matters so much in fractional-N synthesizers.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The dead zone, quantitatively"
+    },
+    {
+      "type": "prose",
+      "text": "If the PFD produced no pulse for a zero phase error, a small error $\\Delta\\phi$ would produce an UP pulse only $\\Delta\\phi\\,T_{ref}/2\\pi$ wide. A pulse shorter than the time $t_{on}$ the driver and switch need to swing fully does not deliver its charge, so for $|\\Delta\\phi| < \\phi_0 \\approx 2\\pi t_{on}/T_{ref}$ the loop gain drops to zero (Razavi, Section 16.3.1). Inside that band the VCO phase wanders freely: the dead zone turns into jitter of about $\\pm t_{on}$ peak, plus the noise the VCO accumulates while the loop is open."
+    },
+    {
+      "type": "prose",
+      "text": "With reset pulses of width $t_{rst} > t_{on}$, both switches are already fully on when a small extra width is added to one of them, so the net charge grows linearly from zero. The widget below shows both cases: set the reset pulse to zero and the minimum pulse to a few percent to see the flat dead zone; raise the reset above the minimum pulse and it disappears."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-pfd-characteristic.svg",
+      "alt": "Average charge-pump current against phase error from minus 2 pi to 2 pi. The ideal dashed line runs straight from minus I_P to plus I_P. The real characteristic follows it until 2 pi times one minus t_rst over T_ref and then jumps to the opposite sign, the blind zone, near both ends. An inset near zero shows a flat dead zone of width plus or minus phi_0 without reset pulses, and a line through zero with reset pulses longer than the switch turn-on time.",
+      "caption": "PFD/CP characteristic: blind zone near the ends, dead zone near zero."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "PFD and charge-pump characteristic",
+        "params": [
+          {
+            "key": "reset",
+            "label": "reset pulse width (% of reference period)",
+            "control": "range",
+            "min": 0,
+            "max": 30,
+            "step": 0.5,
+            "default": 5
+          },
+          {
+            "key": "wmin",
+            "label": "shortest pulse that turns a switch on (% of period)",
+            "control": "range",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "mismatch",
+            "label": "UP minus DN current (% of I_P)",
+            "control": "range",
+            "min": -20,
+            "max": 20,
+            "step": 1,
+            "default": 0
+          }
+        ],
+        "config": {
+          "sim": "pfd-characteristic",
+          "xLabel": "phase error (units of π)",
+          "yLabel": "average current / I_P"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try: reset 0 and minimum pulse 3% (flat band near zero, the dead zone); reset 5% (linear through zero); reset 25% (the blind zone eats the ends of the range); mismatch 10% (the curve no longer passes through zero, and its two halves have different slopes)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Static phase offset from mismatch"
+    },
+    {
+      "type": "prose",
+      "text": "Once both pumps are on every cycle, a mismatch $\\Delta I = I_{UP} - I_{DN}$ injects a net charge $\\Delta I\\, t_{rst}$ per cycle. The loop cannot tolerate a net charge, so it settles at a phase error where the leading pump's extra on-time cancels it. Solving $I_{UP}\\,t_{rst} = I_{DN}\\,(t_{rst} + \\Delta t)$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta t = \\frac{\\Delta I}{I_{DN}}\\,t_{rst}, \\qquad \\Delta\\phi = 2\\pi\\,\\frac{\\Delta I}{I_P}\\,\\frac{t_{rst}}{T_{ref}}"
+    },
+    {
+      "type": "prose",
+      "text": "The offset itself is usually harmless (a fixed skew between reference and output), unless the PLL is used for deskewing or as a clock aligner. What is not harmless is that the cancellation happens with two pulses of opposite sign at slightly different times every cycle, so the control voltage carries a ripple at $f_{ref}$ even in lock, which appears as reference spurs (Charge-Pump Mismatch and Spurs page). The offset and the ripple both scale with $t_{rst}$: another reason to keep the reset pulse no longer than it needs to be."
+    },
+    {
+      "type": "prose",
+      "text": "Other sources add to the same offset: UP/DN timing skew (a pulse of width $t_{skew}$ every cycle), different charge injection and clock feedthrough of the two switches, and leakage from the control node. Each produces a net charge per cycle that the loop cancels with a phase offset, and each leaves a ripple."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Linearity near zero"
+    },
+    {
+      "type": "prose",
+      "text": "With mismatch the characteristic has slope $I_{UP}/2\\pi$ on one side of the lock point and $I_{DN}/2\\pi$ on the other. In an integer-N PLL that only changes the loop gain slightly. In a fractional-N synthesizer it is a serious problem: the sigma-delta modulator dithers the divider ratio, so the instantaneous phase error at the PFD swings by several VCO periods every reference cycle, straddling the kink. A nonlinear detector intermodulates the shaped, mostly high-frequency quantization noise and folds part of it back into the loop bandwidth, raising the in-band noise floor and creating fractional spurs."
+    },
+    {
+      "type": "prose",
+      "text": "The usual fixes:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Offset the operating point: add a small constant bleed current (or delay the reset of one side) so that in lock the phase error always stays on one side of zero by more than the modulator's peak excursion. The PFD then works on a single straight segment. The cost is a larger ripple, so more reference spur, and more pump noise because one pump is on longer.",
+        "Gate the offset: apply the offset current only for a short window right after the pulses (gated-offset linearization), which keeps the benefit with less ripple.",
+        "Match the pumps dynamically (Charge-Pump Circuit Design page) so the slopes on both sides agree.",
+        "Reduce the excursion: a modulator of lower order, a multi-phase divider, or quantization-noise cancellation (subtracting the known error with a DAC) shrinks the range the PFD must handle."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing the reset pulse width"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Lower bound: longer than the time the driver plus the switch need to turn fully on at the slow corner, with margin (about 1.5 times). Otherwise the dead zone returns at that corner.",
+        "Upper bound: the static phase offset, the mismatch ripple and the pump noise all grow in proportion to $t_{rst}$; and the blind zone grows as $t_{rst}/T_{ref}$.",
+        "Typical values are 100 to 500 ps in mature processes and tens of picoseconds in nanometre processes, a few percent of the reference period at most."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Offset from mismatch",
+      "text": "A charge pump has $I_P = 200\\ \\mu\\text{A}$ with a 4% UP/DN mismatch; the PFD reset pulse is 250 ps; the reference is 25 MHz. Find the static timing offset and phase offset.",
+      "solution": [
+        "$\\Delta t = (\\Delta I/I_P)\\,t_{rst} = 0.04 \\times 250\\text{ ps} = 10$ ps.",
+        "$\\Delta\\phi = 2\\pi \\times 10\\text{ ps}/40\\text{ ns} = 1.6$ mrad, about 0.09 degrees."
+      ],
+      "answer": "10 ps, or 1.6 mrad."
+    },
+    {
+      "type": "problem",
+      "title": "Dead zone jitter",
+      "text": "A PFD without reset pulses has switches that need 80 ps to turn on. Estimate the peak-to-peak jitter the dead zone allows, and the dead zone in degrees at 50 MHz.",
+      "solution": [
+        "Errors below 80 ps on either side are not corrected, so the output edge can wander over about $\\pm 80$ ps, or 160 ps peak to peak, before the loop reacts (more if the VCO drifts during that time).",
+        "$\\phi_0 = 360^\\circ \\times 80\\text{ ps}/20\\text{ ns} = 1.44^\\circ$."
+      ],
+      "answer": "About 160 ps peak to peak; dead zone about plus or minus 1.4 degrees."
+    },
+    {
+      "type": "problem",
+      "title": "Offset for a fractional-N loop",
+      "text": "A fractional-N synthesizer at 3.2 GHz uses a third-order MASH modulator; assume the accumulated phase error it causes at the PFD spans up to 4 VCO periods on one side of the mean. What bleed current keeps the PFD on one side of zero if $I_P = 1$ mA and $f_{ref} = 40$ MHz?",
+      "hint": "The offset in time must exceed the peak timing excursion, $4/3.2\\text{ GHz}$.",
+      "solution": [
+        "Peak excursion $= 4 \\times 312.5\\text{ ps} = 1.25$ ns. Add margin: aim for an offset of about 1.5 ns.",
+        "In lock the pump's average must cancel the bleed: $I_P\\,\\Delta t / T_{ref} = I_{bleed}$, so $I_{bleed} = 1\\text{ mA} \\times 1.5\\text{ ns}/25\\text{ ns} = 60\\ \\mu\\text{A}$.",
+        "That is 6% of $I_P$, which is why gated offsets are used: a constant 60 µA bleed makes a sizeable ripple."
+      ],
+      "answer": "About 60 µA (6% of I_P)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Section 16.3.1 (dead zone, reset pulses, mismatch, Problem 16.12).",
+        "M. Mansuri, D. Liu and C.-K. K. Yang, IEEE JSSC, 2002 (blind zone).",
+        "T.-H. Lin, C.-L. Ti and Y.-H. Liu, 'Dynamic current-matching charge pump and gated-offset linearization technique for delta-sigma fractional-N PLLs,' IEEE TCAS-I, vol. 56, no. 5, 2009, doi:10.1109/TCSI.2009.2016180.",
+        "S. Pamarti, L. Jansson and I. Galton, 'A wideband 2.4-GHz delta-sigma fractional-N PLL with 1-Mb/s in-loop modulation,' IEEE JSSC, 2004 (charge-pump offset and quantization-noise cancellation)."
+      ]
+    }
+  ]
+}

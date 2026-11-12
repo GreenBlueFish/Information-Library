@@ -1,0 +1,157 @@
+{
+  "title": "LC VCO Topologies Compared",
+  "intro": "Most low-noise PLLs use an LC VCO. The cross-coupled pair of the Cross-Coupled LC Oscillators page is the starting point; this page compares the variants that improve its phase noise, power or supply range, and when each is worth it.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Current-limited and voltage-limited operation"
+    },
+    {
+      "type": "prose",
+      "text": "With a tail current $I_{tail}$ the cross-coupled pair switches the whole current from one side to the other each half cycle. In this current-limited regime the differential tank amplitude is set by the fundamental of that square-wave current flowing into the tank's parallel resistance $R_p$ (Hajimiri and Lee):"
+    },
+    {
+      "type": "math",
+      "tex": "V_{tank} \\approx \\frac{2}{\\pi}I_{tail}R_p\\ \\ \\text{(NMOS-only)}, \\qquad V_{tank} \\approx \\frac{4}{\\pi}I_{tail}R_p\\ \\ \\text{(complementary)}"
+    },
+    {
+      "type": "prose",
+      "text": "Raising the current raises the swing until the transistors enter triode at the peaks or the swing hits the supply: the voltage-limited regime. Beyond that point extra current only adds noise (triode devices load the tank and lower $Q$) and the phase noise stops improving or gets worse. The best phase noise for a given supply is at the edge between the two regimes, which is why VCOs often include an amplitude control loop that holds the core there across PVT."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-lc-topologies.svg",
+      "alt": "Three LC VCO cores. (a) NMOS cross-coupled: a centre-tapped inductor from VDD to the drains X and Y, a capacitor across X and Y, NMOS transistors with each gate tied to the other drain, and a tail current source to ground. (b) Complementary: a PMOS cross-coupled pair on top and an NMOS cross-coupled pair below, the tank between X and Y, and a tail current source. (c) Class-C: like (a) but each gate is AC-coupled to the opposite drain through a capacitor C_c and biased through a resistor from a low voltage V_B, with a large capacitor C_T across the tail current source.",
+      "caption": "NMOS-only, complementary and class-C cores."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "NMOS-only cross-coupled"
+    },
+    {
+      "type": "prose",
+      "text": "The simplest core, with a centre-tapped inductor to VDD, swings each drain above the supply, so the swing can approach $2V_{DD}$ differentially. Without tail noise, its noise factor is about $1 + \\gamma$ (the tank's own noise plus the switching pair's). In practice the tail current source adds noise in two ways: its noise near $2\\omega_0$ is mixed down by the switching pair to sidebands around $\\omega_0$, and its low-frequency (flicker) noise modulates the amplitude, which varactors convert into phase noise. Also, when one switch is in triode at the peak, the tail node offers a low-impedance path that loads the tank and lowers its effective $Q$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Complementary (CMOS) cross-coupled"
+    },
+    {
+      "type": "prose",
+      "text": "Adding a PMOS pair reuses the same current twice, so in the current-limited regime it gives twice the swing, 6 dB better phase noise for the same current. The waveform is more symmetric, lowering the $1/f^3$ corner. The costs are a swing limited to about $V_{DD}$ (it enters the voltage-limited regime sooner), the PMOS parasitic capacitance (less tuning range at high frequency) and extra noise from the PMOS pair. It is the usual choice when current is scarce and the supply is not too low, and less attractive at very low supplies or mm-wave frequencies."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Tail-noise filtering"
+    },
+    {
+      "type": "prose",
+      "text": "Hegazi, Sjöland and Abidi placed a large capacitor across the tail current source and an inductor between it and the switching pair's common source, resonating at $2\\omega_0$. The capacitor shorts the tail's high-frequency noise; the $2\\omega_0$ resonance gives the common-source node a high impedance at the frequency where it would otherwise load the tank. The noise factor approaches its fundamental minimum; their 1.1 GHz prototypes reached about $-153$ dBc/Hz at 3 MHz offset. The cost is an extra inductor (area), and the resonance must track the tuning range. A cheaper version keeps only the tail capacitor, or removes the tail transistor altogether and sets the current with the supply ('top-biased' or tail-less cores), accepting higher supply sensitivity."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Class-C"
+    },
+    {
+      "type": "prose",
+      "text": "Mazzanti and Andreani bias the cross-coupled gates through AC coupling from a low DC voltage $V_B$, so each transistor conducts only near the peak of its drain swing, and put a large capacitor across the tail so the current flows in tall, narrow pulses. Pulses at the voltage peaks are where the ISF is smallest, so the active devices inject their noise when it matters least, and a pulse current has a larger fundamental for the same DC current. The theory predicts 3.9 dB better phase noise than the standard core at the same current; their 0.13 µm prototypes reached about $-130$ dBc/Hz at 3 MHz offset from 4.9 to 5.65 GHz on 1.4 mW, an FoM of 193.5 to 196 dBc/Hz. Class-C must not let the transistors enter triode at the peaks, so amplitude must be controlled, and start-up needs care (the low gate bias starts as a class-B core and moves to class-C as the amplitude grows)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Class-D"
+    },
+    {
+      "type": "prose",
+      "text": "Fanori and Andreani's class-D oscillator drops the tail and lets large switches pull each drain hard to ground for half a cycle, so the tank swings to nearly three times the supply. It works from very low supplies (0.4 V in their 65 nm prototype, 3.0 to 4.8 GHz, 46% tuning range, FoM 191 dBc/Hz with less than 1 dB variation across the band) and gives less phase noise than class-B and class-C for the same power, at the cost of high supply pushing, which needs a clean regulated supply."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Class-F"
+    },
+    {
+      "type": "prose",
+      "text": "Babaie and Staszewski add a second resonance at the third harmonic, using a transformer-coupled tank, so the drain voltage becomes a pseudo-square wave. Steeper zero crossings make the ISF smaller where the noise is injected and lower the effective noise factor. Their 65 nm prototype reached about $-136$ dBc/Hz at 3 MHz over 5.9 to 7.6 GHz with an FoM of 192 dBc/Hz, on 12 mA from 1.25 V. The transformer costs area and the harmonic resonance must be kept aligned over the tuning range."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Colpitts and other cores"
+    },
+    {
+      "type": "prose",
+      "text": "A Colpitts oscillator (Colpitts and One-Port Oscillators page) injects its current in pulses near the voltage minimum, which gives it the best ISF of the classical cores; but it needs considerably more transconductance to start, and in CMOS its practical phase noise rarely beats a good cross-coupled design. Differential and quadrature Colpitts variants exist. Transformer-based and dual-core designs (two coupled cores, with 3 dB lower phase noise for twice the power, like any coupled-oscillator array) are used where noise must go below what one tank can give, and mode-switching transformers extend tuning range."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The tank"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Inductor $Q$: on-chip spiral inductors reach about 10 to 20 at a few GHz, more with thick top metal; the inductor usually dominates tank loss below about 10 GHz.",
+        "Capacitor $Q$: varactors and switched capacitors have series resistance, so their $Q$ falls as $1/\\omega$; above about 20 to 30 GHz the capacitors, not the inductor, limit tank $Q$.",
+        "Inductance choice: for a fixed tank $Q$, a larger $L$ (smaller $C$) gives a larger $R_p = Q\\omega L$ and so more swing per milliamp, which suits low current; a smaller $L$ gives more room for a capacitor bank and so more tuning range, and is less sensitive to parasitics, which suits low noise at higher current."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing an LC core"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Moderate specs, simple design: NMOS-only or complementary core with a tail capacitor and amplitude control.",
+        "Lowest power for a given noise: class-C (with amplitude control) or a complementary core in the current-limited regime.",
+        "Very low supply: class-D, with a regulator for supply pushing.",
+        "Lowest phase noise per tank: class-F or tail-filtered cores, or coupled dual cores if power allows.",
+        "Wide tuning: transformer-based or switched-inductor tanks, or two VCOs covering half the range each."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Swing and regime",
+      "text": "A complementary VCO has $R_p = 400\\ \\Omega$ differential and a 1.2 V supply. What tail current puts it at the edge of the voltage-limited regime, if the swing limit is about 1.0 V differential peak?",
+      "solution": [
+        "$V_{tank} = (4/\\pi)I_{tail}R_p = 1.0$ V gives $I_{tail} = \\pi/(4\\times400) = 1.96$ mA.",
+        "An NMOS-only core with the same tank would need twice the current, 3.9 mA, for the same swing, but could swing further before limiting."
+      ],
+      "answer": "About 2 mA."
+    },
+    {
+      "type": "problem",
+      "title": "What class-C buys",
+      "text": "A conventional core reaches $-120$ dBc/Hz at 1 MHz from 2.4 GHz on 4 mW. With the same tank and current, a class-C version gains the theoretical 3.9 dB. What FoMs do the two have?",
+      "solution": [
+        "Conventional: $120 + 67.6 - 6.0 = 181.6$ dBc/Hz.",
+        "Class-C: 185.5 dBc/Hz. Alternatively, it could match $-120$ dBc/Hz on 4 mW divided by $10^{0.39} = 2.45$, about 1.6 mW."
+      ],
+      "answer": "181.6 and 185.5 dBc/Hz."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A. Hajimiri and T. H. Lee, 'Design issues in CMOS differential LC oscillators,' IEEE JSSC, vol. 34, no. 5, 1999.",
+        "E. Hegazi, H. Sjöland and A. A. Abidi, 'A filtering technique to lower LC oscillator phase noise,' IEEE JSSC, vol. 36, no. 12, 2001.",
+        "A. Mazzanti and P. Andreani, 'Class-C harmonic CMOS VCOs, with a general result on phase noise,' IEEE JSSC, vol. 43, no. 12, 2008.",
+        "L. Fanori and P. Andreani, 'Class-D CMOS oscillators,' IEEE JSSC, vol. 48, no. 12, 2013.",
+        "M. Babaie and R. B. Staszewski, 'A class-F CMOS oscillator,' IEEE JSSC, vol. 48, no. 12, 2013.",
+        "J. J. Rael and A. A. Abidi, 'Physical processes of phase noise in differential LC oscillators,' Proc. IEEE CICC, 2000.",
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Section 15.3."
+      ]
+    }
+  ]
+}

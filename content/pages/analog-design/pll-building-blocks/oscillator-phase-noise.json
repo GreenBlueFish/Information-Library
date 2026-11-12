@@ -1,0 +1,242 @@
+{
+  "title": "Oscillator Phase Noise and Figures of Merit",
+  "intro": "The VCO usually sets a PLL's noise outside the loop bandwidth and limits how narrow the loop can be. This page gives the models used to predict oscillator phase noise (Leeson, Hajimiri and Lee's impulse sensitivity function), the figures of merit used to compare VCOs, and how phase noise converts to jitter.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Definitions"
+    },
+    {
+      "type": "prose",
+      "text": "An oscillator's output is $A\\cos(\\omega_0t + \\phi_n(t))$ with a small random phase $\\phi_n$. Its single-sideband phase noise $\\mathcal{L}(\\Delta f)$ is the power in a 1 Hz band at offset $\\Delta f$ from the carrier, relative to the carrier, in dBc/Hz. For small noise it equals half the one-sided spectrum of the phase, $\\mathcal{L}(\\Delta f) \\approx S_\\phi(\\Delta f)/2$. A typical free-running spectrum has three regions:"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-phase-noise-regions.svg",
+      "alt": "Log-log plot of phase noise against offset frequency. At low offsets the curve falls at 30 dB per decade (flicker noise upconverted, 1 over f cubed), then at 20 dB per decade (thermal noise, 1 over f squared), then flattens to a floor. The corner between the first two regions is marked, and f0 over 2Q is marked as the offset where the Leeson model's 1 over f squared region meets the floor.",
+      "caption": "The three regions of oscillator phase noise."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$1/f^3$ (30 dB per decade): flicker noise of the active devices, upconverted to around the carrier.",
+        "$1/f^2$ (20 dB per decade): white (thermal) noise, integrated by the oscillator into a random walk of phase. This is the region designers usually specify, often at 1 MHz offset.",
+        "Floor: noise of the output buffer and of the tank beyond its bandwidth."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why the slope is 20 dB per decade"
+    },
+    {
+      "type": "prose",
+      "text": "An oscillator has no restoring force for phase: any phase disturbance persists for ever, because a shifted oscillation is as valid a solution as the original. White noise injected at random times therefore makes the phase a random walk whose variance grows linearly with time, and the spectrum of a random walk falls as $1/f^2$. Amplitude disturbances, by contrast, decay because the active circuit's nonlinearity restores the amplitude, so amplitude noise is small and is usually ignored."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Leeson's model"
+    },
+    {
+      "type": "prose",
+      "text": "Leeson treated the oscillator as a tank of loaded quality factor $Q$ in a loop with an amplifier of noise factor $F$ and signal power $P_s$ in the tank:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{L}(\\Delta f) = 10\\log_{10}\\left[\\frac{2FkT}{P_s}\\left(1 + \\left(\\frac{f_0}{2Q\\,\\Delta f}\\right)^2\\right)\\left(1 + \\frac{\\Delta f_{1/f^3}}{\\Delta f}\\right)\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "In the $1/f^2$ region this reduces to $\\frac{FkT}{2P_sQ^2}\\left(\\frac{f_0}{\\Delta f}\\right)^2$. It says what every later model confirms: phase noise improves with $Q^2$ and with the signal power (amplitude squared over tank resistance), and the active circuit should add as little noise as possible ($F$ near 1). Its weakness is that $F$ and $\\Delta f_{1/f^3}$ are fitting parameters: the model does not say how a circuit's devices produce them."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The impulse sensitivity function"
+    },
+    {
+      "type": "prose",
+      "text": "Hajimiri and Lee made the model predictive by noting that the phase shift caused by a current impulse depends on when in the cycle it arrives. Injecting a charge $\\Delta q$ at a node whose maximum charge swing is $q_{max}$ shifts the phase by"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta\\phi = \\Gamma(\\omega_0\\tau)\\,\\frac{\\Delta q}{q_{max}}"
+    },
+    {
+      "type": "prose",
+      "text": "where the impulse sensitivity function (ISF) $\\Gamma$ is periodic with the oscillation. An impulse at a voltage peak barely moves the zero crossings ($\\Gamma \\approx 0$); one at a zero crossing shifts them most. For white noise current of density $\\overline{i_n^2}/\\Delta f$ the $1/f^2$ region is"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{L}(\\Delta\\omega) = 10\\log_{10}\\left(\\frac{\\Gamma_{rms}^2}{q_{max}^2}\\cdot\\frac{\\overline{i_n^2}/\\Delta f}{2\\,\\Delta\\omega^2}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "and flicker noise upconverts through the ISF's average value $\\Gamma_{dc} = c_0/2$, giving a $1/f^3$ corner of"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta\\omega_{1/f^3} = \\omega_{1/f}\\left(\\frac{\\Gamma_{dc}}{\\Gamma_{rms}}\\right)^2"
+    },
+    {
+      "type": "prose",
+      "text": "Three design lessons follow. Make the swing large ($q_{max}$). Let the active devices inject their noise current only where $\\Gamma$ is small, near the voltage peaks: this is what class-C and Colpitts oscillators do. Make the waveform symmetric (equal rise and fall), which makes $\\Gamma_{dc}$ small and pushes the flicker corner far below the device's own $1/f$ corner; mismatched pull-up and pull-down is why ring oscillators and unbalanced LC cores show high $1/f^3$ corners. The model also handles cyclostationary noise, such as a tail current that flows only part of the cycle, by multiplying the ISF by the noise's time-varying amplitude."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Figures of merit"
+    },
+    {
+      "type": "prose",
+      "text": "Phase noise trades against power and against offset and frequency in a known way ($\\mathcal{L} \\propto (f_0/\\Delta f)^2/P$ in the $1/f^2$ region), so VCOs are compared by"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{FoM} = -\\mathcal{L}(\\Delta f) + 20\\log_{10}\\frac{f_0}{\\Delta f} - 10\\log_{10}\\frac{P_{DC}}{1\\text{ mW}}"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{FoM}_T = \\mathrm{FoM} + 20\\log_{10}\\frac{\\mathrm{TR}\\%}{10}"
+    },
+    {
+      "type": "prose",
+      "text": "(higher is better; $\\mathrm{FoM}_T$ credits wide tuning range TR, and an area-normalised $\\mathrm{FoM}_A$ subtracts $10\\log_{10}(\\text{area}/1\\text{ mm}^2)$). Typical values:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "LC VCOs: 180 to 190 dBc/Hz for good conventional designs; class-C, class-D and class-F designs report 191 to 196 dBc/Hz.",
+        "Ring VCOs: 150 to 165 dBc/Hz. Navid, Lee and Dutton showed a thermodynamic limit of about 165 dBc/Hz for ring oscillators at room temperature (169 for relaxation oscillators), from $\\mathcal{L}_{min} \\approx \\frac{7.33kT}{P}\\left(\\frac{f_0}{\\Delta f}\\right)^2$.",
+        "The LC limit comes from Leeson with $F = 1$ and all power in the tank: $\\mathrm{FoM} \\le 10\\log_{10}\\frac{2Q^2\\cdot1\\text{ mW}}{kT}$, about 197 dBc/Hz for $Q = 10$. Real cores lose a few dB to $F \\approx 1 + \\gamma$ and to converting DC into tank power."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The gap between the families is about 25 to 35 dB at equal power: a ring needs roughly 300 to 3000 times more power for the same phase noise. That one fact decides most VCO choices. Compare the two at your own frequency and power:"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Ring against LC VCO phase noise",
+        "params": [
+          {
+            "key": "f0",
+            "label": "oscillation frequency (GHz)",
+            "control": "range",
+            "min": 0.5,
+            "max": 20,
+            "step": 0.1,
+            "default": 2.4
+          },
+          {
+            "key": "power",
+            "label": "power (mW)",
+            "control": "range",
+            "min": 0.1,
+            "max": 20,
+            "step": 0.1,
+            "default": 2
+          },
+          {
+            "key": "fomLc",
+            "label": "LC VCO figure of merit (dBc/Hz)",
+            "control": "range",
+            "min": 175,
+            "max": 196,
+            "step": 0.5,
+            "default": 188
+          },
+          {
+            "key": "fomRing",
+            "label": "ring VCO figure of merit (dBc/Hz)",
+            "control": "range",
+            "min": 145,
+            "max": 166,
+            "step": 0.5,
+            "default": 160
+          },
+          {
+            "key": "corner",
+            "label": "flicker (1/f³) corner (kHz)",
+            "control": "range",
+            "min": 0,
+            "max": 2000,
+            "step": 10,
+            "default": 200
+          }
+        ],
+        "config": {
+          "sim": "vco-phase-noise",
+          "xLabel": "log10 of offset frequency (Hz)",
+          "yLabel": "phase noise (dBc/Hz)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From phase noise to jitter"
+    },
+    {
+      "type": "prose",
+      "text": "Integrating the phase spectrum gives rms phase error and jitter: $\\sigma_\\phi^2 = 2\\int\\mathcal{L}(f)\\,df$ and $\\sigma_t = \\sigma_\\phi/(2\\pi f_0)$. A free-running oscillator's $1/f^2$ noise integrates to infinity at low offsets, which is correct: its jitter grows without bound with time. Measured over a delay $\\tau$, the timing error grows as $\\sigma(\\tau) = \\kappa\\sqrt{\\tau}$, and in the $1/f^2$ region"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{L}(\\Delta f) = \\kappa^2\\,\\frac{f_0^2}{\\Delta f^2}, \\qquad \\sigma_{cycle} = \\kappa\\sqrt{T_0} = \\frac{\\Delta f\\sqrt{\\mathcal{L}(\\Delta f)}}{f_0^{3/2}}"
+    },
+    {
+      "type": "prose",
+      "text": "(with $\\mathcal{L}$ as a ratio, not in dB). At 2.4 GHz, an LC VCO with $-120$ dBc/Hz at 1 MHz has about 8.5 fs of cycle jitter, a ring with $-95$ dBc/Hz about 150 fs. Inside a PLL the loop resets the accumulation every few loop time constants, so the integrated jitter is finite and is what the In-Band Noise widget computes."
+    },
+    {
+      "type": "problem",
+      "title": "A required figure of merit",
+      "text": "A 5 GHz VCO must reach $-115$ dBc/Hz at 1 MHz offset on 3 mW. What FoM does that demand, and which family can deliver it?",
+      "solution": [
+        "$\\mathrm{FoM} = 115 + 20\\log_{10}5000 - 10\\log_{10}3 = 115 + 74.0 - 4.8 = 184.2$ dBc/Hz.",
+        "Comfortably within LC territory, impossible for a ring (above the 165 dBc/Hz bound)."
+      ],
+      "answer": "About 184 dBc/Hz: an LC VCO."
+    },
+    {
+      "type": "problem",
+      "title": "Ring power for the same noise",
+      "text": "A ring with FoM 160 dBc/Hz must match an LC design with FoM 188 at 2.4 GHz, $-120$ dBc/Hz at 1 MHz. How much power does each need?",
+      "solution": [
+        "From $10\\log_{10}(P/1\\text{ mW}) = -\\mathcal{L} + 20\\log_{10}(f_0/\\Delta f) - \\mathrm{FoM}$. LC: $120 + 67.6 - 188 = -0.4$ dB, so $P \\approx 0.9$ mW.",
+        "Ring: $10\\log P = 120 + 67.6 - 160 = 27.6$ dB, so $P \\approx 575$ mW: 28 dB, or about 630 times, more than the LC."
+      ],
+      "answer": "About 0.9 mW for LC against about 0.6 W for the ring."
+    },
+    {
+      "type": "problem",
+      "title": "Flicker corner from symmetry",
+      "text": "An oscillator's devices have a $1/f$ corner of 1 MHz. Its ISF has $\\Gamma_{rms} = 0.7$ and $\\Gamma_{dc} = 0.07$. Where is the $1/f^3$ corner of its phase noise?",
+      "solution": [
+        "$\\Delta f_{1/f^3} = f_{1/f}(\\Gamma_{dc}/\\Gamma_{rms})^2 = 1\\text{ MHz}\\times(0.1)^2 = 10$ kHz.",
+        "An asymmetric waveform with $\\Gamma_{dc} = 0.35$ would put it at 250 kHz."
+      ],
+      "answer": "10 kHz."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "D. B. Leeson, 'A simple model of feedback oscillator noise spectrum,' Proc. IEEE, vol. 54, 1966.",
+        "A. Hajimiri and T. H. Lee, 'A general theory of phase noise in electrical oscillators,' IEEE JSSC, vol. 33, no. 2, 1998; and T. H. Lee and A. Hajimiri, 'Oscillator phase noise: a tutorial,' IEEE JSSC, vol. 35, no. 3, 2000.",
+        "A. Hajimiri, S. Limotyrakis and T. H. Lee, 'Jitter and phase noise in ring oscillators,' IEEE JSSC, vol. 34, no. 6, 1999.",
+        "R. Navid, T. H. Lee and R. W. Dutton, 'Minimum achievable phase noise of RC oscillators,' IEEE JSSC, vol. 40, no. 3, 2005.",
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Section 15.5 (VCO model, jitter and phase noise)."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,187 @@
+{
+  "title": "Phase-Frequency Detector Circuits",
+  "intro": "The three-state phase-frequency detector (PFD) is the front end of almost every charge-pump PLL. This page covers what it must do, the circuits used to build it, what limits its speed and range, and how to choose one for a design.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What the PFD has to do"
+    },
+    {
+      "type": "prose",
+      "text": "A PFD compares the rising edges of the reference A and the divided-down VCO B and tells the charge pump which way to push. It has three states: UP (A came first), DN (B came first) and neither. The state is held between edges, which is what makes it sequential, and what lets it detect frequency as well as phase: when A is faster than B, A's edges keep arriving before B's, so the output sits mostly in UP and the average pushes the VCO up, whatever the phase."
+    },
+    {
+      "type": "prose",
+      "text": "With an ideal PFD driving a charge pump of current $I_P$, the average output current is linear in the phase error over a full $\\pm 2\\pi$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\bar{I}_{out} = \\frac{I_P}{2\\pi}\\,\\Delta\\phi, \\qquad K_{PD} = \\frac{I_P}{2\\pi}\\ \\text{A/rad}, \\qquad -2\\pi < \\Delta\\phi < 2\\pi"
+    },
+    {
+      "type": "prose",
+      "text": "Four properties of a real PFD matter when choosing one: how small a phase error it still sees (the dead zone), how close to $\\pm 2\\pi$ it stays linear and how fast it can run (both set by the reset path), how its output pulses line up with the charge-pump switches (UP/DN skew), and how much noise its logic adds to the edges."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The reference design: two reset flip-flops and an AND gate"
+    },
+    {
+      "type": "prose",
+      "text": "Two D flip-flops with D tied high are clocked by A and B; their outputs are UP and DN; an AND gate resets both when both are high. Razavi's Figure 16.24 and the Charge-Pump PLLs page show the circuit. In words: an edge of A sets UP; an edge of B sets DN; as soon as both are set, the AND gate fires and clears both after a delay $t_{rst}$."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-pfd-timing.svg",
+      "alt": "Timing diagram with rows A, B, UP, DN and Reset. When A leads B by delta t, UP is high for delta t plus t_rst and DN for t_rst, and both fall together when the reset fires. On the right, a large phase error makes the next A edge arrive while Reset is still high; that edge is marked as missed (blind zone).",
+      "caption": "Pulse widths of a tristate PFD, and an edge lost during the reset pulse."
+    },
+    {
+      "type": "prose",
+      "text": "Two consequences follow from the timing. First, even in perfect lock both outputs pulse for $t_{rst}$ every cycle, so the charge pump is switched on twice per cycle; this is what removes the dead zone (next page), and it is also how mismatch, noise and charge injection enter. Second, the flip-flops are deaf while the reset is active: an edge that arrives inside the reset pulse is lost."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The reset path sets speed and range"
+    },
+    {
+      "type": "prose",
+      "text": "The reset delay is the sum of the AND gate delay, the flip-flops' reset-to-output delay and any delay deliberately added (usually an inverter chain) to widen the pulses. Because edges that land inside the reset are ignored, the linear range shrinks to"
+    },
+    {
+      "type": "math",
+      "tex": "|\\Delta\\phi| < 2\\pi\\left(1 - \\frac{t_{rst}}{T_{ref}}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "Beyond that, the PFD reads the error with the wrong sign: the 'blind zone' described by Mansuri, Liu and Yang. During acquisition, when the phase error sweeps through the blind zone every beat cycle, the average output and so the frequency-detection gain drop, and lock takes longer. A common rule is that the conventional PFD stops detecting frequency reliably above about"
+    },
+    {
+      "type": "math",
+      "tex": "f_{max} \\approx \\frac{1}{2\\,t_{rst}}"
+    },
+    {
+      "type": "prose",
+      "text": "So a 200 ps reset limits the reference to roughly 2.5 GHz, and at a 1 GHz reference the same reset already removes 20% of the range near $\\pm 2\\pi$. At ordinary reference frequencies (10 to 200 MHz) the blind zone is a few percent and rarely matters; it becomes a design issue in PLLs with gigahertz references or with a PFD fed by a fast prescaler output."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ways to build the flip-flops"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Static gate-level flip-flops"
+    },
+    {
+      "type": "prose",
+      "text": "The classic version builds each flip-flop from cross-coupled NAND latches, as in the phase comparator of the CD4046 family and in Gardner's analysis. It is static (it holds its state at any frequency, including DC), easy to verify, and robust over corners. Its drawback is speed: the reset passes through several gates, so $t_{rst}$ is several gate delays, and the outputs of the two halves may not be exactly symmetric unless the layout and loading are."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "True single-phase clock (TSPC) flip-flops"
+    },
+    {
+      "type": "prose",
+      "text": "A TSPC D flip-flop with an asynchronous reset uses about nine to twelve transistors and has very short clock-to-Q and reset-to-Q delays, reported below 100 ps in nanometre processes. A PFD built from two of them is small, low-power and fast, which is why it is the usual choice in GHz-reference and low-power designs. Its nodes are dynamic, so it needs a minimum input frequency (charge leaks away if edges stop for too long), and its outputs can glitch if the input edges are slow; buffer the reference and divider outputs to sharp edges."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Precharged (dynamic) PFDs"
+    },
+    {
+      "type": "prose",
+      "text": "Johansson's precharged PFD replaces the flip-flops with precharged nodes and needs only about 18 transistors: one input edge discharges a node, the other edge precharges it again, so the reset is part of the logic rather than a separate path. It is one of the fastest structures, and many later variants ('nc-PFD', 'pt-PFD', dead-zone-free precharge PFDs) change the precharge timing to trade speed against dead zone and blind zone. Pulse widths are set by internal timing rather than an explicit delay, so check dead zone, minimum frequency and behaviour at start-up in simulation over corners."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Latched and blind-zone-free variants"
+    },
+    {
+      "type": "prose",
+      "text": "To keep frequency detection at high reference rates, variants latch an edge that arrives during reset and act on it once the reset ends (so no edge is lost), or add a separate frequency detector that takes over when the error is large. Fast-locking PLLs also add a cycle-slip detector that boosts the pump current while the phase error keeps wrapping."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Driving the charge pump"
+    },
+    {
+      "type": "prose",
+      "text": "The UP and DN pulses must reach the charge-pump switches at the same time and with clean edges. A charge pump usually needs $\\overline{UP}$ and DN (one PMOS switch, one NMOS switch) or complementary pairs for current steering. Generating the complements with an inverter adds a gate delay to one path; Razavi's fix is a transmission gate in the other path to match it. Any remaining skew $t_{skew}$ acts like a phase error that the loop cancels, and it produces a pump pulse of width $t_{skew}$ each cycle, which adds to the ripple. Drive both switches from matched buffers with equal fan-out, and simulate the skew over corners."
+    },
+    {
+      "type": "callout",
+      "text": "Rule of thumb: choose the reset pulse so it is comfortably longer than the time the charge-pump switches need to turn fully on (to kill the dead zone, next page) and no longer, because every extra picosecond of overlap adds charge-pump noise and mismatch charge."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing a PFD"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Reference up to about 200 MHz, any process: a static or TSPC flip-flop PFD with an AND reset and a small added delay. Nothing exotic is needed; spend the effort on the charge pump.",
+        "Reference above about 500 MHz, or very low power: TSPC or precharged PFD with the reset delay kept small; check the blind zone and $f_{max} \\approx 1/(2t_{rst})$ at the slow corner.",
+        "Fractional-N (sigma-delta) synthesizer: any of the above, but plan for linearity: an offset current or a delayed reset on one side so the PFD stays in one linear region (next page).",
+        "Need very low in-band noise: consider a sampling or sub-sampling phase detector instead (Other Phase Detectors page).",
+        "Digital loop: a time-to-digital converter or a bang-bang detector replaces the PFD and charge pump entirely."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Linear range",
+      "text": "A PFD has $t_{rst} = 150$ ps. What fraction of the ideal $\\pm 2\\pi$ range is still usable at a 100 MHz reference, and at 2 GHz?",
+      "solution": [
+        "Usable fraction $= 1 - t_{rst}/T_{ref}$.",
+        "At 100 MHz, $T_{ref} = 10$ ns: $1 - 0.015 = 98.5\\%$.",
+        "At 2 GHz, $T_{ref} = 500$ ps: $1 - 0.3 = 70\\%$, and $f_{max} \\approx 1/(2 \\times 150\\text{ ps}) = 3.3$ GHz, so the PFD is already near its limit."
+      ],
+      "answer": "98.5% at 100 MHz; 70% at 2 GHz."
+    },
+    {
+      "type": "problem",
+      "title": "How much delay to add",
+      "text": "Simulation shows the charge-pump switches need 60 ps to turn fully on at the slow corner, and the PFD's natural reset path is 50 ps. You add an inverter chain with 40 ps per pair of inverters. How many pairs, and what does the extra delay cost?",
+      "hint": "Leave a margin of about 1.5 times over the turn-on time.",
+      "solution": [
+        "Target $t_{rst} \\approx 1.5 \\times 60 = 90$ ps, so add 40 ps: one pair of inverters (total 90 ps).",
+        "Cost: both pumps are on for 90 ps every cycle instead of 50 ps, which nearly doubles the charge that current mismatch injects per cycle and the time during which the pump's current noise reaches the filter (see the In-Band Noise page)."
+      ],
+      "answer": "One pair of inverters (90 ps total)."
+    },
+    {
+      "type": "problem",
+      "title": "Frequency detection",
+      "text": "Explain why a PFD drives the VCO toward the right frequency even when, at some moments, the phase error has the 'wrong' sign.",
+      "solution": [
+        "With A faster than B, between two B edges there is at least one A edge, and sometimes two. Each A edge sets UP; a B edge only clears it via reset. So UP is high for most of the time and DN only briefly (for the reset pulse).",
+        "The phase error wraps around $2\\pi$ once per beat period, but the PFD does not wrap with it: it stays in its UP half. The average is positive throughout, about half of $I_P$ for a small frequency error and rising toward $I_P$ as the error grows, so the VCO is pushed up until the frequencies match. An XOR detector, by contrast, averages to zero over a beat cycle."
+      ],
+      "answer": "The PFD's memory keeps it in the UP state on average whenever A is faster."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., McGraw-Hill, 2017, Sections 16.2 and 16.3.",
+        "M. Mansuri, D. Liu and C.-K. K. Yang, 'Fast frequency acquisition phase-frequency detectors for Gsamples/s phase-locked loops,' IEEE JSSC, vol. 37, no. 10, 2002 (blind zone and f_max).",
+        "H. O. Johansson, 'A simple precharged CMOS phase frequency detector,' IEEE JSSC, vol. 33, no. 2, 1998.",
+        "F. M. Gardner, Phaselock Techniques, 3rd ed., Wiley, 2005 (the tristate PFD and its analysis).",
+        "TSPC flip-flop PFDs: US patent 6,778,026, 'High-speed phase frequency detection module' (sub-100 ps clock-to-Q and reset delays), and 'TSPC-PFD: TSPC-based low-power high-resolution CMOS phase frequency detector,' arXiv:2508.16933, 2025."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "title": "Charge-Pump Mismatch, Leakage and Reference Spurs",
+  "intro": "In lock an ideal charge pump would deliver nothing. A real one delivers small pulses of charge every reference cycle, and the control voltage ripples at the reference frequency. This page lists the error sources, shows how to estimate the reference spur they cause, and collects the remedies.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The error sources"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Random current mismatch between the UP source and the DN sink, from threshold and current-factor mismatch of the mirrors that bias them.",
+        "Systematic mismatch that changes with output voltage, from the finite output resistance of the sources (channel-length modulation).",
+        "Timing skew between the UP and DN switch drives.",
+        "Charge injection and clock feedthrough of the switches, unequal for PMOS and NMOS.",
+        "Charge sharing with the sources' drain nodes (Charge-Pump Topologies page).",
+        "Leakage from the control node while the pump is off: switch off-state current, varactor junctions, and gate leakage of thin-oxide MOS capacitors used in the loop filter, which in nanometre processes can reach nanoamps."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Each produces a net charge per cycle. The loop cancels the average with a static phase offset, so the charge is replaced by a positive and a negative pulse at slightly different times. What is left is a periodic current at $f_{ref}$ and its harmonics, which the filter turns into a ripple and the VCO into sidebands."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mismatch against output voltage"
+    },
+    {
+      "type": "prose",
+      "text": "With channel-length modulation the UP current falls as $V_{out}$ rises (less $V_{DS}$ across the PMOS) while the DN current rises. If both are matched at mid-supply and both have $\\lambda = 0.1\\ \\text{V}^{-1}$, then at 0.3 V from mid-supply each moves by about 3% in opposite directions, a 6% mismatch. Over a 0.6 V control range the mismatch therefore sweeps from $+6\\%$ to $-6\\%$, and the spur changes with channel. Long channels, cascodes and the active-matching circuits of the next page shrink this; plot $\\Delta I/I_P$ against $V_{out}$ in simulation and define the usable compliance range as where it stays inside the spec."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Random mismatch"
+    },
+    {
+      "type": "prose",
+      "text": "The UP and DN currents come from different mirrors, so each mirror's own mismatch adds. For a mirror at overdrive $V_{ov}$, $\\sigma(\\Delta I/I) \\approx \\sqrt{(2\\sigma_{V_T}/V_{ov})^2 + \\sigma_\\beta^2}$ with $\\sigma_{V_T} = A_{V_T}/\\sqrt{WL}$ (Pelgrom). Large overdrive and large area help; at $V_{ov} = 0.2$ V a 1% match in one mirror needs $\\sigma_{V_T} \\approx 1$ mV, so $WL \\approx (A_{V_T}/1\\text{ mV})^2$, about $9\\ \\mu\\text{m}^2$ for $A_{V_T} = 3$ mV·µm; two independent mirrors then give about 1.4% UP/DN mismatch, so 1% overall needs about $18\\ \\mu\\text{m}^2$ per device. Trimming or active matching is the alternative to area."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From charge to spur"
+    },
+    {
+      "type": "prose",
+      "text": "Write the pump's periodic error current as a Fourier series; its fundamental, of amplitude $i_1$ at $\\omega_{ref} = 2\\pi f_{ref}$, flows into the filter impedance $Z(j\\omega_{ref})$ and produces a ripple $V_1 = i_1|Z(j\\omega_{ref})|$. A sinusoidal ripple on the control line frequency-modulates the VCO with index $\\beta = K_{VCO}V_1/\\omega_{ref}$ ($K_{VCO}$ in rad/s/V), and for $\\beta \\ll 1$ each sideband is $\\beta/2$ of the carrier (Mathematical Model of VCOs page). So"
+    },
+    {
+      "type": "math",
+      "tex": "P_{spur} \\approx 20\\log_{10}\\left(\\frac{K_{VCO}\\,i_1\\,|Z(j\\omega_{ref})|}{2\\,\\omega_{ref}}\\right)\\ \\text{dBc}"
+    },
+    {
+      "type": "prose",
+      "text": "At the reference frequency, well above the loop bandwidth, the second-order filter's impedance is dominated by $C_2$: $|Z| \\approx 1/(\\omega_{ref}C_2)$. A third-order section $R_3C_3$ multiplies it by a further $1/\\sqrt{1 + (\\omega_{ref}/\\omega_3)^2}$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Leakage"
+    },
+    {
+      "type": "prose",
+      "text": "A leakage current $I_{leak}$ discharges the filter steadily, and the pump replaces the lost charge $I_{leak}T_{ref}$ in one narrow pulse each cycle. A train of narrow pulses of charge $Q$ at rate $f_{ref}$ has a fundamental of amplitude $2Qf_{ref}$, so $i_1 = 2I_{leak}$ and"
+    },
+    {
+      "type": "math",
+      "tex": "P_{spur,leak} \\approx 20\\log_{10}\\left(\\frac{K_{VCO}\\,I_{leak}}{\\omega_{ref}^2\\,C_2}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "For $K_{VCO} = 2\\pi\\times 100$ MHz/V, $f_{ref} = 50$ MHz and $C_2 = 10$ pF, 1 nA of leakage gives $-124$ dBc and 100 nA gives $-84$ dBc: leakage spurs are usually negligible in older processes and can dominate in thin-oxide nanometre filters. This is the same model used in Analog Devices application note AN143."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Mismatch"
+    },
+    {
+      "type": "prose",
+      "text": "A mismatch $\\Delta I$ with reset pulse $t_{rst}$ puts a charge $Q = \\Delta I\\,t_{rst}$ of one sign into the filter during the overlap, and the loop's phase offset removes the same charge just before it. Treating the error as an unbalanced pulse gives an upper bound $i_1 \\le 2\\Delta I\\,t_{rst}f_{ref}$. Because the cancelling pulse follows within about $t_{rst}$, the fundamental is really smaller, by roughly $\\pi t_{rst}/T_{ref}$, but timing skew, injection and charge sharing rarely cancel so neatly, so designers use the bound for a first estimate and simulation for sign-off. Either way the spur scales with $\\Delta I$ and with $t_{rst}$, and falls with larger $C_2$, a third pole and a higher reference frequency."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spur budgets in practice"
+    },
+    {
+      "type": "prose",
+      "text": "Specifications depend on the application: wireless transmitters typically need reference spurs below about $-60$ to $-80$ dBc so as not to violate spectral masks and to avoid reciprocal mixing of blockers in receivers; clock generators care about the jitter they add: two spurs at $\\pm f_{ref}$, each $P$ dBc, add deterministic phase modulation of peak $2\\times 10^{P/20}$ rad. A $-50$ dBc spur pair at 2.4 GHz is 6.3 mrad peak, about 0.4 ps peak."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Remedies"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Match the currents: bigger devices, long channels, cascodes, active matching (Charge-Pump Circuit Design page), or calibration of $\\Delta I$ against a measured spur or phase offset.",
+        "Kill the switching errors: steering with bootstrapped dummy nodes, complementary or dummy switches, matched drivers.",
+        "Shorten the overlap: minimum reset pulse consistent with no dead zone.",
+        "Filter harder: larger $C_2$, a third (or fourth) pole a few times above the loop bandwidth. Each pole costs phase margin, so it must sit well above crossover.",
+        "Low-leakage capacitors: MIM or MOM capacitors, or thick-oxide MOS capacitors, on the control node; avoid thin-oxide gate capacitors there.",
+        "Raise $f_{ref}$: the spur falls with $1/\\omega_{ref}^2$ for leakage and the spur lands further from the carrier, where the filter attenuates more.",
+        "Sample-and-hold or 'sampled loop filter': a switch isolates the filter from the pump while the pulses happen and reconnects after the charge has settled, so the VCO sees a step instead of a pulse.",
+        "Differential pumps: common-mode errors cancel."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Leakage spur",
+      "text": "An integrated PLL uses $K_{VCO} = 2\\pi\\times 200$ MHz/V, $f_{ref} = 40$ MHz and $C_2 = 14$ pF. Thin-oxide MOS capacitors leak 10 nA at the control node. Estimate the reference spur.",
+      "solution": [
+        "$\\omega_{ref}^2 = (2.51\\times10^8)^2 = 6.32\\times10^{16}$; $K_{VCO}I_{leak} = 1.257\\times10^9\\times10^{-8} = 12.6$.",
+        "$12.6/(6.32\\times10^{16}\\times1.4\\times10^{-11}) = 1.42\\times10^{-5}$, so $P_{spur} \\approx -97$ dBc."
+      ],
+      "answer": "About −97 dBc."
+    },
+    {
+      "type": "problem",
+      "title": "Effect of a third pole",
+      "text": "The same loop has a 400 kHz bandwidth; you add an $R_3C_3$ pole at 4 MHz. How much does it lower the spur, and what does it cost in phase margin?",
+      "solution": [
+        "Attenuation at 40 MHz: $\\sqrt{1 + 10^2} \\approx 10$, 20 dB, so the spur falls to about $-117$ dBc.",
+        "Phase at crossover: $\\arctan(0.4/4) = 5.7^\\circ$ of margin lost, usually acceptable."
+      ],
+      "answer": "About 20 dB lower, for about 6 degrees of phase margin."
+    },
+    {
+      "type": "problem",
+      "title": "Mismatch bound",
+      "text": "A pump has $I_P = 100\\ \\mu\\text{A}$ with 5% mismatch, $t_{rst} = 200$ ps, $f_{ref} = 40$ MHz, $C_2 = 14$ pF, $K_{VCO} = 2\\pi\\times200$ MHz/V. Bound the mismatch spur.",
+      "solution": [
+        "$i_1 \\le 2\\Delta I\\,t_{rst}f_{ref} = 2\\times5\\ \\mu\\text{A}\\times200\\text{ ps}\\times40\\text{ MHz} = 80$ nA.",
+        "$V_1 = i_1/(\\omega_{ref}C_2) = 80\\text{ nA}/(2.51\\times10^8\\times1.4\\times10^{-11}) = 22.8\\ \\mu$V.",
+        "$\\beta/2 = K_{VCO}V_1/(2\\omega_{ref}) = 1.257\\times10^9\\times2.28\\times10^{-5}/(5.03\\times10^8) = 5.7\\times10^{-5}$, about $-85$ dBc as an upper bound; the doublet correction $\\pi t_{rst}/T_{ref} = 0.025$ would put the ideal value some 30 dB lower, and real switching errors in between."
+      ],
+      "answer": "No worse than about −85 dBc."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Section 16.3.1, and Section 15.5 for sidebands from control-line ripple.",
+        "Analog Devices, AN-143, 'A simple method to accurately predict PLL reference spur levels due to leakage current.'",
+        "M. J. M. Pelgrom, A. C. J. Duinmaijer and A. P. G. Welbers, 'Matching properties of MOS transistors,' IEEE JSSC, vol. 24, no. 5, 1989.",
+        "J.-S. Lee, M.-S. Keel, S.-I. Lim and S. Kim, Electronics Letters, vol. 36, no. 23, 2000 (reference spur below −75 dBc with active matching).",
+        "T.-C. Lee and B. Razavi, 'A stabilization technique for phase-locked frequency synthesizers,' IEEE JSSC, vol. 38, no. 6, 2003 (sampled loop filter for low ripple)."
+      ]
+    }
+  ]
+}

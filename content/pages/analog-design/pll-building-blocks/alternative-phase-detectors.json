@@ -1,0 +1,141 @@
+{
+  "title": "Other Phase Detectors: Bang-Bang, Sampling and TDCs",
+  "intro": "The tristate PFD with a charge pump is not the only choice. Bang-bang detectors run clock and data recovery and many digital PLLs; sampling and sub-sampling detectors give the lowest in-band noise; time-to-digital converters turn the loop digital. This page compares them.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "XOR and mixer detectors"
+    },
+    {
+      "type": "prose",
+      "text": "An XOR gate (or, for sinusoids, a mixer) averages to a voltage proportional to phase error over $0$ to $\\pi$ (Phase Detectors and the Simple PLL page). It has no frequency detection, its output depends on duty cycle, and it gives a type I loop with static phase error unless followed by an integrator. Today it appears mainly in very simple loops, in some frequency-doubling circuits, and in RF loops where a mixer phase detector at the RF frequency gives very low noise."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bang-bang (binary) phase detectors"
+    },
+    {
+      "type": "prose",
+      "text": "A bang-bang phase detector (BBPD) only says early or late. The simplest is a single flip-flop clocked by the VCO that samples the reference; the Alexander detector used for clock and data recovery takes three samples (two data samples and one at the edge between them) and reports early, late or 'no transition'. Its output is a sign, so it is not linear; but random jitter linearises it. If the timing error $\\Delta t$ has Gaussian noise of standard deviation $\\sigma_t$ added, the average output is"
+    },
+    {
+      "type": "math",
+      "tex": "\\bar{y} = \\mathrm{erf}\\left(\\frac{\\Delta t}{\\sqrt{2}\\,\\sigma_t}\\right), \\qquad K_{BB} = \\left.\\frac{d\\bar{y}}{d\\Delta t}\\right|_{0} = \\sqrt{\\frac{2}{\\pi}}\\,\\frac{1}{\\sigma_t} \\approx \\frac{0.8}{\\sigma_t}"
+    },
+    {
+      "type": "prose",
+      "text": "So the detector gain depends on the jitter itself: less jitter means higher gain. This makes the loop dynamics self-adjusting but harder to predict, and a bang-bang loop shows a limit cycle (dithering of a few LSBs of the VCO or DCO step) instead of settling. In return the detector is tiny, works at the full data or clock rate, and its decision has a very high gain, which suppresses the noise of whatever follows. BBPDs are the standard choice for CDRs, and are common in digital PLLs and injection-locked clocking."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Linear CDR detectors (Hogge)"
+    },
+    {
+      "type": "prose",
+      "text": "For random data the Hogge detector produces a pulse proportional to the phase error plus a fixed reference pulse, and their difference is linear in error. It suits analog CDRs but is sensitive to the flip-flop delay, which appears as an offset; bang-bang detectors replaced it in most high-speed links."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sampling and sub-sampling phase detectors"
+    },
+    {
+      "type": "prose",
+      "text": "A sampling phase detector uses the reference edge to sample the VCO waveform itself (or a divided version). In lock the sample lands on the zero crossing; a timing error $\\Delta t$ gives a sampled voltage $\\Delta V = A\\,\\omega_{VCO}\\,\\Delta t$ for a sinusoid of amplitude $A$. Gao, Klumperink, Bohsali and Nauta's sub-sampling PLL removes the divider altogether: the reference samples the VCO every $N$-th cycle, a transconductor turns the sampled voltage into a current, and in lock no divider is in the loop."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/analog-design/pllbb-sspd.svg",
+      "alt": "Top: a VCO sinusoid over many cycles, with dots marking the samples taken at each reference rising edge, every N-th VCO cycle, on the zero crossing. One sample is displaced by delta t and the sampled voltage delta V equals A times omega VCO times delta t. Bottom: the reference square wave whose rising edges line up with the samples.",
+      "caption": "Sub-sampling phase detection."
+    },
+    {
+      "type": "prose",
+      "text": "Why this lowers in-band noise: in a classical PLL, the detector and pump noise is referred to the output multiplied by $N^2$, because their output is compared against the divided phase. Here the detector sees the VCO phase directly, with a gain per radian of VCO phase of about $A$ volts (hundreds of millivolts) rather than the $I_P/2\\pi$ of a pump with an $N$ in front of it. Its noise reaches the output without the $N^2$ factor and divided by this large gain. The 2009 prototype reached about $-126$ dBc/Hz in-band at 2.2 GHz and 0.15 ps rms jitter for 7.6 mW in 0.18 µm CMOS."
+    },
+    {
+      "type": "prose",
+      "text": "The costs: a sampling detector has no frequency detection and will lock onto any harmonic, so it needs a frequency-locked loop (a conventional divider, PFD and pump with a dead zone so it switches itself off in lock) to bring the VCO near the right frequency; its linear range is only the near-linear part of the sine (a fraction of a VCO period); and the sampling switch kicks charge back into the VCO tank, which creates reference spurs unless buffered or isolated (the 2010 follow-up paper deals with this). Sub-sampling works for integer-N; fractional-N versions need a digital-to-time converter to delay the reference edge."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Time-to-digital converters (digital PLLs)"
+    },
+    {
+      "type": "prose",
+      "text": "In an all-digital PLL a time-to-digital converter (TDC) measures the time between the reference edge and the next VCO edges in units of an inverter delay $\\Delta_{TDC}$, a digital loop filter replaces $R$ and $C$, and a digitally controlled oscillator (DCO) replaces the VCO. The TDC's quantization error, treated as white and uniform, sets the in-band floor (Staszewski):"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{L}_{in\\text{-}band} = \\frac{(2\\pi)^2}{12}\\left(\\frac{\\Delta_{TDC}}{T_{VCO}}\\right)^2\\frac{1}{f_{ref}}"
+    },
+    {
+      "type": "prose",
+      "text": "With $\\Delta_{TDC} = 10$ ps, a 3 GHz output ($T_{VCO} = 333$ ps) and a 50 MHz reference this gives $-102$ dBc/Hz, poor compared with a good charge pump; halving $\\Delta_{TDC}$ gains 6 dB. Hence sub-gate-delay TDCs (Vernier, interpolating, time-amplifying), or narrow-range TDCs combined with a digital-to-time converter that cancels the predicted error, or a single bang-bang detector plus DTC, which is how recent low-jitter digital PLLs reach charge-pump noise levels. Digital PLLs win on area (no large capacitor), portability across process nodes, calibration and fast reconfiguration, and suit fine-node SoCs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Comparing the options"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Tristate PFD + charge pump: frequency and phase detection, wide linear range, mature design flow. In-band noise is set by the pump and multiplied by $N^2$. The default for integer-N and fractional-N analog PLLs.",
+        "Bang-bang: smallest and fastest; gain set by jitter; limit cycles. The default in CDRs and many digital PLLs.",
+        "Sampling/sub-sampling: lowest in-band noise and no $N^2$ multiplication; needs a frequency-locked loop for acquisition, care with spurs; integer-N unless a DTC is added. Choose it for very low jitter clocks (data converters, high-speed links).",
+        "TDC (digital PLL): small, portable, easily calibrated; in-band floor set by TDC resolution, so needs a fine TDC or a DTC. Choose it in nanometre SoCs.",
+        "XOR/mixer: simple, no frequency detection; niche uses."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Bang-bang gain",
+      "text": "A bang-bang detector sees Gaussian timing jitter of 1.5 ps rms. What is its effective linear gain, and what happens to it if the jitter halves?",
+      "solution": [
+        "$K_{BB} = \\sqrt{2/\\pi}/\\sigma_t = 0.798/1.5\\text{ ps} = 0.53$ per picosecond (output normalised to $\\pm 1$).",
+        "Halving the jitter doubles the gain to about 1.06 per ps: the loop bandwidth of a BB loop grows as its jitter falls, which is one reason its dynamics need care."
+      ],
+      "answer": "About 0.53 per ps; it doubles when the jitter halves."
+    },
+    {
+      "type": "problem",
+      "title": "TDC resolution needed",
+      "text": "A 2.4 GHz digital PLL with a 40 MHz reference must reach an in-band floor of $-110$ dBc/Hz from TDC quantization alone. What TDC resolution is needed?",
+      "solution": [
+        "Solve $\\frac{(2\\pi)^2}{12}(\\Delta/T_V)^2/f_{ref} = 10^{-11}$: $(\\Delta/T_V)^2 = 10^{-11} \\times 4\\times10^7 \\times 12/39.5 = 1.22\\times10^{-4}$, so $\\Delta/T_V = 0.0110$.",
+        "$T_V = 417$ ps, so $\\Delta \\approx 4.6$ ps, finer than an inverter delay in most processes: use a Vernier or interpolating TDC, or a DTC."
+      ],
+      "answer": "About 4.6 ps."
+    },
+    {
+      "type": "problem",
+      "title": "Why no N squared",
+      "text": "A classical PLL with $N = 100$ has a detector noise floor of $-150$ dBc/Hz referred to the reference. What does it contribute in band at the output? Why is a sub-sampling PLL different?",
+      "solution": [
+        "Classical: $-150 + 20\\log_{10}100 = -110$ dBc/Hz at the output.",
+        "Sub-sampling: the detector compares the VCO phase itself, not a phase divided by $N$, so its noise is referred to the output with a factor of 1, not $N^2$, and it is further divided by the large detector gain $A\\omega_{VCO}$. The same detector noise would contribute far below $-110$ dBc/Hz."
+      ],
+      "answer": "−110 dBc/Hz for the classical loop."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. D. H. Alexander, 'Clock recovery from random binary signals,' Electronics Letters, vol. 11, 1975.",
+        "C. R. Hogge, 'A self correcting clock recovery circuit,' J. Lightwave Technology, vol. 3, 1985.",
+        "X. Gao, E. Klumperink, M. Bohsali and B. Nauta, 'A low noise sub-sampling PLL in which divider noise is eliminated and PD/CP noise is not multiplied by N²,' IEEE JSSC, vol. 44, no. 12, 2009 (ISSCC 2009: 2.2 GHz, 7.6 mW, −126 dBc/Hz in-band, 0.15 ps rms).",
+        "X. Gao, E. Klumperink, G. Socci, M. Bohsali and B. Nauta, 'Spur reduction techniques for phase-locked loops exploiting a sub-sampling phase detector,' IEEE JSSC, vol. 45, no. 9, 2010.",
+        "R. B. Staszewski and P. T. Balsara, All-Digital Frequency Synthesizer in Deep-Submicron CMOS, Wiley, 2006 (TDC quantization noise)."
+      ]
+    }
+  ]
+}

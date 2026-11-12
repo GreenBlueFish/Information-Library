@@ -1,0 +1,241 @@
+{
+  "title": "In-Band Noise: The PFD and Charge-Pump Floor",
+  "intro": "Inside the loop bandwidth a PLL's output phase noise is set by everything before the VCO: the reference, the divider, the PFD and the charge pump, all multiplied by N squared. This page shows how to estimate that floor, how charge-pump current and reset width set it, and how data sheets normalise it.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where in-band noise comes from"
+    },
+    {
+      "type": "prose",
+      "text": "The PLL is a low-pass filter for noise injected at its input and a high-pass filter for noise from the VCO (PLL Nonidealities page). Every source ahead of the VCO is referred to the reference phase and reaches the output as $N^2|H(f)|^2$ times its spectrum, where $H$ is the closed-loop response normalised to 1 at low frequency. A divide ratio of 100 therefore turns a $-150$ dBc/Hz detector floor into $-110$ dBc/Hz at the output: every factor of 2 in $N$ costs 6 dB."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Reference: the crystal oscillator and its buffer. A slow-edged buffer converts its own voltage noise into timing noise; keep reference edges sharp.",
+        "Divider: each stage adds timing jitter, mainly in its last, slow stages. Re-timing the divider output with the VCO clock removes most of it.",
+        "PFD logic: timing jitter of the gates in the UP/DN path.",
+        "Charge pump: current noise of the source and sink devices while they are on.",
+        "Loop filter resistor: its thermal noise reaches the VCO control line; it is filtered by the loop like VCO noise but peaks near the loop bandwidth."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Charge-pump noise"
+    },
+    {
+      "type": "prose",
+      "text": "The pump's current sources are connected to the filter only while they are on, a fraction $t_{on}/T_{ref}$ of each cycle; in lock that is the reset-pulse width. Treating each source's drain-current noise as white, $S_i = 4kT\\gamma g_m$, and the switching as a duty cycle, the average noise current density reaching the filter from the two sources is about"
+    },
+    {
+      "type": "math",
+      "tex": "S_{i,CP} \\approx \\frac{t_{on}}{T_{ref}}\\left(S_{i,UP} + S_{i,DN}\\right) \\approx 2\\,\\frac{t_{on}}{T_{ref}}\\,4kT\\gamma\\,\\frac{2I_P}{V_{ov}}"
+    },
+    {
+      "type": "prose",
+      "text": "using $g_m = 2I_P/V_{ov}$ for square-law devices at overdrive $V_{ov}$. Dividing by the detector gain $(I_P/2\\pi)^2$ refers it to the reference phase:"
+    },
+    {
+      "type": "math",
+      "tex": "S_{\\phi,CP} = \\frac{S_{i,CP}}{(I_P/2\\pi)^2} \\approx \\frac{t_{on}}{T_{ref}}\\cdot\\frac{64\\pi^2\\,kT\\gamma}{I_P\\,V_{ov}}"
+    },
+    {
+      "type": "prose",
+      "text": "Three design levers follow directly. Raise $I_P$: the noise current grows as $\\sqrt{I_P}$ but the signal grows as $I_P$, so the phase noise falls as $1/I_P$. Raise $V_{ov}$: a current source with large overdrive has lower $g_m$ for its current (at the cost of output headroom). Shorten $t_{on}$: the reset pulse sets the duty cycle. Flicker noise of the current sources adds a $1/f$ component that often dominates at low offsets; long, wide devices help."
+    },
+    {
+      "type": "callout",
+      "text": "In practice $I_P$ is the main knob. Doubling it lowers pump noise by 3 dB and, at a fixed loop bandwidth, also halves the loop-filter resistor (so its noise drops too), but it doubles the filter capacitance and the pump's power."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Resistor noise and the I_P trade-off"
+    },
+    {
+      "type": "prose",
+      "text": "For a type II loop, $\\omega_n = \\sqrt{I_PK_{VCO}/(2\\pi N C_P)}$ and $\\zeta = (R_P/2)\\sqrt{I_PC_PK_{VCO}/(2\\pi N)}$ (Charge-Pump PLLs page). Keeping $\\omega_n$ and $\\zeta$ fixed while raising $I_P$ by a factor $k$ requires $C_P \\to kC_P$ and $R_P \\to R_P/k$. The resistor's noise voltage density $\\sqrt{4kTR_P}$ falls by $\\sqrt{k}$, so the loop-filter noise drops too; the price is capacitor area, which is often the largest block of an integrated PLL."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Normalised figures of merit"
+    },
+    {
+      "type": "prose",
+      "text": "Because the floor scales so predictably, synthesizer data sheets quote a normalised figure of merit. The flat part is specified as the noise the PLL would have at a 1 Hz comparison frequency with $N = 1$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{L}_{floor} = \\mathrm{FoM}_{1Hz} + 10\\log_{10} f_{PFD} + 20\\log_{10} N"
+    },
+    {
+      "type": "prose",
+      "text": "Good integer and fractional-N synthesizer chips reach about $-230$ dBc/Hz, and a value near $-234$ dBc/Hz has been quoted for recent parts; integrated CMOS charge-pump PLLs typically land between $-220$ and $-230$. The flicker part is usually normalised to a 1 GHz output at 10 kHz offset, and scales as"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{L}_{1/f}(\\Delta f) = \\mathcal{L}_{1/f,norm} + 20\\log_{10}\\frac{f_{out}}{1\\text{ GHz}} - 10\\log_{10}\\frac{\\Delta f}{10\\text{ kHz}}"
+    },
+    {
+      "type": "prose",
+      "text": "with typical normalised values around $-120$ to $-130$ dBc/Hz. The in-band noise is the larger of the two at each offset (or their power sum)."
+    },
+    {
+      "type": "prose",
+      "text": "The formula shows why a higher comparison frequency helps. For a fixed output frequency $f_{out} = Nf_{PFD}$, doubling $f_{PFD}$ adds 3 dB through the $10\\log f_{PFD}$ term but halves $N$, which removes 6 dB: a net 3 dB better floor, plus a wider loop bandwidth allowed by the faster sampling."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A worked floor"
+    },
+    {
+      "type": "prose",
+      "text": "Take $f_{PFD} = 50$ MHz, $N = 48$ (2.4 GHz out) and an integrated pump with $\\mathrm{FoM}_{1Hz} = -225$ dBc/Hz: $\\mathcal{L}_{floor} = -225 + 77.0 + 33.6 = -114.4$ dBc/Hz. If the VCO has $-110$ dBc/Hz at 1 MHz offset (falling at 20 dB per decade), its noise equals the floor at about 1.7 MHz. Setting the loop bandwidth near that crossing minimises integrated jitter, as the next widget shows."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "PLL output phase-noise budget",
+        "params": [
+          {
+            "key": "fref",
+            "label": "reference / PFD frequency (MHz)",
+            "control": "range",
+            "min": 5,
+            "max": 200,
+            "step": 5,
+            "default": 50
+          },
+          {
+            "key": "n",
+            "label": "divide ratio N",
+            "control": "range",
+            "min": 4,
+            "max": 400,
+            "step": 1,
+            "default": 48
+          },
+          {
+            "key": "fom",
+            "label": "PFD/CP normalised floor (dBc/Hz at 1 Hz)",
+            "control": "range",
+            "min": -240,
+            "max": -210,
+            "step": 1,
+            "default": -225
+          },
+          {
+            "key": "vco",
+            "label": "free-running VCO noise at 1 MHz offset (dBc/Hz)",
+            "control": "range",
+            "min": -130,
+            "max": -80,
+            "step": 1,
+            "default": -110
+          },
+          {
+            "key": "fn",
+            "label": "loop natural frequency (kHz)",
+            "control": "range",
+            "min": 10,
+            "max": 5000,
+            "step": 10,
+            "default": 300
+          },
+          {
+            "key": "zeta",
+            "label": "damping factor",
+            "control": "range",
+            "min": 0.3,
+            "max": 2,
+            "step": 0.05,
+            "default": 0.707
+          }
+        ],
+        "config": {
+          "sim": "pll-phase-noise",
+          "xLabel": "log10 of offset frequency (Hz)",
+          "yLabel": "phase noise (dBc/Hz)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The total curve's label gives the rms jitter integrated from 1 kHz to 100 MHz. With the defaults, sweep the natural frequency from 30 kHz to 5 MHz: the jitter falls from about 1.8 ps to a minimum near 0.45 ps around 1 MHz, then rises again as the in-band floor extends further out. (The usual rule $f_c \\le f_{ref}/10$ applies to the loop bandwidth, which for $\\zeta = 0.707$ is about twice $f_n$.) Lower the damping to 0.4 to see the peaking near the loop bandwidth that underdamped loops add to both contributions. Then raise the VCO noise to $-95$ dBc/Hz (a ring oscillator): the optimum bandwidth moves several times higher, which is why ring-VCO PLLs need wide loops and therefore high reference frequencies."
+    },
+    {
+      "type": "callout",
+      "text": "The model is a linear sketch: white floor, a $1/f^2$ VCO, a second-order type II response. It omits the flicker parts, the reference's own noise and the resistor, so use it to see trade-offs, not to sign off a design."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Jitter and the PLL figure of merit"
+    },
+    {
+      "type": "prose",
+      "text": "Integrated rms phase error $\\sigma_\\phi$ (radians) converts to rms jitter as $\\sigma_t = \\sigma_\\phi/(2\\pi f_{out})$, with $\\sigma_\\phi^2 = 2\\int \\mathcal{L}(f)\\,df$ over the band of interest. To compare PLLs of different power, Gao, Klumperink, Geraedts and Nauta defined a jitter-power figure of merit"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{FoM}_{jitter} = 10\\log_{10}\\left[\\left(\\frac{\\sigma_t}{1\\text{ s}}\\right)^2\\cdot\\frac{P}{1\\text{ mW}}\\right]"
+    },
+    {
+      "type": "prose",
+      "text": "based on their result that, for a given VCO and loop quality, the minimum jitter variance falls in inverse proportion to power. Lower is better: good charge-pump PLLs reach about $-235$ to $-245$ dB and the best published designs (sub-sampling, sampling and digital PLLs with DTCs) reach $-250$ to $-255$ dB and below. For example 200 fs at 10 mW gives $10\\log_{10}(4\\times10^{-26}\\times 10) = -244$ dB. The metric ignores lock time and spurs, so judge those separately."
+    },
+    {
+      "type": "problem",
+      "title": "In-band floor",
+      "text": "A 5.8 GHz synthesizer uses a 40 MHz reference with an integer-N divider. Its PFD/CP has $\\mathrm{FoM}_{1Hz} = -228$ dBc/Hz. Find the in-band floor, and the floor if the reference is doubled to 80 MHz.",
+      "solution": [
+        "$N = 145$: $\\mathcal{L} = -228 + 76.0 + 43.2 = -108.8$ dBc/Hz.",
+        "At 80 MHz, $N = 72.5$ (needs fractional-N, or pick a nearby channel plan): $-228 + 79.0 + 37.2 = -111.8$ dBc/Hz, 3 dB better."
+      ],
+      "answer": "−108.8 dBc/Hz, and −111.8 dBc/Hz at 80 MHz."
+    },
+    {
+      "type": "problem",
+      "title": "Charge-pump noise estimate",
+      "text": "Estimate the phase-noise contribution of a pump with $I_P = 500\\ \\mu\\text{A}$, $V_{ov} = 0.3$ V, $\\gamma = 1$, a 200 ps on-time and a 50 MHz reference at 300 K, referred to the reference and then to a 2.4 GHz output ($N = 48$). Take $\\mathcal{L} = S_\\phi/2$.",
+      "solution": [
+        "$t_{on}/T_{ref} = 0.2/20 = 0.01$. $64\\pi^2kT = 64 \\times 9.87 \\times 4.14\\times10^{-21} = 2.62\\times10^{-18}$.",
+        "$S_\\phi = 0.01 \\times 2.62\\times10^{-18}/(5\\times10^{-4}\\times 0.3) = 1.74\\times10^{-16}$ rad²/Hz, so $\\mathcal{L} = -160.6$ dBc/Hz at the reference.",
+        "At the output add $20\\log_{10}48 = 33.6$ dB: $-127$ dBc/Hz. That is about $-238$ dBc/Hz normalised, better than real pumps achieve, because it ignores flicker noise, a $\\gamma$ above 1 in short channels, and the other sources (reference buffer, divider, resistor)."
+      ],
+      "answer": "About −161 dBc/Hz at the reference, −127 dBc/Hz at 2.4 GHz, from the pump's thermal noise alone."
+    },
+    {
+      "type": "problem",
+      "title": "Jitter figure of merit",
+      "text": "Two PLLs: A has 300 fs rms at 5 mW; B has 150 fs at 25 mW. Which is better by the jitter-power FoM?",
+      "solution": [
+        "A: $10\\log_{10}(9\\times10^{-26}\\times5) = 10\\log_{10}(4.5\\times10^{-25}) = -243.5$ dB.",
+        "B: $10\\log_{10}(2.25\\times10^{-26}\\times25) = 10\\log_{10}(5.6\\times10^{-25}) = -242.5$ dB.",
+        "A is 1 dB better: halving jitter is worth a factor of 4 in power, and B spent 5 times more."
+      ],
+      "answer": "A (−243.5 dB against −242.5 dB)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., Section 16.3.2 (jitter transfer).",
+        "X. Gao, E. Klumperink, P. Geraedts and B. Nauta, 'Jitter analysis and a benchmarking figure-of-merit for phase-locked loops,' IEEE TCAS-II, vol. 56, no. 2, 2009.",
+        "Texas Instruments, PLL performance articles and D. Banerjee, PLL Performance, Simulation and Design, 5th ed. (TI, SNAA106C, 2017): normalised PLL noise floor and 1/f noise.",
+        "DigiKey eMagazine, RF Design and Components, vol. 14: in-band noise floor = FoM + 10 log f_PFD + 20 log N (worked example with −234 dBc/Hz).",
+        "E. Klumperink et al., 'Recent advances in low-jitter CMOS clock generation stimulated by FoM definitions,' RFIC workshop, 2009."
+      ]
+    }
+  ]
+}
