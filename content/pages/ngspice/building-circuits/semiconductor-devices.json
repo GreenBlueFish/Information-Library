@@ -1,0 +1,167 @@
+{
+  "title": "Semiconductor Devices and Models",
+  "intro": "Diodes and transistors are written as an instance line that names a model, and a .model line that holds the model's parameters. ngspice has built-in models from the 1970s Shichman-Hodges MOSFET to BSIM4, BSIM-SOI, HiSIM and a power-MOS VDMOS model, and loads every modern Verilog-A model (BSIM-CMG, PSP, Mextram, HICUM) through OSDI.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Instance and model lines"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* Dname n+ n- model [area] [m=] [pj=] [off] [ic=] [temp=] [dtemp=]\nD1   a  k  dmod\n* Qname nc nb ne [ns] [tj] model [area] [areac=] [areab=] [m=] [off] [ic=vbe,vce] [temp=]\nQ1   c  b  e  npn1\n* Jname nd ng ns model [area] [m=] [off] [ic=] [temp=]\nJ1   d  g  s  njf\n* Zname nd ng ns model [area] [m=] [off]      (MESFET, HFET)\n* Mname nd ng ns nb model [L=] [W=] [AD=] [AS=] [PD=] [PS=] [NRD=] [NRS=] [m=] [nf=] [off] [ic=]\nM1   d  g  s  b  nch L=0.18u W=2u AD=1p AS=1p PD=5u PS=5u m=4\n.model dmod  D    (is=1e-14 n=1.05 rs=0.5 cjo=2p vj=0.7 m=0.5 tt=5n bv=50 ibv=10u)\n.model npn1  NPN  (is=1e-16 bf=150 vaf=80 rb=100 rc=20 re=1 cje=1p cjc=0.5p tf=20p)\n.model njf   NJF  (vto=-2 beta=1e-3 lambda=0.01)\n.model nch   NMOS (level=14 version=4.8.3 tox=4n vth0=0.45)\n"
+    },
+    {
+      "type": "prose",
+      "text": "The model type is the second word of .model: D, NPN, PNP, NJF, PJF, NMOS, PMOS, NMF, PMF (MESFET), VDMOS, and for OSDI models the Verilog-A module name. area (or m) scales a device: area = 4 is four unit devices in parallel. off starts the device off in the operating-point search, a convergence aid for circuits with two stable states."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Diodes"
+    },
+    {
+      "type": "prose",
+      "text": "The diode model is the SPICE junction diode: saturation current IS with emission coefficient N, series resistance RS, depletion capacitance CJO, VJ, M (plus sidewall CJSW, VJSW, MJSW with the perimeter pj), transit time TT, breakdown BV and IBV, high-injection knee IKF, recombination ISR and NR, and temperature parameters EG, XTI. Version 46 updated the sidewall diode and added a soft-recovery model with an internal charge node for power diodes. level=3 gives geometry from W and L of the instance."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Diode I-V and its small-signal resistance\n.model d1n4148 D (is=2.52n rs=0.568 n=1.752 cjo=4p m=0.4 tt=20n bv=100 ibv=100u)\nV1 a 0 DC 0\nD1 a 0 d1n4148\n.control\n  dc V1 0.3 0.8 0.01\n  let id = -i(V1)\n  meas dc vf1m find v(a) when id=1m\n  alter V1 0.65\n  op\n  show D1 : id gd\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "show prints the operating-point quantities of a device; showmod prints its model parameters. Every device has its own list (id, gd, cd for a diode; ic, ib, gm, gpi, cpi for a BJT; id, vth, gm, gds, gmbs, cgg, vdsat for a BSIM MOSFET), shown by devhelp D, devhelp Q and so on."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bipolar transistors"
+    },
+    {
+      "type": "list",
+      "items": [
+        "level=1 (default): the Gummel-Poon model, with optional quasi-saturation (RCO, VO, GAMMA, QCO) and lateral-PNP substrate options. Four-terminal form with a substrate node.",
+        "level=4: VBIC 1.3, with an optional fifth thermal node for self-heating (version 45 revised it).",
+        "level=8: HICUM/L2 for SiGe HBTs.",
+        "Mextram and HICUM/L0, and newer VBIC releases, come as Verilog-A through OSDI."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "BJT output characteristics: a nested DC sweep\n.model qn NPN (is=1e-16 bf=200 vaf=60 br=2 rb=50 rc=10 cje=1p cjc=0.4p tf=30p)\nVce c 0 DC 0\nIb  0 b DC 10u\nQ1  c b 0 qn\n.control\n  dc Vce 0 5 0.05 Ib 5u 25u 5u      $ inner Vce, outer Ib\n  let ic = -i(Vce)\n  meas dc ic_at_3v find ic at=3\n  alter Vce 3\n  op\n  show Q1 : ic gm gpi\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "In a nested DC sweep all outer steps go into one plot as one long vector; the meas above finds the first crossing of 3 V, which is the 5 uA curve. To pull out each curve, loop in the control language instead (Sweeps, Corners and Monte Carlo page)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "JFETs and MESFETs"
+    },
+    {
+      "type": "prose",
+      "text": "JFET level 1 is the Shichman-Hodges model with the Parker-Skellern modification, level 2 the full Parker-Skellern model. MESFETs (Z elements) use the Statz model (level 1), with level 2 and 3 for the Ytterdal and Lee HFET models and level 5 and 6 for HFET1 and HFET2."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "MOSFET model levels"
+    },
+    {
+      "type": "list",
+      "items": [
+        "level 1 (Shichman-Hodges), 2 (Grove-Frohman), 3 (semi-empirical), 6 and 9: hand-analysis and teaching models; level 1 has KP, VTO, LAMBDA, GAMMA, PHI and the Meyer capacitances.",
+        "level 4 and 5: BSIM1 and BSIM2, historical.",
+        "level 8 or 49: BSIM3, with versions 3.0, 3.1, 3.2 to 3.2.4 and 3.3.0 selected by version=.",
+        "level 14 or 54: BSIM4, versions 4.0 to 4.5, 4.6.2, 4.7.0 and 4.8.3 (default the newest). This is the model of most 180 nm to 28 nm planar PDKs, including SkyWater SKY130 and GF180MCU.",
+        "level 10 or 58: BSIM-SOI (B4SOI 4.3.1); 55, 56, 57 for the older fully-, dynamically- and partially-depleted BSIM3SOI; 60 the Southampton STAG SOI model.",
+        "level 68: HiSIM2 (2.8.0); level 73: HiSIM_HV for LDMOS.",
+        "VDMOS: a power-MOSFET model (with weak inversion, quasi-saturation, self-heating and a body diode with soft recovery) that reads the .model lines of discrete MOSFETs as LTspice uses them: .model irf540 VDMOS(...).",
+        "Through OSDI: BSIM-BULK, BSIM-CMG (FinFET and gate-all-around), BSIM-IMG, PSP 103 (used by IHP SG13G2), HiSIM variants, and others."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "NMOS characteristics with BSIM4 default parameters\nM1 d g 0 0 nch L=0.18u W=1u\n.model nch NMOS (level=14 version=4.8.3)\nVd d 0 DC 1.8\nVg g 0 DC 0\n.control\n  dc Vg 0 1.8 0.01\n  let id = -i(Vd)\n  let gm = deriv(id)\n  meas dc gm_max max gm\n  meas dc vt_lin find v(g) when id=1u      $ constant-current threshold\n  alter Vg 1.0\n  op\n  print @m1[gm] @m1[gds] @m1[vth] @m1[vdsat] @m1[cgg]\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "@device[parameter] reads a device's internal value. In a sweep, save it first: save @m1[gm] before the dc command, because by default only node voltages and source currents are kept. In AC analysis @-values are not available; use the operating point."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Model binning"
+    },
+    {
+      "type": "prose",
+      "text": "PDK models are often split into bins of length and width: nch.1, nch.2, ... each with lmin, lmax, wmin and wmax. The instance names the base name (nch) and ngspice picks the bin that contains its L and W. This works for BSIM3 and BSIM4. A device outside every bin gives an error saying no model was found for that L and W: check units (W=1 is one metre) and the scale option."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Binned model\n.model nch.1 NMOS (level=14 lmin=0.15u lmax=1u   wmin=0.4u wmax=100u vth0=0.45)\n.model nch.2 NMOS (level=14 lmin=1u    lmax=100u wmin=0.4u wmax=100u vth0=0.40)\nM1 d g 0 0 nch L=0.5u W=2u\nM2 e g 0 0 nch L=5u   W=2u\nVd d 0 1\nVe e 0 1\nVg g 0 0.8\n.control\n  op\n  print @m1[vth] @m2[vth]\n.endc\n.end\n"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Instance parameters worth knowing"
+    },
+    {
+      "type": "list",
+      "items": [
+        "L and W are the drawn sizes; the model's dl/dw (or lint/wint) make the effective ones. .option scale=1e-6 lets you write L=0.18 for 0.18 um; PDKs often rely on it, so copy their options.",
+        "AD, AS, PD, PS (drain and source diffusion areas and perimeters) set the junction capacitances. Leaving them out leaves those capacitances out, which makes circuits look faster than they are.",
+        "nf (BSIM4): number of fingers; m: parallel devices; sa, sb, sd: stress-effect distances; delvto and mulu0 (BSIM4 instance parameters) shift threshold and mobility for one device, the usual way to apply mismatch.",
+        "off and ic=vds,vgs,vbs: convergence aid and transient initial condition."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Temperature"
+    },
+    {
+      "type": "prose",
+      "text": "Every model is evaluated at the circuit temperature (.temp or .options temp=, default 27 C) relative to its tnom (default 27 C). temp= and dtemp= on an instance set one device's temperature, a simple way to model self-heating or a hot spot. Safe-operating-area limits (bv_max, vgs_max, ..., set in the model) print warnings when exceeded once you set .option warn=1 (maxwarns limits how many); the --soa-log option writes them to a file."
+    },
+    {
+      "type": "problem",
+      "title": "Which level",
+      "text": "A model file starts with .model nfet NMOS (level=54 version=4.5 ...). Which ngspice model will evaluate it, and what happens with level=49?",
+      "solution": [
+        "level=54 is BSIM4 (same as 14), and version=4.5 selects the 4.0-to-4.5 code.",
+        "level=49 is BSIM3 (same as 8); version picks 3.0, 3.1, 3.2.x or 3.3.0."
+      ],
+      "answer": "BSIM4 (v4.5); level 49 is BSIM3."
+    },
+    {
+      "type": "problem",
+      "title": "Missing capacitance",
+      "text": "A ring oscillator of BSIM4 inverters runs 30% faster in simulation than measured. Name two netlist omissions that do this.",
+      "solution": [
+        "AD, AS, PD, PS left out: no drain and source junction capacitance.",
+        "No parasitic wiring capacitance (no extracted netlist), or nf and sa/sb not given so layout effects are missing. Also check .option scale if sizes were written without units."
+      ],
+      "answer": "Missing AD/AS/PD/PS and missing wiring parasitics."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 7 (diodes, BJTs, JFETs, MESFETs, MOSFETs) and chapter 27 (device parameters).",
+        "BSIM4 Manual, BSIM Group, University of California, Berkeley (bsim.berkeley.edu).",
+        "P. Antognetti and G. Massobrio, Semiconductor Device Modeling with SPICE, 2nd ed., McGraw-Hill, 1993."
+      ]
+    }
+  ]
+}

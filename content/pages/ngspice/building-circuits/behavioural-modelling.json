@@ -1,0 +1,160 @@
+{
+  "title": "Behavioural Modelling",
+  "intro": "When a transistor-level model is too slow, too detailed or not yet designed, describe the block by what it does: an equation, a transfer function, a table or a ready-made XSPICE block. ngspice offers three tools for this: B sources (and behavioural R, C and L) with arbitrary expressions, the nonlinear forms of E and G, and the XSPICE analog code models.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "B sources"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* Bname n+ n- V = expression     or     Bname n+ n- I = expression\nB1  out 0  V = V(a)*V(b)                     $ multiplier\nB2  vdd x  I = 1m*tanh(V(inp,inn)/0.1)       $ smooth transconductor (current from vdd to x)\nB3  y   0  V = V(c) < 0.4 ? 0.4 : V(c) > 4.6 ? 4.6 : V(c)   $ clamp (space before ?)\nB4  z   0  V = 2*sin(2*pi*1k*time) * u(time-1m)  $ time-dependent: starts at 1 ms\nB5  w   0  V = 1 + 0.002*(temper-27)             $ follows the circuit temperature\nB6  q   0  I = i(Vsense)*10                      $ current through a voltage source\n"
+    },
+    {
+      "type": "prose",
+      "text": "The expression may use node voltages V(n) and V(n1,n2), currents through voltage sources (and since version 44 i(name) of other devices' first terminal), parameters in braces, and the special variables time (transient time, 0 in other analyses), temper (circuit temperature in degrees C) and hertz (frequency, in AC analysis only). The functions:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Trigonometric and hyperbolic: sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh, acosh, atanh.",
+        "exp, ln (natural), log (also natural in B sources), log10, sqrt, abs, floor, ceil, min, max, pow, pwr,  and ^.",
+        "u(x) the unit step (0.5 at zero), u2(x) a unit ramp clipped to 0..1, uramp(x) the integral of u, and ddt(expr) the time derivative.",
+        "pwl(x, x1,y1, x2,y2, ...): a piecewise-linear table of any expression, for example V = pwl(V(in), 0,0, 1,0.5, 2,3).",
+        "Operators + - * / ^, comparisons, logic && || ! and the ternary a ? b : c."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Two B-source traps. First, exp() is linearised above an argument of 14 to help convergence, so B = exp(V(x)/0.026) will not give a true diode beyond about 0.36 V; use a real diode or a scaled argument. Second, pow(x,y),  and ^ use the absolute value of x, so (-2)^3 is +8 in a B source; pwr(x,y) keeps the sign. log, ln and sqrt also take the absolute value of a negative argument instead of failing."
+    },
+    {
+      "type": "prose",
+      "text": "In the sample below, Bhz shows what hertz does: its gain 1/(1 + f/1 kHz) is a real number at each frequency, not a pole, so it reaches -3 dB at 413 Hz with no phase shift. Use hertz for frequency-dependent magnitudes, and s_xfer (below) for real poles and zeros."
+    },
+    {
+      "type": "prose",
+      "text": "For small-signal analyses a B source is linearised: its AC gain is the derivative of the expression at the operating point. That is what makes a B source multiplier a mixer in transient but a simple gain in AC. tc1 and tc2 on the B line scale the whole output with temperature."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "B-source models: a soft limiter, a multiplier and a hertz-dependent gain\nVIN in 0 DC 0 AC 1 SIN(0 2 1k)\nVLO lo 0 SIN(0 1 10k)\nBlim lim 0 V = 1.5*tanh(V(in)/1.5)\nBmix mix 0 V = V(in)*V(lo)\nBhz  hz  0 V = V(in) * 1/(1 + hertz/1k)     $ only meaningful in AC\n.control\n  tran 1u 2m\n  meas tran limpk max v(lim)\n  meas tran mixrms rms v(mix) from=1m to=2m\n  op\n  ac dec 10 10 100k\n  meas ac f3 when vdb(hz)=-3\n.endc\n.end\n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Behavioural R, C and L"
+    },
+    {
+      "type": "prose",
+      "text": "R, C and L elements accept expressions directly (see Passive Elements): R1 a b r = 'expression', C1 a b c = 'expression' or q = 'expression', L1 a b l = 'expression'. For a capacitor, prefer the charge form q = ..., which conserves charge. The older way, a B source driving a 1 F capacitor through a current-controlled source, still works and appears in many old models."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Transfer functions: s_xfer for Laplace"
+    },
+    {
+      "type": "prose",
+      "text": "ngspice has no LAPLACE keyword on E or G sources. The XSPICE s_xfer code model is the replacement: give it the numerator and denominator coefficients in descending powers of s. It works in AC and transient analysis."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Second-order Butterworth low-pass at 1 kHz with s_xfer\n* H(s) = 1 / (s^2 + 1.4142 s + 1), denormalised to 1 kHz\nVIN in 0 DC 0 AC 1 PULSE(0 1 0 1u 1u 10m 20m)\nA1 in out lp2\n.model lp2 s_xfer(gain=1 num_coeff=[1] den_coeff=[1 1.41421 1]\n+                 int_ic=[0 0] denormalized_freq=6283.19)\n.control\n  ac dec 20 10 100k\n  meas ac f3 when vdb(out)=-3\n  meas ac g10k find vdb(out) at=10k\n  tran 5u 4m\n  meas tran overshoot max v(out)\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "denormalized_freq is in radians per second (2 pi times 1 kHz here), and scales s so the coefficients can be written for a 1 rad/s prototype. Without it, write the coefficients for the real frequencies: den_coeff=[{1/(6283.19^2)} {1.41421/6283.19} 1]. The run gives a -3 dB point at 1 kHz, -40 dB at 10 kHz and a step overshoot of about 4% (theory: 4.3%; the measurement only sees the sampled time points), as a second-order Butterworth should. For an expression rather than one node as input, compute it first with a B source, then feed that node to the A device. A PSpice line like E1 out 0 LAPLACE {V(in)} {1/(1+s/1000)} becomes A1 in out1 filt with num_coeff=[1] and den_coeff=[{1/1000} 1], plus E1 out 0 out1 0 1 if the name E1 must remain."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Frequency tables: FREQ and xfer"
+    },
+    {
+      "type": "prose",
+      "text": "E1 out 0 FREQ {V(in)} = DB (1k, 0, 0) (10k, -3, -45) (100k, -20, -90) (frequency, gain, phase) describes a measured response. ngspice rewrites it to the xfer code model; it works in AC analysis only. MAG, DB, DEG, RAD and R_I select the column formats."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The XSPICE analog code models"
+    },
+    {
+      "type": "prose",
+      "text": "An A element is an instance of a code model: compiled C code with ports and parameters, loaded from the .cm libraries at start-up. Ports are written with an optional type prefix: %v a voltage (single-ended unless you give two nodes), %vd a differential voltage, %i a current, %id a differential current, %g a conductance port (voltage in, current out), %h a resistance port, %d a digital node. Square brackets group several ports into a vector port: A1 [in1 in2 in3] out summer1."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Arithmetic: gain, summer, mult, divide, int (integrator), d_dt (differentiator).",
+        "Limits and nonlinear: limit, climit (controlled limit), ilimit (current limiter), hyst (hysteresis), slew (slew-rate limit), zener, sidiode (a simple diode with smooth turn-on), pwl (a PWL transfer curve), multi_input_pwl, table2D and table3D (tables read from files, for example a transistor's I-V data).",
+        "Transfer functions: s_xfer (Laplace) and xfer (frequency table).",
+        "Sources and oscillators: sine, triangle and square (voltage-controlled oscillators), oneshot, pwlts (PWL in time with smoothed edges), filesource (waveforms from a text file).",
+        "Switches and magnetics: aswitch (smooth controlled switch), pswitch, lcouple and core (magnetic core with B-H hysteresis), potentiometer, memristor.",
+        "Measurement and helpers: cmeter and lmeter (read the capacitance or inductance on a node), delay (analog delay line), astate (the value of a node some steps ago, version 46), ota (an OTA with small-signal noise, version 47).",
+        "Mixed-signal and digital models are covered on the XSPICE and Mixed-Signal page."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "XSPICE analog blocks: a VCO, an integrator and a slew limiter\nVC  ctl 0 PWL(0 0 1m 1)\nA1  ctl osc vco1\n.model vco1 sine(cntl_array=[0 1] freq_array=[10k 50k] out_low=-1 out_high=1)\nA2  osc int integ\n.model integ int(in_offset=0 gain=1k out_lower_limit=-10 out_upper_limit=10)\nVS  step 0 PULSE(0 1 0.2m 1n 1n 0.5m 1m)\nA3  step slw slew1\n.model slew1 slew(rise_slope=1e4 fall_slope=1e4)\n.control\n  tran 1u 1m\n  meas tran trise trig v(slw) val=0.1 rise=1 targ v(slw) val=0.9 rise=1\n  meas tran osc_late trig v(osc) val=0 rise=20 targ v(osc) val=0 rise=21\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "The slew limiter rises at 10 V/ms, so 10% to 90% of 1 V takes 80 us; near 0.8 ms the control voltage is 0.79 V, so the VCO runs at 10 kHz + 0.79 x 40 kHz = 41.6 kHz and meas finds a period of 24 us."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Reading a waveform from a file"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Waveform from a file with filesource\nA1 %vd([out 0]) src\n.model src filesource(file=\"wave.txt\" amploffset=[0] amplscale=[1]\n+                     timeoffset=0 timescale=1 timerelative=false amplstep=false)\nR1 out 0 1k\n.control\n  tran 1u 3m\n  meas tran vmax max v(out)\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "Each line of the file is a time followed by one value per output port; # and ; start comments. With timerelative=true the times are intervals between samples, and amplstep=true holds each value instead of interpolating. Since version 47 the numbers may use engineering notation (2n, 5m). The file is searched for next to the netlist and in the input-file search path."
+    },
+    {
+      "type": "problem",
+      "title": "Laplace translation",
+      "text": "Rewrite G1 out 0 LAPLACE {V(in)} {1m/(1 + s/1e4)} (a transconductance with a pole at 10 krad/s) for ngspice.",
+      "solution": [
+        "s_xfer outputs a voltage, so compute the filtered input voltage first, then turn it into a current:",
+        "A1 in f lp\n.model lp s_xfer(gain=1 num_coeff=[1] den_coeff=[1e-4 1] int_ic=[0])\nG1 out 0 f 0 1m",
+        "den_coeff=[1e-4 1] is 1e-4 s + 1, a pole at 1e4 rad/s (1.59 kHz)."
+      ],
+      "answer": "An s_xfer for the pole, then a linear G of 1 mS."
+    },
+    {
+      "type": "problem",
+      "title": "Signed power",
+      "text": "A B source computes V = V(x)^3 to model a cubic nonlinearity. What goes wrong for negative V(x), and how do you fix it?",
+      "solution": [
+        "^ uses the absolute value of the base, so the output is |V(x)|^3, always positive: an even function instead of an odd one.",
+        "Use pwr(V(x),3), which keeps the sign, or write V(x)*V(x)*V(x)."
+      ],
+      "answer": "Use pwr(V(x),3) or V(x)*V(x)*V(x)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 5 (B, E and G sources) and section 8.2 (XSPICE analog models).",
+        "C. P. Basso, Switch-Mode Power Supplies: SPICE Simulations and Practical Designs, 2nd ed., McGraw-Hill, 2014 (behavioural averaged models)."
+      ]
+    }
+  ]
+}

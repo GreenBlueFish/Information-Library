@@ -1,0 +1,89 @@
+{
+  "title": "S-Parameters and Periodic Steady State",
+  "intro": "Two analyses for RF and switching work: .sp computes the scattering, admittance and impedance matrices of a circuit between RF ports (and its noise figure), and .pss finds the periodic steady state of a driven or oscillating circuit by the shooting method, without simulating the whole start-up.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "S-parameters: .sp"
+    },
+    {
+      "type": "prose",
+      "text": "Mark the ports with voltage sources: V1 in 0 DC 0 AC 1 portnum 1 z0 50. Each port source gets a series resistance z0 (default 50 ohms) that stays in every analysis, so keep S-parameter testbenches separate. Ports are numbered from 1 with no gaps. Then .sp has the same sweep syntax as .ac, with an optional final 1 to add noise parameters."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "S-parameters of a 3rd-order 50 ohm Butterworth low-pass at 100 MHz\nV1 in  0 DC 0 AC 1 portnum 1 z0 50\nV2 out 0 DC 0 AC 0 portnum 2 z0 50\nC1 in  0 31.83p\nL1 in  out 159.2n\nC2 out 0 31.83p\n.control\n  sp lin 300 1meg 300meg          $ 1 MHz steps: point k is (k+1) MHz\n  let s21db = db(s_2_1)\n  let s11db = db(s_1_1)\n  print frequency[9] s11db[9]      $ return loss at 10 MHz\n  let k = 0                        $ -3 dB point (meas on an sp plot crashes in ngspice 47)\n  while s21db[k] > -3\n    let k = k + 1\n  end\n  print frequency[k]\n  let Rbase = 50                   $ wrs2p needs the reference impedance as a vector\n  wrs2p filter.s2p\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Outputs: S_i_j, Y_i_j and Z_i_j for every pair of ports, complex, against frequency.",
+        "wrs2p file.s2p writes a two-port Touchstone version 1 file (real and imaginary parts, # Hz S RI R 50). It needs a vector Rbase in the plot, so let Rbase = 50 first, or it stops with No Rbase vector given. scikit-rf, Qucs and most RF tools read the file.",
+        "In ngspice 47 the meas command crashes the program (a segmentation fault) when used on the plot of an sp run; index the vectors or use a while loop as in the sample until that is fixed.",
+        "With donoise = 1 (.sp lin 201 1meg 300meg 1) a two-port also gets Rn, NF (noise figure in dB), NFmin and SOpt, the optimum source reflection; and the noise correlation matrix Cy_i_j.",
+        "S-parameters are small-signal and linear, from the operating point, like AC analysis. For an amplifier, bias it with ordinary sources; the port sources only carry the AC excitation.",
+        "Reading Touchstone data back into a simulation (a measured filter as a block) is not built in; fit it to an equivalent circuit or use a FREQ table source for AC."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For this filter the run gives a -3 dB point at 100 MHz and about -60 dB return loss at 10 MHz (a near-perfect match far inside the passband), as the Butterworth prototype values 1, 2, 1 scaled to 50 ohms and 100 MHz promise."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Periodic steady state: .pss"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* .pss gfreq tstab oscnob psspoints harms sciter steadycoeff [uic]\n.pss 1k 5m out 256 5 50 1e-3\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "gfreq: your guess of the fundamental frequency (for an oscillator, within about 10%).",
+        "tstab: a stabilisation time simulated by ordinary transient before the shooting starts. It matters a lot: run a plain transient first to see how long the circuit needs to settle roughly.",
+        "oscnob: the node (or branch) whose waveform is reported and used to find the period.",
+        "psspoints: time points in the reported period (more than twice harms); harms: number of harmonics in the report; sciter: maximum shooting iterations (default 50); steadycoeff: convergence weight (default 1e-3, lower is more accurate and slower).",
+        "The result is a time-domain plot of one period in steady state and a frequency-domain plot of the harmonics. PSS is experimental: it needs ngspice built with --enable-pss (distribution builds usually include it; the Debian ngspice 47 used here does), and version 47 updated it and its examples."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "PSS of an RC filter driven at 1 kHz\nV1 a 0 SIN(0 1 1k)\nR1 a b 1k\nC1 b 0 1u\n.control\n  pss 1k 5m b 256 5 50 1e-3\n  display\n.endc\n.end\n"
+    },
+    {
+      "type": "callout",
+      "text": "Test PSS before trusting it. Run here on ngspice 47, this driven RC filter reported Convergence reached with a predicted fundamental of 750 Hz instead of 1 kHz: the shooting method estimates the period itself, as for a free-running oscillator, and settled on a wrong one. A van der Pol style LC oscillator (a cubic negative conductance across an LC tank) did not finish in a minute. Always compare the PSS result with a plain transient that runs long enough, and check the frequency it reports."
+    },
+    {
+      "type": "prose",
+      "text": "In principle PSS saves time when the start-up is long compared with the period: a switching converter with a slow output filter, a crystal oscillator with a Q of 10^5, a sigma-delta modulator with a slow loop. In practice, with ngspice's experimental implementation, a long transient (with tstart to skip the start-up) plus fourier is simpler and more robust, and is what most users do."
+    },
+    {
+      "type": "problem",
+      "title": "Port resistance",
+      "text": "Why does a .sp testbench give a wrong DC operating point when reused for a transient run?",
+      "solution": [
+        "Each RF port source has its z0 resistance in series in every analysis, so the circuit is loaded by 50 ohms at each port even in .op and .tran. Keep RF ports in a separate testbench, or use them only where 50-ohm terminations are intended."
+      ],
+      "answer": "The ports add 50 ohm series resistances in every analysis."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 4.1.11 (RF ports), 11.3.8 (.sp), 11.3.12 (.pss) and 13.9 (S-parameters).",
+        "K. S. Kundert, J. K. White and A. Sangiovanni-Vincentelli, Steady-State Methods for Simulating Analog and Microwave Circuits, Kluwer, 1990 (shooting methods)."
+      ]
+    }
+  ]
+}

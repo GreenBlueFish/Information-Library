@@ -1,0 +1,139 @@
+{
+  "title": "Using a PDK",
+  "intro": "A process design kit (PDK) gives you the foundry's transistor, resistor, capacitor and diode models, organised in corner sections, plus the settings the simulator needs to read them. Three open PDKs work with ngspice: SkyWater SKY130 (130 nm), GlobalFoundries GF180MCU (180 nm) and IHP SG13G2 (130 nm SiGe BiCMOS). This page shows how their models are laid out and how to write a testbench that uses them; the IHP example was run here against the real PDK, with its PSP models compiled by OpenVAF.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a PDK gives ngspice"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A top-level library file with one .lib section per corner (typical, slow-slow, fast-fast, slow-fast, fast-slow, and often mismatch and statistical variants). Each section sets corner parameters and includes the model files.",
+        "Devices as subcircuits, not bare models. You call a transistor with an X line (XM1 d g s b sky130_fd_pr__nfet_01v8 ...), and the subcircuit picks a binned model, adds parasitics and applies mismatch. Hierarchical names therefore look like @m.xm1.msky130_fd_pr__nfet_01v8[gm].",
+        "A .spiceinit with the options its files need: the compatibility mode, faster reading (no_auto_braces, ng_nomodcheck), the search path for model files, and for PDKs with Verilog-A models the osdi commands that load the compiled .osdi files.",
+        "Usually an install made with open_pdks, volare or ciel (SKY130, GF180) or a clone of the PDK repository (IHP), with an environment variable PDK_ROOT pointing to it. The IIC-OSIC-TOOLS container has all three installed under /foss/pdks."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "IHP SG13G2"
+    },
+    {
+      "type": "prose",
+      "text": "IHP's MOSFETs use the PSP 103 model in Verilog-A, so the PDK depends on OSDI. After cloning IHP-Open-PDK, compile the models once with OpenVAF; the script writes the .osdi files to libs.tech/ngspice/osdi:"
+    },
+    {
+      "type": "code",
+      "lang": "shell",
+      "source": "export PDK_ROOT=$HOME/IHP-Open-PDK PDK=ihp-sg13g2\ncd $PDK_ROOT/$PDK/libs.tech/verilog-a\n./openvaf-compile-va.sh            # psp103, psp103_nqs, r3_cmc, mosvar, cap_cmomi, cap_cmomf\ncp $PDK_ROOT/$PDK/libs.tech/ngspice/.spiceinit ~/my-testbenches/\n"
+    },
+    {
+      "type": "prose",
+      "text": "The PDK's .spiceinit adds the model folder to sourcepath and loads the six .osdi files with osdi commands; it reads \\$PDK_ROOT and \\$PDK from the environment. A testbench then needs only the corner sections and the device subcircuits:"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "IHP SG13G2 inverter: DC transfer and delay with PSP103 via OSDI\n.lib cornerMOSlv.lib mos_tt\n.param vdd=1.2\nVDD vdd 0 {vdd}\nVIN in 0 PULSE(0 {vdd} 100p 20p 20p 1n 2n)\nXMP out in vdd vdd sg13_lv_pmos w=2u l=0.13u ng=1\nXMN out in 0   0   sg13_lv_nmos w=1u l=0.13u ng=1\nCL  out 0 10f\n.control\n  dc VIN 0 1.2 0.01\n  meas dc vm when v(out)=v(in)\n  tran 2p 4n\n  meas tran tphl trig v(in) val=0.6 rise=1 targ v(out) val=0.6 fall=1\n  meas tran tplh trig v(in) val=0.6 fall=1 targ v(out) val=0.6 rise=1\n  alter VIN 0.6\n  op\n  print @n.xmn.nsg13_lv_nmos[ids] @n.xmn.nsg13_lv_nmos[gm] @n.xmn.nsg13_lv_nmos[vth]\n  quit\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "It reports a switching threshold of 0.62 V and delays of about 30 ps into 10 fF in the typical corner. The transistor inside XMN is an OSDI device (N element) named nsg13_lv_nmos, so its operating-point values are read as @n.xmn.nsg13_lv_nmos[...]; show n.xmn.nsg13_lv_nmos lists all of them (ids, vth, gm, gds, cgg and many more from the PSP code)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Other corner libraries: cornerMOShv.lib (3.3 V devices sg13_hv_nmos and sg13_hv_pmos), cornerHBT.lib (the SiGe HBTs npn13g2 and friends, sections hbt_typ, hbt_bcs, hbt_wcs), cornerRES.lib (res_typ, res_bcs, res_wcs), cornerCAP.lib (cap_typ ...), cornerDIO.lib.",
+        "MOS corner sections: mos_tt, mos_ss, mos_ff, mos_sf, mos_fs, each with a _mismatch variant, and mos_tt_stat for statistical (process) Monte Carlo.",
+        "ng is the number of gate fingers; w is the total width."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "SkyWater SKY130"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* SKY130 testbench lines (open_pdks install; PDK_ROOT points to it)\n.lib /path/to/sky130A/libs.tech/ngspice/sky130.lib.spice tt\nXM1 out in 0   0   sky130_fd_pr__nfet_01v8 L=0.15 W=1 nf=1\nXM2 out in vdd vdd sky130_fd_pr__pfet_01v8 L=0.15 W=2 nf=1\n* sizes in microns: the model library sets .option scale=1e-6\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Corners in sky130.lib.spice: tt, ss, ff, sf, fs, plus ll, hh, lh, hl (resistor and capacitor extremes) and tt_mm (mismatch). Devices: sky130_fd_pr__nfet_01v8, __pfet_01v8, __nfet_01v8_lvt, __pfet_01v8_hvt, the 3.3 V and 5 V __nfet_g5v0d10v5 families, resistors such as sky130_fd_pr__res_xhigh_po, capacitors such as sky130_fd_pr__cap_mim_m3_1.",
+        "Settings: set ngbehavior=hsa and set ng_nomodcheck in .spiceinit (open_pdks ships one), option klu for speed, and set num_threads. The models are BSIM4 and are built into ngspice, so no OSDI is needed.",
+        "Units: because the library sets scale=1e-6, W=1 means 1 um. Writing W=1u gives 1 pm and an error about no model in range: the most common SKY130 mistake."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "GlobalFoundries GF180MCU"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* GF180MCU testbench lines (open_pdks install, variant D)\n.include /path/to/gf180mcuD/libs.tech/ngspice/design.ngspice\n.lib /path/to/gf180mcuD/libs.tech/ngspice/sm141064.ngspice typical\nXM1 out in 0   0   nfet_03v3 L=0.28u W=0.22u nf=1\nXM2 out in vdd vdd pfet_03v3 L=0.28u W=0.44u nf=1\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Corners: typical, ff, ss, fs, sf, and statistical. Separate sections exist for the resistors, capacitors, diodes and bipolars (for example res_typical, mimcap_typical).",
+        "design.ngspice sets the global parameters the model file expects; include it first.",
+        "Devices: nfet_03v3 and pfet_03v3 (3.3 V), nfet_06v0 and pfet_06v0 (6 V), native and high-voltage variants. Sizes are in metres (W=0.22u)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Habits that save time with any PDK"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Start from the PDK's own example testbench or an Xschem testbench and change it, rather than writing the include lines from memory: paths, section names and device names differ between PDK versions.",
+        "Read the first lines of ngspice's output: the compatibility mode, any warnings about models not found, and which solver is in use.",
+        "Run one device first: an I-V sweep of a single transistor at the sizes you intend to use, compared with the PDK's documented characteristics. It catches unit and corner mistakes before they hide inside a circuit.",
+        "Corner sweeps reload the library for each corner: in the control language, loop over the corner names and use the alterparam/reset or source pattern on the Sweeps, Corners and Monte Carlo page, or write one testbench per corner from a template.",
+        "Mismatch sections (tt_mm, mos_tt_mismatch, statistical) draw new random values on each reset, so a Monte Carlo loop is a loop of reset and run."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "No model in range",
+      "text": "A SKY130 netlist gives 'could not find a valid modelname' for XM1 ... sky130_fd_pr__nfet_01v8 L=0.15u W=1u. What is wrong?",
+      "solution": [
+        "The SKY130 library sets .option scale=1e-6, so sizes are written in microns without a unit: L=0.15 W=1. With u, L becomes 0.15e-12 m and no bin matches."
+      ],
+      "answer": "Write L=0.15 W=1 (scale is 1e-6)."
+    },
+    {
+      "type": "problem",
+      "title": "Reading a PDK device",
+      "text": "In an IHP testbench, how do you print the threshold voltage of the NMOS inside XMN1?",
+      "solution": [
+        "The PDK subcircuit sg13_lv_nmos contains an OSDI instance Nsg13_lv_nmos, so the name is n.xmn1.nsg13_lv_nmos: print @n.xmn1.nsg13_lv_nmos[vth] after an op."
+      ],
+      "answer": "print @n.xmn1.nsg13_lv_nmos[vth]"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 9.3 (OSDI models) and 12.6 (.spiceinit for PDKs).",
+        "IHP-Open-PDK, SG13G2 process, github.com/IHP-GmbH/IHP-Open-PDK (libs.tech/ngspice and libs.tech/verilog-a).",
+        "SkyWater SKY130 PDK documentation, skywater-pdk.readthedocs.io; open_pdks by R. T. Edwards, github.com/RTimothyEdwards/open_pdks.",
+        "GF180MCU PDK documentation, gf180mcu-pdk.readthedocs.io.",
+        "IIC-OSIC-TOOLS container (all open PDKs and tools), github.com/iic-jku/IIC-OSIC-TOOLS."
+      ]
+    }
+  ]
+}

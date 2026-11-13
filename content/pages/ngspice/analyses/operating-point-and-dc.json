@@ -1,0 +1,111 @@
+{
+  "title": "Operating Point and DC Sweeps",
+  "intro": "The operating point is the DC solution with capacitors open and inductors shorted. Every other analysis starts from it, and most simulation trouble shows up first here. A DC sweep repeats it while one or two sources, a resistor or the temperature change.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".op"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Operating point of a resistively loaded common-source stage\n.model nch NMOS (level=1 vto=0.5 kp=200u lambda=0.05)\nVDD vdd 0 1.8\nVG  g   0 0.8\nRD  vdd d 10k\nM1  d g 0 0 nch W=4u L=1u\n.control\n  op\n  print v(d) i(VDD)\n  show M1 : id gm gds vdsat\n  print @m1[id] @m1[gm]\n  let av = -@m1[gm] * 10k / (1 + @m1[gds]*10k)\n  print av\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "The op result is a plot with one value per vector: node voltages v(n) and branch currents of voltage sources and inductors, i(V1) (also written v1#branch). show prints the operating-point quantities of a device; @dev[par] reads one into an expression. Above, the stage gain follows from gm and gds: -gm RD / (1 + gds RD). In batch mode, .op prints a table of all node voltages and source currents unless .option noinit is set; .option opinfo (or the command option opinfo) adds device data."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "How ngspice finds the operating point"
+    },
+    {
+      "type": "list",
+      "items": [
+        "First a plain Newton-Raphson iteration from zero (or from .nodeset values), up to itl1 iterations (default 100).",
+        "If that fails, gmin stepping (gminsteps option, default on): start with a large conductance across every junction and reduce it step by step, each solution starting the next.",
+        "Then source stepping (srcsteps, default on): ramp all sources from zero to their full value.",
+        "Optionally a transient operating point (optran): a short transient with the sources ramped up, whose end point becomes the operating point. Recommended for big digital-heavy or oscillating circuits.",
+        "The Convergence page explains what to do when all of these fail."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": ".nodeset and .ic"
+    },
+    {
+      "type": "list",
+      "items": [
+        ".nodeset v(n1)=0.9 v(n2)=0: starting guesses for the iteration. The final answer is free to move away from them. Use them to pick one state of a bistable circuit (a latch, a Schmitt trigger) or to help a hard circuit converge.",
+        ".ic v(n1)=0.9: forces the node to that voltage during the initial operating point of a transient, then lets it go. It affects only transient analysis (Transient page).",
+        "off on a device line: start the iteration with that device off."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".dc sweeps"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* .dc srcname start stop step [src2 start2 stop2 step2]\n.dc VIN 0 1.8 0.01                 $ a voltage or current source\n.dc VDS 0 1.8 0.05 VGS 0.4 1.2 0.2 $ nested: VDS inner, VGS outer\n.dc RLOAD 1k 10k 1k                $ a resistor's value\n.dc TEMP -40 125 5                 $ the circuit temperature\n"
+    },
+    {
+      "type": "prose",
+      "text": "DC sweeps of a parameter are not built in, but a control-language loop with alterparam and reset does it (Sweeps page), and a source whose value is a parameter can stand in. In a nested sweep the results go into one long vector per output; to plot one curve per outer value, loop in the control language."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Inverter transfer curve and its gain, then a temperature sweep\n.model nch NMOS (level=1 vto=0.5 kp=200u lambda=0.05)\n.model pch PMOS (level=1 vto=-0.5 kp=80u lambda=0.05)\nVDD vdd 0 1.8\nVIN in  0 0\nMP out in vdd vdd pch W=5u L=1u\nMN out in 0   0   nch W=2u L=1u\n.control\n  dc VIN 0 1.8 0.005\n  let gain = deriv(v(out))\n  meas dc vm   when v(out)=v(in)\n  meas dc gmax min gain\n  meas dc vil  when gain=-1 cross=1\n  meas dc vih  when gain=-1 cross=2\n  alter VIN 0.9\n  dc TEMP -40 125 55\n  print v(out)\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "deriv() differentiates a vector against its scale (here v(in)), giving the small-signal gain at every point; the points where the gain is -1 are the input thresholds VIL and VIH used for noise margins. With equal kp W/L of both devices (200u x 2 = 80u x 5) the switching point is at VDD/2."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Current through devices"
+    },
+    {
+      "type": "prose",
+      "text": "By default only voltage-source and inductor currents are saved. To get the current of a resistor, capacitor or transistor terminal, either put a 0 V source in series, read @R1[i] or @M1[id] (save them first in a sweep: save all @m1[id]), or set .option savecurrents, which saves the terminal currents of every device as vectors named @m1[id], @r1[i] and so on (this makes rawfiles much larger)."
+    },
+    {
+      "type": "problem",
+      "title": "Bistable start",
+      "text": "A cross-coupled latch always settles to the same state at the operating point, but you need the other one. Two ways?",
+      "solution": [
+        ".nodeset v(q)=1.8 v(qb)=0 (the iteration starts there and stays in that basin).",
+        "Or put off on the transistor that should be off; or in a transient, .ic v(q)=1.8 v(qb)=0."
+      ],
+      "answer": ".nodeset (or off, or .ic for a transient)."
+    },
+    {
+      "type": "problem",
+      "title": "Gain from the op",
+      "text": "In the sample, the op gives @m1[gm] = 0.257 mS and @m1[gds] = 1.8 uS. Check the printed gain, and the drain current from the level 1 equations.",
+      "solution": [
+        "av = -gm RD / (1 + gds RD) = -0.257e-3 x 10k / (1 + 0.018) = -2.57 / 1.018 = -2.52.",
+        "Level 1 saturation: Id = (kp/2)(W/L)(Vgs - Vt)^2 (1 + lambda Vds) = 100u x 4 x 0.09 x (1 + 0.05 x 1.41) = 36 uA x 1.07 = 38.5 uA, matching i(VDD)."
+      ],
+      "answer": "-2.52, with Id = 38.5 uA."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 11.2 (initial conditions), 11.3.2 (.dc) and 11.3.5 (.op)."
+      ]
+    }
+  ]
+}

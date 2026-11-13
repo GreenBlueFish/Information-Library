@@ -1,0 +1,116 @@
+{
+  "title": "Parameters, Expressions and Functions",
+  "intro": "Parameters turn a netlist into a design you can change in one place: sizes, bias currents and supply voltages become names, and expressions compute the rest. ngspice has three expression languages, and knowing which one a given line uses explains most of the confusing errors.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".param and braces"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Parameters and brace expressions\n.param vdd=1.8 ibias=20u\n.param rload=45k\n.param wn=2u ln=0.5u wp={2.5*wn}      $ computed from another parameter\n.func par(a,b) {a*b/(a+b)}            $ a user function\n.csparam rl_out={rload}               $ copy into the control language (plot const)\n\nVDD vdd 0 {vdd}\nR1  vdd out {par(rload, rload)}       $ 22.5k\nI1  out 0   {ibias}\n.control\n  op\n  print v(out) rl_out\n  alterparam ibias=30u                $ change a global parameter ...\n  reset                               $ ... re-read the circuit with it\n  op\n  print v(out)\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A value in braces {...} is an expression evaluated once, when the netlist is expanded. After that every number in the circuit is a constant. This is ngspice's front end, called numparam.",
+        ".param lines may be in any order and may refer to each other. A .param inside a .subckt is local to it.",
+        "In HSPICE compatibility mode a value in single quotes, 'expr', means the same as {expr}; ngspice also adds braces itself around expressions it recognises (which set no_auto_braces turns off, to speed up reading huge libraries).",
+        ".func name(args) {expr} defines a function that is substituted wherever it is called.",
+        ".csparam name={expr} makes a parameter readable in the control language as a vector in the const plot.",
+        "alterparam name=value (or alterparam subckt name=value for one inside a subcircuit) changes a parameter; it only takes effect after reset, which re-expands the netlist. This is the way to sweep a parameter that sets several values at once."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The three expression languages"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Front-end expressions in braces: in element values, model parameters and .param lines. Evaluated once, before the simulation, with the numparam rules: functions below, operators like C, and parameters only (no node voltages).",
+        "Run-time expressions without braces: in B sources, behavioural R, C and L, and the VALUE, vol and cur forms of E and G. They are evaluated at every iteration and can use node voltages, branch currents, time, temper and hertz. Their function set is slightly different (see Behavioural Modelling).",
+        "Control-language expressions: in .control scripts, working on vectors and variables (let, if, while, meas param=). Described on the Control Language page."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The same-looking text can behave differently in each: ^ and pow treat negative bases differently in B sources (absolute value), in brace expressions (depends on the compatibility mode: hs rounds the exponent, lt returns 0 for a non-integer one) and in the control language, and the set of functions differs slightly. log is the natural logarithm in all three in current versions (log10 is base 10); very old SPICE3 scripts used log for base 10. When a value matters, test it with a one-line op and print."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Built-in functions in brace expressions"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Arithmetic: sqrt, exp, ln and log (both natural), abs, pow(x,y) (C library pow), pwr(x,y) (power of |x|), min, max, sgn, nint (round half to even), int (toward zero), floor, ceil, x % y (modulo) and x \\ y (integer divide).",
+        "Trigonometric and hyperbolic: sin, cos, tan, asin, acos, atan (and arctan), sinh, cosh, tanh, asinh, acosh, atanh.",
+        "Logic: == != <> < <= > >= && || ! and the ternary c ? x : y (or ternary_fcn(c,x,y)).",
+        "Random (for Monte Carlo): gauss(nom, rvar, sigma) and agauss(nom, avar, sigma) give a Gaussian value with relative or absolute deviation rvar/sigma or avar/sigma; unif(nom, rvar) and aunif(nom, avar) a uniform one; limit(nom, avar) nom plus or minus avar at random. Each call draws a new number when the netlist is expanded; reset or a new run draws again.",
+        "Version 46 added var(name), the value of a control-language variable, and vec(name), the first value of a vector, so a script can feed values into the netlist without alterparam.",
+        "Reserved words that cannot be parameter names: time, temper, hertz, and the function names (sqrt, sin, exp, ln, log, abs, pwr, ...), plus or, and, not, div, mod, defined, sqr."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Random parameters: three resistors drawn at expansion time\n.param rnom=10k\nR1 a 0 {agauss(rnom, 0.03*rnom, 3)}   $ 1 % sigma (3-sigma = 3 %)\nR2 a 0 {gauss(rnom, 0.03, 3)}         $ the same, as a relative deviation\nR3 a 0 {aunif(rnom, 500)}             $ uniform within +/- 500 ohms\nI1 0 a 1m\n.control\n  setseed 42                          $ repeatable random numbers\n  reset\n  op\n  print v(a)\n  print @r1[resistance] @r2[resistance] @r3[resistance]\n.endc\n.end\n"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Scope rules"
+    },
+    {
+      "type": "prose",
+      "text": "Parameters defined outside any .subckt are global. Inside a .subckt, its params: arguments and any .param lines are local and hide global names until .ends. Assigning to a global name inside a subcircuit makes a local copy. Model and subcircuit names are always global and must be unique. Nesting works to ten levels."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Temperature"
+    },
+    {
+      "type": "prose",
+      "text": ".temp 85 (or .options temp=85) sets the circuit temperature in degrees C; tnom is the temperature at which model parameters were measured (default 27). In the control language, set temp = 85 or option temp=85 then run again. A temperature sweep is a DC sweep: dc temp -40 125 5."
+    },
+    {
+      "type": "problem",
+      "title": "Brace or not",
+      "text": "Which of these lines are evaluated once and which at every iteration? (a) R1 a b {2*rb} (b) B1 c 0 V=2*V(a) (c) E1 d 0 vol='V(a)*{k}' (d) C1 e 0 c='1p*(1+V(e))'",
+      "solution": [
+        "(a) once: a brace expression in a value.",
+        "(b) every iteration: a B source.",
+        "(c) every iteration, with {k} replaced by its value once at expansion.",
+        "(d) every iteration: a behavioural capacitor."
+      ],
+      "answer": "(a) once; (b), (c), (d) at every iteration (with {k} fixed at expansion)."
+    },
+    {
+      "type": "problem",
+      "title": "Sigma",
+      "text": "You want a resistor whose 1-sigma spread is 2% of 5 kilohms. Write it with agauss.",
+      "solution": [
+        "agauss(nom, avar, sigma) has standard deviation avar/sigma. With avar = 300 (6% of 5k) and sigma = 3 the deviation is 100 ohms, 2%.",
+        "R1 a b {agauss(5k, 300, 3)} or equivalently {agauss(5k, 100, 1)}."
+      ],
+      "answer": "{agauss(5k, 300, 3)}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 2.11 to 2.16 (parameters, functions, scope and the three parsers)."
+      ]
+    }
+  ]
+}

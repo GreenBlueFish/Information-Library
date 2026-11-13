@@ -1,0 +1,142 @@
+{
+  "title": "Transient Analysis",
+  "intro": "Transient analysis computes the circuit's response in time. ngspice chooses its own time steps from an estimate of the integration error, so the step you give is only a hint for the output. Knowing how the step is chosen, which integration method is used and how the starting state is found explains most of the odd results transient runs produce.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".tran"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* .tran tstep tstop [tstart [tmax]] [uic]\n.tran 1n 1u                 $ output hint 1 ns, run to 1 us\n.tran 1n 1u 0.5u            $ simulate from 0, save only from 0.5 us\n.tran 1n 1u 0 0.1n          $ never take a step longer than 0.1 ns\n.tran 1n 1u uic             $ skip the operating point, start from ic= values\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "tstep: the print and plot increment for .print and for interpolated output. It does not set the internal step.",
+        "tstop: end time. tstart: results before it are computed but not stored (to skip a start-up transient).",
+        "tmax: the largest internal step. By default it is the smaller of tstep and (tstop - tstart)/50. Set it when a short event (a narrow pulse inside a long run, a switch that changes state, a fast edge of a free-running oscillator) could be stepped over.",
+        "uic: use initial conditions: no operating point; every node starts from its ic= or .ic value, or zero."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How the time step is chosen"
+    },
+    {
+      "type": "prose",
+      "text": "At each step ngspice predicts the solution, solves the nonlinear equations by Newton-Raphson (at most itl4 = 10 iterations), and estimates the local truncation error from the charges and fluxes of the capacitors and inductors. If the error is too large, or Newton did not converge, the step is rejected and retried at one eighth of the size; if it was small, the next step grows (at most doubling). The error target is set by reltol (default 1e-3), abstol (1e-12 A), vntol (1e-6 V), chgtol (1e-14 C) and trtol (7, a factor by which the estimate is assumed pessimistic; with XSPICE A devices in the circuit it is set to 1, which is more accurate and slower)."
+    },
+    {
+      "type": "prose",
+      "text": "Breakpoints, the corners of PULSE and PWL sources and the sampling times of TRNOISE, force a time point exactly at each corner and restart with small steps after it. Since version 46 the last two steps before a breakpoint are equalised to avoid a tiny final step."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Integration methods"
+    },
+    {
+      "type": "list",
+      "items": [
+        "method=trap (default): the trapezoidal rule, second order and with no artificial damping, so it keeps the energy of LC circuits and oscillators. Its weakness is trap ringing: after an abrupt change, a quantity that should be smooth (an inductor voltage, a capacitor current) can oscillate from step to step.",
+        "method=gear with maxord=2 to 6: backward-differentiation formulas. They damp numerical ringing and handle stiff circuits, but also damp real oscillations a little: a high-Q oscillator's amplitude can decay where trap keeps it. maxord=1 with trap is backward Euler, the most damped of all.",
+        "xmu=0.495 (default 0.5): a slightly damped trapezoidal rule that often removes trap ringing while barely touching real behaviour.",
+        "After a run, m3avg(vector) (version 46) smooths trap ringing out of a result by a three-point average, and mtimeavg(vector) averages over a time window."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Trap ringing on an inductor voltage, and how gear removes it\nI1 0 a PWL(0 0 1u 0 1.001u 1m)     $ 1 mA current step with a 1 ns edge\nL1 a 0 1m\nR1 a 0 1Meg\n.control\n  tran 10n 3u\n  meas tran trap_min min v(a) from=1.1u to=3u\n  meas tran trap_max max v(a) from=1.1u to=3u\n  let smooth = m3avg(v(a))\n  meas tran avg_max max smooth from=1.1u to=3u\n  option method=gear\n  tran 10n 3u\n  meas tran gear_min min v(a) from=1.1u to=3u\n  meas tran gear_max max v(a) from=1.1u to=3u\n.endc\n.end\n"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/ngspice/ngspice-trap-ringing.svg",
+      "alt": "Plot of the inductor voltage between 0.9 and 1.5 microseconds. The trapezoidal result alternates in sign at every time step after the current step at 1 microsecond, decaying over about 0.2 microseconds; the Gear result settles within a few steps.",
+      "caption": "Trap ringing from the sample, plotted from ngspice data (the spike during the edge is off the scale)."
+    },
+    {
+      "type": "prose",
+      "text": "After the edge the inductor voltage should decay to zero within nanoseconds (L/R = 1 ns). With trap it flips sign at every time step, still between -0.4 mV and +0.6 mV a hundred nanoseconds (a hundred time constants) later and dying out only slowly; with gear it is down at microvolts by then. Smoothing the trap result with m3avg cuts it by a factor of about 36. The ringing is small next to the 1 kV spike during the edge, but in a switching converter the same effect shows up as false current spikes in every cycle."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Initial conditions"
+    },
+    {
+      "type": "prose",
+      "text": "The start of a transient is the operating point at t = 0 with every source at its time-zero value. Three ways to change it:"
+    },
+    {
+      "type": "list",
+      "items": [
+        ".ic v(n)=value without uic: during the t = 0 operating point the node is held at that value (through a large conductance), then released. The other nodes are solved consistently with it. This is the right way to start an oscillator or set the state of a memory cell.",
+        "uic on the .tran line: no operating point at all. Capacitor voltages and inductor currents start at their ic= values, nodes with .ic at those values, everything else at zero. Quick and sometimes the only way to start, but the first steps can be violent (sources at full value hitting uncharged capacitors).",
+        ".nodeset only helps the operating point converge; it does not hold anything."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Starting an LC oscillator from an initial condition\nL1 a 0 10u\nC1 a 0 1n ic=1\nR1 a 0 100k\n.ic v(a)=1\n.control\n  tran 10n 20u uic\n  meas tran period trig v(a) val=0 fall=1 targ v(a) val=0 fall=2\n  meas tran v_end max v(a) from=18u to=20u\n  echo \"f = 1/(2 pi sqrt(LC)) = 1.59 MHz\"\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "With uic the capacitor starts at 1 V and the tank rings at 1/(2 pi sqrt(LC)) = 1.59 MHz, a period of 0.63 us, decaying with the time constant 2RC = 200 us, so after 20 us it is still at about 0.9 V. Without uic, the operating point would put v(a) at 0 (the inductor is a short at DC) and nothing would happen."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Other transient tools"
+    },
+    {
+      "type": "list",
+      "items": [
+        "set interp (or .option interp): store results only on the tstep grid, interpolated. Much smaller output files and memory, at the cost of losing detail between grid points.",
+        "linearize: after a run, resample all vectors of the plot onto a uniform tstep grid (needed before fft). Since version 46 linearize np=N or np=auto2n chooses the number of points.",
+        "cutout: keep only a time window of every vector of a tran plot.",
+        ".option autostop: end the transient as soon as all .meas lines are satisfied (not with the meas command).",
+        "stop and resume: in interactive use, stop when v(out) > 1 or stop after 100 halts a run at a condition, inspect it, then resume.",
+        "step N: advance an interactive transient by N time points.",
+        "snsave and snload: save the state of a transient to a file and restart from it later (a long settling run once, many short runs after).",
+        "set deltacheck (version 46) prints the time steps, to see where the simulator struggles."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "A missed pulse",
+      "text": "A 10 ns pulse arrives at 3 ms in a 5 ms run with .tran 10u 5m. The pulse is a PWL source. Will it be seen, and what if it came from a comparator inside the circuit instead?",
+      "solution": [
+        "A PWL corner is a breakpoint, so the simulator places time points at the pulse edges and sees it.",
+        "An internally generated pulse has no breakpoint: with tmax = 10 us the steps can jump over it unless the truncation-error control happens to catch the edge. Set tmax (for example .tran 10u 5m 0 2n), or at least a small tmax around the event."
+      ],
+      "answer": "Yes as a PWL source; an internal 10 ns event needs a small tmax."
+    },
+    {
+      "type": "problem",
+      "title": "Oscillator amplitude",
+      "text": "A crystal oscillator's amplitude slowly decays in simulation with method=gear but stays constant with trap. Which is right?",
+      "solution": [
+        "Gear adds numerical damping, which acts like a loss in a high-Q resonator. Trap does not, so the constant amplitude is the more faithful result. Use trap (perhaps with xmu=0.495) and a small tmax for oscillators."
+      ],
+      "answer": "Trap: gear's numerical damping is eating the energy."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 11.1.4 (transient options), 11.2 (initial conditions), 11.3.10 (.tran) and 13.5 (linearize, cutout, stop, snsave).",
+        "K. Kundert, 'The designer's guide to SPICE and Spectre,' Kluwer, 1995, chapters on transient analysis and integration methods."
+      ]
+    }
+  ]
+}
