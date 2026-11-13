@@ -149,7 +149,11 @@ describe("scripts/score", () => {
     };
     walk(topics);
     expect((await Promise.all(broken)).filter(Boolean)).toEqual([]);
-    const r = await measure(topics, readJson("content/terms.json"), readJson);
+    // The legacy content/terms.json was deleted in task 18; concatenate the
+    // split Glossary_Files in Manifest order to reconstruct the term array.
+    const manifest = readJson("content/terms/index.json");
+    const terms = manifest.glossaries.flatMap(({ file }) => readJson(file));
+    const r = await measure(topics, terms, readJson);
     expect(r.simPages > 0 && r.sims > 0 && r.columnPages > 0).toBe(true);
   });
 });

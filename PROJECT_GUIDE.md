@@ -33,9 +33,18 @@ five principles — every rule below exists to serve one of them.
   **widget registry** mounts interactive lessons. Each can be reasoned about and
   changed on its own. Content never imports runtime code, and the renderer never
   inlines widget logic — it delegates to the registry.
+  The lookup system is **scoped to where the reader is.** Glossaries live under
+  `content/terms/` as one file per topic, listed in a manifest
+  (`content/terms/index.json`); the manifest — not any single file — is the
+  authoritative list of glossaries. On a topic page the panel searches the
+  current page's **scope chain** (the glossaries of the current route and its
+  ancestors, nearest-first) and offers a lazy **"Search all"** control that
+  reaches the rest of the library on demand. On the home page it searches every
+  glossary. See §3.3 for the layout and §5 for adding a term.
 - **Additive by construction.** Adding a topic, a term, or a widget is a
   **localized** operation. A new topic touches `topics.json` plus one new page
-  file; a new term touches only `terms.json`; a new widget of an existing type
+  file; a new term touches one glossary under `content/terms/` (adding its
+  manifest line if the glossary is new); a new widget of an existing type
   touches only a page. Existing files keep working untouched.
 - **Multi-agent maintainable.** Because there is no toolchain and the two
   governance docs capture the contract, any agent on any machine can extend the
@@ -91,7 +100,12 @@ Where content, code, CSS, and governance material live:
 │           └── vga-scanline.js   # VGA beam stepper (communication-protocols/vga, §7.4).
 ├── content/                     # The DATA layer — pure JSON, no presentation logic.
 │   ├── topics.json              # The topic/subtopic tree (single manifest of topics).
-│   ├── terms.json               # The lookup table (array of term entries).
+│   ├── terms/                   # The glossary folder: one Glossary_File per top-level
+│   │   ├── index.json           #   topic, paths mirroring routes (§3.3's Path_Rule).
+│   │   │                        #   index.json is the Manifest: the authoritative list
+│   │   │                        #   of glossaries ({ glossaries: [{ scope, file }] }).
+│   │   ├── _root.json           # Terms shared across unrelated subjects (the `/` scope).
+│   │   └── <topic>.json         # One glossary per top-level topic (array of term entries).
 │   └── pages/                   # One JSON file per page, foldered to mirror the tree.
 │       ├── snn/                 # Spiking neural networks (index, encoding, neuron-filters,
 │       │   ├── neuron-models/   #   neuron-models.json, learning-rules.json); children of
@@ -116,8 +130,8 @@ Where content, code, CSS, and governance material live:
 Rules of thumb for *where things go*:
 
 - **New knowledge → `content/`.** Topic structure in `topics.json`, page bodies
-  in `content/pages/...`, glossary entries in `terms.json`. Never put page body
-  markup in JS.
+  in `content/pages/...`, glossary entries in the right Glossary_File under
+  `content/terms/` (§3.3). Never put page body markup in JS.
 - **New behavior → `src/`.** A genuinely new interaction (e.g. a new widget
   type) is a module under `src/widgets/types/`. New cross-cutting runtime goes in
   the appropriate `src/` module. Keep the module seams intact.
@@ -274,12 +288,51 @@ Example:
 }
 ```
 
-### 3.3 `content/terms.json` — the lookup table (`TermEntry[]`)
+### 3.3 `content/terms/` — the glossaries (`TermEntry[]` per file)
 
-A flat JSON **array** of term records. This is the single source of truth for
-inline definitions; editors may append freely (the runtime indexes on load).
+Inline definitions live in a **folder of glossaries**, not one file. Each
+glossary is a flat JSON **array** of term records (a `Glossary_File`), and a
+**Manifest** lists them all. There is no single source of truth file: the
+Manifest is the authoritative list of glossaries, and the runtime indexes each
+on load.
 
-`TermEntry` fields:
+**The folder, the Path_Rule, and the Manifest.** Glossaries live under
+`content/terms/`, one Glossary_File per top-level topic, with the file path
+mirroring the route:
+
+- **Path_Rule.** The glossary for route `/a/b/c` is `content/terms/a/b/c.json`;
+  the glossary for the root scope `/` is `content/terms/_root.json`. (Today the
+  split is one file per top-level topic — `content/terms/analog-design.json`,
+  `content/terms/snn.json`, … — plus `_root.json`, but the rule supports a
+  glossary at any route depth.)
+- **Manifest.** `content/terms/index.json` lists every Glossary_File as
+  `{ scope, file }` entries under a `glossaries` array. Because the site has no
+  build step and a browser cannot list a folder, this Manifest is what the
+  runtime fetches at boot to learn which glossaries exist — it, not any single
+  JSON file, is the authoritative list.
+
+```json
+{
+  "glossaries": [
+    { "scope": "/", "file": "content/terms/_root.json" },
+    { "scope": "/snn", "file": "content/terms/snn.json" },
+    { "scope": "/analog-design", "file": "content/terms/analog-design.json" }
+  ]
+}
+```
+
+**Where a term goes.** A term lives in the Glossary_File of the **narrowest
+route whose subtree covers every page that uses it**. A term used only within
+`/analog-design` pages belongs in `content/terms/analog-design.json`; a term
+shared across unrelated subjects (used on pages in more than one top-level
+topic) belongs in `content/terms/_root.json`. Store a term **at most once per
+Glossary_File**; when one term has several genuinely different senses within one
+glossary, give it multiple definitions under that one term rather than repeating
+the term. When the *same surface word* means different things in different
+topics, store each meaning as its own `TermEntry` in its own glossary.
+
+`TermEntry` fields (unchanged — the schema is the same whichever glossary holds
+the term):
 
 | Field        | Type            | Required | Rule |
 |--------------|-----------------|----------|------|
@@ -289,12 +342,17 @@ inline definitions; editors may append freely (the runtime indexes on load).
 | `definition` | string          | yes      | The definition text shown in the panel. |
 | `pageRef`    | string \| null  | yes      | A route to an Alexandria page explaining the term, or `null`. When non-null it **must resolve to a real route** in `topics.json`. |
 
+There is **no `source` field on disk.** The runtime attaches a `source`
+annotation (the glossary's scope route and its title, e.g. "from Analog Design")
+to each definition as it loads, so the panel can label where a term came from.
+Never write `source` into a Glossary_File — it is runtime-only.
+
 Matching is case- and whitespace-insensitive (done on a normalized form), so you
 do not need to list case variants. Longest match wins: if both `"Neural"` and
 `"Neural Network"` were terms, highlighting "neural network" resolves the longer
 one.
 
-Example (one entry with an acronym, one without):
+Example of a Glossary_File (one entry with an acronym, one without):
 
 ```json
 [
@@ -393,9 +451,15 @@ invalid.
 
 ## 5. How to add a lookup term
 
-**Append one `TermEntry` to `content/terms.json`** (§3.3) and reload. That is the
-entire procedure — no page edits, no renderer edits. The index rebuilds from the
-data at boot, and the new term resolves everywhere on every page.
+**Append one `TermEntry` to the right Glossary_File under `content/terms/`**
+(§3.3) and reload. Pick the glossary by the "where a term goes" rule: the
+narrowest route whose subtree covers every page that uses the term, or
+`_root.json` when it is shared across unrelated subjects. If that glossary does
+not exist yet, create the file per the Path_Rule and add one `{ scope, file }`
+line to the Manifest `content/terms/index.json`. That is the whole procedure —
+no page edits, no renderer edits. The glossaries are indexed on load, and the
+new term resolves on every page in its scope (the term's own topic and its
+descendants), with "Search all" reaching it from elsewhere.
 
 Guidance:
 - List plural and common alternate spellings in `aliases`; matching is

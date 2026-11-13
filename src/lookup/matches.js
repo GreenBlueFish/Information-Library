@@ -179,6 +179,10 @@ function toDefinitions(entries) {
     definition: entry.definition,
     pageRef: entry.pageRef ?? null,
     acronym: typeof entry.acronym === "string" && entry.acronym !== "" ? entry.acronym : null,
+    // Carry the runtime-only Source_Annotation through so the definition card
+    // can show the "from <Topic>" label (R11.5). Absent for un-annotated
+    // entries (e.g. a plain single-table build).
+    source: entry.source ?? undefined,
   }));
 }
 
@@ -299,6 +303,52 @@ export function findMatches(index, text, limit = MAX_MATCHES) {
   }
 
   return finish(index, found, limit);
+}
+
+/**
+ * The "already shown" key for a (term, definition) pair: the term normalized
+ * the same way the rest of the module normalizes terms (lowercase, trimmed,
+ * whitespace-collapsed tokens joined by a space), a NUL separator, then the
+ * definition trimmed and lowercased (R8.5).
+ *
+ * @param {string} term
+ * @param {string} definition
+ * @returns {string}
+ */
+function shownKey(term, definition) {
+  const t = normalize(typeof term === "string" ? term : "").join(" ");
+  const d = (typeof definition === "string" ? definition : "").trim().toLowerCase();
+  return `${t}\u0000${d}`;
+}
+
+/**
+ * Remove, from `matches`, every Definition already present in `shown`
+ * (same term + same definition text, compared case-insensitively after
+ * trimming). Drops a Match entirely when all its definitions are filtered out.
+ * Used for the "Also defined in" case so Search_All never repeats a shown
+ * definition (R8.4, R8.5).
+ *
+ * Pure and DOM-free: it returns new Match objects and never mutates its inputs.
+ *
+ * @param {Match[]} matches Global (non-chain) matches.
+ * @param {Definition[]} shown Definitions already visible in Local_Results.
+ * @returns {Match[]} Matches carrying only not-yet-shown definitions.
+ */
+export function withoutShownDefinitions(matches, shown) {
+  if (!Array.isArray(matches)) return [];
+  const seen = new Set();
+  if (Array.isArray(shown)) {
+    for (const d of shown) {
+      if (d && typeof d === "object") seen.add(shownKey(d.term, d.definition));
+    }
+  }
+  const out = [];
+  for (const match of matches) {
+    if (!match || !Array.isArray(match.definitions)) continue;
+    const kept = match.definitions.filter((d) => d && !seen.has(shownKey(d.term, d.definition)));
+    if (kept.length > 0) out.push({ ...match, definitions: kept });
+  }
+  return out;
 }
 
 /** Lexicographic comparison of rank tuples. */

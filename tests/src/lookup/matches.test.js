@@ -29,7 +29,22 @@ const { findMatches } = await import("../../../src/lookup/matches.js");
 const { installLookup } = await import("../../../src/lookup/lookup-ui.js");
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const realTerms = JSON.parse(readFileSync(join(repoRoot, "content", "terms.json"), "utf8"));
+
+// R14.8: exercise the ranking against the SPLIT glossaries. Concatenate every
+// Glossary_File in the Manifest — byte-for-byte the same 1,874 entries the old
+// `content/terms.json` held — so this test survives task 18's deletion of the
+// legacy file. Ranking (`findMatches`/`buildIndex`) is unchanged.
+function loadSplitTerms() {
+  const manifest = JSON.parse(
+    readFileSync(join(repoRoot, "content", "terms", "index.json"), "utf8"),
+  );
+  const all = [];
+  for (const { file } of manifest.glossaries) {
+    all.push(...JSON.parse(readFileSync(join(repoRoot, file), "utf8")));
+  }
+  return all;
+}
+const realTerms = loadSplitTerms();
 const realIndex = buildIndex(realTerms);
 
 const TERMS = [
@@ -131,7 +146,7 @@ describe("lookup panel: arrow keys step through matches", () => {
       rangeCount: 1,
       getRangeAt: () => ({ getBoundingClientRect: () => ({ left: 0, top: 0, bottom: 10, right: 10 }) }),
     });
-    installLookup(index, root);
+    installLookup(root, { localIndex: index, loadGlobalIndex: null, scopeTitle: "" });
     root.dispatchEvent(new view.Event("mouseup"));
     return {
       panel: () => dom.document.body.querySelector(".lookup-panel"),

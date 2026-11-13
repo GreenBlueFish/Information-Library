@@ -69,15 +69,26 @@ const TERM_CLASS = {
  *     filter over the cards (R1.3) and lists the glossary terms the text
  *     names in the `.home-terms` section (issue #47).
  *
+ * The term results search over EVERY Glossary_File, loaded lazily: rather than
+ * an eager `terms` array, the third argument is a `loadAllTerms` accessor that
+ * yields the full concatenated entry set (Requirements 10.2, 10.3, 11.7). On
+ * the FIRST `input` event the accessor is awaited ONCE and its resolved array
+ * is memoized in a closure var, so every subsequent keystroke reuses it with no
+ * further loading. The ranking is unchanged — `showTermResults` still runs
+ * `findTerms(allTerms, query)` over the resolved array (design.md §7).
+ *
  * Every lookup is guarded: a home missing its search control, grid, or cards
  * still wires whatever is present and never throws (design.md Error Handling).
+ * A missing `loadAllTerms` accessor is tolerated — the term search is simply a
+ * no-op (the `.home-terms` section stays empty and hidden).
  *
  * @param {HTMLElement} homeEl The `.home` element built by `renderHome`.
  * @param {TopicNode|null} [tree] The root topic tree (reserved for the filter).
- * @param {TermEntry[]} [terms] The lookup table, searched for term results.
+ * @param {(() => Promise<TermEntry[]>)} [loadAllTerms] Lazy accessor yielding the
+ *   full concatenated term set; awaited once on the first keystroke, then reused.
  * @returns {void}
  */
-export function installHome(homeEl, tree, terms = []) {
+export function installHome(homeEl, tree, loadAllTerms) {
   if (!homeEl) return;
 
   const input = homeEl.querySelector(".home-search__input");
@@ -104,16 +115,55 @@ export function installHome(homeEl, tree, terms = []) {
 
   // Live filter: re-run on every keystroke so the visible set updates without a
   // page reload (R1.3). Full match/status logic lives in `applyFilter`.
+  //
+  // The term results search over EVERY Glossary_File, loaded lazily: `allTerms`
+  // is the resolved full set, memoized here so `loadAllTerms()` is awaited at
+  // most once across the life of this home view (R10.2, R10.3). The card filter
+  // is synchronous and runs immediately on every keystroke; the term results —
+  // which may need to await the first load — are populated from the resolved
+  // array, and the term-dependent status tweak runs only AFTER that population.
   if (input) {
+    /** @type {TermEntry[]|null} The resolved full term set, memoized once. */
+    let allTerms = null;
+    /** @type {Promise<TermEntry[]>|null} In-flight first load (deduped). */
+    let loadPromise = null;
+
     input.addEventListener("input", () => {
+      // The card filter never waits — it always reflects the latest keystroke.
       applyFilter(input.value, cards, status);
-      const termCount = showTermResults(input.value, terms, termResults);
+      void runTermSearch(input.value);
+    });
+
+    /**
+     * Populate the term results for `query`, loading the full term set once on
+     * the first call. Subsequent calls reuse the memoized array (or the in-
+     * flight load) so no keystroke triggers another fetch. The term-dependent
+     * status tweak runs only after the results are populated.
+     *
+     * @param {string} query The raw search text at dispatch time.
+     * @returns {Promise<void>}
+     */
+    async function runTermSearch(query) {
+      // No accessor: the term search is a no-op (R-guard). The `.home-terms`
+      // section stays empty and hidden; `applyFilter` already set the status.
+      if (typeof loadAllTerms !== "function") return;
+
+      if (allTerms === null) {
+        if (loadPromise === null) {
+          loadPromise = Promise.resolve(loadAllTerms());
+        }
+        allTerms = await loadPromise;
+      }
+
+      const termCount = showTermResults(query, allTerms, termResults);
       // No topic matched but some terms did: point at the term results rather
-      // than saying the search found nothing (PR #52 review).
-      if (status && !status.hidden && termCount > 0) {
+      // than saying the search found nothing (PR #52 review). Re-check against
+      // the CURRENT input so a stale async result never overrides a later
+      // keystroke's status.
+      if (status && !status.hidden && termCount > 0 && input.value === query) {
         status.textContent = "No matching topics. Matching terms are listed below.";
       }
-    });
+    }
   }
 }
 

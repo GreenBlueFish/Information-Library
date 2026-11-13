@@ -125,6 +125,65 @@ export function buildIndex(termEntries) {
 }
 
 /**
+ * Merge several Search_Indexes into one, preserving each definition's
+ * runtime-only `source` and the nearer-first ordering of the inputs
+ * (design.md — Components and Interfaces §2; Requirements 4.4, 4.5, 6.2, 6.3,
+ * 11.2).
+ *
+ * Design decision — "build per-file then merge": each Glossary_File is built
+ * into its own `SearchIndex` once (independently cacheable and reused across
+ * scope chains), and `mergeIndexes` folds those already-built indexes into one.
+ * The fold is defined to be EXACTLY EQUIVALENT to running `buildIndex` over the
+ * concatenation of the inputs' entries in input order, so the trie and the
+ * `byTerm` grouping behave precisely as a single build would — ranking is
+ * unchanged and nearer-first order is preserved (this equivalence is the tested
+ * Property 2).
+ *
+ * How it reproduces `buildIndex(concatInOrder(...))`:
+ *   - It concatenates each input index's `byTerm` lists in input order. A
+ *     `SearchIndex.byTerm` is a `Map` holding every entry grouped by normalized
+ *     canonical term in that file's build order, so flattening it (Map
+ *     iteration is insertion order) recovers that file's entries, and
+ *     concatenating the inputs nearest-first yields the same entry sequence a
+ *     single `buildIndex` over the concatenation would see.
+ *   - It then replays `buildIndex`'s per-entry work over that sequence: insert
+ *     every surface form into a FRESH trie in the same order and rebuild a
+ *     fresh `byTerm`. Reusing `insert` means the terminal `entry`/`entries`
+ *     semantics (first surface-form wins, duplicates deduped) are identical.
+ *
+ * Because `source` rides on the `TermEntry`/`Definition` objects (not on the
+ * trie keys), the entries carried through here keep their `source` untouched —
+ * nothing copies or reshapes the entry objects (Requirements 1.6, 4.7).
+ *
+ * @param {SearchIndex[]} indexes The per-file indexes, ordered nearest-first.
+ * @returns {SearchIndex} The merged index (answers `query` exactly as a single
+ *   `buildIndex` over the concatenated entries would).
+ */
+export function mergeIndexes(indexes) {
+  const list = Array.isArray(indexes) ? indexes : [];
+
+  // Concatenate each input's `byTerm` lists in input order (nearest-first),
+  // reconstructing the entry sequence a single `buildIndex` over the
+  // concatenation would process.
+  /** @type {TermEntry[]} */
+  const entries = [];
+  for (const index of list) {
+    const byTerm = index && index.byTerm;
+    if (!(byTerm instanceof Map)) continue;
+    for (const group of byTerm.values()) {
+      if (!Array.isArray(group)) continue;
+      for (const entry of group) entries.push(entry);
+    }
+  }
+
+  // Replay `buildIndex`'s per-entry work over the concatenation: re-insert
+  // surface forms into a fresh trie in the same order and rebuild `byTerm`.
+  // Entries are carried through by reference, so each definition's `source`
+  // stays untouched.
+  return buildIndex(entries);
+}
+
+/**
  * Collect an entry's surface forms in a stable order: canonical term first,
  * then aliases (in declared order), then the acronym WHEN PRESENT. A missing,
  * empty, or non-string surface is left out so it never becomes a trie path.

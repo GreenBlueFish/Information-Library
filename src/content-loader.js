@@ -10,14 +10,78 @@
 // case that links to the Project Guide's static-server tip.
 //
 // Requirements: 1.5 (topics.json is the single manifest), 3.1 (load a node's
-// page content from JSON), 9.1 (terms.json is the single source of truth).
+// page content from JSON), 4.1 (content/terms/index.json is the authoritative
+// Manifest of Glossary_Files), 4.3 (glossaries load through the shared cache).
 
 /**
  * Canonical content paths. Kept here so the rest of the runtime refers to
  * content by intent ("topics", "terms") rather than hard-coding URLs.
  */
 export const TOPICS_URL = "content/topics.json";
-export const TERMS_URL = "content/terms.json";
+
+/**
+ * The Manifest — `content/terms/index.json` — the authoritative list of every
+ * Glossary_File as `{ scope, file }` entries. Because the site has no build
+ * step and a browser cannot list folders, this file is what the loader fetches
+ * at boot to learn which glossaries exist (Requirement 4.1, 1.4).
+ */
+export const MANIFEST_URL = "content/terms/index.json";
+
+/**
+ * One Glossary_File record in the Manifest.
+ * @typedef {Object} ManifestEntry
+ * @property {string} scope `/` or a route that resolves in `topics.json`.
+ * @property {string} file  The Glossary_File path (obeys the Path_Rule).
+ */
+
+/**
+ * The parsed Manifest: the authoritative list of Glossary_Files.
+ * @typedef {Object} Manifest
+ * @property {ManifestEntry[]} glossaries Every Glossary_File, by `{scope,file}`.
+ */
+
+/**
+ * A term record. Its schema (`PROJECT_GUIDE §3.3`) is unchanged by this
+ * feature. On disk a Glossary_File entry has NO `source` field; the loader may
+ * attach one at runtime on a COPY it returns (Requirement 1.6).
+ * @typedef {Object} TermEntry
+ * @property {string} term
+ * @property {string[]} [aliases]
+ * @property {string} [acronym]
+ * @property {string} definition
+ * @property {string|null} pageRef
+ * @property {SourceAnnotation} [source] Runtime-only; never written to disk.
+ */
+
+/**
+ * The runtime-only annotation attached to each loaded definition, naming the
+ * glossary it came from so the UI can show "from <Topic>". It is NEVER written
+ * into any Glossary_File on disk (Requirement 1.6, 4.7).
+ * @typedef {Object} SourceAnnotation
+ * @property {string} route The Manifest `scope` the glossary applies to.
+ * @property {string} title That route's title from `topics.json`, or
+ *   `"General"` for the `/` scope.
+ */
+
+/**
+ * A successfully loaded Glossary_File: its path, the scope it applies to (the
+ * Manifest `scope`, equal to `source.route`), the shared Source_Annotation, and
+ * its entries with that annotation attached.
+ * @typedef {Object} LoadedGlossary
+ * @property {string} file  The Glossary_File path that was loaded.
+ * @property {string} scope The scope the glossary applies to (`source.route`).
+ * @property {SourceAnnotation} source The annotation attached to every entry.
+ * @property {TermEntry[]} entries The loaded entries, each carrying `source`.
+ */
+
+/**
+ * A Glossary_File that failed to load. Carries the typed `ContentLoadError` so
+ * the UI can render a non-fatal note without the batch rejecting (R4.8, R8.9).
+ * @typedef {Object} GlossaryFailure
+ * @property {string} file  The Glossary_File path that failed.
+ * @property {string} scope The scope the glossary would have applied to.
+ * @property {ContentLoadError} error The typed load error.
+ */
 
 /**
  * A typed, friendly error for a content file that could not be fetched or
@@ -176,13 +240,94 @@ export function loadPage(pageFile) {
 }
 
 /**
- * Load the lookup table from `content/terms.json` — the single source of truth
- * for definitions (Requirement 9.1). Memoized by URL.
- * @returns {Promise<Array<object>>} The parsed array of TermEntry records.
+ * Load the Manifest from `content/terms/index.json` — the authoritative list of
+ * every Glossary_File (Requirement 4.1). Fetched at boot; no Glossary_File is
+ * fetched here. Memoized by URL via the existing `loadJson` cache.
+ * @returns {Promise<Manifest>} The parsed Manifest.
  * @throws {ContentLoadError}
  */
-export function loadTerms() {
-  return /** @type {Promise<any>} */ (loadJson(TERMS_URL));
+export function loadManifest() {
+  return /** @type {Promise<any>} */ (loadJson(MANIFEST_URL));
+}
+
+/**
+ * Load one Glossary_File and return its entries with a runtime-only
+ * Source_Annotation attached to each (Requirement 4.7). The on-disk schema has
+ * no `source` field (Requirement 1.6), so this never mutates or re-writes the
+ * JSON.
+ *
+ * Because `loadJson` memoizes the *parsed array* by URL (the same shared
+ * reference is reused by every caller and across the session), attaching
+ * `source` directly to those entries would corrupt the cached — and, by schema
+ * contract, the on-disk — shape for everyone. Instead this returns a COPY
+ * layer: a fresh array of shallow-copied entries, each carrying `source`. The
+ * cached parsed array and its entries are left exactly as fetched.
+ *
+ * The caller (`main.js`) derives `source` from the Manifest `scope` and the
+ * route's title in `topics.json` (`"General"` for `/`) and passes it in; the
+ * loader does not read `topics.json` itself.
+ *
+ * @param {string} file The Glossary_File path (from a Manifest entry's `file`).
+ * @param {SourceAnnotation} source The annotation to attach to every entry.
+ * @returns {Promise<TermEntry[]>} The entries, each with `source` attached.
+ * @throws {ContentLoadError} When the file is missing, blocked, or malformed.
+ */
+export async function loadGlossary(file, source) {
+  const parsed = await loadJson(file);
+  const entries = Array.isArray(parsed) ? parsed : [];
+  // Copy layer: a new array of shallow-copied entries so `source` never lands
+  // on the shared cached/on-disk objects (Requirement 1.6). `source` is frozen
+  // and shared across the entries of one file — it is read-only metadata.
+  const annotation = Object.freeze({ route: source.route, title: source.title });
+  return entries.map((entry) => ({ ...entry, source: annotation }));
+}
+
+/**
+ * Load several Glossary_Files in parallel, partitioning the outcomes into
+ * successes and failures. Each entry is loaded via `loadGlossary`, and every
+ * load is wrapped in `Promise.allSettled` so that one missing or malformed file
+ * yields a `GlossaryFailure` while the rest still succeed — the batch itself
+ * NEVER rejects (Requirements 4.8, 8.9, 8.10). This is what lets the lookup UI
+ * degrade gracefully: `render()` builds its index from `results`, and the
+ * Search_All flow shows the "Some topics couldn't be searched" note from
+ * `failures`.
+ *
+ * The `scope` on each result/failure is taken from the entry's `source.route`
+ * (the Manifest `scope`), so callers can correlate outcomes back to the chain.
+ *
+ * @param {Array<{ file: string, source: SourceAnnotation }>} entries The
+ *   Glossary_Files to load, each with the Source_Annotation to attach.
+ * @returns {Promise<{ results: LoadedGlossary[], failures: GlossaryFailure[] }>}
+ *   Both the loaded glossaries and the typed failures; never rejects.
+ */
+export async function loadGlossaries(entries) {
+  const settled = await Promise.allSettled(
+    entries.map(({ file, source }) => loadGlossary(file, source))
+  );
+
+  /** @type {LoadedGlossary[]} */
+  const results = [];
+  /** @type {GlossaryFailure[]} */
+  const failures = [];
+
+  settled.forEach((outcome, i) => {
+    const { file, source } = entries[i];
+    if (outcome.status === "fulfilled") {
+      results.push({ file, scope: source.route, source, entries: outcome.value });
+    } else {
+      const reason = outcome.reason;
+      const error = reason instanceof ContentLoadError
+        ? reason
+        : new ContentLoadError({
+            file,
+            kind: "fetch",
+            cause: reason instanceof Error ? reason : null,
+          });
+      failures.push({ file, scope: source.route, error });
+    }
+  });
+
+  return { results, failures };
 }
 
 /**

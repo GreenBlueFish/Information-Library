@@ -372,9 +372,17 @@ describe(
       );
     });
 
-    it("accepts the real content/terms.json (schema + no surface-form collisions)", () => {
-      const raw = readFileSync(join(repoRoot, "content", "terms.json"), "utf8");
-      const entries = JSON.parse(raw);
+    it("accepts the real split glossaries (schema + no surface-form collisions)", () => {
+      // The legacy content/terms.json was deleted in task 18; concatenate the
+      // split Glossary_Files in Manifest order to reconstruct the same term set
+      // (byte-for-byte the 1,874 entries the old table held) and run the schema
+      // and global surface-form-collision checks over it unchanged.
+      const manifest = JSON.parse(
+        readFileSync(join(repoRoot, "content", "terms", "index.json"), "utf8"),
+      );
+      const entries = manifest.glossaries.flatMap(({ file }) =>
+        JSON.parse(readFileSync(join(repoRoot, file), "utf8")),
+      );
 
       for (const entry of entries) {
         expect(checkTermEntry(entry)).toEqual([]);

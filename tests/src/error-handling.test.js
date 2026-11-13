@@ -258,7 +258,11 @@ describe("error handling (Req 15)", () => {
       view.clearTimeout = () => {};
 
       try {
-        installLookup(index, root);
+        // New signature (task 8.1): `installLookup(rootEl, options)`. With a
+        // null `loadGlobalIndex` (no other topics to search), zero local
+        // matches shows the auto-dismissing "No definition found" message
+        // (R9.3) — exactly the 15.4 path this case pins.
+        installLookup(root, { localIndex: index, loadGlobalIndex: null, scopeTitle: "" });
 
         // Complete a "selection": `mouseup` drives the module's handleSelection.
         root.dispatchEvent(new window.Event("mouseup"));

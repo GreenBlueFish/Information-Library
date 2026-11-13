@@ -27,7 +27,22 @@ const repoRoot = join(here, "..", "..", "..");
 const TOPIC = "computational-cortical-columns";
 
 const topics = JSON.parse(readFileSync(join(repoRoot, "content", "topics.json"), "utf8"));
-const terms = JSON.parse(readFileSync(join(repoRoot, "content", "terms.json"), "utf8"));
+
+// The legacy single content/terms.json was deleted in task 18. The glossary
+// data now lives split across one file per Top_Level_Topic, listed in the
+// Manifest; concatenating them in Manifest order yields byte-for-byte the same
+// 1,874 entries the old table held, so these topic-coverage checks are unchanged.
+function loadSplitTerms() {
+  const manifest = JSON.parse(
+    readFileSync(join(repoRoot, "content", "terms", "index.json"), "utf8"),
+  );
+  const all = [];
+  for (const { file } of manifest.glossaries) {
+    all.push(...JSON.parse(readFileSync(join(repoRoot, file), "utf8")));
+  }
+  return all;
+}
+const terms = loadSplitTerms();
 const topic = topics.children.find((c) => c.slug === TOPIC);
 
 /** Parameter keys each simulation widget type documents (PROJECT_GUIDE §7.3). */

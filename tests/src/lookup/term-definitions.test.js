@@ -39,8 +39,25 @@ const { renderPage } = await import("../../../src/renderer.js");
 const { fuzzyNearest } = await import("../../../src/lookup/fuzzy.js");
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const realTerms = JSON.parse(readFileSync(join(repoRoot, "content", "terms.json"), "utf8"));
 const realTopics = JSON.parse(readFileSync(join(repoRoot, "content", "topics.json"), "utf8"));
+
+// R14.8: the lookup guarantees must hold against the SPLIT glossaries, not the
+// legacy single table. Load every Glossary_File listed in the Manifest and
+// concatenate their entries in Manifest order — this is byte-for-byte the same
+// term data the old `content/terms.json` held (conservation == 1,874), just
+// stored per topic now. Reading the split set here keeps this test valid after
+// task 18 deletes `content/terms.json`.
+function loadSplitTerms() {
+  const manifest = JSON.parse(
+    readFileSync(join(repoRoot, "content", "terms", "index.json"), "utf8"),
+  );
+  const all = [];
+  for (const { file } of manifest.glossaries) {
+    all.push(...JSON.parse(readFileSync(join(repoRoot, file), "utf8")));
+  }
+  return all;
+}
+const realTerms = loadSplitTerms();
 
 /** A table where "Spike" is defined twice and "VGA" is an acronym. */
 const TERMS = [
@@ -62,10 +79,28 @@ function typeInto(home, text) {
   input.dispatchEvent(new dom.window.Event("input"));
 }
 
+/**
+ * Drain the microtask/macrotask chain the home term search awaits on its first
+ * keystroke (`installHome` does `await Promise.resolve(loadAllTerms())`). A
+ * couple of `setTimeout(0)` turns are enough (same pattern as
+ * home-search-all.test.js).
+ */
+async function flush() {
+  await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => setTimeout(r, 0));
+}
+
+// `installHome` (task 11.1) now takes a lazy `loadAllTerms: () => Promise<...>`
+// accessor rather than an eager `terms` array; `renderHome` reads it off the
+// resolution. Wire one that yields the given term set.
 function buildHome(tree, terms) {
   useRealDom();
   const mount = dom.document.createElement("div");
-  renderPage({ node: null, path: [], tree, terms }, null, mount);
+  renderPage(
+    { node: null, path: [], tree, loadAllTerms: async () => terms },
+    null,
+    mount,
+  );
   return mount.querySelector(".home");
 }
 
@@ -121,24 +156,27 @@ describe("findTerms: the home search's term matcher", () => {
 describe("home search lists matching terms", () => {
   const tree = { slug: "", title: "", children: [{ slug: "snn", title: "Spiking Neural Networks" }] };
 
-  it("shows a term found by its acronym, with its definition and page link", () => {
+  it("shows a term found by its acronym, with its definition and page link", async () => {
     const home = buildHome(tree, TERMS);
     const section = home.querySelector(".home-terms");
     expect(section.hidden).toBe(true);
 
     typeInto(home, "vga");
+    await flush();
     expect(section.hidden).toBe(false);
     const first = section.querySelector(".home-term");
     expect(first.querySelector(".home-term__term").textContent).toBe("Video Graphics Array (VGA)");
     expect(first.querySelector(".home-term__link").getAttribute("href")).toBe("#/communication-protocols/vga");
 
     typeInto(home, "");
+    await flush();
     expect(section.hidden).toBe(true);
   });
 
-  it("cycles through a term's definitions with Next and Previous, wrapping", () => {
+  it("cycles through a term's definitions with Next and Previous, wrapping", async () => {
     const home = buildHome(tree, TERMS);
     typeInto(home, "spike");
+    await flush();
     const item = home.querySelector(".home-term");
     const definition = () => item.querySelector(".home-term__definition").textContent;
     const count = () => item.querySelector(".home-term__cycle-count").textContent;
@@ -160,18 +198,21 @@ describe("home search lists matching terms", () => {
     expect(count()).toBe("2 of 2");
   });
 
-  it("points at the term results when no topic matches but a term does", () => {
+  it("points at the term results when no topic matches but a term does", async () => {
     const home = buildHome(tree, TERMS);
     const status = home.querySelector(".home-search__status");
     typeInto(home, "vga");
+    await flush();
     expect(status.textContent).toBe("No matching topics. Matching terms are listed below.");
     typeInto(home, "zzzz");
+    await flush();
     expect(status.textContent).toBe("No matching topics.");
   });
 
-  it("shows no cycle control for a term defined once", () => {
+  it("shows no cycle control for a term defined once", async () => {
     const home = buildHome(tree, TERMS);
     typeInto(home, "neuron");
+    await flush();
     expect(home.querySelector(".home-term__cycle")).toBe(null);
   });
 });
@@ -192,7 +233,7 @@ describe("lookup panel cycles through definitions", () => {
     });
 
     try {
-      installLookup(buildIndex(TERMS), root);
+      installLookup(root, { localIndex: buildIndex(TERMS), loadGlobalIndex: null, scopeTitle: "" });
       root.dispatchEvent(new view.Event("mouseup"));
 
       const panel = dom.document.body.querySelector(".lookup-panel");
@@ -217,9 +258,10 @@ describe("real content: VGA is found", () => {
     expect(result.term).toBe("Video Graphics Array");
   });
 
-  it("the home search lists Video Graphics Array for 'VGA'", () => {
+  it("the home search lists Video Graphics Array for 'VGA'", async () => {
     const home = buildHome(realTopics, realTerms);
     typeInto(home, "VGA");
+    await flush();
     const terms = [...home.querySelectorAll(".home-term__term")].map((t) => t.textContent);
     expect(terms[0]).toBe("Video Graphics Array (VGA)");
   });

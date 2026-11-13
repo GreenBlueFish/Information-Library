@@ -29,6 +29,8 @@ import { appendRichText } from "../math.js";
  * @param {string} classes.term Term heading.
  * @param {string} classes.acronym Acronym span inside the heading.
  * @param {string} classes.definition Definition paragraph.
+ * @param {string} classes.source Source label ("from <Topic>"), shown under the
+ *   definition when the definition carries a `source`.
  * @param {string} classes.link "Open page" link.
  * @param {string} classes.cycle The cycle control's wrapper.
  * @param {string} classes.cycleButton Its Previous/Next buttons.
@@ -48,6 +50,12 @@ export function fillDefinitionCard(doc, container, definitions, classes, onFollo
   const defEl = doc.createElement("p");
   defEl.className = classes.definition;
   container.appendChild(defEl);
+
+  // The source label ("from <Topic>") sits under the definition and before the
+  // "Open page" link. It is shown only when a definition carries a `source`.
+  const sourceEl = doc.createElement("p");
+  sourceEl.className = classes.source;
+  container.appendChild(sourceEl);
 
   const link = doc.createElement("a");
   link.className = classes.link;
@@ -104,12 +112,27 @@ export function fillDefinitionCard(doc, container, definitions, classes, onFollo
     appendRichText(defEl, d.definition);
 
     // The link is present only for a definition with a page, between the
-    // definition and the cycle control.
+    // source label and the cycle control.
     if (d.pageRef) {
       link.href = d.pageRef.startsWith("#") ? d.pageRef : `#${d.pageRef}`;
       if (link.parentNode !== container) container.insertBefore(link, cycle);
     } else {
       link.remove();
+    }
+
+    // Show where this definition comes from, when the loader annotated it.
+    // The label sits under the definition and before the "Open page" link; a
+    // definition without a `source` (defensive) omits it.
+    const sourceTitle = d.source?.title;
+    if (sourceTitle) {
+      sourceEl.textContent = `from ${sourceTitle}`;
+      const before = link.parentNode === container ? link : cycle;
+      if (sourceEl.nextSibling !== before || sourceEl.parentNode !== container) {
+        container.insertBefore(sourceEl, before);
+      }
+    } else {
+      sourceEl.textContent = "";
+      sourceEl.remove();
     }
 
     if (count) count.textContent = `${index + 1} of ${defs.length}`;

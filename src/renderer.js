@@ -456,7 +456,7 @@ export function sortByTitle(nodes) {
  * empty and the nav tree remains the browse affordance. (The boot wiring in
  * task 11 passes the tree through; see design.md Example Usage.)
  *
- * @param {(RouteResolution & { tree?: TopicNode, terms?: TermEntry[] })|null} resolution
+ * @param {(RouteResolution & { tree?: TopicNode, loadAllTerms?: () => Promise<TermEntry[]> })|null} resolution
  * @returns {HTMLElement} A `.home` container.
  */
 function renderHome(resolution) {
@@ -491,8 +491,15 @@ function renderHome(resolution) {
   // freshly built nodes before returning (home-topic-browse — Requirements 1.3,
   // 2.3, 2.4, 2.6, 2.7). Each render builds new nodes and attaches their own
   // listeners, so there is no listener accumulation across navigations.
-  const terms = resolution && Array.isArray(resolution.terms) ? resolution.terms : [];
-  installHome(home, tree, terms);
+  //
+  // The term search loads over EVERY Glossary_File lazily: the home resolution
+  // carries a `loadAllTerms` accessor (attached by main.js) that yields the
+  // full concatenated term set on first keystroke (Requirements 10.2, 10.3).
+  const loadAllTerms =
+    resolution && typeof resolution.loadAllTerms === "function"
+      ? resolution.loadAllTerms
+      : undefined;
+  installHome(home, tree, loadAllTerms);
 
   return home;
 }

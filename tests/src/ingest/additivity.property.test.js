@@ -482,9 +482,16 @@ describe("Ingestion additivity (Property 1) \u2014 Validates: Requirements 3.4, 
     );
   });
 
-  it("accepts a real, additive step over content/topics.json + content/terms.json", () => {
+  it("accepts a real, additive step over content/topics.json + the split glossaries", () => {
     const tree = JSON.parse(readFileSync(join(repoRoot, "content", "topics.json"), "utf8"));
-    const terms = JSON.parse(readFileSync(join(repoRoot, "content", "terms.json"), "utf8"));
+    // The legacy content/terms.json was deleted in task 18; concatenate the
+    // split Glossary_Files in Manifest order to reconstruct the same term array.
+    const manifest = JSON.parse(
+      readFileSync(join(repoRoot, "content", "terms", "index.json"), "utf8"),
+    );
+    const terms = manifest.glossaries.flatMap(({ file }) =>
+      JSON.parse(readFileSync(join(repoRoot, file), "utf8")),
+    );
 
     const pre = { tree, terms };
 

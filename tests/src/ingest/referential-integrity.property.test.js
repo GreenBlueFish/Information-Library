@@ -352,12 +352,17 @@ describe(
     });
 
     // (a) REAL-CONTENT direction — the live library is referentially sound.
-    it("accepts the real content/topics.json + content/terms.json (every reference resolves)", () => {
+    it("accepts the real content/topics.json + the split glossaries (every reference resolves)", () => {
       const tree = JSON.parse(
         readFileSync(join(repoRoot, "content", "topics.json"), "utf8"),
       );
-      const terms = JSON.parse(
-        readFileSync(join(repoRoot, "content", "terms.json"), "utf8"),
+      // The legacy content/terms.json was deleted in task 18; concatenate the
+      // split Glossary_Files in Manifest order to reconstruct the term array.
+      const manifest = JSON.parse(
+        readFileSync(join(repoRoot, "content", "terms", "index.json"), "utf8"),
+      );
+      const terms = manifest.glossaries.flatMap(({ file }) =>
+        JSON.parse(readFileSync(join(repoRoot, file), "utf8")),
       );
       // Real page existence: join the repo-relative page path under repoRoot.
       const pageExists = (p) => existsSync(join(repoRoot, p));

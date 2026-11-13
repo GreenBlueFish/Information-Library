@@ -428,6 +428,30 @@ overflows a small viewport. Parts:
 - `.lookup-panel--empty` — the "No definition found" state renders the definition
   text muted and italic, then auto-dismisses.
 
+On a topic page the panel shows definitions from the glossaries closest to the
+page first, then offers a "Search all" control for every other topic's glossary.
+These rows (styled in `alexandria.css` §9) carry their own classes:
+
+- `.lookup-panel__search-all` — the idle "Search all" `<button>` row, appended as
+  the last result. It shares the button tokens with `.lookup-panel__match-button`
+  so it reads as a peer of the match-navigation control.
+- `.lookup-panel__search-all--loading` — the loading state while every other
+  glossary is fetched: the control is `disabled` and reads "Searching all
+  topics…", drawn with reduced opacity and `cursor: default` like the existing
+  `:disabled` rule.
+- `.lookup-panel__search-all--done` — the finished-with-nothing state: the
+  control becomes the non-interactive muted text "No other definitions found",
+  dropping the button affordance.
+- `.lookup-panel__note` — the "Some topics couldn't be searched" failure note,
+  muted `--font-size-small`, set off by a top rule like `.lookup-panel__matches`.
+- `.lookup-panel__source` / `.home-term__source` — the per-definition source
+  label "from &lt;Topic&gt;", muted and small, mirroring the `__acronym` token
+  usage (the `home-term__source` variant is the same label inside the home
+  search results).
+
+These rows add no new tokens; they reuse `--color-text-muted`, the `--space-*`
+scale, and the border tokens.
+
 ### Interactive widgets (`.block--widget` / `.widget`)
 
 Capped at `--measure-wide`. A `--color-surface` card with border, `--radius-md`,

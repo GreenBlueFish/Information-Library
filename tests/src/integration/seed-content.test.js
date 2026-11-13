@@ -8,16 +8,17 @@
 //   - content/terms.json    (the Lookup_System's Term_Entry records)
 //   - content/pages/**.json  (the Page_Content backing each leaf)
 //
-// and asserts the three invariants that keep navigation and lookup coherent:
+// and asserts the invariants that keep navigation coherent:
 //
-//   1. Every non-null `pageRef` in terms.json resolves to a real route in the
-//      topic tree — a learner following a definition's link never lands on a
-//      dead route (R11.1, 2.6).
-//   2. Every LEAF node in topics.json carries a `page` reference, and that page
+//   1. Every LEAF node in topics.json carries a `page` reference, and that page
 //      file exists on disk and parses as PageContent (a title + a blocks array)
 //      — a browsable topic always has something to render (R11.3).
-//   3. resolveRoute surfaces no slug/validation errors anywhere in the real
+//   2. resolveRoute surfaces no slug/validation errors anywhere in the real
 //      tree (every slug is well-formed and unique among siblings).
+//
+// Note: the old terms.json pageRef-resolution block moved to
+// integration/glossary-manifest.test.js (R12.4), which now checks pageRef
+// resolution across the split Glossary_Files rather than the single terms.json.
 //
 // In Node there is no browser fetch of relative URLs, so we read the JSON files
 // directly with node:fs and resolve paths relative to the repo root derived
@@ -29,7 +30,7 @@ import { dirname, resolve, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, it, expect } from "../../harness.js";
-import { parseHash, resolveRoute } from "../../../src/router.js";
+import { resolveRoute } from "../../../src/router.js";
 
 // This file lives at <repo>/tests/src/integration/, so the repo root is three
 // directories up. Everything below is resolved against it.
@@ -45,7 +46,6 @@ function readJson(relPath) {
 
 // Load the real seed content once; every case below reads from these.
 const topics = readJson("content/topics.json");
-const terms = readJson("content/terms.json");
 
 /**
  * Collect every leaf node (no children) in the topic tree, remembering the
@@ -74,36 +74,6 @@ for (const child of topics.children ?? []) {
 }
 
 describe("seed content integration", () => {
-  describe("terms.json pageRefs resolve to real routes (R11.1, R2.6)", () => {
-    const withRefs = terms.filter(
-      (t) => t.pageRef !== null && t.pageRef !== undefined,
-    );
-
-    it("has at least one term with a non-null pageRef to exercise", () => {
-      // A trivially-empty set would make the loop below pass vacuously; guard it.
-      expect(withRefs.length > 0).toBeTruthy();
-    });
-
-    for (const entry of withRefs) {
-      it(`"${entry.term}" → ${entry.pageRef} resolves`, () => {
-        // A pageRef is a route string like "/snn/neuron-models/lif": parse it
-        // exactly as the hash router would, then resolve against the real tree.
-        const segments = parseHash(entry.pageRef);
-        expect(segments.length > 0).toBeTruthy();
-
-        const errors = [];
-        const res = resolveRoute(topics, segments, (e) => errors.push(e));
-
-        // Non-null resolution with no validation errors, and the resolved node's
-        // slug must be the last segment of the pageRef (we landed where we aimed).
-        expect(res).toBeTruthy();
-        expect(errors).toEqual([]);
-        expect(res.node.slug).toBe(segments[segments.length - 1]);
-        expect(res.path).toEqual(segments);
-      });
-    }
-  });
-
   describe("every leaf node has a loadable page (R11.3)", () => {
     it("finds leaf nodes to check", () => {
       expect(leaves.length > 0).toBeTruthy();

@@ -112,7 +112,9 @@ function richStrings(node, out = []) {
   return out;
 }
 
-const files = [...jsonFiles("content/pages"), "content/terms.json"];
+// The legacy content/terms.json was deleted in task 18; the glossary definitions
+// now live split under content/terms/, so scan that whole folder instead.
+const files = [...jsonFiles("content/pages"), ...jsonFiles("content/terms")];
 const loaded = files.map((f) => [f, JSON.parse(readFileSync(join(repoRoot, f), "utf8"))]);
 
 describe("math › content", () => {
