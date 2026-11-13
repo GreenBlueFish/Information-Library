@@ -471,6 +471,18 @@ These rows (styled in `alexandria.css` §9) carry their own classes:
 These rows add no new tokens; they reuse `--color-text-muted`, the `--space-*`
 scale, and the border tokens.
 
+### Size controls (`.size-controls`)
+
+Every figure and simulation carries a small toolbar at its top right
+(`src/resize.js`, added by `renderTopicPage`): − and + step the block's width
+through 40, 55, 70, 85 and 100% of the content column (`data-size`, centred
+when shrunk), ⤢ fills the window over the page (`data-expanded`; ✕ or Esc
+closes it) and ↺ resets. The width is remembered per block in localStorage
+(`alexandria-sizes`, keyed by page file and block position). Plots and
+simulations are SVG with a viewBox, so they scale with the block. A new block
+type that should be resizable needs only its class added to the selector in
+`installResizers`.
+
 ### Interactive widgets (`.block--widget` / `.widget`)
 
 Capped at `--measure-wide`. A `--color-surface` card with border, `--radius-md`,
