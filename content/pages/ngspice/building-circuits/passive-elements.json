@@ -48,7 +48,7 @@
     },
     {
       "type": "prose",
-      "text": "Writing the charge, q = expression, is the safer form for a nonlinear capacitor: the simulator differentiates the charge, so charge is conserved. A capacitance given as c = expression is integrated by the simulator; with strong nonlinearity that can create or lose charge over a long transient. Version 47 adds a new behavioural capacitor model with better handling of the charge form."
+      "text": "Writing the charge, q = expression, is the safer form for a nonlinear capacitor: the simulator differentiates the charge, so charge is conserved. A capacitance given as c = expression is integrated by the simulator; with strong nonlinearity that can create or lose charge over a long transient. Version 47 adds a new behavioural capacitor model."
     },
     {
       "type": "heading",
@@ -58,16 +58,16 @@
     {
       "type": "code",
       "lang": "spice",
-      "source": "* Lname n+ n- value [mname] [nt=] [m=] [scale=] [temp=] [dtemp=] [tc1=] [tc2=] [ic=]\nL1   a  b   10u\nL2   c  0   1m  ic=10m              $ initial current (with uic or .ic)\nLcore d 0   lmod nt=20              $ model: inductance from turns and core geometry\n.model lmod l (ind=1 csect=1e-4 length=0.05 mu=1000)\nLnl  e  0   l = '1u/(1 + (i(Lnl)/1)^2)'   $ behavioural: saturating inductor\n* Kname L1 L2 coupling  (0 < k <= 1)\nLp   p1 p2  100u\nLs   s1 s2  25u\nKps  Lp Ls  0.999                   $ turns ratio sqrt(100/25) = 2\n"
+      "source": "* Lname n+ n- value [mname] [nt=] [m=] [scale=] [temp=] [dtemp=] [tc1=] [tc2=] [ic=]\nL1   a  b   10u\nL2   c  0   1m  ic=10m              $ initial current (with uic or .ic)\nLcore d 0   lmod nt=20              $ model: inductance from turns and core geometry\n.model lmod l (csect=1e-4 length=0.05 mu=1000)\nLnl  e  0   l = '1u/(1 + (i(Lnl)/1)^2)'   $ behavioural: saturating inductor\n* Kname L1 L2 coupling  (0 < k <= 1)\nLp   p1 p2  100u\nLs   s1 s2  25u\nKps  Lp Ls  0.999                   $ turns ratio sqrt(100/25) = 2\n"
     },
     {
       "type": "prose",
-      "text": "The coupling coefficient k gives mutual inductance M = k times the square root of L1 L2. Dots are implied by node order: the first node of each coupled inductor is its dotted end. A transformer with k = 1 exactly has a singular inductance matrix in some circuits; 0.999 or 0.9999 avoids that and is closer to reality. Several K lines can couple more than two windings; each pair needs its own K line. For a magnetic core with hysteresis and saturation, use the XSPICE core model (Behavioural Modelling page)."
+      "text": "The coupling coefficient k gives mutual inductance M = k times the square root of L1 L2. Dots are implied by node order: the first node of each coupled inductor is its dotted end. A transformer with k = 1 exactly has a singular inductance matrix in some circuits; 0.999 or 0.9999 avoids that and is closer to reality. To couple more than two windings, either write one K line per pair, or since version 43 list them all on one line: K1 L1 L2 L3 0.99. For a magnetic core with hysteresis and saturation, use the XSPICE core model (Behavioural Modelling page)."
     },
     {
       "type": "code",
       "lang": "spice",
-      "source": "Transformer: 2:1 step-down with a load\nV1 p 0 SIN(0 10 50k)\nLp p 0 100u\nLs s 0 25u\nKps Lp Ls 0.999\nRl s 0 100\n.control\n  tran 0.1u 100u\n  meas tran vp_pk max v(p) from=50u to=100u\n  meas tran vs_pk max v(s) from=50u to=100u\n  let ratio = vp_pk / vs_pk\n  print ratio\n.endc\n.end\n"
+      "source": "Transformer: 2:1 step-down with a load\nV1 in 0 SIN(0 10 50k)\nRs in p 0.1                  $ a source resistance: no V-L loop\nLp p 0 100u\nLs s 0 25u\nKps Lp Ls 0.999\nRl s 0 100\n.control\n  tran 0.1u 100u\n  meas tran vp_pk max v(p) from=50u to=100u\n  meas tran vs_pk max v(s) from=50u to=100u\n  let ratio = vp_pk / vs_pk\n  print ratio\n.endc\n.end\n"
     },
     {
       "type": "heading",

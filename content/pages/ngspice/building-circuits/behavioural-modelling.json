@@ -14,7 +14,7 @@
     },
     {
       "type": "prose",
-      "text": "The expression may use node voltages V(n) and V(n1,n2), currents through voltage sources (and since version 44 i(name) of other devices' first terminal), parameters in braces, and the special variables time (transient time, 0 in other analyses), temper (circuit temperature in degrees C) and hertz (frequency, in AC analysis only). The functions:"
+      "text": "The expression may use node voltages V(n) and V(n1,n2), currents through voltage sources (and i(name), the current into the first terminal of another device), parameters in braces, and the special variables time (transient time, 0 in other analyses), temper (circuit temperature in degrees C) and hertz (frequency, in AC analysis only). The functions:"
     },
     {
       "type": "list",
@@ -28,7 +28,7 @@
     },
     {
       "type": "callout",
-      "text": "Two B-source traps. First, exp() is linearised above an argument of 14 to help convergence, so B = exp(V(x)/0.026) will not give a true diode beyond about 0.36 V; use a real diode or a scaled argument. Second, pow(x,y),  and ^ use the absolute value of x, so (-2)^3 is +8 in a B source; pwr(x,y) keeps the sign. log, ln and sqrt also take the absolute value of a negative argument instead of failing."
+      "text": "Power functions in B sources: an integer power of a negative base works as in mathematics ((-2)^3 = -8 with ^,  or pow), but a non-integer power of a negative base gives 0, so V(x)^2.5 is 0 for every negative V(x); pwr(x,y) returns sign(x) |x|^y and stays odd. ln, log and sqrt of a negative argument stop the simulation with an out-of-range error, so guard them (sqrt(abs(V(x))) or max(V(x),1e-12)). The manual also describes exp() being limited above an argument of 14; tested in ngspice 47, B-source exp() is exact (exp(20) = 4.85e8) and that limit applies only in PSpice compatibility mode."
     },
     {
       "type": "prose",
@@ -137,12 +137,12 @@
     {
       "type": "problem",
       "title": "Signed power",
-      "text": "A B source computes V = V(x)^3 to model a cubic nonlinearity. What goes wrong for negative V(x), and how do you fix it?",
+      "text": "A B source models a compressive nonlinearity as V = V(x)^1.5 for a signal that swings both ways. What goes wrong for negative V(x), and how do you fix it?",
       "solution": [
-        "^ uses the absolute value of the base, so the output is |V(x)|^3, always positive: an even function instead of an odd one.",
-        "Use pwr(V(x),3), which keeps the sign, or write V(x)*V(x)*V(x)."
+        "A non-integer power of a negative base gives 0 in a B source, so the output is 0 for the whole negative half-cycle: the model is no longer odd.",
+        "Use pwr(V(x),1.5), which computes sign(x)|x|^1.5, so the curve stays odd and continuous."
       ],
-      "answer": "Use pwr(V(x),3) or V(x)*V(x)*V(x)."
+      "answer": "Use pwr(V(x),1.5)."
     },
     {
       "type": "heading",

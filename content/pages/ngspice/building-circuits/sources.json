@@ -30,7 +30,7 @@
         "PWL(T1 V1 T2 V2 ...) r=TR td=TD: straight lines between points. r=0 repeats the whole list forever; r=T repeats from time T to the end; td delays the whole list. Since version 47 current sources take r and td too.",
         "SFFM(VO VA FC MDI FM TD PHASEM PHASEC): frequency-modulated sine with carrier FC, modulation index MDI and modulating frequency FM. Version 46 swapped FC and FM to this order; check older netlists.",
         "AM(VO VMO VMA FM FC TD PHASEM PHASEC): amplitude-modulated sine, VO + (VMO + VMA sin(2 pi FM t)) sin(2 pi FC t).",
-        "TRNOISE(NA NT NALPHA NAMP RTSAM RTSCAPT RTSEMT): transient noise: white Gaussian noise of rms NA sampled every NT, 1/f noise with exponent NALPHA and amplitude NAMP, and random telegraph noise (Noise page).",
+        "TRNOISE(NA NT NALPHA NAMP RTSAM RTSCAPT RTSEMT): transient noise: white Gaussian noise with samples of rms NA every NT (linearly interpolated between samples, so the measured rms of the waveform is lower, about 0.82 NA), 1/f noise with exponent NALPHA and amplitude NAMP, and random telegraph noise (Noise page).",
         "TRRANDOM(TYPE TS TD PARAM1 PARAM2): a random value held for TS: type 1 uniform (range PARAM1 around offset PARAM2), 2 Gaussian (sigma PARAM1, mean PARAM2), 3 exponential, 4 Poisson. Feed it into a behavioural source to vary a parameter randomly during one run.",
         "EXTERNAL: the value is set by the program that calls ngspice as a shared library."
       ]
@@ -47,7 +47,7 @@
     },
     {
       "type": "prose",
-      "text": "ngspice adds a phase argument to SIN and PULSE: the waveform starts at time zero already shifted by that many degrees, instead of waiting a delay. Since version 46 PULSE also takes parameters by name (for example PULSE(V1=0 V2=1 TD=0 TR=1n TF=1n PW=5n PER=10n)). A PWL list can be read from a file through the XSPICE filesource model (Behavioural Modelling page), which also accepts engineering notation since version 47."
+      "text": "SIN takes a sixth argument, a phase in degrees, so the waveform starts at time zero already shifted instead of waiting a delay. For PULSE the eighth argument is NP, the number of pulses; it is read as a phase only with set ngbehavior=xs. A PWL list can be read from a file through the XSPICE filesource model (Behavioural Modelling page), which accepts engineering notation since version 47."
     },
     {
       "type": "heading",
@@ -79,7 +79,7 @@
     },
     {
       "type": "prose",
-      "text": "F and H sense the current through a voltage source named on the line (often a 0 V source added for the purpose). In ngspice 47 E and G can also take a VCCS-style differential pair of controlling nodes and an m multiplier."
+      "text": "F and H sense the current through a voltage source named on the line (often a 0 V source added for the purpose). E and G take a differential pair of controlling nodes, as in the lines above."
     },
     {
       "type": "heading",
@@ -91,9 +91,9 @@
       "items": [
         "VALUE: E1 out 0 VALUE = {V(a)*V(b)}, or the short form E1 out 0 vol='V(a)*V(b)' (cur= for G). Both become B sources inside.",
         "TABLE: E1 out 0 TABLE {V(in)} = (0,0) (1,2) (2,3): piecewise-linear lookup of an expression, clamped at the ends. Since version 46 the compact form TABLE = (x0, y0, x1, y1, ...) also works.",
-        "POLY(n): the SPICE2 polynomial source, E1 out 0 POLY(2) a 0 b 0 0 1 1 0 0.5 for out = V(a) + V(b) + 0.5 V(a)^2 ... (coefficients in SPICE2 order). ngspice turns it into the XSPICE spice2poly code model, which must be loaded (spinit does this).",
+        "POLY(n): the SPICE2 polynomial source, E1 out 0 POLY(2) a 0 b 0 0 1 1 0.5 for out = V(a) + V(b) + 0.5 V(a)^2 (coefficients in SPICE2 order: constant, V(a), V(b), V(a)^2, V(a)V(b), V(b)^2 ...). ngspice turns it into the XSPICE spice2poly code model, which must be loaded (spinit does this).",
         "LAPLACE and FREQ: transfer functions in s or as frequency tables; see Behavioural Modelling.",
-        "AND, OR, NAND, NOR: E1 out 0 AND(2) a 0 b 0 (0,0) (1,5): PSpice-style logic sources, accepted in PSpice mode."
+        "AND, OR, NAND, NOR: E1 out 0 AND(2) a 0 b 0 (0,0) (1,5): PSpice-style logic sources, accepted without any compatibility mode."
       ]
     },
     {

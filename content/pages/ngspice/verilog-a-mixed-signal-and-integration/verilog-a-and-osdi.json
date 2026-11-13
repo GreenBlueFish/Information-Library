@@ -18,8 +18,8 @@
       "items": [
         "OpenVAF was written by Pascal Kuthe at SemiMod; the original releases stopped at 23.5.0. Development continues as OpenVAF-Reloaded (Árpád Bűrmen, University of Ljubljana), with Linux and Windows binaries at fides.fe.uni-lj.si/openvaf/download and source at github.com/arpadbuermen/OpenVAF. Its executable is called openvaf-r.",
         "It is a single static executable: download, unpack, put it on your PATH. Building from source needs Rust and LLVM and is rarely worth it.",
-        "macOS has no official build; use Linux in a container or virtual machine, or build from source.",
-        "OSDI interface versions: ngspice 39 to 44 read OSDI 0.3; newer ngspice reads 0.4. OpenVAF-Reloaded builds named osdi_0.4 and osdi_0.5 exist; with ngspice 47 here, both a 0.4 and a 0.5 build loaded and ran the samples on this page. If ngspice refuses an .osdi file with a version message, use the OpenVAF build that matches it.",
+        "The ngspice manual says OSDI/OpenVAF is not available for macOS. OpenVAF-Reloaded lists x86_64-apple-darwin and aarch64-apple-darwin as cross-compilation targets, so a Mac .osdi file can be built on Linux (untested here); otherwise use Linux in a container or virtual machine.",
+        "OSDI interface versions: the original OpenVAF wrote OSDI 0.3, and OpenVAF-Reloaded has builds named osdi_0.3, osdi_0.4 and osdi_0.5. With ngspice 47 here, both a 0.4 and a 0.5 build loaded and ran the samples on this page; older ngspice versions may need an older OSDI version. If ngspice refuses an .osdi file with a version message, use the OpenVAF build that matches it.",
         "Your ngspice must have OSDI compiled in (default since version 43; --enable-osdi before). Try osdi or pre_osdi: an unknown-command error means it is missing."
       ]
     },
@@ -78,13 +78,13 @@
     {
       "type": "code",
       "lang": "spice",
-      "source": "Verilog-A diode (vdiode.va) against ngspice's built-in diode\n.model dva vdiode (is=1e-14 n=1 rs=10 cj0=1p vj=0.7 m=0.5 tt=5n)\n.model dsp D      (is=1e-14 n=1 rs=10 cjo=1p vj=0.7 m=0.5 tt=5n)\nI1 0 a DC 1m AC 1\nN1 a 0 dva\nI2 0 b DC 1m AC 1\nD1 b 0 dsp\n.control\n  pre_osdi vdiode.osdi\n  op\n  print v(a) v(b)\n  print @n1[id] @n1[gd]\n  show n1\n  showmod dva\n  noise v(a) I1 dec 10 1k 1meg 1\n  noise v(b) I2 dec 10 1k 1meg 1\n  print noise1.onoise_spectrum[10] noise3.onoise_spectrum[10]\n  setplot noise2\n  print onoise_total_n1_shot onoise_total_n1_thermal\n.endc\n.end\n"
+      "source": "Verilog-A diode (vdiode.va) against ngspice's built-in diode\n.model dva vdiode (is=1e-14 n=1 rs=10 cj0=1p vj=0.7 m=0.5 tt=5n)\n.model dsp D      (is=1e-14 n=1 rs=10 cjo=1p vj=0.7 m=0.5 tt=5n)\nI1 0 a DC 1m AC 1\nN1 a 0 dva\nI2 0 b DC 1m AC 1\nD1 b 0 dsp\n.control\n  pre_osdi vdiode.osdi\n  op\n  print v(a) v(b)\n  print @n1[id] @n1[gd]\n  show n1\n  noise v(a) I1 dec 10 1k 1meg 1\n  noise v(b) I2 dec 10 1k 1meg 1\n  print noise1.onoise_spectrum[10] noise3.onoise_spectrum[10]\n  setplot noise2\n  print onoise_total_n1_shot onoise_total_n1_thermal\n.endc\n.end\n"
     },
     {
       "type": "list",
       "items": [
         "Operating-point values: every variable in the Verilog-A source declared with a desc attribute ((* desc=\\\"...\\\", units=\\\"...\\\" *) real id;) becomes an output parameter, read as @n1[id] or listed by show n1. The CMC models define dozens (ids, vth, gm, gds, cgg ...).",
-        "showmod model prints the model parameters (version 45 and later); devhelp does not list OSDI modules.",
+        "showmod, which NEWS for version 45 says shows Verilog-A models, printed No matching instances or models for an OSDI model in this ngspice 47 build; read model values from the .model line, and instance values with show and @n1[...]. devhelp does not list OSDI modules.",
         "Internal nodes appear as vectors named n1#nodename; PSP and BSIM-CMG add many. save nointernals (version 45) leaves them out of the results.",
         "Noise: white_noise and flicker_noise contributions in the model take part in .noise and are reported by the name given in the source (onoise_total_n1_shot). This needs the Sparse solver: OSDI noise does not work with option klu.",
         "The run above gives the same voltage (0.665 V at 1 mA) and the same noise density (0.617 nV per root hertz at 10 kHz: shot noise of the junction, 0.46 nV, plus thermal noise of rs, 0.41 nV) for both diodes."
@@ -100,7 +100,7 @@
       "items": [
         "Sources: the Si2 Compact Model Coalition publishes the standard models; the GitHub repository dwarning/VA-Models collects most public ones, checked for OpenVAF and ngspice, with compile scripts and example netlists. The ngspice release folder has VAforOSDI.7z with the models used by the examples in ngspice/examples/osdi.",
         "MOS: BSIM-BULK (successor of BSIM4), BSIM-CMG (FinFET, gate-all-around), BSIM-IMG (FD-SOI), BSIM-SOI, PSP 103 (used by IHP SG13G2), HiSIM2, HiSIM_HV. Not every public model complies with the language standard: the manual names PSP 102 and EKV 2.6 as ones that do not.",
-        "Bipolar: HICUM/L0 and L2, Mextram 504 and 505, VBIC 1.3 with self-heating.",
+        "Bipolar: HICUM/L0 and L2, Mextram 504 and 505, VBIC with self-heating.",
         "Others: the r2_cmc and r3_cmc resistors, MOS varactors (IHP's mosvar), and ASM-HEMT for GaN HEMTs (named in ngspice's own spinit).",
         "Model cards from foundries are written for Spectre or HSPICE with level numbers; convert them as described above, and compare an I-V and C-V sweep against the foundry's reference before trusting a circuit result."
       ]

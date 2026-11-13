@@ -32,14 +32,14 @@
     {
       "type": "code",
       "lang": "spice",
-      "source": "Spectrum of a two-tone signal through a cubic nonlinearity\nVA a 0 SIN(0 0.5 10k)\nVB b a SIN(0 0.5 11k)\nBnl out 0 V = V(b) - 0.1*V(b)*V(b)*V(b)\nR1 out 0 1k\n.control\n  tran 0.5u 2m 0 0.5u\n  linearize v(out)               $ fft needs equally spaced points\n  set specwindow=blackman        $ hanning, hamming, blackman, flattop, gaussian, none ...\n  fft v(out)                     $ makes a new plot (sp1) with frequency as scale\n  meas sp p10k  find vdb(out) at=10k\n  meas sp im3lo find vdb(out) at=9k\n  let im3_dbc = im3lo - p10k\n  print im3_dbc\n.endc\n.end\n"
+      "source": "Spectrum of a two-tone signal through a cubic nonlinearity\nVA a 0 SIN(0 0.5 10k)\nVB b a SIN(0 0.5 11k)\nBnl out 0 V = V(b) - 0.1*V(b)*V(b)*V(b)\nR1 out 0 1k\n.control\n  tran 0.5u 2m 0 0.5u\n  linearize v(out)               $ fft needs equally spaced points\n  set specwindow=blackman        $ hanning, hamming, blackman, flattop, gaussian, none ...\n  fft v(out)                     $ makes a new plot (sp1) with frequency as scale\n  meas sp p10k  find vdb(out) at=10k\n  meas sp im3lo find vdb(out) at=9k\n  let im3_dbc = im3lo - p10k\n  print im3_dbc\n  setplot tran1                  $ exact tones: all are multiples of 1 kHz\n  set nfreqs=12\n  fourier 1k v(out)\n.endc\n.end\n"
     },
     {
       "type": "list",
       "items": [
         "fft vectors: a windowed FFT of transient vectors; the result is a new plot of complex spectra. Resolution is 1/(simulated time): 2 ms gives 500 Hz bins here, enough to separate 9, 10, 11 and 12 kHz. Run long enough for the resolution you need.",
         "The input must be on a uniform grid: run linearize (or set interp before the run) first. Without it ngspice interpolates for you and prints a note.",
-        "Windows: set specwindow to rectangular (none), bartlet, blackman, hanning, hamming, gaussian (with specwindoworder) or flattop. Blackman or Blackman-Harris for spurs far below the carrier, flattop for accurate amplitudes, none when the signal is exactly periodic in the window.",
+        "Windows: set specwindow to rectangular (none), bartlet, blackman, hanning, hamming, gaussian (with specwindoworder) or flattop. Blackman or Blackman-Harris for spurs far below the carrier, flattop for accurate amplitudes, none only when the record holds a whole number of periods and is not zero-padded (fft pads to a power of two, which breaks that; with none the two-tone sample's IM3 reading was off by tens of dB).",
         "spec fstart fstop fstep vectors: a DFT on a frequency grid you choose (the step must be at least 1/(simulated time)).",
         "psd smooth vectors: a single-sided power spectral density (the smooth argument averages adjacent bins), and it prints the total power up to the Nyquist frequency. Use it for transient-noise results.",
         "ifft goes back from a spectrum to time.",
@@ -48,7 +48,7 @@
     },
     {
       "type": "prose",
-      "text": "In the two-tone run the third-order intermodulation product at 2 x 10 kHz - 11 kHz = 9 kHz comes out 36 dB below each tone (dBc). For the nonlinearity y = x - a x^3 with two tones of amplitude A, theory gives IM3 = (3/4) a A^3 against a fundamental of A, which is -36 dB for a = 0.1 and A = 0.5, less the small compression of the fundamental: close to what the fft shows."
+      "text": "For y = x - a x^3 with two tones of amplitude A, theory gives an IM3 product of (3/4) a A^3 against a fundamental of A - (9/4) a A^3 after compression: for a = 0.1 and A = 0.5, 0.0188 against 0.472, which is -34.0 dBc. fourier with a 1 kHz fundamental (every tone is a multiple of it) reports exactly that: the 9 kHz magnitude (0.00936) is 34.05 dB below the 10 kHz one (0.472). Ignore its THD and normalised columns here, which are relative to the empty 1 kHz bin. The fft readout gives -36.3 dBc, 2.3 dB off: the 2 ms record is zero-padded to a power of two and the tones do not fall on bin centres, so peak readings from an fft are approximate. Use fft to see the spectrum, and fourier or a longer, exactly periodic record when the number matters."
     },
     {
       "type": "heading",
