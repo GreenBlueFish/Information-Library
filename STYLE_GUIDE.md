@@ -100,6 +100,25 @@ seventh color.
 
 ---
 
+### Dark mode
+
+Every colour above has a dark value in the `:root[data-theme="dark"]` block at
+the end of `tokens.css`. The theme is the `data-theme` attribute on `<html>`:
+an inline script in `index.html` sets it before first paint from the reader's
+saved choice (`localStorage` key `alexandria-theme`), else from the system's
+`prefers-color-scheme`. The header button (`.theme-toggle`, `src/theme.js`)
+switches it and saves the choice; until the reader chooses, the page follows
+the system setting live.
+
+Rules that keep both themes working:
+- Never hard-code a colour in CSS or JS; use a token, so it gets a dark value.
+  A new colour token needs a value in **both** blocks.
+- Figures sit on `--color-figure-bg`, which stays light in dark mode, because
+  the SVG diagrams carry the light token hex values. Keep drawing diagrams for
+  a light ground.
+- Widgets draw with the plot and series tokens (CSS classes in `plot.js`), so
+  they switch with the page.
+
 ## 2. Typography
 
 ### Font families
