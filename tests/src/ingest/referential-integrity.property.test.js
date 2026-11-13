@@ -51,6 +51,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "../../harness.js";
 import * as fcNS from "https://cdn.jsdelivr.net/npm/fast-check/+esm";
 import { resolveRoute, parseHash, SLUG_PATTERN } from "../../../src/router.js";
+import { readTopicTree } from "../../../scripts/topic-tree.js";
 
 // fast-check's ESM build exposes its API on the module namespace; some bundles
 // also nest it under `default`. Normalize to a single `fc` handle either way.
@@ -353,9 +354,7 @@ describe(
 
     // (a) REAL-CONTENT direction — the live library is referentially sound.
     it("accepts the real content/topics.json + the split glossaries (every reference resolves)", () => {
-      const tree = JSON.parse(
-        readFileSync(join(repoRoot, "content", "topics.json"), "utf8"),
-      );
+      const tree = readTopicTree(repoRoot);
       // The legacy content/terms.json was deleted in task 18; concatenate the
       // split Glossary_Files in Manifest order to reconstruct the term array.
       const manifest = JSON.parse(

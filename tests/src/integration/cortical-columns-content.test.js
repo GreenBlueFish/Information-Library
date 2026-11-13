@@ -5,7 +5,7 @@
 // that point into it. Complements the generic ingest property tests (schema,
 // referential integrity, term collisions) with topic-specific guarantees:
 //
-//   - the topic is a top-level node whose every node has a page that exists,
+//   - the topic is a node on its shelf whose every node has a page that exists,
 //     parses, and resolves through the runtime router;
 //   - every page has a title, real content, and ends with a "Sources:" callout
 //     (the project's attribution convention, see page-schema.property.test.js);
@@ -21,12 +21,13 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "../../harness.js";
 import { resolveRoute, parseHash } from "../../../src/router.js";
 import { hasWidget } from "../../../src/widgets/registry.js";
+import { readTopicTree } from "../../../scripts/topic-tree.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..", "..");
 const TOPIC = "computational-cortical-columns";
 
-const topics = JSON.parse(readFileSync(join(repoRoot, "content", "topics.json"), "utf8"));
+const topics = readTopicTree(repoRoot);
 
 // The legacy single content/terms.json was deleted in task 18. The glossary
 // data now lives split across one file per Top_Level_Topic, listed in the
@@ -43,7 +44,8 @@ function loadSplitTerms() {
   return all;
 }
 const terms = loadSplitTerms();
-const topic = topics.children.find((c) => c.slug === TOPIC);
+const SHELF = "brain";
+const topic = topics.children.find((c) => c.slug === SHELF)?.children?.find((c) => c.slug === TOPIC);
 
 /** Parameter keys each simulation widget type documents (PROJECT_GUIDE §7.3). */
 const WIDGET_KEYS = {
@@ -63,7 +65,7 @@ function walk(node, prefix, out = []) {
   return out;
 }
 
-const nodes = topic ? walk(topic, "") : [];
+const nodes = topic ? walk(topic, `/${SHELF}`) : [];
 const pages = nodes.map(({ node, route }) => ({
   route,
   path: node.page,
@@ -83,17 +85,17 @@ async function registerAllTypes() {
 }
 
 describe("computational cortical columns — content integrity", () => {
-  it("is a top-level topic with a deep tree of at least 8 sections and 40 pages", () => {
+  it("is a topic on its shelf with a deep tree of at least 8 sections and 40 pages", () => {
     expect(topic === undefined).toBe(false);
     expect(topic.children.length >= 8).toBe(true);
     expect(nodes.length >= 40).toBe(true);
-    expect(nodes.some(({ route }) => route.split("/").length === 4)).toBe(true);
+    expect(nodes.some(({ route }) => route.split("/").length === 5)).toBe(true);
   });
 
-  it("every node has a page under content/pages/computational-cortical-columns/ that exists and resolves", () => {
+  it("every node has a page under content/pages/brain/computational-cortical-columns/ that exists and resolves", () => {
     for (const { node, route } of nodes) {
       expect(typeof node.page).toBe("string");
-      expect(node.page.startsWith(`content/pages/${TOPIC}/`)).toBe(true);
+      expect(node.page.startsWith(`content/pages/${SHELF}/${TOPIC}/`)).toBe(true);
       expect(existsSync(join(repoRoot, node.page))).toBe(true);
       const res = resolveRoute(topics, parseHash(`#${route}`));
       expect(Boolean(res && res.node)).toBe(true);
@@ -136,7 +138,7 @@ describe("computational cortical columns — content integrity", () => {
   });
 
   it("has glossary coverage: at least 60 terms point into the topic and all of them resolve", () => {
-    const own = terms.filter((t) => typeof t.pageRef === "string" && t.pageRef.startsWith(`/${TOPIC}`));
+    const own = terms.filter((t) => typeof t.pageRef === "string" && t.pageRef.startsWith(`/${SHELF}/${TOPIC}`));
     expect(own.length >= 60).toBe(true);
     for (const t of own) {
       const res = resolveRoute(topics, parseHash(`#${t.pageRef}`));

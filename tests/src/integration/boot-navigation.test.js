@@ -46,7 +46,7 @@
 // boot against whatever ambient DOM/location/fetch exist at import time. We make
 // that deterministic by:
 //   - installing the full environment (shell + location + fetch) FIRST, with the
-//     initial hash already set to "#/snn", THEN importing main.js. The auto-run
+//     initial hash already set to "#/brain/snn", THEN importing main.js. The auto-run
 //     therefore boots the route we want.
 //   - also importing the EXPORTED `boot` and awaiting a fresh `boot()` call so we
 //     have a Promise to await before asserting (the top-level call's Promise is
@@ -123,7 +123,7 @@ if (!nav) {
 // global (read by render()) and window.location (read by onRouteChange). Setting
 // `.hash` stores the normalized value; navigation is driven by dispatching a
 // `hashchange` on window (see navigate() below).
-const locationShim = { hash: "#/snn", protocol: "http:" };
+const locationShim = { hash: "#/brain/snn", protocol: "http:" };
 globalThis.location = locationShim;
 try {
   // linkedom's window has no own `location`; define it to point at the same shim.
@@ -230,7 +230,7 @@ function resetWidgetStats() {
 // Boot the real runtime EXACTLY ONCE.
 //
 // main.js runs boot() at module top-level, so importing it boots the runtime a
-// single time against the environment installed above (initial hash "#/snn").
+// single time against the environment installed above (initial hash "#/brain/snn").
 // We deliberately do NOT call the exported boot() again: each boot() subscribes
 // its own `onRouteChange` handler and installs its own lookup closure, so
 // re-booting would stack renders and lookup panels — artifacts of the test, not
@@ -281,7 +281,7 @@ async function waitFor(predicate, describe, tries = 200) {
  * this exercises the runtime's own hashchange → re-resolve → re-render path
  * (Requirement 2.5).
  *
- * @param {string} hash e.g. "#/snn/neuron-models"
+ * @param {string} hash e.g. "#/brain/snn/neuron-models"
  * @param {string} expectedTitle The .page-title text the destination renders.
  */
 async function navigate(hash, expectedTitle) {
@@ -316,24 +316,24 @@ function removeLookupPanels() {
   }
 }
 
-// Wait for the single auto-run boot's initial render to settle at "#/snn" before
+// Wait for the single auto-run boot's initial render to settle at "#/brain/snn" before
 // the suite's assertions, so the first case sees a fully rendered page.
 await waitFor(
   () => {
     const t = app.querySelector(".page .page-title");
     return !!t && t.textContent === "Spiking Neural Networks";
   },
-  'initial boot to render the SNN page at "#/snn"',
+  'initial boot to render the SNN page at "#/brain/snn"',
 );
 
 describe("boot + navigation integration (R2.5, R3.3, R8.4, R10.7)", () => {
   // =========================================================================
-  // R3.3 / R14.1 — after boot at "#/snn", #app renders the SNN page and #nav
+  // R3.3 / R14.1 — after boot at "#/brain/snn", #app renders the SNN page and #nav
   // carries the tree + breadcrumb.
   // =========================================================================
   describe("initial boot renders the resolved page and nav", () => {
     it("renders the SNN page into #app (a .page titled 'Spiking Neural Networks')", async () => {
-      await navigate("#/snn", "Spiking Neural Networks");
+      await navigate("#/brain/snn", "Spiking Neural Networks");
 
       const page = app.querySelector(".page");
       expect(page).toBeTruthy();
@@ -353,7 +353,7 @@ describe("boot + navigation integration (R2.5, R3.3, R8.4, R10.7)", () => {
       expect(tree).toBeTruthy();
       // …and includes a link to the active SNN route.
       const links = Array.from(nav.querySelectorAll(".nav-tree__link"));
-      const snnLink = links.find((a) => a.getAttribute("href") === "#/snn");
+      const snnLink = links.find((a) => a.getAttribute("href") === "#/brain/snn");
       expect(snnLink).toBeTruthy();
 
       // A breadcrumb trail exists for the active (non-home) route (R2.3).
@@ -367,6 +367,13 @@ describe("boot + navigation integration (R2.5, R3.3, R8.4, R10.7)", () => {
   // R2.5 / R3.3 — navigating to a deeper route re-renders the page WITHOUT a
   // full reload (driven purely by setting the hash + a hashchange event).
   // =========================================================================
+  describe("old addresses from before the shelves still open their page", () => {
+    it("'#/snn/neuron-models' (now under /brain) renders Neuron Models", async () => {
+      await navigate("#/snn/neuron-models", "Neuron Models");
+      expect(app.querySelector(".page-title")?.textContent).toBe("Neuron Models");
+    });
+  });
+
   describe("hash navigation re-renders without a reload (R2.5, R3.3)", () => {
     it("navigating to '#/snn/neuron-models' re-renders #app to that page", async () => {
       // Hold a reference to the current page element; after navigation the app
@@ -375,7 +382,7 @@ describe("boot + navigation integration (R2.5, R3.3, R8.4, R10.7)", () => {
       const before = app.querySelector(".page");
       expect(before).toBeTruthy();
 
-      await navigate("#/snn/neuron-models", "Neuron Models");
+      await navigate("#/brain/snn/neuron-models", "Neuron Models");
 
       const page = app.querySelector(".page");
       expect(page).toBeTruthy();
@@ -391,7 +398,7 @@ describe("boot + navigation integration (R2.5, R3.3, R8.4, R10.7)", () => {
     });
 
     it("navigating back to '#/snn' restores the SNN page", async () => {
-      await navigate("#/snn", "Spiking Neural Networks");
+      await navigate("#/brain/snn", "Spiking Neural Networks");
       const title = app.querySelector(".page .page-title");
       expect(title.textContent).toBe("Spiking Neural Networks");
     });
@@ -424,11 +431,11 @@ describe("boot + navigation integration (R2.5, R3.3, R8.4, R10.7)", () => {
       // Drive the real runtime through several navigations so that, under the
       // OLD per-render install, listeners would have accumulated on #app. The
       // one-install-at-boot runtime keeps exactly one set of listeners regardless.
-      await navigate("#/snn", "Spiking Neural Networks");
-      await navigate("#/snn/neuron-models", "Neuron Models");
-      await navigate("#/snn", "Spiking Neural Networks");
-      await navigate("#/snn/neuron-models", "Neuron Models");
-      await navigate("#/snn", "Spiking Neural Networks");
+      await navigate("#/brain/snn", "Spiking Neural Networks");
+      await navigate("#/brain/snn/neuron-models", "Neuron Models");
+      await navigate("#/brain/snn", "Spiking Neural Networks");
+      await navigate("#/brain/snn/neuron-models", "Neuron Models");
+      await navigate("#/brain/snn", "Spiking Neural Networks");
 
       // Stub the ambient selection so a raw gesture on #app resolves to a real
       // indexed term (the booted lookup queries the index boot built). We vary
@@ -495,17 +502,17 @@ describe("boot + navigation integration (R2.5, R3.3, R8.4, R10.7)", () => {
     it("destroys prior widgets on re-render — live instances never exceed one page", async () => {
       // Start on a page WITHOUT the widget so the destroy of any prior render's
       // widget has already run, THEN reset the counters from a clean baseline.
-      await navigate("#/snn", "Spiking Neural Networks");
+      await navigate("#/brain/snn", "Spiking Neural Networks");
       resetWidgetStats(); // no widget is live on the SNN index
       expect(widgetStats.live).toBe(0);
 
       // Bounce into and out of the widget page several times.
       for (let i = 0; i < 3; i++) {
-        await navigate("#/snn/neuron-models", "Neuron Models"); // page WITH one widget
+        await navigate("#/brain/snn/neuron-models", "Neuron Models"); // page WITH one widget
         // Exactly one spy widget is live while the widget page is shown.
         expect(widgetStats.live).toBe(1);
 
-        await navigate("#/snn", "Spiking Neural Networks"); // page WITHOUT the widget
+        await navigate("#/brain/snn", "Spiking Neural Networks"); // page WITHOUT the widget
         // Leaving the widget page destroyed its instance — nothing lingers.
         expect(widgetStats.live).toBe(0);
       }

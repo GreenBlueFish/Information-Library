@@ -3,7 +3,7 @@
 // Integrity tests for the "Communication Protocols" topic and for figure
 // blocks everywhere:
 //
-//   - the topic is a top-level node with exactly one subtopic, VGA, and every
+//   - the topic is a node on its shelf with exactly one subtopic, VGA, and every
 //     node has a page that exists, parses and resolves through the router;
 //   - every page ends with a "Sources:" block;
 //   - the VGA page embeds the vga-scanline widget with the keys it documents
@@ -18,12 +18,13 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "../../harness.js";
 import { resolveRoute, parseHash } from "../../../src/router.js";
 import { MODES } from "../../../src/widgets/types/vga-scanline.js";
+import { readTopicTree } from "../../../scripts/topic-tree.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..", "..");
 const TOPIC = "communication-protocols";
 
-const topics = JSON.parse(readFileSync(join(repoRoot, "content", "topics.json"), "utf8"));
+const topics = readTopicTree(repoRoot);
 
 // The legacy single content/terms.json was deleted in task 18. The glossary
 // data now lives split across one file per Top_Level_Topic, listed in the
@@ -40,7 +41,8 @@ function loadSplitTerms() {
   return all;
 }
 const terms = loadSplitTerms();
-const topic = topics.children.find((c) => c.slug === TOPIC);
+const SHELF = "electronics";
+const topic = topics.children.find((c) => c.slug === SHELF)?.children?.find((c) => c.slug === TOPIC);
 
 const readPage = (rel) => JSON.parse(readFileSync(join(repoRoot, rel), "utf8"));
 
@@ -55,7 +57,7 @@ function allPageFiles(dir = join(repoRoot, "content", "pages"), rel = "content/p
 }
 
 describe("communication-protocols content", () => {
-  it("is a top-level topic whose only subtopic is VGA", () => {
+  it("is a topic on its shelf whose only subtopic is VGA", () => {
     expect(topic === undefined).toBe(false);
     expect((topic.children ?? []).map((c) => c.slug)).toEqual(["vga"]);
   });
@@ -68,7 +70,7 @@ describe("communication-protocols content", () => {
       const last = page.blocks.at(-1);
       expect(last.text.startsWith("Sources:")).toBe(true);
     }
-    const res = resolveRoute(topics, parseHash("/communication-protocols/vga"), () => {});
+    const res = resolveRoute(topics, parseHash("/electronics/communication-protocols/vga"), () => {});
     expect(res.node.slug).toBe("vga");
   });
 
@@ -97,7 +99,7 @@ describe("communication-protocols content", () => {
   });
 
   it("glossary terms pointing into the topic resolve", () => {
-    const into = terms.filter((t) => typeof t.pageRef === "string" && t.pageRef.startsWith(`/${TOPIC}`));
+    const into = terms.filter((t) => typeof t.pageRef === "string" && t.pageRef.startsWith(`/${SHELF}/${TOPIC}`));
     expect(into.length >= 10).toBe(true);
     for (const t of into) {
       const segments = parseHash(t.pageRef);

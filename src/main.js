@@ -77,6 +77,8 @@ import {
   loadPage,
   loadManifest,
   loadGlossaries,
+  loadRedirects,
+  redirectSegments,
   ContentLoadError,
 } from "./content-loader.js";
 import { renderPage, renderNav, renderError } from "./renderer.js";
@@ -403,9 +405,12 @@ export async function boot() {
   let tree;
   /** @type {Manifest} */
   let manifest;
+  /** @type {Record<string, string>} */
+  let redirects = {};
   try {
     tree = /** @type {TopicNode} */ (await loadTopics());
     manifest = /** @type {Manifest} */ (await loadManifest());
+    redirects = await loadRedirects();
   } catch (err) {
     reportBootError(err, app);
     return;
@@ -469,7 +474,25 @@ export async function boot() {
 
     // Parse the hash once: both the route resolution and the Scope_Chain wiring
     // below read the same slug segments (Flow 2 step 1).
-    const segments = parseHash(location.hash);
+    let segments = parseHash(location.hash);
+
+    // An old address (a topic that has since moved, e.g. `#/snn/...` before the
+    // shelves) renders the page where it lives now. Only a route that no longer
+    // resolves is redirected; the address bar is corrected with replaceState,
+    // which keeps the old address out of the history and fires no hashchange.
+    if (segments.length > 0 && resolveRoute(tree, segments) === null) {
+      const moved = redirectSegments(redirects, segments);
+      if (moved && moved.join("/") !== segments.join("/") && resolveRoute(tree, moved) !== null) {
+        segments = moved;
+        if (typeof history !== "undefined" && typeof history.replaceState === "function") {
+          try {
+            history.replaceState(history.state, "", "#/" + moved.join("/"));
+          } catch {
+            // A sandboxed frame may refuse; the page still renders at its new home.
+          }
+        }
+      }
+    }
 
     // Resolve the route. A null resolution (bad/duplicate slug, missing leaf
     // page) is treated as the home route by the renderer; an empty/unknown hash

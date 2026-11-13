@@ -31,6 +31,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, it, expect } from "../../harness.js";
 import { resolveRoute } from "../../../src/router.js";
+import { readTopicTree } from "../../../scripts/topic-tree.js";
 
 // This file lives at <repo>/tests/src/integration/, so the repo root is three
 // directories up. Everything below is resolved against it.
@@ -45,7 +46,7 @@ function readJson(relPath) {
 }
 
 // Load the real seed content once; every case below reads from these.
-const topics = readJson("content/topics.json");
+const topics = readTopicTree(repoRoot);
 
 /**
  * Collect every leaf node (no children) in the topic tree, remembering the

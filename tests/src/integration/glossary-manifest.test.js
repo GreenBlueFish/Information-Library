@@ -41,6 +41,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, it, expect } from "../../harness.js";
 import { parseHash, resolveRoute } from "../../../src/router.js";
+import { readTopicTree } from "../../../scripts/topic-tree.js";
 
 // This file lives at <repo>/tests/src/integration/, so the repo root is three
 // directories up. Everything below is resolved against it.
@@ -53,7 +54,7 @@ function readJson(relPath) {
   return JSON.parse(readFileSync(abs, "utf8"));
 }
 
-const topics = readJson("content/topics.json");
+const topics = readTopicTree(repoRoot);
 const manifest = readJson("content/terms/index.json");
 
 const glossaries = Array.isArray(manifest.glossaries) ? manifest.glossaries : [];

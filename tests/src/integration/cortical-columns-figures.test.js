@@ -20,7 +20,7 @@ import { describe, it, expect } from "../../harness.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..", "..");
 const FIG_DIR = "assets/figures/computational-cortical-columns";
-const PAGE_ROOTS = ["content/pages/computational-cortical-columns", "content/pages/neuroscience/cortical-columns"];
+const PAGE_ROOTS = ["content/pages/brain/computational-cortical-columns", "content/pages/brain/neuroscience/cortical-columns"];
 
 function jsonFiles(dir) {
   return readdirSync(join(repoRoot, dir)).flatMap((name) => {
@@ -36,7 +36,7 @@ const figures = PAGE_ROOTS.flatMap(jsonFiles).flatMap((path) =>
     .map((b) => ({ path, ...b })),
 );
 const credits = readFileSync(join(repoRoot, FIG_DIR, "CREDITS.md"), "utf8");
-const CREDITS_PAGE = "content/pages/computational-cortical-columns/image-credits/index.json";
+const CREDITS_PAGE = "content/pages/credits/index.json";
 const rows = credits
   .split("\n")
   .filter((line) => line.startsWith("| `"))

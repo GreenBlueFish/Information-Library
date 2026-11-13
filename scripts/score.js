@@ -38,11 +38,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { parseHash, resolveRoute } from "../src/router.js";
 import { clearWidgetRegistry, registerWidget } from "../src/widgets/registry.js";
+import { readTopicTree } from "./topic-tree.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 export const MIN_TEXT = 1000;
-export const COLUMN_ROOTS = ["computational-cortical-columns", "neuroscience/cortical-columns"];
+export const COLUMN_ROOTS = ["brain/computational-cortical-columns", "brain/neuroscience/cortical-columns"];
 export const WEIGHTS = { pages: 1, columnPages: 2, simPages: 3, sims: 3, linksPer: 10 };
 
 /** The readable text in a content block, whitespace collapsed. */
@@ -236,7 +237,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   // tests/vendor/, as they do for the test suite.
   register("../tests/net/hooks.js", import.meta.url);
   const readJson = (rel) => JSON.parse(readFileSync(join(root, rel), "utf8"));
-  const r = await measure(readJson("content/topics.json"), readJson("content/terms.json"), readJson);
+  const r = await measure(readTopicTree(root), readJson("content/terms.json"), readJson);
   console.log(`pages with content (>= ${MIN_TEXT} chars): ${r.pages}`);
   console.log(`  of them on cortical columns: ${r.columnPages}`);
   console.log(`  of them with a working simulation set up anew: ${r.simPages}`);

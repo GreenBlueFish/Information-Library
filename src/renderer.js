@@ -273,7 +273,7 @@ function buildTree(nodes, ancestorSlugs, activePath) {
   const list = el("ul", "nav-tree");
 
   for (const node of nodes) {
-    if (!node || typeof node.slug !== "string") continue;
+    if (!node || typeof node.slug !== "string" || node.hidden) continue;
 
     const slugPath = ancestorSlugs.concat(node.slug);
     const item = el("li", "nav-tree__item");
@@ -480,12 +480,38 @@ function renderHome(resolution) {
   termResults.appendChild(el("ul", "home-terms__list"));
   home.appendChild(termResults);
 
+  // Shelves (root nodes marked `"shelf": true`) each get a section of their
+  // own, in authored order, holding a card per topic on the shelf. Any other
+  // visible root node gets a card in a grid of its own after the shelves.
+  // Hidden nodes (`"hidden": true`, e.g. the Credits page) get no card.
+  const authored = tree && Array.isArray(tree.children) ? tree.children : [];
+  for (const shelf of authored) {
+    if (!shelf || !shelf.shelf || shelf.hidden || typeof shelf.slug !== "string") continue;
+    const section = el("section", "home-shelf");
+    section.setAttribute("aria-label", shelf.title ?? shelf.slug);
+    const heading = el("h2", "home-shelf__title");
+    const link = el("a", "home-shelf__link", shelf.title ?? shelf.slug);
+    link.setAttribute("href", hrefForPath([shelf.slug]));
+    heading.appendChild(link);
+    section.appendChild(heading);
+    const shelfGrid = el("ul", "home-grid");
+    for (const node of sortByTitle(shelf.children).filter((n) => n && !n.hidden)) {
+      const card = buildHomeCard(node, [shelf.slug, node.slug]);
+      if (card) shelfGrid.appendChild(card);
+    }
+    section.appendChild(shelfGrid);
+    home.appendChild(section);
+  }
+
   const grid = el("ul", "home-grid");
   for (const node of roots) {
+    if (!node || node.shelf || node.hidden) continue;
     const card = buildHomeCard(node, [node.slug]);
     if (card) grid.appendChild(card);
   }
-  home.appendChild(grid);
+  if (grid.childNodes.length > 0 || !authored.some((n) => n && n.shelf)) {
+    home.appendChild(grid);
+  }
 
   // Wire the home behavior (search filter + per-card expand/collapse) onto the
   // freshly built nodes before returning (home-topic-browse — Requirements 1.3,
@@ -697,7 +723,7 @@ function pageOrder(tree) {
   const walk = (nodes, ancestors) => {
     if (!Array.isArray(nodes)) return;
     for (const node of nodes) {
-      if (!node || typeof node.slug !== "string") continue;
+      if (!node || typeof node.slug !== "string" || node.hidden) continue;
       const path = ancestors.concat(node.slug);
       order.push({ node, path });
       walk(node.children, path);
