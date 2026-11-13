@@ -166,66 +166,16 @@
     },
     {
       "type": "prose",
-      "text": "Forward Euler with a 0.05-0.1 ms step is accurate enough for most purposes. Spikes are drawn as a vertical line to +20 mV for visibility; the model itself only records the spike time."
+      "text": "The same Euler step in JavaScript, with the defaults of the widget above. A 0.05-0.1 ms step is accurate enough for most purposes; the model only records the spike time."
     },
     {
       "type": "code",
       "lang": "js",
-      "source": "function lifStep(v, I, dt, p) {\n  // p = { tau: 10, EL: -65, R: 10, vth: -50, vreset: -70 }\n  v += (dt / p.tau) * (-(v - p.EL) + p.R * I);\n  if (v >= p.vth) return { v: p.vreset, spike: true };\n  return { v, spike: false };\n}"
-    },
-    {
-      "type": "widget",
-      "widget": {
-        "type": "parameter-plot",
-        "title": "LIF membrane potential under a current step",
-        "params": [
-          {
-            "key": "current",
-            "label": "Input current (nA)",
-            "control": "range",
-            "min": 0,
-            "max": 5,
-            "step": 0.1,
-            "default": 2
-          },
-          {
-            "key": "tau",
-            "label": "Membrane time constant (ms)",
-            "control": "range",
-            "min": 2,
-            "max": 40,
-            "step": 1,
-            "default": 10
-          },
-          {
-            "key": "threshold",
-            "label": "Threshold (mV)",
-            "control": "range",
-            "min": -60,
-            "max": -40,
-            "step": 1,
-            "default": -50
-          },
-          {
-            "key": "refractory",
-            "label": "Refractory period (ms)",
-            "control": "range",
-            "min": 0,
-            "max": 10,
-            "step": 0.5,
-            "default": 2
-          }
-        ],
-        "config": {
-          "sim": "lif",
-          "xLabel": "time (ms)",
-          "yLabel": "membrane potential (mV)"
-        }
-      }
+      "source": "function lifStep(v, I, dt, p) {\n  // p = { tau: 20, vrest: -65, R: 10, vth: -50, vreset: -65 }  (the widget defaults above)\n  v += (dt / p.tau) * (-(v - p.vrest) + p.R * I);\n  if (v >= p.vth) return { v: p.vreset, spike: true };\n  return { v, spike: false };\n}"
     },
     {
       "type": "prose",
-      "text": "Things to try: set the current to 1.4 nA and the neuron charges toward -51 mV and never fires; at 1.6 nA it fires slowly. Raise the refractory period and watch the maximum rate fall. Shorten tau_m and the voltage tracks the input almost instantly."
+      "text": "The plot below draws the whole f–I curve at once. Shorten the membrane time constant and the curve shifts and steepens; raise the refractory period and its ceiling, $1/t_{ref}$, comes down. This closed form is one reason the LIF dominates theory: rates, population activity and NEF tuning curves can all be written down analytically (see #/brain/foundations/nef, where exactly this formula forms the tuning curves)."
     },
     {
       "type": "widget",
@@ -240,7 +190,7 @@
             "min": 2,
             "max": 40,
             "step": 1,
-            "default": 10
+            "default": 20
           },
           {
             "key": "refractory",
@@ -313,20 +263,6 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "What each parameter does"
-    },
-    {
-      "type": "list",
-      "items": [
-        "tau_m (about 10-20 ms): memory of the membrane. Large tau_m integrates many inputs over a long window; small tau_m makes the neuron a coincidence detector.",
-        "R (input resistance): converts current to voltage; together with the threshold gap it sets the rheobase I_rh = (V_th - V_rest) / R.",
-        "V_th and V_reset: the spike criterion and where the voltage restarts. A reset below rest gives a brief after-hyperpolarization.",
-        "t_ref (1-5 ms): absolute refractory period; caps the firing rate at 1 / t_ref."
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
       "text": "What the LIF leaves out"
     },
     {
@@ -382,7 +318,7 @@
     },
     {
       "type": "prose",
-      "text": "Sources: Lapicque, L. (1907). Recherches quantitatives sur l'excitation électrique des nerfs traitée comme une polarisation. Journal de Physiologie et de Pathologie Générale; Hodgkin, A. L. & Huxley, A. F. (1952). A quantitative description of membrane current and its application to conduction and excitation in nerve. Journal of Physiology; Dayan, P. & Abbott, L. F. (2001). Theoretical Neuroscience. MIT Press; Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014). Neuronal Dynamics: From Single Neurons to Networks and Models of Cognition. Cambridge University Press; Rotter, S. & Diesmann, M. (1999). Exact digital simulation of time-invariant linear systems with applications to neuronal modeling. Biological Cybernetics; Brette, R. & Gerstner, W. (2005). Adaptive exponential integrate-and-fire model as an effective description of neuronal activity. Journal of Neurophysiology; van Vreeswijk, C. & Sompolinsky, H. (1996). Chaos in neuronal networks with balanced excitatory and inhibitory activity. Science; Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience; Destexhe, A., Rudolph, M. & Paré, D. (2003). The high-conductance state of neocortical neurons in vivo. Nature Reviews Neuroscience; Potjans, T. C. & Diesmann, M. (2014). The cell-type specific cortical microcircuit: relating structure and activity in a full-scale spiking network model. Cerebral Cortex; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Davies, M. et al. (2018). Loihi: A neuromorphic manycore processor with on-chip learning. IEEE Micro; Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife; Lapicque (1907), as reviewed in Abbott, \"Lapicque's introduction of the integrate-and-fire model neuron\" (Brain Research Bulletin, 1999); Gerstner, Kistler, Naud & Paninski, Neuronal Dynamics (Cambridge University Press, 2014), chapter 1; Dayan & Abbott, Theoretical Neuroscience (MIT Press, 2001), chapter 5."
+      "text": "Sources: Lapicque, L. (1907). Recherches quantitatives sur l'excitation électrique des nerfs traitée comme une polarisation. Journal de Physiologie et de Pathologie Générale (reviewed in Abbott, L. F. (1999). Lapicque's introduction of the integrate-and-fire model neuron. Brain Research Bulletin); Hodgkin, A. L. & Huxley, A. F. (1952). A quantitative description of membrane current and its application to conduction and excitation in nerve. Journal of Physiology; Dayan, P. & Abbott, L. F. (2001). Theoretical Neuroscience. MIT Press; Gerstner, W., Kistler, W. M., Naud, R. & Paninski, L. (2014). Neuronal Dynamics: From Single Neurons to Networks and Models of Cognition. Cambridge University Press; Rotter, S. & Diesmann, M. (1999). Exact digital simulation of time-invariant linear systems with applications to neuronal modeling. Biological Cybernetics; Brette, R. & Gerstner, W. (2005). Adaptive exponential integrate-and-fire model as an effective description of neuronal activity. Journal of Neurophysiology; van Vreeswijk, C. & Sompolinsky, H. (1996). Chaos in neuronal networks with balanced excitatory and inhibitory activity. Science; Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience; Destexhe, A., Rudolph, M. & Paré, D. (2003). The high-conductance state of neocortical neurons in vivo. Nature Reviews Neuroscience; Potjans, T. C. & Diesmann, M. (2014). The cell-type specific cortical microcircuit: relating structure and activity in a full-scale spiking network model. Cerebral Cortex; Diehl, P. U. & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Davies, M. et al. (2018). Loihi: A neuromorphic manycore processor with on-chip learning. IEEE Micro; Stimberg, M., Brette, R. & Goodman, D. F. M. (2019). Brian 2, an intuitive and efficient neural simulator. eLife."
     }
   ]
 }

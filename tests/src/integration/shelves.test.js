@@ -90,6 +90,12 @@ describe("shelves: the topic tree", () => {
     expect(orphans).toEqual([]);
   });
 
+  it("no Computational Cortical Columns text refers to a numbered section", () => {
+    const bad = pageFiles("content/pages/brain").filter((f) =>
+      /\b[Ss]ections? [1-9](?!\d|\.\d)/.test(readFileSync(join(repoRoot, f), "utf8")));
+    expect(bad).toEqual([]);
+  });
+
   it("no title starts with a number", () => {
     for (const { node } of nodes()) {
       if (/^\d+\.\s/.test(node.title)) throw new Error(`numbered title: ${node.title}`);
@@ -104,6 +110,12 @@ describe("shelves: redirects", () => {
     for (const [from, to] of Object.entries(redirects)) {
       expect(resolveRoute(tree, parseHash(to)) !== null).toBe(true);
       expect(resolveRoute(tree, parseHash(from))).toBe(null);
+    }
+  });
+
+  it("no redirect points at another redirect", () => {
+    for (const to of Object.values(redirects)) {
+      expect(redirectSegments(redirects, parseHash(to))).toBe(null);
     }
   });
 
@@ -193,5 +205,19 @@ describe("path steps (ref nodes)", () => {
     const note = mount.querySelector(".page-ref-note");
     expect(note.textContent).toBe("This page lives in Ref Topic.");
     expect(note.querySelector("a").getAttribute("href")).toBe("#/s/ref-topic/leaf");
+  });
+});
+
+describe("shared pages search both topics' glossaries", async () => {
+  const { linkedRoutes, topLevelTitle } = await import("../../../src/main.js");
+  it("a step links to the page it borrows, and the page links back to the step", () => {
+    const step = ["brain", "computational-cortical-columns", "spiking-neuron-models", "leaky-integrate-and-fire"];
+    expect(linkedRoutes(tree, step)).toEqual([["brain", "snn", "neuron-models", "lif"]]);
+    expect(linkedRoutes(tree, ["brain", "snn", "neuron-models", "lif"])).toEqual([step]);
+    expect(linkedRoutes(tree, ["brain", "snn"])).toEqual([]);
+  });
+  it("the topic title skips the shelf", () => {
+    expect(topLevelTitle(tree, ["brain", "snn", "encoding"])).toBe("Spiking Neural Networks");
+    expect(topLevelTitle(tree, ["brain"])).toBe("Brain & Neuromorphic");
   });
 });

@@ -187,9 +187,11 @@ Additional rules:
   by its longest matching prefix there (so `/snn` → `/brain/snn` covers every
   page under it) and the address bar is corrected. Links inside the library
   should still point at the new route, not rely on a redirect (a test checks).
-- A node has `page`, `children`, or both. A leaf lacking a `page` is invalid and
-  the router refuses to resolve it (and surfaces an error naming the node).
-- The root node uses `slug: "root"` and carries only `summary` + `children`.
+- A node has `page` (or `ref`), `children`, or both. A leaf lacking both `page`
+  and `ref` is invalid and the router refuses to resolve it (and surfaces an
+  error naming the node).
+- The root node uses `slug: "root"` and carries `title`, `summary` and
+  `children`: the shelf stubs, plus any hidden page such as Credits.
 - The order of `children` is the reading order: the previous/next arrows at the
   foot of each page step through the tree in it, depth-first (a topic, then its
   subtopics, then its next sibling), the same order the sidebar lists them.
@@ -385,6 +387,15 @@ the term):
 | `acronym`    | string          | no       | Short form (e.g. `"SNN"`). **Omit the field entirely** when there is no acronym — never store `""` or `null`. Indexed as an additional surface form. |
 | `definition` | string          | yes      | The definition text shown in the panel. |
 | `pageRef`    | string \| null  | yes      | A route to an Alexandria page explaining the term, or `null`. When non-null it **must resolve to a real route** in `topics.json`. |
+
+**Shared pages.** On a page shared between a learning path and its reference
+topic (a `ref` step, or the page steps borrow), the chain of the other route is
+searched too, after the page's own chain, so a term from either topic's glossary
+resolves locally.
+
+`content/terms.json` is the older single-file glossary. The site no longer reads
+it; only `scripts/score.js` does. Add new terms to the files under
+`content/terms/`.
 
 There is **no `source` field on disk.** The runtime attaches a `source`
 annotation (the glossary's scope route and its title, e.g. "from Analog Design")

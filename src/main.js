@@ -246,7 +246,40 @@ export function topLevelTitle(tree, segments) {
   const children = tree && Array.isArray(tree.children) ? tree.children : [];
   const node = children.find((child) => child && child.slug === topSegment);
 
+  // On a shelf, the topic is the next level down ("Spiking Neural Networks",
+  // not "Brain & Neuromorphic"); the shelf's own page names the shelf.
+  if (node && node.shelf && segments.length > 1) {
+    const topic = (node.children ?? []).find((c) => c && c.slug === segments[1]);
+    if (topic && topic.title) return topic.title;
+  }
+
   return node && node.title ? node.title : "";
+}
+
+/**
+ * The other routes a page is shared with: for a path step (`ref`), the route of
+ * the page it borrows; for a page that steps borrow, the route of each step.
+ * @param {TopicNode} tree
+ * @param {string[]} segments
+ * @returns {string[][]} Slug segments of each linked route.
+ */
+export function linkedRoutes(tree, segments) {
+  if (!tree || !Array.isArray(segments) || segments.length === 0) return [];
+  const here = "/" + segments.join("/");
+  const out = [];
+  const walk = (nodes, path) => {
+    for (const node of Array.isArray(nodes) ? nodes : []) {
+      if (!node || typeof node.slug !== "string") continue;
+      const route = path + "/" + node.slug;
+      if (typeof node.ref === "string") {
+        if (route === here) out.push(parseHash(node.ref));
+        else if (node.ref === here) out.push(route.slice(1).split("/"));
+      }
+      walk(node.children, route);
+    }
+  };
+  walk(tree.children, "");
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -569,7 +602,15 @@ export async function boot() {
 
     // 1–2. Compute the Scope_Chain for this route: the Manifest glossaries whose
     // scope is this route or an ancestor, narrowest-first down to `/` (R5).
+    // A page shared between a learning path and its reference topic (a `ref`
+    // step, or the page a step borrows) also searches the other place's chain
+    // after its own, so terms from both topics resolve locally there.
     const chain = computeScopeChain(tree, manifest, segments);
+    for (const linked of linkedRoutes(tree, segments)) {
+      for (const entry of computeScopeChain(tree, manifest, linked)) {
+        if (!chain.some((e) => e.file === entry.file)) chain.push(entry);
+      }
+    }
 
     // The full Manifest glossary set, and the chain's file URLs, drive both the
     // home local index (all glossaries) and the Search_All non-chain set (every
