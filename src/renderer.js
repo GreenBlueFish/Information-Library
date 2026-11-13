@@ -32,6 +32,7 @@
 // subtopics shown within/beneath the card), 2.3 (breadcrumb from the ancestor
 // chain), 3.2 (standard page template), 3.3 (render blocks in order).
 
+import { installResizers } from "./resize.js";
 import { mountWidget } from "./widgets/registry.js";
 import { installHome } from "./home.js";
 import { appendRichText, texToMathML, TexError } from "./math.js";
@@ -690,6 +691,9 @@ function renderTopicPage(resolution, pageContent) {
   for (const block of blocks) {
     renderBlock(block, page);
   }
+
+  // Size controls on every figure and simulation, remembered per page file.
+  installResizers(page, resolution.pageFile ?? (resolution.path ?? []).join("/"));
 
   const pager = buildPager(resolution.tree, resolution.path);
   if (pager) page.appendChild(pager);
