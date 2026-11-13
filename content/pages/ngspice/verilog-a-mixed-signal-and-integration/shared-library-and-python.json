@@ -1,0 +1,104 @@
+{
+  "title": "Shared Library and Python",
+  "intro": "ngspice can be built as a shared library, libngspice, that another program loads and drives: it sends netlist lines and commands, receives printed output and results through callbacks, and reads vectors directly from memory. KiCad's simulator works this way. This page shows the C interface, a complete Python example using ctypes, and the simpler alternative of running ngspice as a separate program.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The API in brief"
+    },
+    {
+      "type": "list",
+      "items": [
+        "ngSpice_Init(SendChar, SendStat, ControlledExit, SendData, SendInitData, BGThreadRunning, user): register callbacks for printed text, status messages, exit requests, per-point data and the vector list. Must be called first.",
+        "ngSpice_Circ(char lines): load a netlist from an array of lines ending with NULL (first line the title, last .end).",
+        "ngSpice_Command(\\\"...\\\"): run any control-language command: run, tran 1n 1u, alter R1 2k, bg_run (simulate in a background thread), bg_halt, bg_resume, write, quit.",
+        "ngGet_Vec_Info(\\\"v(out)\\\"): a pointer to a vector's data (name, type, real or complex values, length). ngSpice_CurPlot, ngSpice_AllPlots, ngSpice_AllVecs list what exists.",
+        "ngSpice_running, ngSpice_SetBkpt (stop a background run at a time), ngSpice_Init_Sync with GetVSRCData and GetISRCData callbacks to feed EXTERNAL sources from the program at each time point (co-simulation with a system model), ngSpice_Reset (version 44: reset completely).",
+        "Event nodes: ngGet_Evt_NodeInfo, ngSpice_Raw_Evt and ngSpice_Decode_Evt (version 45).",
+        "The header is sharedspice.h in the ngspice source and the ngspice-dev or libngspice0-dev packages."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Python with ctypes"
+    },
+    {
+      "type": "prose",
+      "text": "This script loads libngspice, registers the callbacks it needs, loads an RC circuit, runs a transient for three resistor values and reads the time constant from the vectors. Set NGSPICE_LIB to the library's path if it is not on the default search path (libngspice.so.0 on Linux, ngspice.dll on Windows, libngspice.dylib on macOS)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Drive libngspice from Python with ctypes: load a netlist, run, read vectors.\nimport ctypes as C, ctypes.util, os, sys\n\nlib = C.CDLL(os.environ.get(\"NGSPICE_LIB\") or ctypes.util.find_library(\"ngspice\") or \"libngspice.so.0\")\n\n# callback types from sharedspice.h\nSendChar = C.CFUNCTYPE(C.c_int, C.c_char_p, C.c_int, C.c_void_p)\nSendStat = C.CFUNCTYPE(C.c_int, C.c_char_p, C.c_int, C.c_void_p)\nControlledExit = C.CFUNCTYPE(C.c_int, C.c_int, C.c_bool, C.c_bool, C.c_int, C.c_void_p)\nSendData = C.CFUNCTYPE(C.c_int, C.c_void_p, C.c_int, C.c_int, C.c_void_p)\nSendInitData = C.CFUNCTYPE(C.c_int, C.c_void_p, C.c_int, C.c_void_p)\nBGThreadRunning = C.CFUNCTYPE(C.c_int, C.c_bool, C.c_int, C.c_void_p)\n\nlog = []\n@SendChar\ndef on_char(text, ident, user):\n    log.append(text.decode(errors=\"replace\"))\n    return 0\n@SendStat\ndef on_stat(text, ident, user):\n    return 0\n@ControlledExit\ndef on_exit(status, unload, quit, ident, user):\n    return 0\n\nclass vector_info(C.Structure):\n    _fields_ = [(\"v_name\", C.c_char_p), (\"v_type\", C.c_int), (\"v_flags\", C.c_short),\n                (\"v_realdata\", C.POINTER(C.c_double)), (\"v_compdata\", C.c_void_p),\n                (\"v_length\", C.c_int)]\nlib.ngGet_Vec_Info.restype = C.POINTER(vector_info)\nlib.ngSpice_CurPlot.restype = C.c_char_p\nlib.ngSpice_Init(on_char, on_stat, on_exit, None, None, None, None)\n\ndef cmd(s):\n    return lib.ngSpice_Command(s.encode())\n\ndef load(lines):\n    arr = (C.c_char_p * (len(lines) + 1))(*[l.encode() for l in lines], None)\n    return lib.ngSpice_Circ(arr)\n\ndef vec(name):\n    p = lib.ngGet_Vec_Info(name.encode())\n    if not p:\n        raise KeyError(name)\n    v = p.contents\n    return [v.v_realdata[i] for i in range(v.v_length)]\n\nload([\"RC from Python\", \"V1 in 0 PULSE(0 1 0 1n 1n 1 2)\", \"R1 in out 1k\", \"C1 out 0 1u\", \".end\"])\nfor r in [\"1k\", \"2k\", \"4k\"]:\n    cmd(f\"alter R1 {r}\")\n    cmd(\"tran 10u 5m\")                       # runs in the foreground; bg_run for a background thread\n    t, v = vec(\"time\"), vec(\"v(out)\")\n    i63 = next(i for i, x in enumerate(v) if x >= 0.632)\n    print(f\"R1={r}: plot {lib.ngSpice_CurPlot().decode()}, tau = {t[i63]*1e3:.2f} ms\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "It prints a time constant of 1.01, 2.01 and 4.01 ms (RC plus the sampling of the 63.2% point). The callbacks must be kept referenced (here as module-level names) for as long as the library may call them, or Python's garbage collector frees them and the program crashes. Printed output from ngspice arrives through on_char, collected in log. For long runs, bg_run starts the simulation in ngspice's own thread and BGThreadRunning reports when it ends."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Python packages"
+    },
+    {
+      "type": "list",
+      "items": [
+        "PySpice: builds netlists from Python objects and runs ngspice through the shared library or as a subprocess; returns numpy arrays. It lags behind ngspice releases and may need its NgSpiceShared library path set for newer versions.",
+        "spicelib and PyLTSpice: run simulators as processes and read rawfiles (LTspice, ngspice, Xyce, QSPICE); good for batch sweeps and parsing results.",
+        "ngspyce and others wrap the shared library more thinly; scikit-rf reads the Touchstone files wrs2p writes."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Or just run the program"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# run ngspice as a separate process, read wrdata output: no library needed\nimport subprocess, tempfile, os\nimport numpy as np\n\nnet = '''RC step\nV1 in 0 PULSE(0 1 0 1n 1n 1 2)\nR1 in out {r}\nC1 out 0 1u\n.control\n  tran 10u 5m\n  set wr_singlescale\n  wrdata {out} v(out)\n.endc\n.end\n'''\nwith tempfile.TemporaryDirectory() as d:\n    for r in (\"1k\", \"2k\"):\n        cir, out = os.path.join(d, \"rc.cir\"), os.path.join(d, \"rc.txt\")\n        open(cir, \"w\").write(net.format(r=r, out=out))\n        subprocess.run([\"ngspice\", \"-b\", cir], check=True, capture_output=True)\n        t, v = np.loadtxt(out, unpack=True)\n        print(r, \"tau =\", round(t[np.argmax(v >= 0.632)] * 1e3, 2), \"ms\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "For sweeps, optimisation (scipy.optimize calling a function that writes the netlist, runs ngspice and returns a cost from meas results) and regression tests, running ngspice as a subprocess is simpler and more robust than the shared library: each run starts clean, crashes cannot take Python down, and runs parallelise with a process pool. The shared library is worth it when you need thousands of tiny runs, a live connection during a transient, or EXTERNAL sources driven by your program."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Programs built on ngspice"
+    },
+    {
+      "type": "list",
+      "items": [
+        "KiCad (eeschema): links libngspice; symbols carry Sim.* fields (model, pins, parameters), and the simulator window runs the analyses and plots the results. KiCad names nets with a leading slash (/out); when you run an exported KiCad netlist in ngspice yourself, set ngbehavior=ki so such names (and /gnd, /0 as ground in version 47) are handled.",
+        "Xschem: writes netlists with .control sections and runs ngspice on them; the usual front end with the open PDKs, whose testbenches are good starting points.",
+        "Qucs-S: a schematic editor that can use ngspice, Xyce or Qucsator, with ngspice's analyses and its own plotting.",
+        "tclspice: ngspice built with --with-tcl as a Tcl extension, for Tcl scripts and Tk front ends."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Two libraries",
+      "text": "Your program needs two independent simulations at once. Can one process load libngspice twice?",
+      "solution": [
+        "One loaded library has one global state. The manual's parallel-ngspice example copies the library under different names (ngspice1.dll, ngspice2.dll ...), loads each and initialises it with its own identification number. Simpler: run separate processes."
+      ],
+      "answer": "Not as one library; load renamed copies or use separate processes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 15 (shared ngspice and its API) and 16 (tclspice).",
+        "PySpice documentation, pyspice.fabrice-salvaire.fr; spicelib, github.com/nunobrum/spicelib.",
+        "KiCad documentation, Simulator chapter, docs.kicad.org."
+      ]
+    }
+  ]
+}

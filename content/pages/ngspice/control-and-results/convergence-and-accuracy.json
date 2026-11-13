@@ -1,0 +1,124 @@
+{
+  "title": "Convergence and Accuracy",
+  "intro": "Sooner or later a simulation stops with 'singular matrix', 'timestep too small' or 'gmin stepping failed'. Most of these come from a handful of causes in the circuit or the models, not from the simulator. This page explains the messages, the options that matter, and a checklist that fixes most cases.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Singular matrix"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Floating node: C1 and C2 leave node c without a DC path\nV1 a 0 1\nR1 a b 1k\nC1 b c 1n\nR2 c d 1k\nC2 d 0 1n\n.control\n  op\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "ngspice answers Warning: singular matrix: check node c, then tries gmin stepping and source stepping, which also fail. The cause is topological: a node with no DC path to ground (here the island c-d between two capacitors), a loop of voltage sources or inductors, or a current source in series with a capacitor. Fixes: add a large resistor to ground (1G), set .option rshunt=1e12 to put one on every node, or correct the connection. Check the named node first; with many floating nodes, listing and option node help find them."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Operating point does not converge"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Look at the circuit: bistable circuits (latches, Schmitt triggers, oscillators) have several or no stable DC solutions. Give .nodeset values or off on a device, or use optran.",
+        "Behavioural sources with discontinuities (ternary steps, abs, u()) give Newton nothing smooth to follow: smooth them (tanh instead of a step, a small resistance in series).",
+        "Ideal elements in impossible configurations: two voltage sources fighting through a switch with ron=0, a diode across a voltage source with no series resistance. Add realistic resistances.",
+        "Models used outside their range, units wrong by 10^6 (W=1 meaning a metre), or a missing .lib corner so a model is undefined.",
+        "Options that help: .option gmin=1e-10 (larger minimum conductance), itl1=500 (more iterations), gminsteps and srcsteps (on by default), noopiter (go straight to gmin stepping).",
+        "optran: replace the operating point by a short pseudo-transient with ramped sources: optran 0 0 0 100n 10u 0 (skip the plain iteration, gmin and source stepping; 100 ns steps for 10 us). Robust for large circuits, PDK digital blocks and oscillators."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Timestep too small"
+    },
+    {
+      "type": "prose",
+      "text": "doAnalyses: TRAN: Timestep too small; time = ..., timestep = ...: trouble with node x means the transient could not find a solution at a time point even after reducing the step to its minimum. Usual causes and fixes:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A real discontinuity: an ideal switch, a zero rise time, a behavioural source that jumps. Give sources finite edges, switches finite ron/roff ratios (about 1e9 or less), and smooth behavioural expressions.",
+        "A node with no capacitance driven by a nonlinear element: a little capacitance (1f to 1p) to ground on high-impedance nodes helps the integration.",
+        "Very fast internal events: a smaller tmax so the simulator approaches them gradually.",
+        "Tolerances: .option reltol=1e-3 is the default; loosening to 1e-2 sometimes gets past a hard point (check results afterwards); abstol (1e-12 A) may need raising for circuits with large currents (power electronics: abstol=1e-9, vntol=1e-4).",
+        "method=gear for stiff circuits and power converters; xmu=0.495 to damp trap ringing that sends Newton astray.",
+        "set deltacheck prints the step sizes to show where it struggles; option node lists node numbers to map 'trouble with node 23' to a name."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The tolerance options"
+    },
+    {
+      "type": "list",
+      "items": [
+        "reltol (default 1e-3): relative tolerance on voltages and currents. 1e-4 for precision work (distortion, offsets); 1e-2 only to get through.",
+        "vntol (1e-6 V) and abstol (1e-12 A): absolute tolerances for voltages and currents near zero. Scale them to your circuit: microamp circuits need abstol well below 1e-12, kiloamp circuits much above.",
+        "chgtol (1e-14 C) and trtol (7): truncation-error control for transients.",
+        "gmin (1e-12 S): conductance added across every junction; raising it helps convergence and adds error.",
+        "itl1 (100, DC iterations), itl2 (50, iterations per DC sweep point), itl4 (10, per transient time point), itl6 or srcsteps (source steps).",
+        "pivtol and pivrel: matrix pivoting thresholds; rarely needed, sometimes for badly scaled circuits.",
+        "temp and tnom, method, maxord, xmu: see Transient Analysis.",
+        "klu or sparse: the matrix solver. KLU is faster on large circuits; Sparse is needed for noise and CIDER, and is sometimes faster on small behavioural ones."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A checklist"
+    },
+    {
+      "type": "list",
+      "items": [
+        "1. Run op alone first and read every warning. Fix singular matrices and the named nodes before anything else.",
+        "2. Use listing expand to see the netlist ngspice actually built: parameters, units, subcircuit nodes.",
+        "3. Replace ideal parts with realistic ones: series resistance on sources and capacitors, finite edges, finite switch resistances, small capacitance on high-impedance nodes.",
+        "4. For the operating point: .nodeset, off, larger gmin, optran.",
+        "5. For the transient: tmax, method=gear or xmu=0.495, sensible abstol/vntol for the circuit's scale, then reltol as a last resort.",
+        "6. Simplify: cut the circuit until it simulates, then add parts back. The part that breaks it is usually the one to look at.",
+        "7. Check models: compatibility mode set, the right corner loaded, devices inside their bins and their intended voltage range."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Accuracy is not convergence"
+    },
+    {
+      "type": "prose",
+      "text": "A simulation that runs is not necessarily right. Tighten reltol by ten and compare: if the answer moves, it was not converged in the numerical sense. Check charge conservation in switched-capacitor circuits (behavioural capacitors given as c= rather than q= can create charge), check that an oscillator's amplitude is not set by numerical damping, and check timestep-sensitive quantities (THD, jitter, settling to 0.01%) against a run with a smaller tmax."
+    },
+    {
+      "type": "problem",
+      "title": "Diagnose",
+      "text": "A buck converter netlist with ideal switches (ron=0.001, roff=1e12) stops with timestep too small at the first switching edge. Name three changes to try, in order.",
+      "solution": [
+        "Make the switch ratio realistic: ron=10m, roff=1Meg (ratio 1e8), or use a MOSFET model; add a small capacitance across the switch.",
+        "Give the gate drive finite edges (10 ns) and set tmax to a fraction of the edge time.",
+        "Use method=gear and raise abstol to about 1e-9 for the amp-level currents."
+      ],
+      "answer": "Realistic switch, finite edges with tmax, then gear and abstol."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 11.1 (options), 11.3.5 (op convergence aids, optran) and 25 (error messages).",
+        "R. Kielkowski, Inside SPICE, 2nd ed., McGraw-Hill, 1998 (convergence techniques).",
+        "K. Kundert, The Designer's Guide to SPICE and Spectre, Kluwer, 1995."
+      ]
+    }
+  ]
+}

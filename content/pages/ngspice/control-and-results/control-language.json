@@ -1,0 +1,125 @@
+{
+  "title": "The Control Language",
+  "intro": "Inside .control ... .endc (or at the ngspice prompt) you write scripts in ngspice's own language, inherited from SPICE3's nutmeg. It has two kinds of data, vectors and variables, a handful of control structures, and about a hundred commands. It is small and a little quirky, but enough to automate almost any simulation task.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Vectors and plots"
+    },
+    {
+      "type": "prose",
+      "text": "Every analysis creates a plot: a named set of vectors (op1, dc1, ac1, tran1, noise1 ...). Vectors are arrays of real or complex numbers with a type (voltage, current, time, frequency ...); one of them is the scale (time, frequency, the swept source). let creates or changes vectors; the newest plot is the current one, and setplot switches between them. Vectors in other plots are reached as plotname.vector, and the const plot holds constants: pi, e, c, kelvin, echarge, boltz, planck, yes, no, true, false."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Vectors, plots and expressions\nV1 in 0 SIN(0 1 1k)\nR1 in out 1k\nC1 out 0 100n\n.control\n  tran 10u 3m\n  let p = v(out)*i(V1)              $ element-wise: instantaneous power\n  let vpk = vecmax(v(out))          $ a one-element vector\n  let n = length(time)\n  let first = v(out)[0]              $ index from 0\n  let some = v(out)[10,20]           $ a range\n  print vpk n first\n  let w = vector(5)                  $ [0 1 2 3 4]\n  compose z values 1 2 4             $ a vector from listed values\n  let z = z * 2\n  print w z\n  setplot const\n  print pi boltz\n  setplot tran1\n  print mean(p) tran1.vpk\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Arithmetic is element by element; a scalar combines with every element. Vectors of different lengths are cut to the shorter one, with a warning.",
+        "Functions: mag, ph, cph, unwrap, real, imag, db, j, conj, abs, sqrt, exp, ln, log (both natural), log10, sin ... atanh, floor, ceil, norm, mean, avg (running average), stddev, integ, deriv, group_delay, vecmin, vecmax, minimum, maximum, length, vector, unitvec, interpolate, fft, ifft, sortorder, m3avg, mtimeavg, and random functions rnd, sgauss, sunif, poisson, exponential.",
+        "Comparison and logic (eq, ne, gt, lt, ge, le, and, or, not, or the symbols) give 1 or 0, element by element.",
+        "v(a,b) is v(a) - v(b); i(V1) is the current of V1; @dev[param] reads device data; quoted names reach odd characters: let x = \\\"v(n-1)\\\".",
+        "setscale changes a plot's scale vector, so plot v(out) vs v(in) or setscale v(in) plots against another vector.",
+        "destroy removes plots to free memory in long loops; remzerovec removes empty vectors."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Variables"
+    },
+    {
+      "type": "prose",
+      "text": "Variables are separate from vectors: strings, numbers, booleans or lists, set with set and read with \\$name. They control options (set units=degrees, set filetype=ascii, set wr_vecnames) and hold strings for scripts. \\$&vector turns a vector's first value into text, so you can print a vector inside an echo or build a file name. Lists are written in parentheses."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Variables, strings and the conversion between them\nV1 a 0 1.5\nR1 a 0 1k\n.control\n  set name = \"run1\"\n  set vals = ( 1 2.5 4 )\n  set flag\n  op\n  let ia = -i(V1)*1000\n  echo \"the current in $name is $&ia mA\"\n  if $?flag\n    echo \"flag is set\"\n  end\n  echo \"second value: $vals[2], count: $#vals\"\n  set outfile = \"{$name}.txt\"        $ braces end the name: $name.txt would look up \"name.txt\"\n  echo \"would write to $outfile\"\n  strcmp res \"$name\" \"run1\"\n  echo \"strcmp gives $res\"\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "\\$name: the value; \\$?name: 1 if set, else 0; \\$#name: the number of words in a list; \\$name[2]: an element of a list (from 1).",
+        "\\$&vec: the value of a vector, \\$&vec[3] an element. Needed wherever a command expects text, such as alter, echo, file names and if with variables.",
+        "A dot is a legal character in a variable name, so \\$name.txt looks for a variable called name.txt. Write {\\$name}.txt to end the name.",
+        "Strings: strcmp, strstr, strslice, and setcs to keep upper case. -D name=value on the command line sets a variable before the script runs.",
+        "Predefined variables include curplot, curplottitle, plots, temp, tnom, and many that change behaviour: units, filetype, width, height, nfreqs, specwindow, wr_singlescale, wr_vecnames, noaskquit, num_threads, sourcepath, interactive, ngbehavior."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Control structures"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Control structures\nV1 a 0 1\nR1 a b 1k\nR2 b 0 1k\n.control\n  foreach r 1k 2k 5k 10k\n    alter R2 $r\n    op\n    echo \"R2 = $r: v(b) = $&v(b)\"\n  end\n  let k = 0\n  repeat 3\n    let k = k + 1\n  end\n  while k < 10\n    let k = k * 2\n  end\n  dowhile k > 1\n    let k = k - 5\n  end\n  if k < 0\n    echo \"k went negative: $&k\"\n  else\n    echo \"k is $&k\"\n  end\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "foreach var values ... end loops over words (numbers or names); repeat N ... end, while cond ... end, dowhile cond ... end, if cond ... else ... end, break and continue, and label/goto. Conditions are vector expressions; an empty or zero result is false. Each block must close with its own end."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Changing the circuit and running again"
+    },
+    {
+      "type": "list",
+      "items": [
+        "alter R1 2k, alter R1 resistance = 2k, alter @R1[resistance] = 2k: change an instance parameter. alter @V1[pulse] = [ 0 1 0 1n 1n 5n 10n ] changes a vector parameter. alter @m1[w] = 2u changes a transistor's width.",
+        "altermod nch vth0 = 0.5 (or altermod @nch[vth0] = 0.5) changes a model parameter for every device using it; altermod nch file new.mod replaces a whole model from a file.",
+        "alterparam name = value then reset: change a .param and re-expand the netlist, so every expression using it is recomputed.",
+        "reset: re-read the stored netlist, undoing alters and drawing new random parameter values.",
+        "option name=value (or .options in the netlist) changes simulator options between runs: option reltol=1e-4, option method=gear, option temp=85.",
+        "source file reads another netlist or script; remcirc removes the current circuit; setcirc switches between loaded circuits; mc_source reloads the netlist from its stored copy (Monte Carlo with new random values per run).",
+        "shell runs an operating-system command; cd, getcwd; fopen, fread, fclose read text files into variables.",
+        "define f(x) expr: a user function for vector expressions."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Running commands before the circuit is parsed"
+    },
+    {
+      "type": "prose",
+      "text": "Commands in a .control block normally run after the circuit is read. Some must run before: loading code models or .osdi files, or setting variables that change how the netlist is read. Prefix them with pre_ (pre_osdi file.osdi, pre_set ...), or put them in .spiceinit."
+    },
+    {
+      "type": "problem",
+      "title": "Echo a vector",
+      "text": "Why does echo \\\"gain is gain\\\" not print the number, and how do you fix it?",
+      "solution": [
+        "echo prints text; gain there is just a word. Use \\$&gain to substitute the vector's value: echo \\\"gain is \\$&gain\\\"."
+      ],
+      "answer": "Write \\$&gain."
+    },
+    {
+      "type": "problem",
+      "title": "Sweep a capacitor",
+      "text": "Write a loop that runs a transient for C1 = 1p, 2p, 5p and prints the delay each time (measured by meas tran td trig ... targ ...).",
+      "solution": [
+        "foreach c 1p 2p 5p\n  alter C1 \\$c\n  tran 1p 2n\n  meas tran td trig v(in) val=0.5 rise=1 targ v(out) val=0.5 fall=1\n  echo \\\"C1=\\$c delay=\\$&td\\\"\nend"
+      ],
+      "answer": "foreach with alter, tran, meas and echo."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 13 (interactive interpreter: expressions, plots, commands, control structures, variables, scripts)."
+      ]
+    }
+  ]
+}

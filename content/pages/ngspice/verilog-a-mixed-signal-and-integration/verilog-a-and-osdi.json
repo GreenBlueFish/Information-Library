@@ -1,0 +1,141 @@
+{
+  "title": "Verilog-A Models and OSDI",
+  "intro": "Modern compact device models (BSIM-CMG, BSIM-BULK, PSP, HiSIM, HICUM, Mextram, the CMC resistor and varactor models) are published as Verilog-A source. ngspice runs them through OSDI, the Open Source Device Interface: the OpenVAF compiler turns a .va file into a shared library with an .osdi extension, and ngspice loads it at run time. The same route works for your own Verilog-A models.",
+  "blocks": [
+    {
+      "type": "figure",
+      "src": "assets/figures/ngspice/ngspice-osdi-flow.svg",
+      "alt": "Flow diagram: a Verilog-A source file goes into the OpenVAF compiler, which writes a .osdi shared library. ngspice loads it with pre_osdi or an osdi line in spinit or .spiceinit. The netlist uses it through a .model line whose type is the Verilog-A module name and N instance lines.",
+      "caption": "From Verilog-A source to a simulated device."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Getting OpenVAF"
+    },
+    {
+      "type": "list",
+      "items": [
+        "OpenVAF was written by Pascal Kuthe at SemiMod; the original releases stopped at 23.5.0. Development continues as OpenVAF-Reloaded (Árpád Bűrmen, University of Ljubljana), with Linux and Windows binaries at fides.fe.uni-lj.si/openvaf/download and source at github.com/arpadbuermen/OpenVAF. Its executable is called openvaf-r.",
+        "It is a single static executable: download, unpack, put it on your PATH. Building from source needs Rust and LLVM and is rarely worth it.",
+        "macOS has no official build; use Linux in a container or virtual machine, or build from source.",
+        "OSDI interface versions: ngspice 39 to 44 read OSDI 0.3; newer ngspice reads 0.4. OpenVAF-Reloaded builds named osdi_0.4 and osdi_0.5 exist; with ngspice 47 here, both a 0.4 and a 0.5 build loaded and ran the samples on this page. If ngspice refuses an .osdi file with a version message, use the OpenVAF build that matches it.",
+        "Your ngspice must have OSDI compiled in (default since version 43; --enable-osdi before). Try osdi or pre_osdi: an unknown-command error means it is missing."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Compiling"
+    },
+    {
+      "type": "code",
+      "lang": "shell",
+      "source": "openvaf-r mymodel.va                  # writes mymodel.osdi next to it\nopenvaf-r -o lib/psp103.osdi psp103.va\nopenvaf-r -I include/ -D__NGSPICE__ bsimcmg.va   # include path, preprocessor define\nopenvaf-r --target_cpu generic model.va           # portable code (default: native, this CPU only)\nopenvaf-r --target x86_64-pc-windows model.va     # cross-compile for Windows\nopenvaf-r -b --cache-dir ~/.cache/openvaf model.va   # only rebuild when the source changed\nopenvaf-r --lints                                  # list warnings; -A/-W/-E allow, warn or deny them\n"
+    },
+    {
+      "type": "prose",
+      "text": "Compilation takes a fraction of a second for a small model and 5 to 30 seconds for PSP or BSIM-CMG. By default the code is optimised for the CPU it is compiled on (--target_cpu native); an .osdi file copied to an older machine can crash with an illegal-instruction error, so use --target_cpu generic for files you share. Many PDK scripts define __NGSPICE__ (-D__NGSPICE__) to select ngspice-specific code in the model."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Loading the .osdi file"
+    },
+    {
+      "type": "list",
+      "items": [
+        "pre_osdi file.osdi at the top of the .control block: loads it before the circuit is parsed. Relative paths are relative to the netlist's folder; NGSPICE_OSDI_DIR adds a search folder.",
+        "osdi file.osdi in .spiceinit or spinit: loads it for every netlist, the way PDKs do it (IHP's .spiceinit loads six). Distributions that ship .osdi files list them in spinit under if \\$?osdi_enabled; comment out unset osdi_enabled to switch them on.",
+        "Several files can be loaded; each provides one or more modules."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Using the model"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* .model name <verilog-a module name> param=value ...\n* Nname node1 node2 ... model [instance parameters]\n.model bsimn bsimcmg type=1 ...        $ TYPE=1 NMOS / NPN, TYPE=-1 PMOS / PNP\nN1 d g s b bsimn l=20n nfin=4\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Instances start with N. The nodes are the module's ports in the order of its module line (module bsimcmg(d, g, s, e) has four). Optional ports are not supported: give all of them.",
+        "The model type on .model is the Verilog-A module name, not NMOS or a level. Remove level= and version= from model cards written for other simulators, and add type= where the model has one.",
+        "Only parameters marked as instance parameters in the source, with the attribute (*type=\\\"instance\\\"*), may go on the N line (l, w, nf and so on in the CMC models); the rest belong on .model. A model parameter on the N line stops the run with an error on that line, as tested here.",
+        "m= (the multiplier, \\$mfactor in Verilog-A) works on every OSDI instance.",
+        "Inside a subcircuit, PDKs wrap the N line so users still write XM1 ... (see Using a PDK)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading results"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Verilog-A diode (vdiode.va) against ngspice's built-in diode\n.model dva vdiode (is=1e-14 n=1 rs=10 cj0=1p vj=0.7 m=0.5 tt=5n)\n.model dsp D      (is=1e-14 n=1 rs=10 cjo=1p vj=0.7 m=0.5 tt=5n)\nI1 0 a DC 1m AC 1\nN1 a 0 dva\nI2 0 b DC 1m AC 1\nD1 b 0 dsp\n.control\n  pre_osdi vdiode.osdi\n  op\n  print v(a) v(b)\n  print @n1[id] @n1[gd]\n  show n1\n  showmod dva\n  noise v(a) I1 dec 10 1k 1meg 1\n  noise v(b) I2 dec 10 1k 1meg 1\n  print noise1.onoise_spectrum[10] noise3.onoise_spectrum[10]\n  setplot noise2\n  print onoise_total_n1_shot onoise_total_n1_thermal\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Operating-point values: every variable in the Verilog-A source declared with a desc attribute ((* desc=\\\"...\\\", units=\\\"...\\\" *) real id;) becomes an output parameter, read as @n1[id] or listed by show n1. The CMC models define dozens (ids, vth, gm, gds, cgg ...).",
+        "showmod model prints the model parameters (version 45 and later); devhelp does not list OSDI modules.",
+        "Internal nodes appear as vectors named n1#nodename; PSP and BSIM-CMG add many. save nointernals (version 45) leaves them out of the results.",
+        "Noise: white_noise and flicker_noise contributions in the model take part in .noise and are reported by the name given in the source (onoise_total_n1_shot). This needs the Sparse solver: OSDI noise does not work with option klu.",
+        "The run above gives the same voltage (0.665 V at 1 mA) and the same noise density (0.617 nV per root hertz at 10 kHz: shot noise of the junction, 0.46 nV, plus thermal noise of rs, 0.41 nV) for both diodes."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The industry models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Sources: the Si2 Compact Model Coalition publishes the standard models; the GitHub repository dwarning/VA-Models collects most public ones, checked for OpenVAF and ngspice, with compile scripts and example netlists. The ngspice release folder has VAforOSDI.7z with the models used by the examples in ngspice/examples/osdi.",
+        "MOS: BSIM-BULK (successor of BSIM4), BSIM-CMG (FinFET, gate-all-around), BSIM-IMG (FD-SOI), BSIM-SOI, PSP 103 (used by IHP SG13G2), HiSIM2, HiSIM_HV. Not every public model complies with the language standard: the manual names PSP 102 and EKV 2.6 as ones that do not.",
+        "Bipolar: HICUM/L0 and L2, Mextram 504 and 505, VBIC 1.3 with self-heating.",
+        "Others: the r2_cmc and r3_cmc resistors, MOS varactors (IHP's mosvar), and ASM-HEMT for GaN HEMTs (named in ngspice's own spinit).",
+        "Model cards from foundries are written for Spectre or HSPICE with level numbers; convert them as described above, and compare an I-V and C-V sweep against the foundry's reference before trusting a circuit result."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Port order",
+      "text": "A Verilog-A file starts with module hbt(c, b, e, s, dt);. How must the instance line look, and what is dt?",
+      "solution": [
+        "Five nodes in that order: N1 c b e s dt hbtmod. dt is a thermal port (self-heating temperature rise); connect it to a node, usually left floating through the model's own thermal network or tied to an external thermal circuit, as the model's documentation says. It cannot be omitted."
+      ],
+      "answer": "N1 c b e s dt model, all five nodes."
+    },
+    {
+      "type": "problem",
+      "title": "Crash on another PC",
+      "text": "An .osdi file compiled on your workstation crashes ngspice on a colleague's older laptop with 'illegal instruction'. Why?",
+      "solution": [
+        "OpenVAF compiles for the host CPU by default (--target_cpu native), using instructions the older CPU lacks. Recompile with --target_cpu generic for files you share."
+      ],
+      "answer": "Compiled for the native CPU; use --target_cpu generic."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 9 (Verilog-A compact device models) and 13.5.57 (pre_osdi).",
+        "P. Kuthe, M. Müller and M. Schröter, 'VerilogAE: an open source Verilog-A compiler for compact model parameter extraction,' IEEE J-EDS, 2020, and the OpenVAF documentation (openvaf.semimod.de).",
+        "OpenVAF-Reloaded, github.com/arpadbuermen/OpenVAF; OSDI specification in the same repository.",
+        "VA-Models repository, github.com/dwarning/VA-Models."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "title": "Measurements",
+  "intro": "meas (and the netlist form .meas) pulls numbers out of results: delays, rise times, crossings, peaks, averages, rms values, integrals, derivatives, and expressions of other measurements. It works on dc, ac, tran and sp (spectrum) results, and each result becomes a vector you can compute with.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The forms"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Trigger and target: meas tran tpd trig v(in) val=0.9 rise=1 targ v(out) val=0.9 fall=1. The time from the trigger crossing to the target crossing. trig at=1n uses a fixed time instead of a crossing.",
+        "When: meas tran t1 when v(out)=0.9 cross=2 gives the time (frequency, swept value) at which the condition is met; when v(a)=v(b) for two signals crossing.",
+        "Find when / find at: meas tran v1 find v(x) when v(y)=0.5 fall=1; meas ac g1k find vdb(out) at=1k.",
+        "Statistics over a range: avg, min, max, pp (peak to peak), rms, min_at and max_at (where the extreme is), with from= and to=.",
+        "integ (integral) over a range: charge from a current, energy from power.",
+        "deriv at=... or deriv when ...: a slope. In ngspice 47 this form fails (meas says deriv is not supported, and .meas fails too); take let d = deriv(v(out)) and meas ... find d at=... instead, as in the sample.",
+        "param='expression': combine earlier results (.meas tran ratio param='tr/tf'). This works in .meas lines in the netlist; the meas command in a .control block rejects it in version 47, but there let ratio = tr/tf does the same, since results are vectors.",
+        "find par('expression') at=...: an expression of vectors at a point."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Crossing selectors: rise=N, fall=N, cross=N (either direction) and rise=last, fall=last, cross=last. td=delay ignores everything before that time (or swept value). For ac, at= and from/to are frequencies; for dc they are the swept value."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "A catalogue of measurements on an RC-loaded inverter-like waveform\nVIN in 0 PULSE(0 1.8 1n 50p 50p 5n 10n)\nR1 in out 2k\nC1 out 0 1p\n.control\n  tran 5p 30n\n  meas tran tpd   trig v(in) val=0.9 rise=1 targ v(out) val=0.9 rise=1\n  meas tran trise trig v(out) val=0.18 rise=2 targ v(out) val=1.62 rise=2\n  meas tran tfall trig v(out) val=1.62 fall=1 targ v(out) val=0.18 fall=1\n  meas tran t_last when v(out)=0.9 cross=last\n  meas tran vmid  find v(out) at=2n\n  meas tran vx    find v(out) when v(in)=0.9 fall=2\n  meas tran vavg  avg v(out) from=10n to=30n\n  meas tran vrms  rms v(out) from=10n to=30n\n  meas tran vpp   pp  v(out) from=10n to=30n\n  meas tran tmax  max_at v(out) from=10n to=20n\n  meas tran q     integ i(VIN) from=10n to=15n\n  let dvdt = deriv(v(out))\n  meas tran slope find dvdt at=11.5n\n  let ratio = trise/tfall\n  let tau = 2k*1p\n  print tau ratio\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "The RC time constant is 2 ns, so the 10 to 90% rise and fall times come out at 2.2 RC = 4.39 ns, and the 50% delay at ln 2 RC = 1.39 ns. The waveform does not settle fully in 5 ns, so it swings between about 0.14 and 1.66 V (pp = 1.52 V) and averages 0.91 V. q integrates the source current over the high half-cycle: -1.34 pC, the charge delivered into C (1 pF times the 1.34 V it gains in that half-cycle); negative because i(VIN) is measured into the source's + node."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "meas in the control language and .meas in the netlist"
+    },
+    {
+      "type": "list",
+      "items": [
+        ".meas lines run automatically after the matching analysis in batch and interactive runs, and print their results. In batch mode with -r (output straight to a rawfile) the data are not kept in memory and .meas cannot run; use a .control block or .print lines.",
+        "meas commands in a .control block run on the current plot when the script reaches them; their results are vectors in that plot, and since version 45 the command accepts expressions (meas tran x find v(a)*v(b) at=1n).",
+        "A measurement that fails (the condition is never met) prints an error and creates no vector; scripts that use the result should check with if or let with a default.",
+        "Precision: set measureprec=N (version 46) or NGSPICE_MEAS_PRECISION for more printed digits; the vector itself is full precision.",
+        ".option autostop ends a transient as soon as all .meas lines have their answers.",
+        "meas does not work on noise plots (noise1, noise2); index the vectors there. In ngspice 47 it also crashes on the plot of an sp (S-parameter) run."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Duty cycle",
+      "text": "Measure the duty cycle of a clock v(clk) with 0 to 1.2 V swing in its 5th period.",
+      "solution": [
+        "meas tran thigh trig v(clk) val=0.6 rise=5 targ v(clk) val=0.6 fall=5\nmeas tran tper trig v(clk) val=0.6 rise=5 targ v(clk) val=0.6 rise=6\nmeas tran duty param='thigh/tper'",
+        "(If the clock starts high, the 5th fall comes before the 5th rise; pick fall=6 in that case.)"
+      ],
+      "answer": "Two trig/targ measurements and a param ratio."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), section 11.4 (.meas) and 13.5 (meas command)."
+      ]
+    }
+  ]
+}

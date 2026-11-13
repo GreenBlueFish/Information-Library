@@ -1,0 +1,136 @@
+{
+  "title": "Writing Verilog-A for ngspice",
+  "intro": "Verilog-A describes a device by the currents and voltages on its branches as equations; OpenVAF compiles it to an .osdi file and ngspice solves it like a built-in device. This page teaches the language through three models that were compiled and run here, and lists what OpenVAF's subset leaves out.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The structure of a module"
+    },
+    {
+      "type": "list",
+      "items": [
+        "`include \\\"disciplines.vams\\\" (electrical, thermal and other natures) and `include \\\"constants.vams\\\" (`P_Q, `P_K, `M_PI ...). OpenVAF has its own copies built in.",
+        "module name(port1, port2, ...); with inout and electrical declarations for each port, and extra electrical (or thermal) nodes for internal nodes.",
+        "parameter real name = default from (low:high); with the range checked at load time; from [0:inf) includes 0. parameter integer for switches.",
+        "analog begin ... end: the equations. Contributions I(a,b) <+ expr add a current from a to b; V(a,b) <+ expr makes the branch a voltage source. Several contributions to one branch add up.",
+        "ddt(x) is d/dt (capacitance as ddt(charge)), idt(x, ic) an integral, limexp(x) an exponential with built-in limiting that helps Newton converge, \\$temperature the device temperature in kelvin, \\$vt the thermal voltage kT/q, \\$abstime the transient time.",
+        "white_noise(psd, \\\"name\\\") and flicker_noise(k, exponent, \\\"name\\\") contributions add noise that .noise reports under that name.",
+        "Variables with (* desc=\\\"...\\\", units=\\\"...\\\" *) become operating-point outputs (@n1[name])."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A diode with charge storage and noise"
+    },
+    {
+      "type": "code",
+      "lang": "verilog-a",
+      "source": "`include \"constants.vams\"\n`include \"disciplines.vams\"\n\nmodule vdiode(a, c);\n  inout a, c;\n  electrical a, c, ai;            // ai: internal node after the series resistance\n  parameter real is  = 1e-14 from (0:inf);\n  parameter real n   = 1.0   from (0:inf);\n  parameter real rs  = 10    from [0:inf);\n  parameter real cj0 = 1p    from [0:inf);\n  parameter real vj  = 0.7   from (0:inf);\n  parameter real m   = 0.5   from (0:1);\n  parameter real tt  = 5n    from [0:inf);\n  parameter real kf  = 0     from [0:inf);\n  parameter real af  = 1     from (0:inf);\n  (* desc=\"diode current\", units=\"A\" *) real id;\n  (* desc=\"small-signal conductance\", units=\"S\" *) real gd;\n  real vd, vt, qj;\n  analog begin\n    vt = `P_K * $temperature / `P_Q;\n    vd = V(ai, c);\n    id = is * (limexp(vd / (n * vt)) - 1);\n    gd = is / (n * vt) * limexp(vd / (n * vt));\n    if (vd < 0.5 * vj)\n      qj = cj0 * vj / (1 - m) * (1 - pow(1 - vd / vj, 1 - m));\n    else   // linear extension above vj/2 keeps the charge finite\n      qj = cj0 * vj / (1 - m) * (1 - pow(0.5, 1 - m))\n         + cj0 / pow(0.5, m) * (vd - 0.5 * vj);\n    I(ai, c) <+ id + ddt(tt * id + qj);\n    if (rs > 0) I(a, ai) <+ V(a, ai) / rs; else V(a, ai) <+ 0;\n    I(ai, c) <+ white_noise(2 * `P_Q * abs(id), \"shot\");\n    I(ai, c) <+ flicker_noise(kf * pow(abs(id), af), 1, \"flicker\");\n    if (rs > 0) I(a, ai) <+ white_noise(4 * `P_K * $temperature / rs, \"thermal\");\n  end\nendmodule\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The series resistance makes an internal node ai. When rs = 0, the else branch V(a, ai) <+ 0 shorts it, and OpenVAF collapses the node so the matrix stays non-singular.",
+        "limexp instead of exp: the simulator may try huge voltages during Newton iterations; limexp grows linearly beyond a point so nothing overflows.",
+        "The depletion charge uses the SPICE formula below vj/2 and a linear extension above it, so the charge stays finite in forward bias. A Verilog-A model must be continuous and smooth everywhere the simulator might go, not just in the intended region.",
+        "The previous page's testbench compares it with the built-in diode: same operating point and the same noise."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A thermal node: a self-heating resistor"
+    },
+    {
+      "type": "code",
+      "lang": "verilog-a",
+      "source": "`include \"constants.vams\"\n`include \"disciplines.vams\"\n\nmodule shres(p, n);\n  inout p, n;\n  electrical p, n;\n  thermal dt;                          // internal node: temperature rise in kelvin\n  parameter real r0  = 100   from (0:inf);   // resistance at ambient\n  parameter real tc1 = 4e-3;                 // 1/K\n  parameter real rth = 500   from (0:inf);   // K/W\n  parameter real cth = 1e-3  from (0:inf);   // J/K\n  (* desc=\"temperature rise\", units=\"K\" *) real trise;\n  (* desc=\"resistance\", units=\"Ohm\" *) real r;\n  real p_el;\n  analog begin\n    trise = Temp(dt);\n    r = r0 * (1 + tc1 * trise);\n    I(p, n) <+ V(p, n) / r;\n    p_el = V(p, n) * V(p, n) / r;\n    Pwr(dt) <+ -p_el;                  // heat flows into the thermal node\n    Pwr(dt) <+ Temp(dt) / rth + ddt(cth * Temp(dt));\n  end\nendmodule\n"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Self-heating resistor: 5 V applied at t = 0, resistance rises as it heats\nV1 a 0 DC 0 PWL(0 0 1m 5 3 5)\nN1 a 0 sh\n.model sh shres r0=100 tc1=4e-3 rth=500 cth=1e-3\n.control\n  pre_osdi shres.osdi\n  save all @n1[trise]\n  tran 1m 3\n  meas tran i_on  find i(V1) at=2m\n  meas tran i_end find i(V1) at=3\n  meas tran trise find @n1[trise] at=3\n  let r_on = -5/i_on\n  let r_end = -5/i_end\n  print r_on r_end\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "The thermal node dt carries power (Pwr) as its flow and temperature (Temp) as its potential, so the electrical power is a current source into a thermal resistor and capacitor. In steady state R = 100 (1 + 0.004 x 500 x 25/R), so R^2 - 100 R - 5000 = 0 and R = 136.6 ohms with a 91.5 K rise; the run reaches both after a few thermal time constants (Rth Cth = 0.5 s)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Behavioural blocks"
+    },
+    {
+      "type": "code",
+      "lang": "verilog-a",
+      "source": "`include \"disciplines.vams\"\n\n// an ideal integrator: v(o) = k * integral of v(i) dt\nmodule integ(i, o);\n  inout i, o;\n  electrical i, o;\n  parameter real k = 1k;\n  analog V(o) <+ k * idt(V(i), 0);\nendmodule\n"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Verilog-A integrator driven by a 1 V step\nV1 i 0 DC 0 PWL(0 0 1u 1)\nN1 i o imod\n.model imod integ k=1k\nR1 o 0 1k\n.control\n  pre_osdi integ.osdi\n  tran 1u 1m\n  meas tran v1m find v(o) at=1m\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "k = 1000 per second integrates 1 V for 1 ms to 1 V (0.9995 V, since the step takes 1 us). Behavioural Verilog-A like this is handy, but the analog-only, compact-model subset that OpenVAF accepts limits it, as the next section shows."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What OpenVAF and ngspice do not support"
+    },
+    {
+      "type": "prose",
+      "text": "OpenVAF compiles the compact-modelling subset of Verilog-AMS (LRM 2.4). Tested here with OpenVAF-Reloaded and ngspice 47:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Works: ddt, idt, ddx (partial derivatives), limexp, \\$abstime, \\$temperature, \\$vt, \\$simparam, analysis(), \\$bound_step, @(initial_step) and @(final_step) with \\$strobe or \\$display, white_noise, flicker_noise, analog functions, branches, internal nodes, thermal and other disciplines.",
+        "Rejected by the compiler: transition(), slew(), laplace_* and zi_* filters, and event controls other than initial_step and final_step (no @(cross(...)) or @(timer(...))). Digital and mixed-signal Verilog-AMS (always, logic, wreal) is out of scope.",
+        "Compiles but fails in ngspice: absdelay() (the operating point fails with timestep too small).",
+        "So for behavioural system models, combine: Verilog-A for smooth device equations, XSPICE code models for delays, slew limits and digital behaviour, and B sources for quick expressions. Simulators like Xyce or Spectre run the wider Verilog-A language."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Debugging a model"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Compile errors point to the line; openvaf-r --print-expansion shows the source after macros and includes.",
+        "\\$strobe(\\\"vd=%g\\\", vd) inside @(final_step) or unconditionally prints values (every iteration, so keep it short).",
+        "Compare against a known model at a few operating points (as the diode testbench does), and sweep far outside the normal range to find discontinuities: a dc sweep from -100 V to +100 V with deriv() of the current shows jumps in conductance that will break Newton later.",
+        "A singular matrix at an internal node (check node n1#ai) means a node with no defined current path: add a contribution or collapse it."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Capacitor",
+      "text": "Write the analog block of a linear capacitor c between ports p and n, and of a nonlinear one with C(V) = c0 (1 + a V).",
+      "solution": [
+        "Linear: I(p,n) <+ ddt(c * V(p,n));",
+        "Nonlinear: write the charge, Q(V) = c0 (V + a V^2 / 2), so that dQ/dV = C(V): I(p,n) <+ ddt(c0 * (V(p,n) + a*V(p,n)*V(p,n)/2)); This conserves charge, unlike multiplying C(V) by ddt(V)."
+      ],
+      "answer": "I(p,n) <+ ddt(Q(V)) with Q the integral of C(V)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Accellera, Verilog-AMS Language Reference Manual, version 2.4, 2014.",
+        "K. Kundert and O. Zinke, The Designer's Guide to Verilog-AMS, Kluwer, 2004.",
+        "C. C. McAndrew et al., 'Best practices for compact modeling in Verilog-A,' IEEE J-EDS, vol. 3, no. 5, 2015.",
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 9."
+      ]
+    }
+  ]
+}

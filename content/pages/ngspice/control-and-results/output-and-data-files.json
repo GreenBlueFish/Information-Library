@@ -1,0 +1,107 @@
+{
+  "title": "Output, Plotting and Data Files",
+  "intro": "Results live in memory as vectors until you print, plot or write them. This page covers choosing what to save, the text and rawfile formats, the plotting commands (plot, gnuplot, pyplot, hardcopy), and how to read ngspice results into Python.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing what is saved"
+    },
+    {
+      "type": "list",
+      "items": [
+        "By default every node voltage and every voltage-source and inductor current is saved, and nothing else.",
+        "save v(out) i(VDD) @m1[id] (or .save in the netlist) saves only what is listed. save all @m1[gm] keeps the defaults and adds a device quantity. Saving less makes big transients faster and smaller.",
+        "save nointernals (version 45) drops internal device nodes, which OSDI models such as PSP add in large numbers.",
+        ".option savecurrents saves all device terminal currents (@r1[i], @m1[id], @q1[ic] ...). .probe (alli, a device current, a differential voltage, power p(M1)) is a selective form.",
+        "set interp, or .option interp, keeps only points on the tstep grid."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Printing"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "print, wrdata and write\nV1 in 0 PULSE(0 1 0 1u 1u 5u 10u)\nR1 in out 1k\nC1 out 0 1n\n.control\n  save v(in) v(out) i(V1)\n  tran 0.1u 20u\n  print v(out)[50] v(out)[100]\n  set width=120\n  print col v(in) v(out) > out-table.txt\n  set wr_singlescale\n  set wr_vecnames\n  option numdgt=7\n  wrdata out-data.txt v(in) v(out)\n  write out-binary.raw v(in) v(out)\n  set filetype=ascii\n  write out-ascii.raw v(in) v(out)\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "print prints vectors as a table (print col, the default for long vectors) or in a line (print line). > file sends it to a file. set width and height set the page size; set nobreak removes page breaks.",
+        "wrdata file vectors writes plain columns of numbers: by default each vector comes with its own scale column (time, v(in), time, v(out)); set wr_singlescale writes one scale column, set wr_vecnames adds a header line, option numdgt sets digits. This is the easiest format for gnuplot, a spreadsheet or numpy.loadtxt.",
+        "write file vectors writes a SPICE3 rawfile, binary unless set filetype=ascii. Without vectors it writes the whole current plot; with -r on the command line batch runs write everything automatically. load file.raw reads one back as a plot.",
+        "wrs2p writes Touchstone S-parameter files; eprvcd writes digital event nodes as a VCD file for a waveform viewer such as GTKWave; sndprint writes a .wav sound file (version 47)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Plotting"
+    },
+    {
+      "type": "list",
+      "items": [
+        "plot v(in) v(out): an X11 window (Linux, with --with-x) or the Windows GUI window. Options: xlimit 0 1u, ylimit -1 1, xlog, ylog, loglog, title 'text', xlabel, ylabel, vs for a different x axis (plot v(out) vs v(in)), and retraceplot. The window can zoom, and hardcopy saves it as PostScript.",
+        "gnuplot name vectors: writes name.plt and name.data and runs gnuplot. With set gnuplot_terminal=png/quit it writes a PNG without opening a window, for batch runs.",
+        "pyplot name vectors (version 47): the same with Python and matplotlib; set pyplot_terminal=png writes name.png, set pyplot_subplots=N stacks the traces in panels, set pyplot_style picks a matplotlib style.",
+        "asciiplot: a character plot in the terminal, from the SPICE2 days; quick on a remote shell.",
+        "iplot: an incremental plot that updates while a transient runs.",
+        "Xschem, KiCad and Qucs-S show results in their own viewers; gaw and GTKWave read rawfiles and VCD files."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading results in Python"
+    },
+    {
+      "type": "prose",
+      "text": "wrdata files load with numpy.loadtxt. For rawfiles, packages exist (spicelib, PyLTSpice, ltspice), but the format is simple enough to read directly: a text header with Variables: and Values: or Binary: sections, then the numbers, real doubles (or pairs for complex data) point by point. This reader handles ngspice's binary and ascii rawfiles, real and complex, and checks itself against the files written above:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# read_raw.py: read an ngspice rawfile (binary or ascii, real or complex) into numpy arrays\nimport numpy as np\n\ndef read_raw(path):\n    plots, f = [], open(path, \"rb\")\n    while True:\n        meta, names = {}, []\n        line = f.readline()\n        while line and not line.strip():          # blank lines between plots\n            line = f.readline()\n        if not line:\n            return plots\n        while line:                               # header lines \"Key: value\"\n            text = line.decode(\"latin-1\").rstrip(\"\\n\")\n            key, _, val = text.partition(\":\")\n            key = key.strip().lower()\n            if key == \"variables\":\n                for _ in range(int(meta[\"no. variables\"])):\n                    parts = f.readline().decode(\"latin-1\").split()\n                    names.append(parts[1])         # index, name, type\n            elif key in (\"binary\", \"values\"):\n                break\n            else:\n                meta[key] = val.strip()\n            line = f.readline()\n        nv, npts = int(meta[\"no. variables\"]), int(meta[\"no. points\"])\n        cplx = \"complex\" in meta.get(\"flags\", \"\").lower()\n        width = 2 if cplx else 1\n        if key == \"binary\":\n            data = np.frombuffer(f.read(8 * nv * npts * width), dtype=\"<f8\")\n            data = data.reshape(npts, nv * width)\n        else:                                     # ascii: \"index value\" then one value per line\n            need, toks = npts * (nv + 1), []\n            while len(toks) < need:\n                toks += f.readline().decode().split()\n            rows = [toks[i * (nv + 1) + 1:(i + 1) * (nv + 1)] for i in range(npts)]\n            data = np.array([[float(x) for t in r for x in t.split(\",\")] for r in rows])\n        if cplx:\n            data = data[:, 0::2] + 1j * data[:, 1::2]\n        plots.append({\"title\": meta.get(\"plotname\"), \"vectors\": dict(zip(names, data.T))})\n\nif __name__ == \"__main__\":\n    a = read_raw(\"out-ascii.raw\")[0][\"vectors\"]\n    b = read_raw(\"out-binary.raw\")[0][\"vectors\"]\n    print(sorted(a), len(a[\"time\"]))\n    assert np.allclose(a[\"v(out)\"], b[\"v(out)\"], rtol=1e-6)\n    d = np.loadtxt(\"out-data.txt\", skiprows=1)    # wrdata with a header line\n    assert np.allclose(d[:, 2], b[\"v(out)\"], rtol=1e-6)\n    print(\"v(out) at the end:\", b[\"v(out)\"][-1])\n"
+    },
+    {
+      "type": "prose",
+      "text": "The test at the bottom reads the same results in the three formats and checks that they agree. The reader returns one dictionary per plot in the file; a complex AC result comes back as complex numpy arrays."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Logs and messages"
+    },
+    {
+      "type": "list",
+      "items": [
+        "-o file keeps a batch run's messages; in a script, echo > file and print > file write your own.",
+        "set ngdebug prints much more about parsing and analyses; option list and option node print the expanded netlist and node table; listing (or listing expand) shows the netlist after subcircuit and parameter expansion, the most useful command when a netlist does not mean what you think.",
+        "rusage prints time and memory; option acct after each analysis."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Batch to PNG",
+      "text": "On a server with no display, how do you produce a PNG of v(out) from a transient in a batch run?",
+      "solution": [
+        "set gnuplot_terminal=png/quit then gnuplot name v(out) (gnuplot must be installed), or set pyplot_terminal=png then pyplot name v(out) (Python with matplotlib). Or wrdata the vectors and plot them with any tool."
+      ],
+      "answer": "gnuplot or pyplot with the png terminal variable set, or wrdata."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 11.6 (batch output), 13.5 (print, wrdata, write, plot, hardcopy, gnuplot, pyplot), 14.6 to 14.8 and 15 (rawfile format)."
+      ]
+    }
+  ]
+}
