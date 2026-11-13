@@ -66,13 +66,24 @@ function walk(node, prefix, out = []) {
 }
 
 const nodes = topic ? walk(topic, `/${SHELF}`) : [];
-const pages = nodes.map(({ node, route }) => ({
-  route,
-  path: node.page,
-  page: node.page && existsSync(join(repoRoot, node.page))
-    ? JSON.parse(readFileSync(join(repoRoot, node.page), "utf8"))
-    : null,
-}));
+/** A node's page file: its own, or for a path step (`ref`) the page it borrows. */
+function pageOf(node, route) {
+  if (node.page) return node.page;
+  const res = resolveRoute(topics, parseHash(`#${route}`));
+  return res ? res.pageFile : undefined;
+}
+
+const pages = nodes.map(({ node, route }) => {
+  const path = pageOf(node, route);
+  return {
+    route,
+    path,
+    borrowed: !node.page,
+    page: path && existsSync(join(repoRoot, path))
+      ? JSON.parse(readFileSync(join(repoRoot, path), "utf8"))
+      : null,
+  };
+});
 
 /** Re-register every widget type module (other tests may clear the registry). */
 async function registerAllTypes() {
@@ -94,21 +105,29 @@ describe("computational cortical columns — content integrity", () => {
 
   it("every node has a page under content/pages/brain/computational-cortical-columns/ that exists and resolves", () => {
     for (const { node, route } of nodes) {
+      const res = resolveRoute(topics, parseHash(`#${route}`));
+      expect(Boolean(res && res.node)).toBe(true);
+      if (node.ref) {
+        // A path step borrows the page of a reference topic elsewhere on the shelf.
+        expect(node.page).toBe(undefined);
+        expect(typeof res.pageFile).toBe("string");
+        expect(existsSync(join(repoRoot, res.pageFile))).toBe(true);
+        continue;
+      }
       expect(typeof node.page).toBe("string");
       expect(node.page.startsWith(`content/pages/${SHELF}/${TOPIC}/`)).toBe(true);
       expect(existsSync(join(repoRoot, node.page))).toBe(true);
-      const res = resolveRoute(topics, parseHash(`#${route}`));
-      expect(Boolean(res && res.node)).toBe(true);
     }
   });
 
   it("every page has a title, substantive content, and ends with a Sources callout", () => {
-    for (const { path, page } of pages) {
+    for (const { path, page, borrowed } of pages) {
       if (!page) throw new Error(`missing page ${path}`);
       expect(typeof page.title === "string" && page.title.length > 0).toBe(true);
       expect(Array.isArray(page.blocks) && page.blocks.length >= 4).toBe(true);
       const last = page.blocks[page.blocks.length - 1];
-      if (!(last.type === "callout" && /^Sources: /.test(last.text))) {
+      // Borrowed reference pages follow their own topic's style: a "Sources: " prose block.
+      if (!((last.type === "callout" || borrowed) && /^Sources: /.test(last.text))) {
         throw new Error(`${path} must end with a "Sources: " callout`);
       }
     }

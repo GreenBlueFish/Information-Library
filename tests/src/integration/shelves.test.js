@@ -76,6 +76,12 @@ describe("shelves: the topic tree", () => {
   it("every page is <route>/index.json, every node has one, and no page file is orphaned", () => {
     const used = new Set();
     for (const { node, route } of nodes()) {
+      if (node.ref) {
+        // A path step borrows another node's page; it must name a real page.
+        expect(node.page).toBe(undefined);
+        expect(resolveRoute(tree, parseHash(route)).refPath.join("/")).toBe(node.ref.slice(1));
+        continue;
+      }
       expect(node.page).toBe(`content/pages${route}/index.json`);
       expect(existsSync(join(repoRoot, node.page))).toBe(true);
       used.add(node.page);
@@ -87,7 +93,7 @@ describe("shelves: the topic tree", () => {
   it("no title starts with a number", () => {
     for (const { node } of nodes()) {
       if (/^\d+\.\s/.test(node.title)) throw new Error(`numbered title: ${node.title}`);
-      const page = readJson(node.page);
+      const page = node.page ? readJson(node.page) : {};
       if (/^\d+\.\s/.test(page.title ?? "")) throw new Error(`numbered page title: ${node.page}`);
     }
   });
@@ -147,5 +153,45 @@ describe("shelves: hidden pages and the home", () => {
     shelves.forEach((shelf, i) => {
       expect(sections[i].querySelectorAll(".home-card").length).toBe(shelf.children.length);
     });
+  });
+});
+
+describe("path steps (ref nodes)", () => {
+  const t = {
+    slug: "root",
+    children: [
+      { slug: "s", title: "Shelf", shelf: true, children: [
+        { slug: "ref-topic", title: "Ref Topic", page: "r.json", children: [{ slug: "leaf", title: "Leaf", page: "leaf.json" }] },
+        { slug: "path", title: "Path", page: "p.json", children: [
+          { slug: "step", title: "Leaf", ref: "/s/ref-topic/leaf" },
+          { slug: "broken", title: "Broken", ref: "/s/nowhere" },
+          { slug: "chained", title: "Chained", ref: "/s/path/step" },
+        ] },
+      ] },
+    ],
+  };
+
+  it("a step resolves on the path, with the borrowed page and its home", () => {
+    const res = resolveRoute(t, ["s", "path", "step"]);
+    expect(res.node.slug).toBe("step");
+    expect(res.pageFile).toBe("leaf.json");
+    expect(res.refPath).toEqual(["s", "ref-topic", "leaf"]);
+    expect(res.crumbs.map((n) => n.slug)).toEqual(["s", "path", "step"]);
+  });
+
+  it("a ref to a missing page, or to another ref, does not resolve and is reported", () => {
+    const seen = [];
+    expect(resolveRoute(t, ["s", "path", "broken"], (e) => seen.push(e.kind))).toBe(null);
+    expect(resolveRoute(t, ["s", "path", "chained"], (e) => seen.push(e.kind))).toBe(null);
+    expect(seen).toEqual(["bad-ref", "bad-ref"]);
+  });
+
+  it("the page says where it lives, naming the topics above it but not the shelf", () => {
+    const mount = pinDom();
+    const res = resolveRoute(t, ["s", "path", "step"]);
+    renderPage({ ...res, tree: t }, { title: "Leaf", blocks: [] }, mount);
+    const note = mount.querySelector(".page-ref-note");
+    expect(note.textContent).toBe("This page lives in Ref Topic.");
+    expect(note.querySelector("a").getAttribute("href")).toBe("#/s/ref-topic/leaf");
   });
 });

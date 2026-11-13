@@ -20,7 +20,8 @@ import { describe, it, expect } from "../../harness.js";
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, "..", "..", "..");
 const FIG_DIR = "assets/figures/computational-cortical-columns";
-const PAGE_ROOTS = ["content/pages/brain/computational-cortical-columns", "content/pages/brain/neuroscience/cortical-columns"];
+// The column pages and the reference pages the path borrows (merged from it).
+const PAGE_ROOTS = ["content/pages/brain"];
 
 function jsonFiles(dir) {
   return readdirSync(join(repoRoot, dir)).flatMap((name) => {

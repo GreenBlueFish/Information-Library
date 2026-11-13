@@ -59,7 +59,8 @@ const topics = readTopicTree(repoRoot);
 function collectLeaves(node, path, out) {
   const children = Array.isArray(node.children) ? node.children : [];
   if (children.length === 0) {
-    out.push({ path, node });
+    // A path step (`ref`) borrows another node's page; shelves.test.js checks it.
+    if (!node.ref) out.push({ path, node });
     return out;
   }
   for (const child of children) {

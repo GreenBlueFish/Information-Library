@@ -669,6 +669,18 @@ function renderTopicPage(resolution, pageContent) {
     "";
   page.appendChild(el("h1", "page-title", title));
 
+  // A path step shows a page that lives in another topic: say where, so the
+  // reader can go to its home there (and the page arrows there).
+  const home = refHome(resolution.tree, resolution.refPath);
+  if (home) {
+    const note = el("p", "page-ref-note", "This page lives in ");
+    const link = el("a", "page-ref-note__link", home.label);
+    link.setAttribute("href", hrefForPath(resolution.refPath));
+    note.appendChild(link);
+    note.appendChild(document.createTextNode("."));
+    page.appendChild(note);
+  }
+
   if (pageContent && pageContent.intro) {
     page.appendChild(richEl("p", "page-intro", pageContent.intro));
   }
@@ -683,6 +695,27 @@ function renderTopicPage(resolution, pageContent) {
   if (pager) page.appendChild(pager);
 
   return page;
+}
+
+/**
+ * The label for a path step's home: the titles of the nodes above the page it
+ * shows, below the shelf ("Spiking Neural Networks › Neuron Models"), or null.
+ * @param {TopicNode|undefined} tree
+ * @param {string[]|undefined} refPath
+ * @returns {{ label: string }|null}
+ */
+function refHome(tree, refPath) {
+  if (!tree || !Array.isArray(refPath) || refPath.length === 0) return null;
+  const titles = [];
+  let siblings = Array.isArray(tree.children) ? tree.children : [];
+  for (const slug of refPath) {
+    const node = siblings.find((n) => n && n.slug === slug);
+    if (!node) return null;
+    if (!node.shelf) titles.push(node.title ?? node.slug);
+    siblings = Array.isArray(node.children) ? node.children : [];
+  }
+  titles.pop(); // the page itself is already the heading
+  return titles.length ? { label: titles.join(" › ") } : null;
 }
 
 /**

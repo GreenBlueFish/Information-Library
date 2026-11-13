@@ -98,10 +98,12 @@ export function checkTopicNodeSchema(root) {
         seen.add(slug);
       }
 
-      // Leaf ⇒ has a non-empty `page`.
+      // Leaf ⇒ has a non-empty `page` (or a `ref` borrowing another node's page).
       const isLeaf = !Array.isArray(node.children) || node.children.length === 0;
       if (isLeaf) {
-        if (typeof node.page !== "string" || node.page.trim() === "") {
+        const hasPage = typeof node.page === "string" && node.page.trim() !== "";
+        const hasRef = typeof node.ref === "string" && node.ref.trim() !== "";
+        if (!hasPage && !hasRef) {
           problems.push({ kind: "missing-page", path });
         }
       } else {

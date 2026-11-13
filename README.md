@@ -40,7 +40,7 @@ nothing is compiled or installed.
 ## Using it
 
 - **Browse topics.** The left navigation shows the topic tree; click a topic or
-  subtopic to open its page. The URL hash (e.g. `#/calculus/limits`) reflects
+  subtopic to open its page. The URL hash (e.g. `#/math/calculus/limits`) reflects
   where you are, so links and the back button work.
 - **Look up a term.** Highlight any word or phrase on a page to see an inline
   definition. Matching is case-insensitive and tolerates plurals and small
@@ -72,8 +72,16 @@ layer, SDR overlap, temporal memory, multi-column voting).
 
 Everything is data-driven, so extending the library is a localized edit:
 
-- **A new topic:** add a node to `content/topics.json` and create its page JSON
-  under `content/pages/...`.
+- **A new topic:** add a node to its shelf's file in `content/topics/` (e.g.
+  `content/topics/electronics.json`) and create its page at
+  `content/pages/<route>/index.json`, e.g. `content/pages/electronics/vhdl/index.json`
+  for `#/electronics/vhdl`. A topic that belongs on no shelf yet gets a new
+  shelf: a new file in `content/topics/` plus one `{ "file": ... }` line in
+  `content/topics.json`.
+- **A page that appears in a learning path:** don't copy it; add a node with
+  `"ref": "/route/of/the/page"` to the path.
+- **A page that moves:** add `"/old/route": "/new/route"` to
+  `content/redirects.json` so old links keep working.
 - **A new glossary term:** glossaries live one-per-topic under `content/terms/`,
   with paths mirroring topic routes — `/a/b/c` → `content/terms/a/b/c.json`, and
   the shared general glossary `/` → `content/terms/_root.json`. To add a term,
