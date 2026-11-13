@@ -1,0 +1,195 @@
+{
+  "title": "Netlist Syntax",
+  "intro": "An ngspice input file is plain text: a title, one line per circuit element, dot commands that define models, parameters and analyses, an optional .control script, and .end. This page gives the rules every line follows.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The structure of a file"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Two-stage example: the first line is always the title\n* A full-line comment starts with * in the first column\n.param vdd=1.8 rload=10k        $ end-of-line comment after \"$ \"\n.include \"models.lib\"           ; also \";\" and \"//\" start one\n\nVDD  vdd 0   {vdd}\nVIN  in  0   DC 0.9 AC 1\nR1   vdd out {rload}\nM1   out in 0 0 nfet W=2u L=0.18u\n+    m=2                        $ \"+\" in column 1 continues the line\n\n.op\n.ac dec 10 1k 1G\n.control\n  run                           $ runs the .op and .ac above\n  print v(out)\n  quit                          $ exit here (see Installing and Running)\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Line 1 is the title. It is never read as a circuit line, whatever it says, so a file that starts straight with R1 loses that resistor. .title some text sets a title elsewhere.",
+        "The last line is .end. Anything after it is ignored.",
+        "Between them the order does not matter: models can come after the elements that use them, and analyses can be anywhere. Only blocks must stay together: .subckt ... .ends, .control ... .endc, .if ... .endif.",
+        "Blank lines and leading spaces are ignored. Everything is case-insensitive (R1 and r1 are the same element, OUT and out the same node), except file names and strings in quotes."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Element lines"
+    },
+    {
+      "type": "prose",
+      "text": "An element line is the instance name, its nodes, then its value or model and parameters. The first letter of the name sets the kind of element:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "R resistor, C capacitor, L inductor, K mutual inductance (coupling between inductors).",
+        "V voltage source, I current source, E voltage-controlled voltage source, G voltage-controlled current source, F current-controlled current source, H current-controlled voltage source, B behavioural (arbitrary expression) source.",
+        "D diode, Q bipolar transistor, J JFET, M MOSFET, Z MESFET (and HFET), S voltage-controlled switch, W current-controlled switch.",
+        "T lossless transmission line, O lossy transmission line (LTRA), U uniform RC line, Y single lossy line (TXL), P coupled multiconductor line (CPL).",
+        "X subcircuit instance, A XSPICE code model, N Verilog-A device loaded from an .osdi file. U is also used for PSpice-style digital primitives in PSpice compatibility mode."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The rest of the name is free: R1, Rload and R_feedback_2 are all resistors. Fields are separated by spaces, commas, an equals sign or parentheses, so V1 in 0 PULSE(0 1 0 1n 1n 5n 10n) and V1 in 0 PULSE 0 1 0 1n 1n 5n 10n are the same."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Numbers and scale factors"
+    },
+    {
+      "type": "prose",
+      "text": "A number can be an integer (12), a decimal (3.3), in exponent form (1e-14, 2.65e3), or followed by a scale factor:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "T = 1e12, G = 1e9, Meg = 1e6, k = 1e3, mil = 25.4e-6 (a thousandth of an inch).",
+        "m = 1e-3, u = 1e-6, n = 1e-9, p = 1e-12, f = 1e-15, a = 1e-18."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "The classic trap: M and m both mean milli. A 1 megohm resistor is 1Meg (or 1e6), not 1M, which is 1 milliohm. Letters after a number or scale factor are ignored, so 10V, 10Hz and 10Volts are all 10, and 1kOhm is 1000; but 1F (meant as one farad) is read as 1 femto. Write capacitors in farads with a prefix (1u, 100n) or exponent form (1e-6)."
+    },
+    {
+      "type": "prose",
+      "text": "In LTspice compatibility mode ngspice also accepts the RKM notation used on resistor and capacitor markings: 2K7 for 2.7 kilohms, 4R7 for 4.7 ohms, 100R for 100 ohms."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Node names and ground"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Node names are strings: 1, out, vdd, n_bias_3. They are case-insensitive. Avoid = % ( ) , [ ] < > ~ in names; they are delimiters for XSPICE models.",
+        "Ground is node 0. gnd is accepted too and turned into 0 (set no_auto_gnd stops that). Unlike SPICE2, 0 and 00 are different nodes in ngspice, because names are strings, not numbers.",
+        "Inside a subcircuit, node names are local; hierarchical names like x1.out or x1.x2.n3 reach them from outside (in the control language and in .save).",
+        ".global vdd vss makes nodes the same in every subcircuit."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Rules the circuit itself must follow"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Every node needs a DC path to ground. A node connected only through capacitors (a floating gate, the middle of two series capacitors) gives a singular matrix: add a large resistor to ground (1G) or set .option rshunt=1e12, which adds one to every node.",
+        "No loop made only of voltage sources and inductors (two ideal sources in parallel, an inductor straight across a voltage source), and no cut-set made only of current sources and capacitors (a current source feeding a capacitor with nothing else).",
+        "Every node needs at least two connections, except at a transmission line's ends and MOSFET bulk nodes. A dangling node is usually a typing mistake in a node name."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Comments and continuation"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A line starting with * is a comment.",
+        "An end-of-line comment starts with \\$ followed by a space (a lone \\$ is accepted too), with ;, or with //. In PSpice compatibility mode \\$ becomes an ordinary character (PSpice uses it in names), so use ; there.",
+        "A line starting with + continues the previous line. A line ending in two backslashes continues on the next line, shell style. .title, .lib and .include cannot be continued.",
+        "If a line starts with one of = [ ] ? ( ) & % \\$ \\\" ! : ngspice turns it into a comment and warns; set strict_errorhandling makes such warnings fatal."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Dot commands"
+    },
+    {
+      "type": "prose",
+      "text": "Lines starting with a dot are commands to the simulator rather than circuit elements. Grouped by job:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Models and structure: .model, .subckt and .ends, .include, .lib, .global, .param, .func, .csparam, .if/.elseif/.else/.endif, .temp, .options, .title, .end.",
+        "Analyses: .op, .dc, .ac, .tran, .noise, .disto, .pz, .tf, .sens, .sp, .pss.",
+        "Initial conditions: .ic and .nodeset.",
+        "Output in batch mode: .save, .print, .plot (character plots), .probe, .four, .meas, .width, .sndparam and .sndprint (sound files).",
+        "The control script: .control ... .endc."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Conditional netlists"
+    },
+    {
+      "type": "prose",
+      "text": ".if, .elseif, .else and .endif include or skip lines depending on a parameter expression. This is how one file holds several variants of a circuit:"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Conditional netlist\n.param use_rc=1 rval=1k\nV1 in 0 AC 1\n.if (use_rc == 1)\n  R1 in out {rval}\n  C1 out 0 1n\n.else\n  R1 in out {rval}\n  L1 out 0 1m\n.endif\n.control\n  ac dec 10 1k 10meg\n  meas ac f3 when vdb(out)=-3\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "The condition is evaluated once, when the netlist is read, so it cannot depend on a node voltage, and changing use_rc with alterparam needs a reset to re-read the netlist."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The .control section"
+    },
+    {
+      "type": "prose",
+      "text": "Between .control and .endc you write commands in ngspice's own scripting language: run analyses, compute with result vectors, loop, measure, print and write files. It is a different language from the netlist (no element lines, no braces needed, variables with \\$), described on the Control Language page. A netlist may have one .control section, normally just before .end."
+    },
+    {
+      "type": "callout",
+      "text": "How to run the samples in this topic: save one as a file and run ngspice -b file.cir. Their analyses are inside the .control block, and those that also have dot analyses end with quit, so they behave the same whether you start them with -b or not."
+    },
+    {
+      "type": "problem",
+      "title": "Spot the mistakes",
+      "text": "What is wrong with this file?\nR1 in out 1M; C1 out 0 1F; V1 in 0 1; .tran 1 10; .end (each on its own line, with no title line).",
+      "solution": [
+        "There is no title line, so R1 in out 1M is taken as the title and the resistor is lost.",
+        "1M is 1 milliohm; for a megohm write 1Meg.",
+        "1F is 1 femtofarad; for a farad write 1 or 1e0.",
+        "Without R1, node in connects only to V1 and node out only to C1, so out has no DC path to ground."
+      ],
+      "answer": "No title line, 1M is milli, 1F is femto, and out floats."
+    },
+    {
+      "type": "problem",
+      "title": "Continuation",
+      "text": "Write a MOSFET line with W=10u, L=0.5u, AD=5p, AS=5p, PD=11u, PS=11u split over two lines.",
+      "solution": [
+        "M1 d g s b nch W=10u L=0.5u\n+ AD=5p AS=5p PD=11u PS=11u"
+      ],
+      "answer": "Put + at the start of the second line."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 2 (circuit description) and section 2.4 (title, end, comments and continuation)."
+      ]
+    }
+  ]
+}

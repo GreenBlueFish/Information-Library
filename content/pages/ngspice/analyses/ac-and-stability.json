@@ -1,0 +1,112 @@
+{
+  "title": "AC Analysis and Stability",
+  "intro": "AC analysis linearises the circuit at its operating point and solves it at each frequency of a sweep, with the sources' AC values as inputs. The results are complex vectors, so one run gives gain, phase, group delay and impedance. With a little care in how the loop is broken, it also gives the loop gain and phase margin of a feedback circuit.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".ac"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* .ac dec points_per_decade fstart fstop | oct points_per_octave ... | lin points fstart fstop\n.ac dec 20 1 1G\n.ac lin 101 0.9meg 1.1meg\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Only sources with an AC value are inputs. Usually exactly one has AC 1, so every node's result is the transfer function from it.",
+        "Results are complex: v(out) has a real and imaginary part. Functions turn them into what you plot: vdb(out) or db(v(out)) (20 log10 of the magnitude), vm(out) or mag(), vp(out) or ph() (phase in radians, or degrees after set units=degrees), cph() for a phase without jumps at plus or minus 180 degrees, vr(), vi(), real(), imag(), and group_delay().",
+        "Impedance: drive a node with a 1 A AC current source; v(node) is then the impedance in ohms.",
+        "The analysis is linear: an AC 1 V input gives correct transfer functions even for a circuit that would clip at 10 mV. Use transient or .disto for large signals.",
+        "Device @-values (@m1[gm]) are not available inside AC; read them from the op."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Two-pole amplifier: gain, phase, bandwidth and group delay\nVIN in 0 DC 0 AC 1\nG1 0 a in 0 1m\nR1 a 0 100k\nC1 a 0 1.59n            $ pole at 1 kHz\nG2 0 out a 0 1m\nR2 out 0 10k\nC2 out 0 15.9p          $ pole at 1 MHz\n.control\n  set units=degrees\n  ac dec 50 10 100meg\n  let gain = vdb(out)\n  let phase = cph(v(out))          $ continuous phase, in degrees here\n  let gd = group_delay(v(out))\n  meas ac a0 find gain at=10\n  meas ac f3db when gain=a0-3\n  meas ac fu when gain=0\n  meas ac ph_fu find phase when gain=0\n  meas ac gd_dc find gd at=10\n.endc\n.end\n"
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/ngspice/ngspice-bode.svg",
+      "alt": "Bode plot from the ngspice run of the two-pole amplifier: gain flat at 60 dB up to 1 kHz, then falling at 20 dB per decade, and at 40 dB per decade above 1 MHz; phase going from 0 to -180 degrees, with -128 degrees at the 787 kHz unity-gain point.",
+      "caption": "The sample's gain and phase, plotted from ngspice's wrdata output."
+    },
+    {
+      "type": "prose",
+      "text": "DC gain is 100 x 10 = 1000 (60 dB); the first pole gives f3db = 1 kHz. Alone it would put the unity-gain frequency at 1 MHz, but the second pole at 1 MHz lowers it to 787 kHz, where the phase is -90 - atan(0.787) = -128 degrees, as meas reports. vp(), ph() and cph() all follow set units=degrees; without it they return radians."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Loop gain and phase margin"
+    },
+    {
+      "type": "prose",
+      "text": "A feedback amplifier's stability is decided by its loop gain T(s), not its closed-loop response. Three ways to get T in ngspice:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Open the loop with an LC break: a huge inductor (1 GH) in the feedback path keeps the DC operating point closed, a huge capacitor (1 GF) couples an AC source into the far side. Simple and common, but it ignores the loading of the loop at the break point.",
+        "Middlebrook's voltage injection: at a point where one side has low impedance and the other high, insert an AC voltage source in series and measure the voltages on both sides; T = -v(after)/v(before) is accurate when the impedance ratio is large. His double-injection method adds a second run with current injection and combines the two, T = (Tv Ti - 1)/(Tv + Ti + 2), which removes the impedance condition.",
+        "Tian's method (and its general form by Middlebrook, the Tian-Middlebrook method): two AC runs, one injecting a series voltage, one injecting a shunt current at the same point, combined to give T exactly with no assumption about impedances, and bidirectional loops included. It needs no break of the DC path."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Loop gain of a follower by Tian's method\n* op-amp: A0 = 1e4, poles at 1 kHz and 2 MHz; unity-gain feedback from out to inn\n.subckt opamp inp inn out\nG1 0 a inp inn 1m\nR1 a 0 10Meg\nC1 a 0 15.9p\nG2 0 b a 0 1m\nR2 b 0 1k\nC2 b 0 79.6p\nE1 out 0 b 0 1\n.ends\nVINP inp 0 DC 0.5\nX1 inp inn out opamp\n* the probe: a voltage source Vi in series and a current source Ii to ground at node x\nVi x inn DC 0 AC 0\nIi 0 x DC 0 AC 0\nRfb out x 1\n.control\n  set units=degrees\n  * run 1: voltage injection\n  alter @Vi[acmag] = 1\n  alter @Ii[acmag] = 0\n  ac dec 20 1 100meg\n  let iv = i(Vi)\n  let vv = v(x)\n  * run 2: current injection\n  alter @Vi[acmag] = 0\n  alter @Ii[acmag] = 1\n  ac dec 20 1 100meg\n  let ii = i(Vi)\n  let vi = v(x)\n  * Tian: T = -1 / (1 - 1/(2(ID VI - VD II) + VD + II))\n  let d = 2*(ac1.iv*vi - ac1.vv*ii) + ac1.vv + ii\n  let T = -1/(1 - 1/d)\n  let tdb = db(T)\n  let tph = cph(T)\n  meas ac fc when tdb=0\n  meas ac pm find tph when tdb=0\n  let pmargin = pm + 180\n  print pmargin\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "The probe is a series voltage source Vi and a shunt current source Ii at the same node x, both with DC 0, so the operating point is untouched. Two AC runs inject one and then the other, the vectors of the first run are read back as ac1.name, and Tian's formula combines them. This op-amp model (A0 = 10^4, poles at 1 kHz and 2 MHz) crosses unity loop gain at 4.26 MHz with a phase margin of 25 degrees as a follower: the second pole sits below the crossover, so it would ring badly. Hand check: 10^7/f = sqrt(1 + (f/2 MHz)^2) gives f = 4.26 MHz, and 90 - atan(4.26/2) = 25 degrees. The sign conventions of the formula depend on the direction of the probe sources: if T comes out as 1/T or with the wrong sign, check them against the derivation, and check the result once against an LC-break run."
+    },
+    {
+      "type": "callout",
+      "text": "The rule of thumb that 45 degrees of phase margin gives a well-behaved step response, and 60 degrees an overshoot of under 10%, applies to two-pole loops. For anything else, run a transient step as well and look at the overshoot and ringing."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Gain margin"
+    },
+    {
+      "type": "prose",
+      "text": "Find the loop gain where the phase crosses -180 degrees: meas ac gmar find tdb when tph=-180. The gain margin is minus that value in dB."
+    },
+    {
+      "type": "problem",
+      "title": "Impedance",
+      "text": "How do you plot the output impedance of a regulator from 10 Hz to 10 MHz?",
+      "solution": [
+        "Set the input source's AC value to 0, add Iout out 0 DC 0 AC 1 (or keep the DC load and add AC 1 to it), run ac dec 20 10 10meg, and plot vm(out): with a 1 A excitation the voltage is the impedance in ohms."
+      ],
+      "answer": "A 1 A AC current source at the output; vm(out) is |Z|."
+    },
+    {
+      "type": "problem",
+      "title": "Phase units",
+      "text": "After set units=degrees, which of vp(out), ph(v(out)) and cph(v(out)) are in degrees?",
+      "solution": [
+        "All three. units=degrees applies to vp, ph and cph (cph is the continuous version, without jumps at plus or minus 180). Without set units they are in radians."
+      ],
+      "answer": "All three."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 11.3.1 (.ac) and 13.2 (vector functions).",
+        "R. D. Middlebrook, 'Measurement of loop gain in feedback systems,' Int. J. Electronics, vol. 38, no. 4, 1975.",
+        "M. Tian, V. Visvanathan, J. Hantgan and K. Kundert, 'Striving for small-signal stability,' IEEE Circuits and Devices Magazine, vol. 17, no. 1, 2001.",
+        "F. Wiedmann, 'Loop gain simulation,' (Tian and Middlebrook methods for SPICE), and the loop-gain examples in the ngspice distribution."
+      ]
+    }
+  ]
+}

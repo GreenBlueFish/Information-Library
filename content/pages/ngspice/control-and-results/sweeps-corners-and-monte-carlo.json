@@ -1,0 +1,114 @@
+{
+  "title": "Sweeps, Corners and Monte Carlo",
+  "intro": "ngspice has no .step command. Sweeps of any parameter, temperature sweeps, process corners and Monte Carlo runs are all written as loops in the control language, which is more flexible once you know three patterns: alter for an element, alterparam and reset for a parameter, and reloading the netlist for a library corner.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sweeping a parameter and collecting the results"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Sweep a parameter, collect a measurement per run into one vector\n.param rl=1k\nV1 in 0 DC 0 AC 1\nR1 in out 1k\nC1 out 0 1n\nR2 out 0 {rl}\n.control\n  let rvals = vector(5)\n  let fc = vector(5)\n  let k = 0\n  foreach r 1k 2k 5k 10k 100k\n    alterparam rl = $r\n    reset\n    ac dec 50 1k 10meg\n    meas ac f3 when vdb(out)=vdb(out)[0]-3\n    let rvals[k] = $r\n    let fc[k] = f3\n    let k = k + 1\n    destroy                          $ free the ac plot\n  end\n  setplot const\n  print rvals fc\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "alter changes one element directly (alter C1 2n). alterparam plus reset changes a .param and recomputes every expression that uses it; use it when one parameter sets several values.",
+        "Results of each run land in a new plot. Collect the numbers into vectors created before the loop (they live in the plot that was current then, here const), or write them to a file with echo >> or print >>.",
+        "destroy (with no argument, the current plot) keeps memory from growing in long loops.",
+        "Nested loops give two-dimensional sweeps; dc can sweep two sources natively."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Temperature"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Temperature sweep of a diode forward voltage at 1 mA\n.model dmod D (is=1e-14 n=1)\nI1 0 a 1m\nD1 a 0 dmod\n.control\n  dc TEMP -40 125 15\n  let tc = deriv(v(a))\n  print v(a) tc\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "dc TEMP sweeps the circuit temperature directly. For a transient or AC at several temperatures, loop: foreach t -40 27 125 ... option temp = \\$t ... tran ... end. The forward voltage of a diode at constant current falls by about 1.7 to 1.85 mV per degree here (the familiar 2 mV/K rule of thumb), which the derivative shows."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Process corners"
+    },
+    {
+      "type": "prose",
+      "text": "Changing a .lib section needs the netlist to be read again, and .if cannot choose between .lib lines (the library is read before the condition is evaluated). The robust pattern: keep the circuit in its own file that includes a small corner file, and let a driver script rewrite that file and source the circuit for each corner."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Corner loop driver: the circuit is in corner-ckt.cir\n.control\n  shell rm -f corner-results.txt           $ start a fresh results file\n  foreach corner tt ss ff\n    echo \".lib corner-models.lib $corner\" > corner.inc\n    source corner-ckt.cir\n    op\n    echo \"corner $corner: v(b) = $&v(b)\" >> corner-results.txt\n    echo \"corner $corner: v(b) = $&v(b)\"\n    remcirc\n  end\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "Each pass writes corner.inc, loads the circuit (which includes it), simulates, records, and removes the circuit before the next. The same driver works for a real PDK: write the PDK's .lib line with the corner name, and loop over temperature and supply inside the corner loop for a full PVT table."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Monte Carlo"
+    },
+    {
+      "type": "prose",
+      "text": "Give the varying values random functions (agauss, gauss, aunif, unif, limit) in braces. Each reset re-expands the netlist and draws new numbers, so a Monte Carlo run is a loop of reset, analysis and collection:"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Monte Carlo: offset of a resistor divider with 1% resistors\n.param rnom=10k\nV1 a 0 2\nR1 a b {agauss(rnom, 0.01*rnom, 1)}\nR2 b 0 {agauss(rnom, 0.01*rnom, 1)}\n.control\n  setseed 7\n  let runs = 500\n  let vb = vector(runs)\n  let k = 0\n  while k < runs\n    reset\n    op\n    let vb[k] = v(b)\n    let k = k + 1\n  end\n  let mu = mean(vb)\n  let sigma = sqrt(mean((vb - mu)^2))\n  print mu sigma\n  let lo = vecmin(vb)\n  let hi = vecmax(vb)\n  print lo hi\n  wrdata mc-vb.txt vb\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "For two independent 1% resistors the output varies by 1% x 1 V / sqrt(2) = 7.1 mV (sigma), and this seed gives 7.5 mV. With 500 runs the estimate itself has a standard error of about 3% (sigma divided by the square root of 2N), so values from about 6.7 to 7.5 mV are all consistent with the theory. setseed makes the run repeatable; without it each session draws different numbers. The ngspice manual also shows the alternative of sgauss() and alter inside the loop, and mc_source to reload the netlist."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Process and mismatch: foundry PDKs put statistical parameters in special corner sections (SKY130 tt_mm, IHP mos_tt_mismatch and mos_tt_stat). Load that section and loop with reset; every device gets its own random draw for mismatch, the global parameters a common one for process.",
+        "Mismatch by hand: give each transistor delvto={agauss(0, avt/sqrt(w*l), 1)} (BSIM instance parameter), Pelgrom's rule.",
+        "In one transient: TRRANDOM sources driving behavioural elements vary a parameter randomly over time, an alternative for some statistical studies.",
+        "Analyse the collected vector with mean, stddev (or the explicit formula above), vecmin and vecmax, or write it out for a histogram in Python."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Optimisation"
+    },
+    {
+      "type": "prose",
+      "text": "The manual's chapter on optimisation shows ngspice driven by an external optimiser (or a control-language loop) that changes parameters, simulates and evaluates a cost from meas results. For real work, drive ngspice from Python (shared library or batch runs) and use scipy.optimize: see Shared Library and Python."
+    },
+    {
+      "type": "problem",
+      "title": "Seeds",
+      "text": "Two Monte Carlo runs on the same netlist give different sigmas, 7.0 mV and 7.4 mV. Is something wrong?",
+      "solution": [
+        "No: with 500 samples the standard error of a sigma estimate is about sigma/sqrt(2N) = 3%, so 7.0 and 7.4 are both consistent with 7.1. Use setseed for repeatable runs, and more runs for a tighter estimate."
+      ],
+      "answer": "No; that is the sampling error of 500 runs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 18 (statistical analysis, Monte Carlo), chapter 19 (optimisation) and 13.5 (alter, alterparam, reset, source, remcirc).",
+        "M. J. M. Pelgrom, A. C. J. Duinmaijer and A. P. G. Welbers, 'Matching properties of MOS transistors,' IEEE JSSC, vol. 24, no. 5, 1989."
+      ]
+    }
+  ]
+}

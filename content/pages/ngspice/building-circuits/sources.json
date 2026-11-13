@@ -1,0 +1,140 @@
+{
+  "title": "Sources",
+  "intro": "Independent sources drive the circuit; controlled sources model gain, coupling and ideal blocks. An independent source can have a DC value, an AC value for small-signal analyses and a transient waveform at the same time, and each analysis uses the part it needs.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Independent voltage and current sources"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* Vname n+ n- [DC value] [AC mag [phase]] [transient waveform] [DISTOF1 ...] [DISTOF2 ...]\nV1   in   0   DC 1.2  AC 1 0  SIN(1.2 0.1 1k)\nIb   vdd  b   10u            $ current flows from vdd through the source into b\nVsense x  y   0              $ a 0 V source used as an ammeter: i(Vsense)\n"
+    },
+    {
+      "type": "prose",
+      "text": "Current sources push current from the first node through the source to the second, so I1 vdd out 1m pushes 1 mA into node out. For a voltage source, i(V1) is the current flowing into its positive node from the circuit through the source, which is why a supply that delivers power shows a negative current. A 0 V source is the standard way to measure current in a branch."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Transient waveforms"
+    },
+    {
+      "type": "list",
+      "items": [
+        "PULSE(V1 V2 TD TR TF PW PER NP): starts at V1, after delay TD rises in TR to V2, stays for PW, falls in TF, repeats every PER, NP times (0 or omitted: forever). A zero rise time is replaced by the transient step, so give real edges.",
+        "SIN(VO VA FREQ TD THETA PHASE): VO + VA exp(-(t-TD) THETA) sin(2 pi FREQ (t-TD) + PHASE); before TD it holds VO. PHASE is in degrees.",
+        "EXP(V1 V2 TD1 TAU1 TD2 TAU2): exponential rise from V1 toward V2 from TD1 with time constant TAU1, then back toward V1 from TD2 with TAU2.",
+        "PWL(T1 V1 T2 V2 ...) r=TR td=TD: straight lines between points. r=0 repeats the whole list forever; r=T repeats from time T to the end; td delays the whole list. Since version 47 current sources take r and td too.",
+        "SFFM(VO VA FC MDI FM TD PHASEM PHASEC): frequency-modulated sine with carrier FC, modulation index MDI and modulating frequency FM. Version 46 swapped FC and FM to this order; check older netlists.",
+        "AM(VO VMO VMA FM FC TD PHASEM PHASEC): amplitude-modulated sine, VO + (VMO + VMA sin(2 pi FM t)) sin(2 pi FC t).",
+        "TRNOISE(NA NT NALPHA NAMP RTSAM RTSCAPT RTSEMT): transient noise: white Gaussian noise with samples of rms NA every NT (linearly interpolated between samples, so the measured rms of the waveform is lower, about 0.82 NA), 1/f noise with exponent NALPHA and amplitude NAMP, and random telegraph noise (Noise page).",
+        "TRRANDOM(TYPE TS TD PARAM1 PARAM2): a random value held for TS: type 1 uniform (range PARAM1 around offset PARAM2), 2 Gaussian (sigma PARAM1, mean PARAM2), 3 exponential, 4 Poisson. Feed it into a behavioural source to vary a parameter randomly during one run.",
+        "EXTERNAL: the value is set by the program that calls ngspice as a shared library."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Waveform gallery\nV1 p1 0 PULSE(0 1.8 1n 100p 100p 4.9n 10n)\nV2 p2 0 SIN(0 1 1meg 0 0 90)                  $ a cosine\nV3 p3 0 EXP(0 1 1u 0.5u 5u 1u)\nV4 p4 0 PWL(0 0 1u 1 2u 1 3u 0) r=0           $ a repeating trapezoid\nV5 p5 0 SFFM(0 1 1meg 5 100k)\nV6 p6 0 AM(0 1 0.5 100k 1meg)\nV7 p7 0 DC 0 TRNOISE(10m 10n 0 0)\nV8 p8 0 DC 0 TRRANDOM(2 1u 0 0.1 1)            $ Gaussian, mean 1, sigma 0.1\n.control\n  tran 10n 10u\n  meas tran p1avg avg v(p1) from=0 to=10u\n  meas tran p4max max v(p4)\n  meas tran n7rms rms v(p7)\n  meas tran r8avg avg v(p8)\n.endc\n.end\n"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Phase and repetition details"
+    },
+    {
+      "type": "prose",
+      "text": "SIN takes a sixth argument, a phase in degrees, so the waveform starts at time zero already shifted instead of waiting a delay. For PULSE the eighth argument is NP, the number of pulses; it is read as a phase only with set ngbehavior=xs. A PWL list can be read from a file through the XSPICE filesource model (Behavioural Modelling page), which accepts engineering notation since version 47."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "AC sources"
+    },
+    {
+      "type": "prose",
+      "text": "AC mag phase gives the source a small-signal amplitude for .ac, .noise and .pz. Its transient waveform and DC value play no part in AC analysis except through the operating point. Give AC 1 to exactly one source and the AC result at any node is the transfer function from that source. A source with no AC value is a short (voltage) or open (current) in AC analysis."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "RF ports"
+    },
+    {
+      "type": "prose",
+      "text": "For S-parameter analysis a voltage source becomes a port: V1 in 0 DC 0 AC 1 portnum 1 z0 50 makes it port 1 with a 50 ohm internal resistance in series (default 50). Port numbers must count up from 1. The series resistance stays in every analysis, so build a separate testbench for .sp (S-Parameters page)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Linear controlled sources"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* VCVS: Ename n+ n- nc+ nc- gain       voltage = gain * V(nc+, nc-)\nE1  out 0  in 0  100\n* VCCS: Gname n+ n- nc+ nc- gm         current n+ -> n- = gm * V(nc+, nc-)\nG1  out 0  in 0  1m\n* CCCS: Fname n+ n- Vsense gain       current = gain * i(Vsense)\nF1  out 0  Vsense 10\n* CCVS: Hname n+ n- Vsense rm         voltage = rm * i(Vsense)\nH1  out 0  Vsense 1k\n"
+    },
+    {
+      "type": "prose",
+      "text": "F and H sense the current through a voltage source named on the line (often a 0 V source added for the purpose). E and G take a differential pair of controlling nodes, as in the lines above."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Nonlinear forms of E and G"
+    },
+    {
+      "type": "list",
+      "items": [
+        "VALUE: E1 out 0 VALUE = {V(a)*V(b)}, or the short form E1 out 0 vol='V(a)*V(b)' (cur= for G). Both become B sources inside.",
+        "TABLE: E1 out 0 TABLE {V(in)} = (0,0) (1,2) (2,3): piecewise-linear lookup of an expression, clamped at the ends. Since version 46 the compact form TABLE = (x0, y0, x1, y1, ...) also works.",
+        "POLY(n): the SPICE2 polynomial source, E1 out 0 POLY(2) a 0 b 0 0 1 1 0.5 for out = V(a) + V(b) + 0.5 V(a)^2 (coefficients in SPICE2 order: constant, V(a), V(b), V(a)^2, V(a)V(b), V(b)^2 ...). ngspice turns it into the XSPICE spice2poly code model, which must be loaded (spinit does this).",
+        "LAPLACE and FREQ: transfer functions in s or as frequency tables; see Behavioural Modelling.",
+        "AND, OR, NAND, NOR: E1 out 0 AND(2) a 0 b 0 (0,0) (1,5): PSpice-style logic sources, accepted without any compatibility mode."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Controlled sources: an ideal op-amp amplifier and a current mirror\nVIN in 0 DC 0.1 AC 1\nR1  in  n  1k\nR2  n   out 9k\nEop out 0 0 n 1e6          $ open-loop gain 1e6, inverting input n\nIin 0 y 50u\nVy  y 0 0\nFm  0 m Vy 4               $ 4 x the current in Vy\nRm  m 0 1k\n.control\n  op\n  print v(out) v(m)\n  ac dec 5 1 1k\n  print vdb(out)[0]\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "The inverting amplifier gives -0.9 V (gain -9, about 19.1 dB in the AC result). Iin pushes 50 uA from ground into node y; it returns to ground through Vy, entering its + node, so i(Vy) = +50 uA. Fm then drives four times that, 200 uA, from its first node (0) through itself into m, and out through Rm, so v(m) = +0.2 V. Swapping the nodes of Fm flips the sign: check the signs of F and H outputs with a quick op."
+    },
+    {
+      "type": "problem",
+      "title": "Current direction",
+      "text": "I1 a 0 1m: does current flow into node a or out of it? And what does i(V1) read for V1 vdd 0 3.3 supplying 2 mA to a circuit?",
+      "solution": [
+        "Current flows from the first node (a) through the source to the second (0), so I1 pulls 1 mA out of a.",
+        "i(V1) is the current entering V1 at its positive node; a supply delivering 2 mA pushes current out of its + node, so i(V1) = -2 mA."
+      ],
+      "answer": "Out of a; i(V1) = -2 mA."
+    },
+    {
+      "type": "problem",
+      "title": "A clock",
+      "text": "Write a 100 MHz clock from 0 to 1.2 V with 50 ps edges and a 50% duty cycle, starting with a rising edge at 1 ns.",
+      "solution": [
+        "Period 10 ns. With 50 ps edges, the time at high is PW = 5 ns - 50 ps = 4.95 ns so that the high and low halves are equal (measured from mid-edge).",
+        "V1 clk 0 PULSE(0 1.2 1n 50p 50p 4.95n 10n)"
+      ],
+      "answer": "PULSE(0 1.2 1n 50p 50p 4.95n 10n)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 4 (sources) and sections 5.2 and 5.3 (nonlinear E and G)."
+      ]
+    }
+  ]
+}

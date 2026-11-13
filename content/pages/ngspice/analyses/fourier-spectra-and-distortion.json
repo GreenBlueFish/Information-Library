@@ -1,0 +1,99 @@
+{
+  "title": "Fourier, Spectra and Distortion",
+  "intro": "Harmonic distortion, spurs and spectra come from transient results. ngspice has four tools for them: .four and fourier for the harmonics of a periodic waveform and its THD, fft and spec for full spectra, psd for power spectral density, and the older small-signal .disto analysis. Getting clean numbers depends more on the time grid and the window than on the command.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Harmonics and THD: .four and fourier"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Harmonic distortion of a soft limiter\nVIN in 0 SIN(0 1 1k)\nBnl out 0 V = tanh(V(in))\nR1 out 0 1k\n.control\n  tran 1u 5m 0 1u\n  fourier 1k v(out)          $ also as a dot command: .four 1k v(out)\n  let h3 = fourier11[1][3] / fourier11[1][1]\n  print h3\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "fourier f0 vectors analyses the last period of the run (numPeriod since version 46 for more), interpolated onto a grid, and prints the magnitude and phase of the DC term and the first nine harmonics, normalised to the fundamental, plus the THD. Here the THD is 6.7% and the third harmonic 6.7% of the fundamental: tanh is odd, so the even harmonics are zero to numerical precision. The results are also stored as vectors (fourier11 and so on: rows are harmonic number, magnitude, phase, normalised values), unless set fournosave. set nfreqs=20 asks for more harmonics, and set fourgridsize the interpolation grid."
+    },
+    {
+      "type": "list",
+      "items": [
+        "The run must be long enough to reach steady state, and the last period must be exact: let the simulation end on a whole number of periods after settling.",
+        "Accuracy depends on the time steps: give a tmax of a small fraction of the period (1/100 or less for a 0.1% THD figure), and tighten reltol (1e-4 or 1e-5) for distortion below about -80 dB.",
+        "With trap ringing in the waveform, high harmonics are garbage; see Transient Analysis."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spectra: fft, spec and psd"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Spectrum of a two-tone signal through a cubic nonlinearity\nVA a 0 SIN(0 0.5 10k)\nVB b a SIN(0 0.5 11k)\nBnl out 0 V = V(b) - 0.1*V(b)*V(b)*V(b)\nR1 out 0 1k\n.control\n  tran 0.5u 2m 0 0.5u\n  linearize v(out)               $ fft needs equally spaced points\n  set specwindow=blackman        $ hanning, hamming, blackman, flattop, gaussian, none ...\n  fft v(out)                     $ makes a new plot (sp1) with frequency as scale\n  meas sp p10k  find vdb(out) at=10k\n  meas sp im3lo find vdb(out) at=9k\n  let im3_dbc = im3lo - p10k\n  print im3_dbc\n  setplot tran1                  $ exact tones: all are multiples of 1 kHz\n  set nfreqs=12\n  fourier 1k v(out)\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "fft vectors: a windowed FFT of transient vectors; the result is a new plot of complex spectra. Resolution is 1/(simulated time): 2 ms gives 500 Hz bins here, enough to separate 9, 10, 11 and 12 kHz. Run long enough for the resolution you need.",
+        "The input must be on a uniform grid: run linearize (or set interp before the run) first. Without it ngspice interpolates for you and prints a note.",
+        "Windows: set specwindow to rectangular (none), bartlet, blackman, hanning, hamming, gaussian (with specwindoworder) or flattop. Blackman or Blackman-Harris for spurs far below the carrier, flattop for accurate amplitudes, none only when the record holds a whole number of periods and is not zero-padded (fft pads to a power of two, which breaks that; with none the two-tone sample's IM3 reading was off by tens of dB).",
+        "spec fstart fstop fstep vectors: a DFT on a frequency grid you choose (the step must be at least 1/(simulated time)).",
+        "psd smooth vectors: a single-sided power spectral density (the smooth argument averages adjacent bins), and it prints the total power up to the Nyquist frequency. Use it for transient-noise results.",
+        "ifft goes back from a spectrum to time.",
+        "Measurements on an fft plot use meas sp ... find ... at=..."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For y = x - a x^3 with two tones of amplitude A, theory gives an IM3 product of (3/4) a A^3 against a fundamental of A - (9/4) a A^3 after compression: for a = 0.1 and A = 0.5, 0.0188 against 0.472, which is -34.0 dBc. fourier with a 1 kHz fundamental (every tone is a multiple of it) reports exactly that: the 9 kHz magnitude (0.00936) is 34.05 dB below the 10 kHz one (0.472). Ignore its THD and normalised columns here, which are relative to the empty 1 kHz bin. The fft readout gives -36.3 dBc, 2.3 dB off: the 2 ms record is zero-padded to a power of two and the tones do not fall on bin centres, so peak readings from an fft are approximate. Use fft to see the spectrum, and fourier or a longer, exactly periodic record when the number matters."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Small-signal distortion: .disto"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": ".disto of a BJT stage: second and third harmonic at the collector\n.model qn NPN (is=1e-16 bf=100)\nVCC vcc 0 5\nVIN b 0 DC 0.7 AC 1 DISTOF1 0.01      $ 10 mV amplitude for the distortion analysis\nRC vcc c 1k\nQ1 c b 0 qn\n.control\n  disto dec 1 1k 10k\n  setplot disto1                       $ 2nd harmonic\n  print mag(v(c))\n  setplot disto2                       $ 3rd harmonic\n  print mag(v(c))\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": ".disto computes distortion by a Volterra-series expansion of the device nonlinearities around the operating point: harmonics HD2 and HD3 with one input frequency, and the intermodulation products when a second source has DISTOF2 and f2overf1 is given. It is fast and noise-free, but works only for the built-in semiconductor devices: B sources, XSPICE models and OSDI models contribute no distortion. For this stage it gives 2.1 mV of second harmonic and 0.14 mV of third, matching the exponential law (Ic (a^2/4) RC and Ic (a^3/24) RC with a = 10 mV / 26 mV). Prefer transient plus fourier when in doubt."
+    },
+    {
+      "type": "problem",
+      "title": "Frequency resolution",
+      "text": "You need to see a spur 200 Hz away from a 1 MHz carrier. How long must the transient be, and what window?",
+      "solution": [
+        "Resolution is 1/T. To resolve 200 Hz you need bins well below that, say 50 Hz, so T = 20 ms of steady-state data (after the start-up transient; use tstart to skip it).",
+        "A window with low sidelobes (Blackman or Blackman-Harris) keeps the carrier's leakage from burying the spur."
+      ],
+      "answer": "About 20 ms of settled data, Blackman window."
+    },
+    {
+      "type": "problem",
+      "title": "THD from the vectors",
+      "text": "How do you compute THD in dB from the fourier result instead of reading the printout?",
+      "solution": [
+        "Use the stored vectors: with a vector fourier11 whose row 1 holds magnitudes for harmonics 0 to 9, THD = sqrt(sum over n = 2..9 of m_n^2) / m_1. In the control language: let m = fourier11[1]; let thd = sqrt(m[2]^2 + m[3]^2 + ... ) / m[1]; print db(thd)."
+      ],
+      "answer": "Square-sum the harmonic magnitudes from the fourier vector, divide by the fundamental."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 11.3.3 (.disto), 11.6.4 (.four) and 13.5 (fourier, fft, spec, psd, linearize).",
+        "F. J. Harris, 'On the use of windows for harmonic analysis with the discrete Fourier transform,' Proc. IEEE, vol. 66, no. 1, 1978."
+      ]
+    }
+  ]
+}

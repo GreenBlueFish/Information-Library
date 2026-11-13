@@ -1,0 +1,172 @@
+{
+  "title": "Installing and Running ngspice",
+  "intro": "ngspice runs on Linux, Windows and macOS. This page covers getting a build with the features you need, the ways to start it, the command-line options and where results go.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Getting ngspice"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Linux"
+    },
+    {
+      "type": "prose",
+      "text": "Most distributions package it: apt install ngspice on Debian and Ubuntu, dnf install ngspice on Fedora, pacman -S ngspice on Arch. Distribution packages lag the releases by months or years (Ubuntu 24.04 ships version 42), and some are built without CIDER or without OSDI. Check with ngspice -v and by trying the feature. To get the newest version, build from the release tarball or from git:"
+    },
+    {
+      "type": "code",
+      "lang": "shell",
+      "source": "# from a release tarball (ngspice-47.tar.gz from sourceforge.net/projects/ngspice/files)\ntar xzf ngspice-47.tar.gz && cd ngspice-47\nmkdir release && cd release\n../configure --with-x --enable-cider --enable-osdi --enable-openmp \\\n             --with-readline=yes CFLAGS=\"-m64 -O2\" LDFLAGS=\"-m64 -s\"\nmake -j\"$(nproc)\"\nsudo make install          # installs to /usr/local by default (--prefix to change)\n\n# or from git: git clone https://git.code.sf.net/p/ngspice/ngspice\n# then ./compile_linux.sh, which runs autogen.sh, configure and make for you\n"
+    },
+    {
+      "type": "prose",
+      "text": "Since version 43, XSPICE, KLU, readline, OpenMP, FFTW3 and OSDI are switched on by default, and --disable-xspice, --disable-klu, --disable-osdi, --disable-openmp or --with-fftw3=no turn them off. The options you still choose:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "--with-x: the X11 plot window. Without it, plot draws nothing; use gnuplot, pyplot or wrdata instead.",
+        "--enable-cider: the CIDER numerical device simulator (Specialist Features page).",
+        "--with-ngshared: build libngspice.so, the shared library used by Python, KiCad and other programs, instead of the executable. Build it in a separate directory, or make clean between the two builds.",
+        "--enable-pss: the experimental periodic steady state analysis.",
+        "--with-tcl=DIR: tclspice, a Tcl extension. --enable-relpath: look for spinit relative to the executable (useful for a portable install). --disable-sp: drop S-parameter analysis and RF noise.",
+        "Build dependencies on Debian/Ubuntu: build-essential, autoconf, automake, libtool, bison, flex, libx11-dev, libxaw7-dev, libreadline-dev, libfftw3-dev; libsndfile1-dev and libsamplerate0-dev for sound-file support."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Windows"
+    },
+    {
+      "type": "prose",
+      "text": "Download the 64-bit zip (ngspice-47_64.7z) from the sourceforge files page and unpack it to C:\\Spice64. It contains ngspice.exe (a GUI with its own console and plot windows), ngspice_con.exe (a console version for scripts and batch runs) and the code-model libraries. The MSVC build already includes OSDI and KLU. Put C:\\Spice64\\bin on your PATH to call it from a terminal. The shared library ngspice.dll is a separate download for programs that embed ngspice."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "macOS"
+    },
+    {
+      "type": "prose",
+      "text": "brew install ngspice installs the executable; brew install libngspice the shared library. Plotting uses X11 through XQuartz, or gnuplot. OpenVAF has no native macOS build, so to use .osdi files on a Mac run ngspice under Linux (a container or virtual machine), or build OpenVAF from source."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ways to run it"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Batch: ngspice -b circuit.cir runs the analyses written as dot commands (.op, .tran ...) and carries out .print, .plot, .four and .meas lines. Output goes to the terminal (or the -o log), and with -r FILE all results go to a rawfile. In plain batch mode without -r, ngspice needs .print, .plot or .four lines: with none at all it stops with no .plot, .print, or .fourier lines in batch mode; no simulations run!, and an analysis whose results no line asks for is skipped with no data saved ... analysis not run. Nothing waits for input; this is the mode for old SPICE decks, regressions and make files.",
+        "Interactive: ngspice circuit.cir loads the circuit and gives you the ngspice prompt. Type run, then plot v(out), print, meas, alter and so on. The netlist's dot analyses run when you type run.",
+        "Control mode: a .control ... .endc block in the file is a script that runs right after the circuit is loaded: it calls analyses (run, or op, ac, tran with their own arguments), measures and writes files. Start it with ngspice circuit.cir; end the script with quit to make it behave like a batch job and exit. This is the most useful way to work, and the way most samples in this topic are written.",
+        "Batch plus a control block: the manual warns that -b with a .control section is unpredictable. What ngspice 47 does is run the control script and then, unless the script ended with quit, run the dot analyses again in batch fashion. So either leave dot analyses out of files run with -b and put the analyses in the control block (the samples here do that), or end the control block with quit.",
+        "Autorun: ngspice -a circuit.cir behaves as if the file ended with .control run .endc, then stays interactive.",
+        "Server and pipe modes: -s writes a rawfile to standard output after a line with a single @ (for programs that read results from a pipe); -p lets a front-end program drive the interactive prompt through a pipe.",
+        "As a library: libngspice is called from C, Python and other languages (Shared Library and Python page)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A batch run that saves everything to a binary rawfile and keeps the log:"
+    },
+    {
+      "type": "code",
+      "lang": "shell",
+      "source": "ngspice -b -r rc.raw -o rc.log rc.cir    # results in rc.raw, messages in rc.log\nngspice -b -D vin=2.5 -D fast amp.cir    # sets control-language variables vin and fast\nngspice -n -b test.cir                   # do not read .spiceinit\n"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Command-line options"
+    },
+    {
+      "type": "list",
+      "items": [
+        "-b, --batch: batch mode. Also the default when standard input is not a terminal (ngspice < file.cir).",
+        "-i, --interactive: interactive mode even when standard input is not a terminal.",
+        "-r FILE, --rawfile=FILE: write the results of the dot analyses to FILE.",
+        "-o FILE, --output=FILE: write all messages of a batch run to FILE.",
+        "-n, --no-spiceinit: skip the user start-up file .spiceinit.",
+        "-a, --autorun: run the circuit immediately, as if .control run .endc had been added.",
+        "-D var or -D var=value, --define: set a control-language variable before the netlist is read; use it as \\$var in the .control block.",
+        "-s, --server and -p, --pipe: the pipe modes above.",
+        "--soa-log=FILE: write safe-operating-area warnings to FILE.",
+        "-v, --version (and -version-full for build options); -h, --help."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The interactive prompt"
+    },
+    {
+      "type": "prose",
+      "text": "At the ngspice prompt you can load a circuit (source file.cir), run it (run), look at the results (display lists the vectors; print, plot), change a value and run again (alter R1 2k; run), switch between result sets (setplot), and quit (quit). Readline gives you history and tab completion when it is compiled in. Everything that works at the prompt also works in a .control block, so a session can be turned into a script by copying the commands."
+    },
+    {
+      "type": "code",
+      "lang": "shell",
+      "source": "$ ngspice rc.cir\nngspice 1 -> run\nngspice 2 -> display                 # list the vectors of the current plot\nngspice 3 -> plot v(in) v(out)       # X11 window, or use gnuplot / pyplot\nngspice 4 -> alter C1 330n\nngspice 5 -> run\nngspice 6 -> setplot                 # list the result sets: tran1, tran2 ...\nngspice 7 -> plot tran1.v(out) tran2.v(out)\nngspice 8 -> quit\n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where results go"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Printed output (.print, print, meas) goes to the terminal, or to the -o log in batch mode.",
+        "A rawfile (with -r, or the write command) holds all saved vectors in the SPICE3 rawfile format: binary by default, text with set filetype=ascii. KiCad, Xschem's viewer, gaw, the ltspice and spicelib Python packages and others read it.",
+        "wrdata writes plain columns of numbers for gnuplot, Python or a spreadsheet; wrs2p writes Touchstone S-parameter files; hardcopy and gnuplot write pictures.",
+        "The Output, Plotting and Data Files page covers all of these."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Front ends that use ngspice"
+    },
+    {
+      "type": "prose",
+      "text": "Several schematic editors run ngspice as their simulator: KiCad's eeschema (through the shared library; it adds a simulation panel and plot window), Xschem (the usual choice for open-source chip design with the SkyWater, GF180 and IHP PDKs), Qucs-S (which can use ngspice, Xyce or Qucsator), and others listed in the manual. They all produce an ngspice netlist, so what this topic teaches about netlists and control scripts applies to them too: open the generated netlist when a simulation misbehaves."
+    },
+    {
+      "type": "problem",
+      "title": "Which mode",
+      "text": "You want a script to run a transient, measure the delay, and write it to a file, with no human at the keyboard. Which mode and which file structure?",
+      "solution": [
+        "A .control block that does the work: tran with its arguments, meas, then echo or print the value into a file (print delay > delay.txt, or wrdata), and quit as its last line.",
+        "Start it with ngspice file.cir (or ngspice -b file.cir if the file has no dot analyses). Without the final quit, a -b run would also run any dot analyses a second time after the script."
+      ],
+      "answer": "A .control block that calls tran, meas and writes the file, ending with quit."
+    },
+    {
+      "type": "problem",
+      "title": "Missing plot window",
+      "text": "plot v(out) does nothing and prints a warning about no graphics interface. What are your options?",
+      "solution": [
+        "Your build has no X11 (built without --with-x, or no DISPLAY). Use gnuplot (needs the gnuplot program), pyplot (needs Python with matplotlib, version 47 and later), hardcopy to write a PostScript file, wrdata to export columns, or write a rawfile and open it in a viewer."
+      ],
+      "answer": "Use gnuplot, pyplot, hardcopy, wrdata or a rawfile viewer."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapters 12, 14 and 28.",
+        "ngspice download and install notes: ngspice.sourceforge.io/download.html."
+      ]
+    }
+  ]
+}

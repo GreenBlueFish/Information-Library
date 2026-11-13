@@ -1,0 +1,148 @@
+{
+  "title": "Passive Elements and Switches",
+  "intro": "Resistors, capacitors and inductors are the simplest lines in a netlist, but each has more options than a value: models with geometry, temperature coefficients, multipliers, initial conditions, noise control and expression-dependent values. This page covers them, mutual inductance, and the two switch elements.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Resistors"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* Rname n+ n- value [mname] [l=] [w=] [temp=] [dtemp=] [m=] [ac=] [scale=] [noisy=0|1] [tc1=] [tc2=] [tce=]\nR1   a   b   4.7k\nR2   b   0   10k  tc1=1e-3 tc2=2e-6      $ R(T) = R(Tnom)(1 + tc1 dT + tc2 dT^2)\nR3   b   0   1k   m=4                     $ four in parallel: 250 ohms\nR4   c   0   1Meg noisy=0                 $ noiseless (for a bias resistor in a noise run)\nR5   c   d   1k   ac=10k                  $ 1k at DC, 10k in AC analysis\nRpoly d  0   rpoly l=20u w=2u             $ value from the model: rsh*(l-short)/(w-narrow)\n.model rpoly r (rsh=200 narrow=0.1u tc1=-1e-3 defw=1u)\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "value can be an expression in braces, {2*rbase}, evaluated once when the circuit is set up.",
+        "A resistor with a model computes its value from sheet resistance and geometry: R = RSH (L - SHORT) / (W - NARROW), the semiconductor resistor of SPICE3, with TC1 and TC2 for temperature. DEFW is the default width.",
+        "tce gives an exponential temperature law instead: R(T) = R(Tnom) times 1.01 to the power tce (T - Tnom). If both tc and tce are given, tce wins.",
+        "temp sets the instance temperature directly, dtemp sets it relative to the circuit temperature (self-heating by hand, for example).",
+        "noisy=0 removes the thermal noise of that one resistor from noise analyses.",
+        "Since version 44 the smallest resistance is 1e-12 ohms; a value of 0 is raised to that."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A behavioural resistor takes an expression of node voltages and branch currents, evaluated at every iteration:"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Behavioural resistor: resistance that changes with its own voltage\n.param r0=1k vt=0.5\nV1 in 0 DC 0\nR1 in 0 r = 'V(in) < {vt} ? {r0} : {2*r0}'\n.control\n  dc V1 0.01 1 0.01\n  let rr = v(in) / (-i(V1))\n  print rr[9] rr[89]               $ at 0.1 V and 0.9 V\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "A resistor always has thermal noise; give it a model with kf and af to add flicker noise (carbon resistors, some poly resistors). For foundry resistor models with voltage and temperature nonlinearity, the CMC models r2_cmc and r3_cmc are loaded as Verilog-A through OSDI (Verilog-A and OSDI page)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Capacitors"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* Cname n+ n- value [mname] [m=] [scale=] [temp=] [dtemp=] [tc1=] [tc2=] [ic=]\nC1   out 0   10p\nC2   a   b   1u   ic=2.5                 $ starting voltage, used with uic or .ic\nCmim x   0   cmim l=20u w=20u            $ geometry model: cj*area + cjsw*perimeter\n.model cmim c (cj=2e-3 cjsw=0.1n defw=1u)\nCnl  y   0   c = '1p*(1 + 0.2*V(y))'     $ behavioural: capacitance as an expression\nCq   z   0   q = '1p*V(z) + 0.1p*V(z)^2' $ behavioural: charge as an expression\n"
+    },
+    {
+      "type": "prose",
+      "text": "Writing the charge, q = expression, is the safer form for a nonlinear capacitor: the simulator differentiates the charge, so charge is conserved. A capacitance given as c = expression is integrated by the simulator; with strong nonlinearity that can create or lose charge over a long transient. Version 47 adds a new behavioural capacitor model."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Inductors and coupling"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* Lname n+ n- value [mname] [nt=] [m=] [scale=] [temp=] [dtemp=] [tc1=] [tc2=] [ic=]\nL1   a  b   10u\nL2   c  0   1m  ic=10m              $ initial current (with uic or .ic)\nLcore d 0   lmod nt=20              $ model: inductance from turns and core geometry\n.model lmod l (csect=1e-4 length=0.05 mu=1000)\nLnl  e  0   l = '1u/(1 + (i(Lnl)/1)^2)'   $ behavioural: saturating inductor\n* Kname L1 L2 coupling  (0 < k <= 1)\nLp   p1 p2  100u\nLs   s1 s2  25u\nKps  Lp Ls  0.999                   $ turns ratio sqrt(100/25) = 2\n"
+    },
+    {
+      "type": "prose",
+      "text": "The coupling coefficient k gives mutual inductance M = k times the square root of L1 L2. Dots are implied by node order: the first node of each coupled inductor is its dotted end. A transformer with k = 1 exactly has a singular inductance matrix in some circuits; 0.999 or 0.9999 avoids that and is closer to reality. To couple more than two windings, either write one K line per pair, or since version 43 list them all on one line: K1 L1 L2 L3 0.99. For a magnetic core with hysteresis and saturation, use the XSPICE core model (Behavioural Modelling page)."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Transformer: 2:1 step-down with a load\nV1 in 0 SIN(0 10 50k)\nRs in p 0.1                  $ a source resistance: no V-L loop\nLp p 0 100u\nLs s 0 25u\nKps Lp Ls 0.999\nRl s 0 100\n.control\n  tran 0.1u 100u\n  meas tran vp_pk max v(p) from=50u to=100u\n  meas tran vs_pk max v(s) from=50u to=100u\n  let ratio = vp_pk / vs_pk\n  print ratio\n.endc\n.end\n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Initial conditions on C and L"
+    },
+    {
+      "type": "prose",
+      "text": "ic= on a capacitor or inductor is the voltage or current it starts from at time zero, but only if the transient skips the operating point (tran ... uic) or if .ic is given for the node; otherwise the operating point overrides it. Initial Conditions on the Transient Analysis page explains the three ways and when each is used."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Switches"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* voltage-controlled: Sname n+ n- nc+ nc- model [on|off]\nS1  out 0  ctl 0  swmod off\n.model swmod sw (vt=1 vh=0.2 ron=1 roff=1Meg)\n* current-controlled: Wname n+ n- vsource model [on|off]\nW1  a  b  Vsense cswmod\n.model cswmod csw (it=1m ih=0.2m ron=10 roff=1G)\n"
+    },
+    {
+      "type": "prose",
+      "text": "The switch turns on when the control voltage rises above vt + vh and off when it falls below vt - vh, so vh gives hysteresis of 2 vh. ron and roff are its resistances. The change is abrupt, which can stall a transient: keep the ratio roff/ron below about 1e12, give the transient a maximum step, and consider a smooth behavioural resistor or the XSPICE aswitch model (which changes resistance smoothly and logarithmically) instead. The current-controlled switch W senses the current through a voltage source, like F and H sources."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Relaxation oscillator with a hysteretic switch\nV1 vdd 0 5\nR1 vdd c 10k\nC1 c 0 100n\nS1 c 0 c 0 swmod\n.model swmod sw (vt=2.5 vh=1 ron=10 roff=1G)\n.control\n  tran 1u 10m 0 20n           $ tmax 20 ns: the 1 us discharge needs small steps\n  meas tran tper trig v(c) val=2 rise=2 targ v(c) val=2 rise=3\n  echo \"period $&tper s\"\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "C1 charges through R1 until it reaches vt + vh = 3.5 V, the switch closes and discharges it through 10 ohms to below vt - vh = 1.5 V, then opens again. The charge time from 1.5 V to 3.5 V is RC ln((5-1.5)/(5-3.5)) = 1 ms times ln 2.33 = 0.85 ms, and the discharge takes about a microsecond, so meas reports a period of 0.85 ms."
+    },
+    {
+      "type": "callout",
+      "text": "Try it without the fourth tran argument (the maximum step): the simulator takes steps of about 1 us during the 1 us discharge, the switch reopens late at about 1.75 V instead of 1.5 V, and the period comes out 9% short at 0.77 ms. Fast events inside slow circuits are the classic case for a maximum time step."
+    },
+    {
+      "type": "problem",
+      "title": "Parallel resistors",
+      "text": "What resistance does R1 a b 6k m=3 present, and how does m differ from scale=3?",
+      "solution": [
+        "m is the number of parallel copies, so 6k/3 = 2k. scale multiplies the value: scale=3 gives 18k. (For capacitors both m and scale multiply the capacitance.)"
+      ],
+      "answer": "2k (scale=3 would give 18k)."
+    },
+    {
+      "type": "problem",
+      "title": "Coupled inductors",
+      "text": "Lp = 400 uH and Ls = 4 uH with k = 0.99. What is the turns ratio and the mutual inductance?",
+      "solution": [
+        "Turns ratio = sqrt(Lp/Ls) = sqrt(100) = 10.",
+        "M = k sqrt(Lp Ls) = 0.99 x sqrt(1.6e-9) = 0.99 x 40 uH = 39.6 uH."
+      ],
+      "answer": "10:1 and 39.6 uH."
+    },
+    {
+      "type": "problem",
+      "title": "Switch thresholds",
+      "text": "A switch has vt = 2 and vh = 0.5. At what control voltages does it turn on and off?",
+      "solution": [
+        "On above vt + vh = 2.5 V, off below vt - vh = 1.5 V. The hysteresis band is 1 V wide."
+      ],
+      "answer": "On at 2.5 V, off at 1.5 V."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 3.3.1 to 3.3.16."
+      ]
+    }
+  ]
+}

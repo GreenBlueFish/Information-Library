@@ -1,0 +1,83 @@
+{
+  "title": "Subcircuits and Libraries",
+  "intro": "A subcircuit is a reusable block with its own nodes and parameters, called with an X line. Libraries collect models and subcircuits in files that a netlist includes whole (.include) or in named sections (.lib), which is how process corners are organised.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Defining and calling a subcircuit"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Subcircuits with parameters\n.subckt rcfilter in out params: r=1k c=1n\nR1 in out {r}\nC1 out 0 {c}\n.ends rcfilter\n\n.subckt buffer in out vdd vss gain=1      $ \"params:\" is optional in ngspice\nE1 out vss in vss {gain}\nRdummy vdd vss 1Meg\n.ends\n\nV1 in 0 DC 0 AC 1\nVDD vdd 0 1.8\nX1 in mid  rcfilter r=10k c=1n\nX2 mid out vdd 0 buffer gain=2\nX3 in m3   rcfilter r=1k c=1n m=4         $ four in parallel\nR3 m3 0 1Meg\n.control\n  ac dec 20 100 10meg\n  meas ac f1 when vdb(mid)=-3\n  meas ac gdc find vdb(out) at=100\n  print @r.x2.rdummy[resistance]          $ a device inside X2, by its hierarchical name\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        ".subckt name node1 node2 ... [params: p1=default p2=default] ... .ends [name]. The node list is the interface; all other nodes are local.",
+        "Xname n1 n2 ... subname p1=value ...: an instance. Nodes are matched by position, parameters by name; missing ones take the defaults.",
+        "m=N on an X line puts N copies in parallel (every element inside is multiplied).",
+        "Node 0 (ground) is global. Other global nodes need .global vdd vss, or must be passed in.",
+        "Inside, elements and internal nodes get hierarchical names: R1 in X1 becomes r.x1.r1 (type letter first), an internal node n3 becomes x1.n3. Interface nodes keep the caller's name (in X1 above, out is simply mid). Use these names in print, save and @-references: @r.x1.r1[resistance], v(x1.n3).",
+        "Subcircuits may be defined inside subcircuits (local definitions) and nested to any depth."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Including files"
+    },
+    {
+      "type": "list",
+      "items": [
+        ".include path (or .inc): inserts the file at that point. Relative paths are relative to the file containing the .include, then to the input-file search path (\\$NGSPICE_INPUT_DIR, and sourcepath set in .spiceinit).",
+        ".lib path section: inserts only the named section of a library file. The file marks sections with .lib name ... .endl name. Sections may themselves .lib other sections, which is how a PDK file says 'the tt corner is these model sections with these parameters'.",
+        "A path with spaces needs quotes. A tilde (~) is expanded to your home folder."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Corner library with .lib sections\n.lib \"corners.lib\" ss\nV1 in 0 1.0\nR1 in out 1k\nXm out 0 rmod_r\n.control\n  op\n  print v(out)\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "Changing ss to tt on the first line switches the corner. The ss run gives v(out) = 0.545 V (the divider with a 1.2 kilohm lower resistor); tt gives 0.5 V. A corner sweep in one run reloads the circuit for each corner from a control loop (Sweeps, Corners and Monte Carlo page)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Organising a project"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Keep models in library files, testbenches in their own netlists that .include the circuit and .lib the models; put the options the models need in a .spiceinit next to the testbenches.",
+        "Schematic tools (Xschem, KiCad, Qucs-S) write the circuit as a .subckt and a testbench that calls it; that structure carries over to hand-written netlists.",
+        "For many runs of the same circuit, put the circuit in one file and write several small testbench files that include it, each with its own .control block."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Hierarchical names",
+      "text": "Inside subcircuit X2 there is an instance X5, which contains M3 and node nb. How do you print the gm of M3 and the voltage at nb?",
+      "solution": [
+        "Device: @m.x2.x5.m3[gm] (letter of the device type, then the path, then the name).",
+        "Node: v(x2.x5.nb)."
+      ],
+      "answer": "@m.x2.x5.m3[gm] and v(x2.x5.nb)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 2.6 to 2.10 (.subckt, .global, .include, .lib)."
+      ]
+    }
+  ]
+}

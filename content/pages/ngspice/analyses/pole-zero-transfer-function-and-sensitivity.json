@@ -1,0 +1,74 @@
+{
+  "title": "Pole-Zero, Transfer Function and Sensitivity",
+  "intro": "Three small analyses that answer specific questions quickly: where the poles and zeros of a transfer function are (.pz), what the DC gain and input and output resistances are (.tf), and how much an output changes with each component and model parameter (.sens).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".pz: poles and zeros"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Two-section RC ladder: poles and the DC transfer function\n* .pz in+ in- out+ out- vol|cur pol|zer|pz\n* vol: transfer function V(out)/V(in); cur: V(out)/I(in) (transimpedance)\nVIN in 0 DC 1 AC 1\nR1 in a 1k\nC1 a 0 1u\nR2 a out 1k\nC2 out 0 1u\nRL out 0 1Meg\n.control\n  pz in 0 out 0 vol pz\n  print all\n  let f1 = -real(pole(1))/(2*pi)\n  let f2 = -real(pole(2))/(2*pi)\n  print f1 f2\n  tf v(out) VIN\n  print all\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Results are in radians per second, as complex numbers pole(1), pole(2), ... and zero(1), ...: divide by 2 pi for hertz. A pair a +/- jb is an underdamped pole pair.",
+        "For this ladder the poles are at s = -(3 +/- sqrt 5)/(2RC), 382 and 2618 rad/s (61 and 417 Hz), as hand analysis predicts.",
+        "The method (Muller's iteration on the circuit determinant) can fail or miss roots in large circuits or with poles spread over many decades; it works best on small linearised circuits. A failure message does not mean the circuit is broken. For a big circuit, fit the AC response or reduce the circuit to the part of interest.",
+        "It works on the circuit linearised at its operating point. Keep .pz to circuits of built-in elements and devices; XSPICE code models and OSDI devices may not support it, so check the poles against an AC run when they are present."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".tf: DC gain and resistances"
+    },
+    {
+      "type": "prose",
+      "text": ".tf outvar insrc gives three numbers from the linearised circuit at DC: the transfer function outvar/insrc, the input resistance seen by insrc, and the output resistance at outvar. Above it reports a gain of 0.998, an output resistance of 1.996 kilohms (2k in parallel with 1Meg) and an input resistance of 1.002 megohms. outvar can be a current: .tf i(VLOAD) VIN."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".sens: sensitivities"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Sensitivity of a bias point to every component and model parameter\n.model nch NMOS (level=1 vto=0.5 kp=200u lambda=0.05)\nVDD vdd 0 1.8\nR1 vdd g 100k\nR2 g 0 80k\nRD vdd d 10k\nM1 d g 0 0 nch W=4u L=1u\n.control\n  sens v(d)\n  print r1 r2 rd\n  print m1:vto m1:kp\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        ".sens outvar computes d(outvar)/d(p) for every instance and model parameter at the operating point, in absolute units (volts per ohm, volts per volt of vto ...). The result lists element values (r1) and parameters (m1:vto, model and instance names with a colon) and has many zero entries.",
+        ".sens outvar ac dec 10 1 1meg does the same for the AC response at each frequency.",
+        "Multiply by the parameter value to get a normalised (percentage per percentage) sensitivity.",
+        "It is a linear estimate: good for ranking which parameters matter, before a Monte Carlo that gives the real spread."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Pole to hertz",
+      "text": ".pz prints pole(1) = -6.283e+05, 1.2566e+06. What frequency and damping is this?",
+      "solution": [
+        "A complex pole pair at s = -sigma +/- j omega_d with sigma = 6.283e5 and omega_d = 1.2566e6 rad/s.",
+        "omega_n = sqrt(sigma^2 + omega_d^2) = 1.405e6 rad/s, so f_n = 224 kHz; zeta = sigma/omega_n = 0.447, Q = 1/(2 zeta) = 1.12."
+      ],
+      "answer": "f_n = 224 kHz, zeta = 0.45 (Q = 1.1)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 11.3.6 (.pz), 11.3.7 (.sens) and 11.3.9 (.tf)."
+      ]
+    }
+  ]
+}

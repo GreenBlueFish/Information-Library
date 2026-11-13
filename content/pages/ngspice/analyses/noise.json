@@ -1,0 +1,104 @@
+{
+  "title": "Noise Analysis",
+  "intro": "Small-signal noise analysis adds up the noise of every resistor and device at each frequency, as it appears at an output, and divides by the gain to refer it to an input. Transient noise puts random noise sources into a time-domain run, for effects the small-signal method cannot see, such as noise in a sampled or switching circuit.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".noise"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* .noise v(out[,ref]) input_source dec|oct|lin points fstart fstop [points_per_summary]\n.noise v(out) VIN dec 20 1 100meg\n.noise v(outp,outn) VIN dec 20 1 100meg 1      $ differential output, with a summary per decade\n"
+    },
+    {
+      "type": "prose",
+      "text": "The run makes two plots. noise1 holds the spectra against frequency: onoise_spectrum (output noise in V per root hertz) and inoise_spectrum (the same divided by the gain from the input source, in V or A per root hertz). noise2 holds the integrals over the whole sweep, onoise_total and inoise_total, in V rms. With points_per_summary given, noise2 also holds the contribution of every noise source of every device (onoise_total_m1_id, onoise_total_rd_thermal and so on), and with set sqrnoise the spectra are in V squared per hertz instead."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "kT/C: the integrated noise of an RC filter does not depend on R\nVIN in 0 DC 0 AC 1\nR1 in out 10k\nC1 out 0 1p\n.control\n  noise v(out) VIN dec 50 1 1e12\n  setplot noise1\n  print frequency[150] onoise_spectrum[150]   $ point 150 is 1 kHz (50 per decade from 1 Hz)\n  setplot noise2\n  print onoise_total\n  let kTC = sqrt(1.380649e-23*300.15/1p)\n  print kTC\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "The spot noise at 1 kHz is the resistor's thermal noise sqrt(4kTR) = 12.9 nV per root hertz, and the total, integrated to well past the 15.9 MHz corner, is sqrt(kT/C) = 64 uV rms at 27 C. Changing R changes the spectrum but not the total. Integrate far enough: a sweep stopping at the corner frequency gives only about 71% of the rms noise."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Contributions and noise models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Per-device contributions: give points_per_summary (any number, often 1); noise2 then has one total per device and per noise source: onoise_total_rd, onoise_total_rd_thermal, onoise_total_m1_id (channel noise), onoise_total_m1_1overf, onoise_total_m1_rd (series resistances), and the same with inoise_. display lists them.",
+        "Resistors: thermal noise always (noisy=0 removes it); flicker noise with kf and af in an R model.",
+        "Diodes and BJTs: shot noise on the junction currents, thermal noise of the series resistances, flicker noise with kf and af.",
+        "MOSFETs: channel thermal and flicker noise. BSIM3 and BSIM4 select formulas with noimod (and tnoimod, fnoimod in BSIM4): in BSIM3 the default (noimod=1) is the simple model with kf and af; in BSIM4 the default (fnoimod=1) is the unified model with noia, noib and noic, and fnoimod=0 selects kf and af. Check which one a PDK uses before comparing with measurements.",
+        "OSDI (Verilog-A) models contribute noise from white_noise and flicker_noise statements, since version 42, but only with the Sparse solver: noise is not supported with option klu.",
+        "XSPICE code models have small-signal noise since version 47, starting with the ota model; others contribute none."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Noise of a CS amplifier, referred to the input, and its contributors\n.model nch NMOS (level=1 vto=0.5 kp=200u lambda=0.05 kf=1e-27 af=1)\nVDD vdd 0 1.8\nVIN g 0 DC 0.8 AC 1\nRD vdd d 10k\nM1 d g 0 0 nch W=4u L=1u\n.control\n  noise v(d) VIN dec 10 10 1g 1                $ the final 1 asks for contributions\n  setplot noise1\n  let floor = inoise_spectrum[50]              $ 1 MHz (10 points per decade from 10 Hz)\n  print inoise_spectrum[0] floor               $ at 10 Hz and at 1 MHz\n  let k = 0                                    $ find the 1/f corner: first point within 3 dB\n  while inoise_spectrum[k] > 1.414*floor\n    let k = k + 1\n  end\n  print frequency[k]\n  setplot noise2\n  print inoise_total onoise_total\n  print onoise_total_m1_id onoise_total_m1_1overf onoise_total_rd\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "meas does not work on noise plots, so the script indexes the vectors and searches with a while loop instead. At 1 MHz the input-referred noise is the white floor (the channel noise of M1 plus RD's noise divided by the gain); at 10 Hz flicker noise dominates. The script finds the 1/f corner, where the input noise is 3 dB above the floor, at about 13 kHz, and the contributions show that over the whole 10 Hz to 1 GHz band the total is set by M1's channel noise (0.52 mV) and RD's thermal noise (0.40 mV); flicker noise (9 uV) only matters at low frequencies. Note that inoise_total integrates the input-referred spectrum, which is only meaningful over the signal band; integrate output noise for the noise a following stage sees."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Transient noise"
+    },
+    {
+      "type": "prose",
+      "text": "Small-signal noise assumes a fixed operating point. Mixers, samplers, oscillators, comparators and switched-capacitor circuits move theirs, so their noise needs transient noise: TRNOISE sources in the time domain, then statistics or a spectrum of the result."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Transient noise: a resistor's thermal noise as a voltage source, filtered by C\n* 4kTR for 10k at 300 K: 1.66e-16 V^2/Hz; with samples every NT the rms is sqrt(4kTR/(2 NT))\n.param r=10k nt=0.1n\n.param vnrms={sqrt(4*1.380649e-23*300*r/(2*nt))}\nVN n 0 DC 0 TRNOISE({vnrms} {nt} 0 0)\nR1 n out {r} noisy=0\nC1 out 0 1p\n.control\n  setseed 1\n  tran 0.1n 20u\n  meas tran vrms rms v(out) from=1u to=20u\n  print sqrt(1.380649e-23*300/1p)\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "Noise sampled every NT is white up to 1/(2 NT), so a one-sided density of 4kTR needs an rms of sqrt(4kTR / (2 NT)). The filtered result reproduces kT/C to within the statistical error of one run (a few percent). TRNOISE also takes 1/f noise (NALPHA, NAMP) and random telegraph noise (RTSAM, RTSCAPT, RTSEMT). set notrnoise turns all noise sources off for a clean reference run, and alter @vn[trnoise] = [ 0 0 0 0 ] one of them. For a spectrum of the result, use psd or fft (next page)."
+    },
+    {
+      "type": "problem",
+      "title": "Bandwidth",
+      "text": "An amplifier's output noise spectrum is flat at 50 nV per root hertz up to a single-pole corner of 1 MHz. What onoise_total do you expect, and why might the simulated value be lower?",
+      "solution": [
+        "Noise bandwidth of a single pole is (pi/2) f_c = 1.57 MHz. Total = 50n x sqrt(1.57e6) = 62.7 uV rms.",
+        "If the sweep stops near 1 MHz, the tail above is missing; integrate to at least 10 to 100 times the corner."
+      ],
+      "answer": "About 63 uV rms; less if the sweep stops too early."
+    },
+    {
+      "type": "problem",
+      "title": "Klu and noise",
+      "text": "A noise run on a PDK with OSDI models fails with a message about the matrix solver. Why?",
+      "solution": [
+        "Small-signal noise (and CIDER) needs the Sparse 1.3 solver. The PDK's .spiceinit or the netlist has option klu; add option sparse before the noise run, or remove klu."
+      ],
+      "answer": "Noise needs option sparse."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 11.3.4 (.noise), 11.3.11 (transient noise) and 4.1.7 (TRNOISE).",
+        "N. J. Kasdin, 'Discrete simulation of colored noise and stochastic processes and 1/f^alpha power law noise generation,' Proc. IEEE, vol. 83, no. 5, 1995.",
+        "B. Razavi, Design of Analog CMOS Integrated Circuits, 2nd ed., McGraw-Hill, 2017, chapter 7 (noise)."
+      ]
+    }
+  ]
+}

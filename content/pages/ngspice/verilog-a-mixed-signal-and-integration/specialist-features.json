@@ -1,0 +1,118 @@
+{
+  "title": "Specialist Features",
+  "intro": "The corners of ngspice that most users never need, and that are exactly what a few users need: numerical device simulation with CIDER, transmission lines, radiation-induced current pulses, sound files, snapshots, power-supply checks and the example library that ships with the program.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "CIDER: numerical device simulation"
+    },
+    {
+      "type": "prose",
+      "text": "CIDER couples the circuit simulator to a one- or two-dimensional semiconductor device simulator. Instead of a compact model, a diode (NUMD), bipolar transistor (NBJT) or MOSFET (NUMOS, 2D only) is described by its doping profile, mesh and physical models, and ngspice solves the drift-diffusion equations inside it at every circuit iteration. It is slow, but shows physics no compact model has: reverse recovery from stored charge, punch-through, high-level injection."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "CIDER: a one-dimensional numerical pn diode\n* the first node contacts x=0 (the n+ side), so forward bias is a negative V(a)\nV1 a 0 DC 0\nD1 a 0 M_PN AREA=100\n.model M_PN numd level=1\n+ x.mesh loc=0.0 n=1\n+ x.mesh loc=1.3 n=201\n+ domain num=1 material=1\n+ material num=1 silicon\n+ doping gauss n.type conc=1e20 x.l=0.0 x.h=0.0 char.len=0.100\n+ doping unif p.type conc=1e16 x.l=0.0 x.h=1.3\n+ models bgn srh auger conctau concmob fieldmob\n+ options defa=1p\n.control\n  dc V1 -0.7 0 0.05\n  print v(a) i(V1)\n.endc\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The model card describes the device: x.mesh (and y.mesh in 2D) lines in microns, domains and materials, doping profiles (unif, gauss, erfc, from files), electrodes in 2D, physical models (bandgap narrowing, SRH and Auger recombination, concentration- and field-dependent mobility) and options.",
+        "The current rises about a decade every 60 mV in this run, as an ideal junction should.",
+        "CIDER needs ngspice built with --enable-cider and the Sparse solver (since version 46 KLU works for DC, OP and transient).",
+        "Internal states (carrier densities, potentials) can be written for plotting with the output and save statements of the model card."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Transmission lines"
+    },
+    {
+      "type": "list",
+      "items": [
+        "T: lossless line, T1 a 0 b 0 z0=50 td=1n (or f= and nl= for a frequency and electrical length).",
+        "O: lossy line, the LTRA model (resistance, inductance, conductance and capacitance per length), with options for its convolution accuracy.",
+        "U: uniform distributed RC line, the URC model, for on-chip resistive wires.",
+        "Y: TXL, a single lossy line by a different method; P: CPL, coupled multiconductor lines (crosstalk).",
+        "XSPICE code models (version 45): tline, cpline (generic and coupled lines), mlin and cpmlin (microstrip and coupled microstrip from geometry and substrate data), msopen (open-end effect).",
+        "Examples of every kind are in the ngspice distribution's examples/TransmissionLines and examples/xspice/transmission_lines folders."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Lossless line: a matched source driving an open end\nVS s 0 PULSE(0 2 0 10p 10p 5n 20n)\nRS s a 50\nT1 a 0 b 0 Z0=50 TD=1n\nRL b 0 1Meg\n.control\n  tran 10p 6n\n  meas tran ta when v(a)=0.5 rise=1\n  meas tran tb when v(b)=1 rise=1\n  meas tran va find v(a) at=1.5n\n  meas tran vb find v(b) at=1.5n\n  meas tran va3 find v(a) at=3n\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "The 2 V step divides between the 50 ohm source resistance and the line's 50 ohm impedance, so 1 V enters the line, reaches the open end after 1 ns, doubles to 2 V there, and the reflection returns to the source after 2 ns, bringing v(a) up to 2 V as well."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Single-event effects: seegen"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Radiation pulses: the seegen code model injects double-exponential current pulses\naseegen1 NULL mon [%id(n1 p1) %id(n2 p2)] seemod1\n.model seemod1 seegen (tdelay = 5n tperiod=4.5n)\nRsee1 n1 0 1\nVmeas1 p1 0 0\nRsee2 n2 0 1\nVmeas2 p2 0 0\n.control\n  tran 10p 25n\n  meas tran pk1 max i(Vmeas1)\n  meas tran pk2 max i(Vmeas2)\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "seegen (updated in version 47) generates the current pulse a particle strike causes in a junction, as a double exponential set by the deposited charge (from LET, the linear energy transfer) and two time constants, and applies it to each listed node pair in turn, tperiod apart. Placed across the sensitive drain junctions of a memory cell, it shows which strikes flip the cell. The examples/xspice/see folder of the distribution has SRAM and op-amp examples, including ones with the IHP PDK."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sound files"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Write a stereo .wav file: a 440 Hz tone and a soft-clipped copy\nV1 a 0 SIN(0 0.5 440)\nBclip b 0 V = tanh(4*V(a))*0.5\n.sndparam tone.wav 48000 wav16 0.0 1.0 1\n.sndprint tran v(a) v(b)\n.tran 20.833u 0.5 0 20.833u\n.end\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Version 47 reads and writes audio: a voltage source with file(name.wav) snd(id v_offset v_mult t_off channel oversampling) plays a .wav file into the circuit, and .sndparam/.sndprint (or the commands sndparam and sndprint) write node voltages to a .wav file, one channel per vector, clipped to plus or minus 1.",
+        ".sndparam file rate format v_off v_mult oversampling: formats wav16, wav24, wav32, aiff. Give the transient a maximum step of one sample period (here 1/48000 s) and set oversampling to match; with the default oversampling of 64 this run stopped early with an oversampling error and wrote only a quarter of the samples. Even with oversampling 1 the log shows resample messages and the file came out a few milliseconds short of 0.5 s, so check the length of what you write.",
+        "Guitar effects, filters and amplifier distortion can be heard, not just plotted; examples are in the distribution's wave folder."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Other corners"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Snapshots: stop a transient (stop after or stop when), snsave file writes its full state, and snload file plus resume continues from it later or in another session; useful after a long settling time.",
+        "Safe operating area: .option warn=1 with bv_max, vgs_max, pd_max and similar limits in model cards prints warnings when devices are over-stressed (Semiconductor Devices page).",
+        "optran: the transient operating point (Convergence page).",
+        ".probe: device terminal currents, power and differential voltages saved by name.",
+        "Memristor: an XSPICE memristor model, and Verilog-A versions through OSDI; the distribution's memristor examples show both.",
+        "Magnetic cores: the XSPICE core model with a B-H hysteresis loop, and lcouple to tie a winding to it.",
+        "Optimisation: chapter 19 of the manual drives ngspice from an external optimiser.",
+        "The manual's Paranoia test suite (version 47 expands it to over 100 circuits) checks ngspice against reference results; useful when building ngspice yourself.",
+        "The examples folder that comes with ngspice (examples under the documentation folder in distribution packages, or in the source tree) has working netlists for most features: Monte_Carlo, cider, digital, measure, noise, optran, osdi, pss, snapshot, soa, sp, transient-noise, vdmos, xspice and more. When a manual section is unclear, its example usually is not."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapters 6 (transmission lines), 8 (XSPICE models), 13.11 (sound files), 26 (CIDER).",
+        "K. Mayaram and D. O. Pederson, 'Coupling algorithms for mixed-level circuit and device simulation,' IEEE Trans. CAD, vol. 11, no. 8, 1992 (CIDER).",
+        "G. C. Messenger, 'Collection of charge on junction nodes from ion tracks,' IEEE Trans. Nucl. Sci., vol. 29, no. 6, 1982 (the double-exponential SEE pulse)."
+      ]
+    }
+  ]
+}

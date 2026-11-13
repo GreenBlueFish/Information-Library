@@ -1,0 +1,98 @@
+{
+  "title": "Circuit Simulation with ngspice",
+  "intro": "ngspice is a free, open-source circuit simulator descended from Berkeley SPICE3. You describe a circuit as a text netlist, tell it which analyses to run, and it solves the circuit equations and gives you voltages, currents, spectra and measurements. This topic teaches it from the first netlist to Verilog-A models compiled into .osdi files, mixed-signal simulation, scripting, Monte Carlo and the niche corners of the program. Every sample on these pages was run in ngspice 47 before it was published.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What the topic covers"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Getting Started: installing ngspice, running it in batch and interactive mode, how a netlist is written, and the start-up files and compatibility modes that decide how it reads other simulators' models.",
+        "Building Circuits: passive elements, every kind of source, behavioural modelling, semiconductor devices and their models, parameters and expressions, subcircuits and libraries, and using a foundry PDK (SkyWater SKY130, GF180MCU, IHP SG13G2).",
+        "Analyses: operating point and DC sweeps, AC, transient, noise, Fourier and distortion, pole-zero, transfer function and sensitivity, S-parameters and periodic steady state.",
+        "Control Scripts and Results: the control language, measurements, writing and plotting results (including reading them in Python), sweeps, corners and Monte Carlo, and how to fix convergence problems.",
+        "Verilog-A, Mixed-Signal and Integration: compiling Verilog-A with OpenVAF and loading .osdi files, writing your own Verilog-A models, the industry compact models, XSPICE code models and digital simulation, co-simulation with Verilog and VHDL, ngspice as a shared library from Python or C, and the specialist features (CIDER, transmission lines, radiation effects, sound files).",
+        "A quick-reference page at the end lists the syntax of every element, analysis, option and command used in the topic."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How a SPICE simulator works"
+    },
+    {
+      "type": "prose",
+      "text": "ngspice reads the netlist, expands subcircuits and parameters, and builds one equation per node and one per voltage source or inductor by modified nodal analysis (MNA). Kirchhoff's current law at every node gives a system of the form"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathbf{G}\\,\\mathbf{x} + \\mathbf{C}\\,\\frac{d\\mathbf{x}}{dt} + \\mathbf{i}_{nl}(\\mathbf{x}) = \\mathbf{b}(t)"
+    },
+    {
+      "type": "prose",
+      "text": "where x holds the node voltages and branch currents, G and C the linear conductances and capacitances, i_nl the currents of the nonlinear devices (diodes, transistors), and b the sources. Each analysis solves this system in a different way:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Operating point (.op) and DC sweep (.dc): set d/dt to zero and solve the nonlinear equations by Newton-Raphson iteration, linearising every device at the present guess until the changes are below the tolerances.",
+        "AC (.ac), noise (.noise), pole-zero (.pz), transfer function (.tf) and S-parameters (.sp): linearise around the operating point and solve the complex linear system at each frequency.",
+        "Transient (.tran): replace d/dt by an integration formula (trapezoidal or Gear), and at each time point solve the nonlinear equations by Newton-Raphson. The time step is chosen automatically from an estimate of the local truncation error."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/ngspice/ngspice-flow.svg",
+      "alt": "Block diagram: a netlist file and .include/.lib model files enter the front end (parser, subcircuit and parameter expansion, compatibility translation). The flattened circuit goes to the simulator core, which runs the analyses (op, dc, ac, tran, noise and others) using device models (built-in, XSPICE code models, OSDI models from .osdi files). Results go to vectors in plots, which the control language reads to print, measure, plot, and write rawfiles and data files.",
+      "caption": "How ngspice turns a netlist into results."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A first simulation"
+    },
+    {
+      "type": "prose",
+      "text": "Save this as rc.cir and run ngspice -b rc.cir. It is an RC low-pass filter with a 1 kilohm resistor and a 159 nF capacitor, so its corner is at 1 kHz. The .control block runs an operating point, an AC sweep and a transient, and measures the -3 dB frequency and the rise time."
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "RC low-pass filter: a first ngspice run\n* title line above, then the circuit\nV1 in 0 DC 0 AC 1 PULSE(0 1 0 1u 1u 5m 10m)\nR1 in out 1k\nC1 out 0 159n\n\n.control\n  op\n  print v(in) v(out)\n  ac dec 20 10 100k\n  meas ac f3db when vdb(out)=-3\n  set fc = $&f3db           $ keep it: vectors belong to the ac plot\n  tran 10u 10m\n  meas tran trise trig v(out) val=0.1 rise=1 targ v(out) val=0.9 rise=1\n  echo \"corner $fc Hz, rise time $&trise s\"\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "It prints a corner of about 1 kHz and a 10 to 90% rise time of about 0.35 ms, which is 2.2 RC as theory predicts. The rest of the topic explains every line of this file and everything else the program can do."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Versions"
+    },
+    {
+      "type": "prose",
+      "text": "ngspice is released about twice a year; version 47 came out in August 2026. Features named on these pages that need a recent version say so. Run ngspice -v to see yours. Major recent additions: OSDI support for Verilog-A models (version 39), small-signal noise in OSDI models (42), VHDL co-simulation with GHDL (45), Icarus Verilog co-simulation (44), multi-bit ADC and DAC bridges, a pyplot command and noise in code models (47)."
+    },
+    {
+      "type": "callout",
+      "text": "If you know LTspice, PSpice or HSPICE: the netlist language is almost the same, but ngspice has no .step (sweeps are written as control-language loops), and its .meas lines work but are not collected across runs as LTspice does with .step, and it reads other simulators' models through a compatibility mode, set ngbehavior. The Start-Up Files and Compatibility page explains this."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html).",
+        "L. W. Nagel, SPICE2: A Computer Program to Simulate Semiconductor Circuits, Memo UCB/ERL M520, University of California, Berkeley, 1975.",
+        "T. L. Quarles, Analysis of Performance and Convergence Issues for Circuit Simulation, Memo UCB/ERL M89/42, Berkeley, 1989 (the SPICE3 core ngspice is built on).",
+        "P. Nenzi and H. Vogt, 'Ngspice: an open-source mixed-signal circuit simulator,' and the ngspice home page, ngspice.sourceforge.io."
+      ]
+    }
+  ]
+}

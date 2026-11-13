@@ -1,0 +1,122 @@
+{
+  "title": "XSPICE Digital and Mixed-Signal Simulation",
+  "intro": "XSPICE, built into ngspice, adds an event-driven simulator next to the analog one. Digital gates, flip-flops, state machines and memories run on event nodes that change only at discrete times, and bridge models convert between them and analog nodes. The result is fast mixed-signal simulation: a digital controller around an analog core, an ADC's logic, a PWM generator.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Event nodes and bridges"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A digital node holds one of 12 states: a level 0, 1 or U (unknown), each with a strength s (strong), r (resistive), z (high impedance) or u (undetermined). eprint shows them as 0s, 1s, Us, 0z and so on.",
+        "Digital code models (d_and, d_dff ...) connect only to digital nodes. Nodes are typed by what connects to them; never connect a digital output to an analog element directly.",
+        "adc_bridge turns an analog voltage into a digital state with thresholds in_low and in_high (between them the output is U); dac_bridge drives an analog voltage from a digital state (out_low, out_high, out_undef, with t_rise and t_fall). Since version 47 both can be multi-bit converters and adc_bridge can act as a Schmitt trigger.",
+        "Other node types: real (event-driven real numbers, with real_gain, real_delay, real_to_v and d_to_real), and int. User-defined node types can be added in C."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A counter with clock and analog output"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "XSPICE 2-bit counter: analog clock in, analog outputs\nVCLK clk 0 PULSE(0 1.8 0 1n 1n 49n 100n)\nAadc [clk] [dclk] adc1\n.model adc1 adc_bridge(in_low=0.6 in_high=1.2)\nAone one pull1\n.model pull1 d_pullup\nAst  st nset\nArst rs nset\n.model nset d_pulldown\nAt0 one dclk st rs q0 q0b tff1\nAt1 one q0b  st rs q1 q1b tff1\n.model tff1 d_tff(clk_delay=1n set_delay=1n reset_delay=1n rise_delay=1n fall_delay=1n)\nAdac [q0 q1] [a0 a1] dac1\n.model dac1 dac_bridge(out_low=0 out_high=1.8 t_rise=1n t_fall=1n)\nR0 a0 0 1k\nR1 a1 0 1k\n.control\n  tran 1n 1u\n  eprint q0 q1\n  meas tran tq1 when v(a1)=0.9 rise=1\n  eprvcd clk dclk q0 q1 > counter.vcd\n.endc\n.end\n"
+    },
+    {
+      "type": "prose",
+      "text": "Two toggle flip-flops make a ripple counter: q0 toggles on every rising clock edge, q1 whenever q0 falls (q0b rises), so q1q0 counts 00, 01, 10, 11. eprint lists every event with its time; eprvcd writes a VCD file that GTKWave and other waveform viewers open, with analog nodes as real-valued traces. With XSPICE devices in a circuit, ngspice sets trtol to 1 (the message Reducing trtol to 1 for xspice 'A' devices), which makes transients more accurate and somewhat slower."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The digital models"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gates: d_buffer, d_inverter, d_and, d_nand, d_or, d_nor, d_xor, d_xnor (vector inputs), d_tristate, d_pullup, d_pulldown, d_open_c and d_open_e. Each has rise_delay, fall_delay and input_load.",
+        "Flip-flops and latches: d_dff, d_jkff, d_tff, d_srff, d_dlatch, d_srlatch, with set and reset inputs and their own delays.",
+        "d_state: a state machine read from a file (states, outputs, transitions on inputs). d_fdiv: frequency divider. d_ram: a RAM. d_lut and d_genlut: lookup tables. d_osc: a digital oscillator controlled by an analog voltage. d_pwm: a PWM generator.",
+        "d_source: a digital stimulus from a text file (one line per time, with a state per output: 0s, 1s, Uz ...).",
+        "d_process: a separate program (C or anything else) connected through pipes acts as the digital block. d_cosim: compiled Verilog or VHDL (next section).",
+        "Event output: eprint node ..., edisplay (list all event nodes), esave (choose which to keep), eprvcd."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Digital stimulus from a file into an AND gate\nAsrc [a b] dsrc1\n.model dsrc1 d_source(input_file=\"stim.txt\")\nAand [a b] y and1\n.model and1 d_and(rise_delay=1n fall_delay=1n)\n.control\n  tran 1n 50n\n  eprint a b y\n.endc\n.end\n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "PSpice digital libraries (U devices)"
+    },
+    {
+      "type": "prose",
+      "text": "With set ngbehavior=ps (PSpice compatibility), subcircuits made of PSpice U-device primitives (gates, flip-flops, LOGICEXP and PINDLY behavioural blocks) and their timing models are translated to XSPICE models. This is how the 74xx and 40xx libraries shipped with ngspice and with KiCad's simulation libraries work. RAM, ROM, STIM and PLA primitives are not translated."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Co-simulation with Verilog and VHDL"
+    },
+    {
+      "type": "prose",
+      "text": "The d_cosim code model (Verilator since version 42, Icarus Verilog since 44, GHDL since 45) runs a compiled hardware-description model as a digital block, with its inputs, outputs and inouts matched to event nodes bit by bit, most significant first. Three routes:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Verilator (4.210 or later): ngspice vlnggen counter.v runs Verilator and the glue code and makes counter.so. For timing delays: ngspice vlnggen -- --timing pwm.v. The netlist: adut [inputs] [outputs] dmod and .model dmod d_cosim simulation=\\\"./counter.so\\\".",
+        "Icarus Verilog: iverilog -o adc adc.v, then .model dmod d_cosim simulation=\\\"ivlng\\\" sim_args=[\\\"adc\\\"]. The manual says lib_args must be set too, at least to \\\"libvvp\\\" (lib_args=[\\\"libvvp\\\"]). This needs libvvp, the library form of Icarus' simulator, which requires Icarus Verilog 13 or later configured with --enable-libvvp; standard binary packages (including Ubuntu 24.04's Icarus 12) do not have it. Always give a `timescale in the Verilog source.",
+        "GHDL (version 6, LLVM back end, with clang): ngspice ghnggen name.vhd (or ngspice -- ghnggen -top entity file.vhd) builds a shared library; .model m d_cosim simulation=\\\"./entity\\\" sim_args=[\\\"./entity\\\"], with -gName=value in sim_args to set generics.",
+        "The manual warns that a circuit with HDL devices can only be simulated once per process: the HDL simulator's state may not be cleared, even by remcirc.",
+        "Alternatives: Yosys can synthesise Verilog to a netlist of XSPICE gates and flip-flops (a demonstrator by Uros Platise), and d_process connects any external program."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "The co-simulation route was not run for this page: the sandbox it was written in has Icarus Verilog 12 without libvvp, and no Verilator or GHDL. The commands above are from the ngspice 47 manual; the ngspice source tree has working examples in examples/xspice/verilator, icarus_verilog and ghdl."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Writing your own code model"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A code model is C code plus an interface file (ifspec.ifs: name, ports, parameters) compiled with the cmpp preprocessor into a .cm library, loaded with codemodel lib.cm in spinit or .spiceinit.",
+        "Analog code models compute outputs and partial derivatives (for the Jacobian) on each call; digital ones schedule output events with delays. Macros such as INPUT, OUTPUT, PARTIAL, PARAM, STATIC_VAR, cm_analog_alloc and cm_event_queue are the API. Version 47 adds small-signal noise for code models (the ota model is the example).",
+        "Build: the ngspice source tree's src/xspice/icm folder is the template; add a folder with cfunc.mod and ifspec.ifs, list it in modpath.lst, and make.",
+        "Prefer Verilog-A (OSDI) for device-like models and code models for event-driven or block-diagram behaviour."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Bridge thresholds",
+      "text": "An adc_bridge has in_low=0.6 and in_high=1.2. What digital state does an input of 0.9 V give, and why does this matter?",
+      "solution": [
+        "Between the thresholds the output is U (unknown). Slow analog edges spend time in that band, and U propagates through logic; give sharp edges or use the Schmitt-trigger option (version 47) when the analog signal is slow or noisy."
+      ],
+      "answer": "U, the unknown state."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), chapter 8 (XSPICE models), 10 (digital devices, U devices, HDL co-simulation), 21 to 24 (code models).",
+        "F. L. Cox et al., XSPICE Software User's Manual, Georgia Tech Research Institute, 1992."
+      ]
+    }
+  ]
+}

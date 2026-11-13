@@ -1,0 +1,99 @@
+{
+  "title": "Quick Reference",
+  "intro": "The syntax used across this topic, on one page. Square brackets mark optional parts.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "File structure"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Title line (always the first line)\n* comment        ; end-of-line comment after \"$ \", \";\" or \"//\"\n.include file    .lib file section    .param name=value    .func f(x) {expr}\n.subckt name n1 n2 params: p=1   ...   .ends\n.model name type (param=value ...)\n.options name=value    .temp 27    .global vdd\n.ic v(n)=1    .nodeset v(n)=1\n.control  ...  .endc\n.end\n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Elements"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "Rname n+ n- value [m=] [tc1=] [tc2=] [noisy=0]        R=expr for behavioural\nCname n+ n- value [ic=]          C=expr or Q=expr        Lname n+ n- value [ic=]\nKname L1 L2 k\nVname n+ n- [DC v] [AC mag [ph]] [PULSE|SIN|EXP|PWL|SFFM|AM|TRNOISE|TRRANDOM(...)]\nIname n+ n- ...  (current flows n+ -> source -> n-)\nEname n+ n- nc+ nc- gain    Gname n+ n- nc+ nc- gm    Fname n+ n- Vsense gain    Hname n+ n- Vsense r\nBname n+ n- V=expr | I=expr\nDname a k model [area]    Qname c b e [s] model [area]    Jname d g s model\nMname d g s b model L= W= [AD= AS= PD= PS= m= nf=]\nSname n+ n- c+ c- model    Wname n+ n- Vsense model\nTname a1 a2 b1 b2 Z0= TD=    Oname ... ltra_model    Uname n1 n2 n3 urc_model\nXname nodes subckt [p=v]    Aname ports codemodel    Nname nodes osdi_model [params]\n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Analyses"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": ".op\n.dc src start stop step [src2 start2 stop2 step2]      (src: V, I, R or TEMP)\n.ac dec|oct|lin n fstart fstop\n.tran tstep tstop [tstart [tmax]] [uic]\n.noise v(out[,ref]) src dec n fstart fstop [pts_per_summary]\n.disto dec n fstart fstop [f2overf1]\n.pz in+ in- out+ out- vol|cur pol|zer|pz\n.tf outvar src\n.sens outvar [ac dec n fstart fstop]\n.sp dec n fstart fstop [donoise]\n.pss gfreq tstab node points harms [sciter steadycoeff] [uic]\n.four f0 v(out)    .meas tran|ac|dc|sp name ...    .save vectors    .print tran v(out)\n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Options that matter"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Accuracy: reltol=1e-3, abstol=1e-12, vntol=1e-6, chgtol=1e-14, trtol=7.",
+        "Convergence: gmin=1e-12, gminsteps, srcsteps, itl1=100, itl2=50, itl4=10, rshunt, noopiter, optran (command).",
+        "Integration: method=trap|gear, maxord, xmu=0.5.",
+        "Solver: klu or sparse (small-signal noise needs sparse). num_threads (variable) for OpenMP.",
+        "Output: noinit, interp, savecurrents, numdgt, warn and maxwarns, temp and tnom, scale, acct."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Control language"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "run  op  dc ...  ac ...  tran ...  noise ...  pz ...  tf ...  sens ...  sp ...  pss ...\nlet x = expr    set var = value    echo \"text $var $&vector\"    print v(out) > file\nmeas tran name trig ... targ ... | when ... | find ... at= | avg|rms|pp|min|max|integ ...\nalter R1 2k    altermod nch vth0=0.4    alterparam p=1    reset    option reltol=1e-4\nforeach v a b c ... end    while cond ... end    repeat n ... end    if cond ... else ... end\nsetplot [name]   display   destroy   save v(out) @m1[gm]   show m1   showmod nch\nwrdata file vecs   write file.raw [vecs]   load file.raw   wrs2p file.s2p\nplot v(out) vs v(in) xlog   gnuplot name vecs   pyplot name vecs   hardcopy file vecs\nfourier f0 v(out)   linearize   fft v(out)   spec f1 f2 df v(out)   psd n v(out)\npre_osdi file.osdi   codemodel file.cm   source file.cir   remcirc   setseed n   quit\n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Vector functions"
+    },
+    {
+      "type": "prose",
+      "text": "mag ph cph unwrap real imag db j conj abs sqrt exp ln log log10 sin cos tan atan sinh cosh tanh floor ceil norm mean avg stddev integ deriv group_delay vecmin vecmax length vector unitvec interpolate fft ifft m3avg mtimeavg rnd sgauss sunif."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Scale factors"
+    },
+    {
+      "type": "prose",
+      "text": "T=1e12  G=1e9  Meg=1e6  k=1e3  mil=25.4e-6  m=1e-3  u=1e-6  n=1e-9  p=1e-12  f=1e-15  a=1e-18. M is milli."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Command line"
+    },
+    {
+      "type": "prose",
+      "text": "ngspice [-b] [-r raw] [-o log] [-n] [-a] [-i] [-s] [-D var=value] file.cir;  openvaf-r [-o out.osdi] [-I dir] [-D macro] [--target_cpu generic] model.va."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html)."
+      ]
+    }
+  ]
+}

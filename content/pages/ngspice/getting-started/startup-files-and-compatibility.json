@@ -1,0 +1,140 @@
+{
+  "title": "Start-Up Files and Compatibility",
+  "intro": "Before ngspice reads your netlist it runs two start-up scripts, spinit and .spiceinit, which load the code models and set variables. One of those variables, ngbehavior, decides how it reads netlists and model files written for PSpice, LTspice, HSPICE, Spectre or KiCad. Getting these two right is most of what it takes to use vendor models and foundry PDKs.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "spinit"
+    },
+    {
+      "type": "prose",
+      "text": "spinit is the system start-up script, in share/ngspice/scripts under the install prefix (C:\\Spice64\\share\\ngspice\\scripts on Windows; \\$SPICE_SCRIPTS overrides the folder). It loads the XSPICE code-model libraries with codemodel commands (analog.cm, digital.cm, xtradev.cm, xtraevt.cm, spice2poly.cm, table.cm, tlines.cm), may load .osdi model libraries with osdi commands, and sets a few defaults such as num_threads. You rarely edit it; when you do, it is to load .osdi files for every session or to change num_threads."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": ".spiceinit"
+    },
+    {
+      "type": "prose",
+      "text": ".spiceinit is your own start-up script, read after spinit and before the netlist. ngspice looks for it, in order, in the directory of the netlist, in \\$SPICE_USERINIT_DIR, in the current directory, and in your home directory (USERPROFILE on Windows, where it may also be called spice.rc). The first one found is used; -n skips it. A typical file:"
+    },
+    {
+      "type": "code",
+      "lang": "spice",
+      "source": "* .spiceinit: read before every netlist\nset ngbehavior=hsa          ; HSPICE compatibility for the whole netlist (a = all)\nset num_threads=8           ; OpenMP threads for BSIM4 and similar models\nset filetype=binary         ; rawfile format: binary (default) or ascii\nset color0=white            ; plot background\nset wr_singlescale          ; wrdata: one shared x column\nset wr_vecnames             ; wrdata: a header line with vector names\noption noinit               ; don't print the operating point at every run\n* pre_osdi /opt/osdi/psp103.osdi   ; load a Verilog-A model for every session\n"
+    },
+    {
+      "type": "prose",
+      "text": "Anything that can be typed at the prompt can go in .spiceinit. Because it is read for every netlist in that folder, a project-wide .spiceinit next to the netlists is how open-source PDKs set the options their model files need."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Environment variables"
+    },
+    {
+      "type": "list",
+      "items": [
+        "SPICE_LIB_DIR: the share/ngspice folder (default /usr/local/share/ngspice); SPICE_SCRIPTS: where spinit is (default \\$SPICE_LIB_DIR/scripts).",
+        "SPICE_USERINIT_DIR: the first place to look for .spiceinit.",
+        "NGSPICE_INPUT_DIR: an extra folder searched for netlists and for .include and .lib files.",
+        "NGSPICE_OSDI_DIR: an extra folder searched for .osdi files named in osdi and pre_osdi commands.",
+        "SPICE_ASCIIRAWFILE: 1 for text rawfiles. NGSPICE_MEAS_PRECISION: digits printed by meas (default 5). SPICE_EDITOR: the editor the edit command opens."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Compatibility modes: set ngbehavior"
+    },
+    {
+      "type": "prose",
+      "text": "Model files from other simulators use syntax ngspice does not accept by default: PSpice's VALUE= and TABLE expressions, LTspice's behavioural functions and RKM numbers, HSPICE's parameter rules and .lib sections. The variable ngbehavior, set in spinit or .spiceinit, turns on translators for them. It is a string of flags:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "ps: PSpice. Translates PSpice behavioural syntax, U-device digital primitives, and makes \\$ an ordinary character.",
+        "lt: LTspice. Accepts LTspice behavioural functions, RKM numbers (2K7), and other LTspice forms.",
+        "ltps: both, for LTspice model libraries that also contain PSpice syntax (common for vendor op-amp models).",
+        "hs: HSPICE. Parameter and expression rules of HSPICE, the usual setting for foundry PDKs. ps and hs exclude each other.",
+        "spe: Spectre-style netlists, ki: KiCad (for example the local ground symbols /gnd and /0 become 0, version 47), eg: EAGLE vector names, s3: plain Spice3 (turns off some ngspice extensions), mc: used by make check.",
+        "a: apply the mode to the whole netlist. Without a, the mode applies only to files pulled in with .include and .lib, so your own netlist stays in plain ngspice syntax while the vendor models are translated."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Typical settings: set ngbehavior=ltpsa for LTspice and PSpice vendor models; set ngbehavior=hsa for HSPICE-style PDKs such as SkyWater SKY130 and GF180MCU; set ngbehavior=ki in KiCad projects. unset ngbehavior goes back to plain ngspice. The mode is printed at start-up, so check the first lines of the output."
+    },
+    {
+      "type": "prose",
+      "text": ".incpslt file includes one file in PSpice-and-LTspice mode without changing the mode of the rest of the netlist."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Variables PDK users meet"
+    },
+    {
+      "type": "list",
+      "items": [
+        "set no_auto_braces (formerly set skywaterpdk): skip the slow automatic insertion of braces around parameter expressions when reading huge model libraries. Use it when the library is written with braces already.",
+        "set ng_nomodcheck: skip the model parameter checks that print many warnings for foundry models.",
+        "option klu: the KLU sparse solver, often two or more times faster than Sparse 1.3 on big transistor circuits. option sparse selects Sparse 1.3, which small-signal noise (including OSDI noise) needs.",
+        "optran tstep tstop ...: replace the DC operating point by a short pseudo-transient (Convergence page). PDK templates use optran 0 0 0 100p 2n 0 for large digital-heavy circuits.",
+        "set num_threads=N: OpenMP threads for the BSIM3, BSIM4 and B4SOI models; set it to the number of physical cores."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Missing features and translations"
+    },
+    {
+      "type": "prose",
+      "text": "Some constructs of other simulators have no ngspice equivalent and are translated or have to be rewritten by hand:"
+    },
+    {
+      "type": "list",
+      "items": [
+        ".step (LTspice, PSpice): use a control-language loop with alter or alterparam (Sweeps, Corners and Monte Carlo page).",
+        "LTspice .meas placed with the analysis, .wave and .backanno: write meas commands or .meas lines; save results with wrdata or write.",
+        "Laplace sources (E or G with LAPLACE, common in PSpice and LTspice models): ngspice has no LAPLACE option; rewrite them with the XSPICE s_xfer code model (Behavioural Modelling page shows how). FREQ tables are translated automatically to the xfer code model, for AC analysis only.",
+        "Encrypted vendor models (PSpice or HSPICE encryption) cannot be read by ngspice. Ask the vendor for an unencrypted or ngspice-specific model.",
+        "HSPICE .alter, .data and .lib with corner sections: .lib sections work; .alter and .data become control-language loops."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Vendor op-amp model",
+      "text": "An op-amp vendor ships an LTspice .lib file that uses LTspice and PSpice syntax. Your own netlist is plain ngspice. What do you put in .spiceinit?",
+      "solution": [
+        "set ngbehavior=ltps (without a), so only included files are translated, and include the model with .include or .lib. If the vendor file still fails, try ltpsa and check the start-up message that shows the mode in force."
+      ],
+      "answer": "set ngbehavior=ltps"
+    },
+    {
+      "type": "problem",
+      "title": "Slow PDK load",
+      "text": "A SKY130 testbench takes 40 s just to read the models. Which settings speed it up?",
+      "solution": [
+        "set ngbehavior=hsa, set no_auto_braces, set ng_nomodcheck in .spiceinit, and option klu; set num_threads to the number of cores. The open_pdks install provides a .spiceinit with these settings next to the models."
+      ],
+      "answer": "no_auto_braces and ng_nomodcheck (with hsa, klu and num_threads)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Vogt, G. Atkinson, D. Warning and P. Nenzi, Ngspice User's Manual, version 47, 2026 (ngspice.sourceforge.io/docs.html), sections 12.5 to 12.7 (start-up files and environment) and 12.11 (compatibility).",
+        "Open-source PDK documentation: SkyWater SKY130 (skywater-pdk.readthedocs.io), GF180MCU (gf180mcu-pdk.readthedocs.io) and IHP SG13G2 (github.com/IHP-GmbH/IHP-Open-PDK), and the open_pdks installer by R. T. Edwards."
+      ]
+    }
+  ]
+}
