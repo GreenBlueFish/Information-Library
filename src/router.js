@@ -34,6 +34,12 @@
  * @property {string} [summary]   One-line description shown in nav/home cards.
  * @property {string} [page]      Path to this node's page JSON (omit for pure groupings).
  * @property {TopicNode[]} [children] Nested subtopics (recursive, any depth).
+ * @property {string} [ref]       A path step: the route of another node whose page
+ *   this node shows (used instead of `page`), e.g. "/brain/snn/encoding".
+ * @property {boolean} [shelf]    A top-level grouping of topics (the home shows one
+ *   section per shelf).
+ * @property {boolean} [hidden]   Routable, but left out of the nav, the home and the
+ *   page arrows (e.g. the Credits page).
  */
 
 /**
@@ -45,6 +51,8 @@
  * @property {string} pageFile    Path to the page JSON for this node.
  * @property {TopicNode[]} crumbs Ancestor chain for breadcrumb rendering,
  *   root-first and ending with the resolved node itself.
+ * @property {string[]} [refPath] For a path step, the route of the node whose
+ *   page it shows.
  */
 
 /**
@@ -204,8 +212,29 @@ export function resolveRoute(tree, segments, onError) {
   const node = /** @type {TopicNode} */ (current);
 
   // A leaf topic (no children) must carry a `page` reference (Req 11.3/11.4).
+  // A path step (`"ref": "/a/b"`) borrows the page of the node at that route,
+  // so one page can sit in a learning path and in its reference topic at once.
+  // The breadcrumbs and nav stay on the path; only the page file is borrowed.
+  let pageFile = node.page ?? null;
+  let refPath = null;
+  if (!pageFile && typeof node.ref === "string") {
+    const target = followRef(tree, node.ref);
+    if (!target) {
+      report({
+        kind: "bad-ref",
+        slug: node.slug,
+        path: segments.slice(),
+        message: `Topic "${node.slug}" at /${segments.join("/")} refers to ` +
+          `"${node.ref}", which is not a page.`,
+      });
+      return null;
+    }
+    pageFile = target.node.page;
+    refPath = target.path;
+  }
+
   const isLeaf = !Array.isArray(node.children) || node.children.length === 0;
-  if (isLeaf && !node.page) {
+  if (isLeaf && !pageFile) {
     report({
       kind: "missing-page",
       slug: node.slug,
@@ -221,9 +250,29 @@ export function resolveRoute(tree, segments, onError) {
   return {
     path: segments.slice(),
     node,
-    pageFile: node.page ?? /** @type {any} */ (null),
+    pageFile: pageFile ?? /** @type {any} */ (null),
     crumbs,
+    ...(refPath ? { refPath } : {}),
   };
+}
+
+/**
+ * The node a `ref` route names, if it exists and has a page of its own (a ref
+ * never chains to another ref).
+ * @param {TopicNode} tree
+ * @param {string} ref A route such as "/brain/snn/encoding".
+ * @returns {{ node: TopicNode, path: string[] } | null}
+ */
+function followRef(tree, ref) {
+  const path = parseHash(ref);
+  let siblings = tree && Array.isArray(tree.children) ? tree.children : [];
+  let node = null;
+  for (const slug of path) {
+    node = siblings.find((child) => child && child.slug === slug) ?? null;
+    if (!node) return null;
+    siblings = Array.isArray(node.children) ? node.children : [];
+  }
+  return node && typeof node.page === "string" && node.page ? { node, path } : null;
 }
 
 /**

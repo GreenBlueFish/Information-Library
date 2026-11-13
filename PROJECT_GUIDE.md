@@ -99,29 +99,25 @@ Where content, code, CSS, and governance material live:
 │           ├── column-voting.js
 │           └── vga-scanline.js   # VGA beam stepper (communication-protocols/vga, §7.4).
 ├── content/                     # The DATA layer — pure JSON, no presentation logic.
-│   ├── topics.json              # The topic/subtopic tree (single manifest of topics).
-│   ├── terms/                   # The glossary folder: one Glossary_File per top-level
-│   │   ├── index.json           #   topic, paths mirroring routes (§3.3's Path_Rule).
+│   ├── topics.json              # The root of the topic tree: lists the shelves (§3.1).
+│   ├── topics/                  # One file per shelf: brain.json, electronics.json,
+│   │                            #   math.json, finance.json, games.json.
+│   ├── redirects.json           # Old route → new route, so old links keep working (§3.1).
+│   ├── terms/                   # The glossary folder: one Glossary_File per topic,
+│   │   ├── index.json           #   paths mirroring routes (§3.3's Path_Rule).
 │   │   │                        #   index.json is the Manifest: the authoritative list
 │   │   │                        #   of glossaries ({ glossaries: [{ scope, file }] }).
 │   │   ├── _root.json           # Terms shared across unrelated subjects (the `/` scope).
-│   │   └── <topic>.json         # One glossary per top-level topic (array of term entries).
-│   └── pages/                   # One JSON file per page, foldered to mirror the tree.
-│       ├── snn/                 # Spiking neural networks (index, encoding, neuron-filters,
-│       │   ├── neuron-models/   #   neuron-models.json, learning-rules.json); children of
-│       │   └── learning-rules/  #   neuron-models / learning-rules live in these folders.
-│       ├── neuroscience/        # Cortical columns (+ cortical-columns/), dynamics, mushroom bodies, manifolds,
-│       │                        #   cell types (+ cell-types/, one folder per cell family).
-│       ├── foundations/         # NEF, semantic pointers, LMU.
-│       ├── neuromorphic-hardware/  # Overview, Loihi, TrueNorth, SpiNNaker, FPGA.
-│       ├── computational-cortical-columns/  # Learning path: biology → neuron models →
-│       │                        #   plasticity → HTM → Thousand Brains → other models →
-│       │                        #   building an SNN column → reading list (one folder per section).
-│       ├── communication-protocols/  # Overview (index.json) and its one subtopic, vga.json.
-│       ├── analog-design.json + analog-design/  # Analog CMOS design course (Razavi-based): one folder per chapter,
-│       │                        #   subtopic pages with problems (solutions hidden) and simulations from sims/analog.js.
-│       ├── calculus/            # Template topic.
-│       └── game-theory/         # Template topic.
+│   │   └── <shelf>/<topic>.json # One glossary per topic (array of term entries).
+│   └── pages/                   # One folder per node, mirroring the routes; each holds
+│       │                        #   that node's page as index.json (§6).
+│       ├── brain/               # Brain & Neuromorphic: snn/, neuroscience/, foundations/,
+│       │                        #   neuromorphic-hardware/, computational-cortical-columns/.
+│       ├── electronics/         # analog-design/, ngspice/, communication-protocols/.
+│       ├── math/                # calculus/, game-theory/ (starter topics).
+│       ├── finance/             # investing/.
+│       ├── games/               # poker/, racing/.
+│       └── credits/             # The one Image Credits page (hidden from the nav).
 ├── STYLE_GUIDE.md               # Governance doc #1 — visual standards.
 ├── PROJECT_GUIDE.md             # Governance doc #2 — this file: organization + how to extend.
 └── tests/                       # Dev-only, optional (see §9). Mirrors src/ under tests/src/.
@@ -148,8 +144,17 @@ match exactly — the runtime reads these verbatim.
 
 ### 3.1 `content/topics.json` — the topic tree (`TopicNode`)
 
-A single root `TopicNode` whose `children` are the top-level topics. Nodes nest
-to **arbitrary depth**.
+A single root `TopicNode` whose `children` are the **shelves**: a few broad
+groups (Brain & Neuromorphic, Electronics, Math, Finance, Games & Hobbies) whose
+children are the topics. Nodes nest to **arbitrary depth** below them.
+
+**Split per shelf.** `content/topics.json` holds only the root; each shelf is
+kept in a file of its own under `content/topics/` and named in the root's
+`children` by a stub `{ "file": "content/topics/<shelf>.json" }`. The loader
+(`loadTopics()` in `src/content-loader.js`, `readTopicTree()` in
+`scripts/topic-tree.js` for Node) swaps each stub for the node in that file, so
+everything else sees one ordinary tree. A new shelf is one new file plus one
+stub line.
 
 Fields:
 
@@ -160,20 +165,40 @@ Fields:
 | `summary`  | string       | no       | One-line description shown in nav / home cards. |
 | `page`     | string       | see rule | Path (relative to repo root) to this node's page JSON. A **leaf** node (no `children`) **must** have a `page`; a pure grouping node may omit it. |
 | `children` | TopicNode[]  | no       | Nested subtopics (recursive, any depth). |
+| `shelf`    | boolean      | no       | `true` on a shelf (a root child). The home shows one section per shelf. |
+| `ref`      | string       | no       | A **path step**: the route of another node whose page this node shows, used *instead of* `page` (e.g. `"/brain/snn/encoding"`). The target must have a `page` of its own (refs do not chain). |
+| `hidden`   | boolean      | no       | Routable, but left out of the nav, the home and the page arrows (the Credits page, linked from the footer). |
 
 Additional rules:
-- The **full route** to a node is the join of ancestor slugs, e.g.
-  `/snn/neuron-models/lif`.
-- A node has `page`, `children`, or both. A leaf lacking a `page` is invalid and
-  the router refuses to resolve it (and surfaces an error naming the node).
-- The root node uses `slug: "root"` and carries only `summary` + `children`.
+- The **full route** to a node is the join of ancestor slugs, shelf first, e.g.
+  `/brain/snn/neuron-models/lif`.
+- **Reference pages and learning paths.** Each concept has **one** page, in the
+  topic it belongs to (LIF under Spiking Neural Networks, Temporal Memory under
+  Neuroscience). A learning path such as Computational Cortical Columns is an
+  ordered tree whose steps are either its own pages or `ref` nodes that borrow a
+  reference page. A step keeps the path's breadcrumbs, sidebar and previous/next
+  order, and the page shows a note naming the topic it lives in. Never copy a
+  page into a path: add a `ref`.
+- **Titles carry no numbers** ("Biology of the Neocortex", not "1. Biology of
+  the Neocortex"): the order of `children` is the order, so a number would go
+  stale the first time a step moves. Refer to other steps by title, not number.
+- **Redirects.** When a page moves, add a line to `content/redirects.json`
+  (`"/old/route": "/new/route"`). A route that no longer resolves is rewritten
+  by its longest matching prefix there (so `/snn` → `/brain/snn` covers every
+  page under it) and the address bar is corrected. Links inside the library
+  should still point at the new route, not rely on a redirect (a test checks).
+- A node has `page` (or `ref`), `children`, or both. A leaf lacking both `page`
+  and `ref` is invalid and the router refuses to resolve it (and surfaces an
+  error naming the node).
+- The root node uses `slug: "root"` and carries `title`, `summary` and
+  `children`: the shelf stubs, plus any hidden page such as Credits.
 - The order of `children` is the reading order: the previous/next arrows at the
   foot of each page step through the tree in it, depth-first (a topic, then its
   subtopics, then its next sibling), the same order the sidebar lists them.
   Moving to another page (an arrow, a nav link or a card) opens it scrolled to
   its top (`render()` in `src/main.js`).
 
-Example (abridged from the real manifest):
+Example (abridged from the real files). `content/topics.json`:
 
 ```json
 {
@@ -181,32 +206,53 @@ Example (abridged from the real manifest):
   "title": "Library of Alexandria",
   "summary": "Browse a tree of topics, highlight any term, explore interactive lessons.",
   "children": [
+    { "file": "content/topics/brain.json" },
+    { "file": "content/topics/electronics.json" },
+    { "slug": "credits", "title": "Image Credits", "hidden": true,
+      "page": "content/pages/credits/index.json" }
+  ]
+}
+```
+
+`content/topics/brain.json`:
+
+```json
+{
+  "slug": "brain",
+  "title": "Brain & Neuromorphic",
+  "shelf": true,
+  "page": "content/pages/brain/index.json",
+  "children": [
     {
       "slug": "snn",
       "title": "Spiking Neural Networks",
-      "summary": "Neural networks whose neurons communicate via discrete spikes over time.",
-      "page": "content/pages/snn/index.json",
+      "page": "content/pages/brain/snn/index.json",
       "children": [
         {
           "slug": "neuron-models",
           "title": "Neuron Models",
-          "summary": "How individual spiking neurons integrate input and fire.",
-          "page": "content/pages/snn/neuron-models.json",
+          "page": "content/pages/brain/snn/neuron-models/index.json",
           "children": [
-            {
-              "slug": "lif",
-              "title": "Leaky Integrate-and-Fire",
-              "page": "content/pages/snn/neuron-models/lif.json"
-            }
+            { "slug": "lif", "title": "Leaky Integrate-and-Fire",
+              "page": "content/pages/brain/snn/neuron-models/lif/index.json" }
           ]
         }
+      ]
+    },
+    {
+      "slug": "computational-cortical-columns",
+      "title": "Computational Cortical Columns",
+      "page": "content/pages/brain/computational-cortical-columns/index.json",
+      "children": [
+        { "slug": "leaky-integrate-and-fire", "title": "Leaky Integrate-and-Fire",
+          "ref": "/brain/snn/neuron-models/lif" }
       ]
     }
   ]
 }
 ```
 
-### 3.2 Page content — `content/pages/**/<slug>.json` (`PageContent`)
+### 3.2 Page content — `content/pages/<route>/index.json` (`PageContent`)
 
 Each page is one JSON document: a title, an optional intro paragraph, and an
 ordered array of content blocks the renderer paints top to bottom.
@@ -297,13 +343,13 @@ Manifest is the authoritative list of glossaries, and the runtime indexes each
 on load.
 
 **The folder, the Path_Rule, and the Manifest.** Glossaries live under
-`content/terms/`, one Glossary_File per top-level topic, with the file path
+`content/terms/`, one Glossary_File per topic, with the file path
 mirroring the route:
 
 - **Path_Rule.** The glossary for route `/a/b/c` is `content/terms/a/b/c.json`;
   the glossary for the root scope `/` is `content/terms/_root.json`. (Today the
-  split is one file per top-level topic — `content/terms/analog-design.json`,
-  `content/terms/snn.json`, … — plus `_root.json`, but the rule supports a
+  split is one file per topic — `content/terms/electronics/analog-design.json`,
+  `content/terms/brain/snn.json`, … — plus `_root.json`, but the rule supports a
   glossary at any route depth.)
 - **Manifest.** `content/terms/index.json` lists every Glossary_File as
   `{ scope, file }` entries under a `glossaries` array. Because the site has no
@@ -315,15 +361,15 @@ mirroring the route:
 {
   "glossaries": [
     { "scope": "/", "file": "content/terms/_root.json" },
-    { "scope": "/snn", "file": "content/terms/snn.json" },
-    { "scope": "/analog-design", "file": "content/terms/analog-design.json" }
+    { "scope": "/brain/snn", "file": "content/terms/brain/snn.json" },
+    { "scope": "/electronics/analog-design", "file": "content/terms/electronics/analog-design.json" }
   ]
 }
 ```
 
 **Where a term goes.** A term lives in the Glossary_File of the **narrowest
 route whose subtree covers every page that uses it**. A term used only within
-`/analog-design` pages belongs in `content/terms/analog-design.json`; a term
+`/electronics/analog-design` pages belongs in `content/terms/electronics/analog-design.json`; a term
 shared across unrelated subjects (used on pages in more than one top-level
 topic) belongs in `content/terms/_root.json`. Store a term **at most once per
 Glossary_File**; when one term has several genuinely different senses within one
@@ -341,6 +387,15 @@ the term):
 | `acronym`    | string          | no       | Short form (e.g. `"SNN"`). **Omit the field entirely** when there is no acronym — never store `""` or `null`. Indexed as an additional surface form. |
 | `definition` | string          | yes      | The definition text shown in the panel. |
 | `pageRef`    | string \| null  | yes      | A route to an Alexandria page explaining the term, or `null`. When non-null it **must resolve to a real route** in `topics.json`. |
+
+**Shared pages.** On a page shared between a learning path and its reference
+topic (a `ref` step, or the page steps borrow), the chain of the other route is
+searched too, after the page's own chain, so a term from either topic's glossary
+resolves locally.
+
+`content/terms.json` is the older single-file glossary. The site no longer reads
+it; only `scripts/score.js` does. Add new terms to the files under
+`content/terms/`.
 
 There is **no `source` field on disk.** The runtime attaches a `source`
 annotation (the glossary's scope route and its title, e.g. "from Analog Design")
@@ -361,7 +416,7 @@ Example of a Glossary_File (one entry with an acronym, one without):
     "acronym": "SNN",
     "aliases": ["spiking neural network", "spiking neural net"],
     "definition": "Neural networks whose neurons communicate via discrete, time-stamped spikes.",
-    "pageRef": "/snn"
+    "pageRef": "/brain/snn"
   },
   {
     "term": "Neural Network",
@@ -430,17 +485,18 @@ Example:
 
 Two localized edits — no existing file changes.
 
-1. **Add a `TopicNode` to `content/topics.json`** at the right place in the tree
+1. **Add a `TopicNode` to its shelf's file in `content/topics/`** at the right place in the tree
    (any depth). Give it a `slug` (matching `^[a-z0-9]+(-[a-z0-9]+)*$`, unique
    among its siblings), a `title`, an optional `summary`, and — if it is a page
    (a leaf, or any node you want to be viewable) — a `page` path. Add it to a
    parent's `children` array to nest it; add `children` to it to give it
    subtopics of its own.
 2. **Create its page JSON** at the `page` path, under `content/pages/...`,
-   following the §3.2 schema. Mirror the tree in the folder structure (e.g. a
-   node at `/calculus/limits` → `content/pages/calculus/limits.json`).
+   following the §3.2 schema. The path is always the node's route plus
+   `index.json` (e.g. a node at `/math/calculus/limits` →
+   `content/pages/math/calculus/limits/index.json`).
 
-Reload: the new route (the join of ancestor slugs, e.g. `#/calculus/limits`)
+Reload: the new route (the join of ancestor slugs, e.g. `#/math/calculus/limits`)
 resolves and renders. Nothing else needs editing — no renderer or router code.
 
 A pure grouping node (one that only organizes children and has no page of its
@@ -485,10 +541,15 @@ Guidance:
 - **Slugs:** `^[a-z0-9]+(-[a-z0-9]+)*$` — lowercase letters and digits,
   hyphen-separated words, unique among siblings. No spaces, underscores, or
   capitals.
-- **Page files:** one JSON file per page, named for the node's slug, foldered to
-  mirror the topic tree under `content/pages/` (e.g. `/snn/neuron-models` →
-  `content/pages/snn/neuron-models.json`). The `page` path in `topics.json` is
-  relative to the repo root (`content/pages/...`).
+- **Page files: one folder per node.** A node's page is always
+  `content/pages/<route>/index.json` (e.g. `/brain/snn/neuron-models` →
+  `content/pages/brain/snn/neuron-models/index.json`), so any node can grow
+  children (in sub-folders beside its `index.json`) without its own file moving.
+  The `page` path is relative to the repo root. A test
+  (`tests/src/integration/shelves.test.js`) checks every node follows this.
+- **Image credits** for outside images go on the one Credits page
+  (`content/pages/credits/index.json`), under a heading for the topic, not on a
+  page in the topic's own tree.
 - **Content is data:** never write page HTML by hand. Express a page as blocks
   (§3.2); the renderer owns all structure.
 - **Styling is centralized:** no inline or per-page styles. Colors, type, and
@@ -510,15 +571,15 @@ Guidance:
   Commons (resized).", and add a row to `CREDITS.md` in the same folder with
   the licence, source link and what you changed. The caption's licence must
   match the row's, and readers see the full credits too: add the same details
-  to the topic's Image Credits page
-  (`content/pages/computational-cortical-columns/image-credits/index.json`).
+  to the library's one Image Credits page, under the topic's heading
+  (`content/pages/credits/index.json`, route `#/credits`).
   `assets/figures/computational-cortical-columns/CREDITS.md` is the example, and
   `tests/src/integration/cortical-columns-figures.test.js` checks all three.
   Images are capped at `--figure-max-height` so a tall one and its caption
   fit on one screen.
 - **Where to copy a template from:** start a new page by copying an existing one
-  with the blocks you need. `content/pages/snn/index.json` is a good prose/list/
-  callout template; `content/pages/snn/neuron-models.json` additionally shows a
+  with the blocks you need. `content/pages/brain/snn/index.json` is a good prose/list/
+  callout template; `content/pages/brain/snn/neuron-models/index.json` additionally shows a
   `code` block and a `parameter-plot` **widget** block. The `calculus/` and
   `game-theory/` folders are deliberately template topics to clone from.
 
@@ -534,7 +595,7 @@ Add a `widget` content block to a page (§3.4) whose `type` is already
 registered (e.g. `"parameter-plot"`). Declare its `params` and `config` in the
 page JSON and reload — the renderer delegates the block to the registry, which
 mounts it. No code changes. See the widget block in
-`content/pages/snn/neuron-models.json` for a complete example.
+`content/pages/brain/snn/neuron-models/index.json` for a complete example.
 
 A `parameter-plot` runs a real simulation when its `config.sim` names one of
 the simulators listed in `src/widgets/sims/index.js` (e.g. `"lif"`,

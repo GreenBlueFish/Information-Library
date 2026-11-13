@@ -226,6 +226,7 @@ export function applyFilter(query, cards, status) {
       card.hidden = false;
       clearMatchMarks(card);
     }
+    syncShelves(list);
     if (status) {
       status.textContent = "";
       status.hidden = true;
@@ -257,6 +258,8 @@ export function applyFilter(query, cards, status) {
       clearMatchMarks(card);
     }
   }
+
+  syncShelves(list);
 
   // R1.6 — the "No matching topics." status shows IFF nothing is visible.
   if (status) {
@@ -360,4 +363,21 @@ export function showTermResults(query, terms, section) {
     list.appendChild(item);
   }
   return results.length;
+}
+
+/**
+ * Hide each `.home-shelf` section whose cards are all hidden, and show the
+ * rest. A home without shelves has no sections, so this does nothing there.
+ * @param {HTMLElement[]} cards
+ * @returns {void}
+ */
+function syncShelves(cards) {
+  const sections = new Set();
+  for (const card of cards) {
+    const section = typeof card.closest === "function" ? card.closest(".home-shelf") : null;
+    if (section) sections.add(section);
+  }
+  for (const section of sections) {
+    section.hidden = ![...section.querySelectorAll(".home-card")].some((c) => !c.hidden);
+  }
 }

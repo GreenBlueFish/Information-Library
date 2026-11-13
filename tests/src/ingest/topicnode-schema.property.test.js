@@ -39,6 +39,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "../../harness.js";
 import * as fcNS from "https://cdn.jsdelivr.net/npm/fast-check/+esm";
 import { SLUG_PATTERN } from "../../../src/router.js";
+import { readTopicTree } from "../../../scripts/topic-tree.js";
 
 // fast-check's ESM build exposes its API on the module namespace; some bundles
 // also nest it under `default`. Normalize to a single `fc` handle either way.
@@ -97,10 +98,12 @@ export function checkTopicNodeSchema(root) {
         seen.add(slug);
       }
 
-      // Leaf ⇒ has a non-empty `page`.
+      // Leaf ⇒ has a non-empty `page` (or a `ref` borrowing another node's page).
       const isLeaf = !Array.isArray(node.children) || node.children.length === 0;
       if (isLeaf) {
-        if (typeof node.page !== "string" || node.page.trim() === "") {
+        const hasPage = typeof node.page === "string" && node.page.trim() !== "";
+        const hasRef = typeof node.ref === "string" && node.ref.trim() !== "";
+        if (!hasPage && !hasRef) {
           problems.push({ kind: "missing-page", path });
         }
       } else {
@@ -293,8 +296,7 @@ describe("TopicNode schema validity (Property 3) \u2014 Validates: Requirements 
   });
 
   it("accepts the real content/topics.json (every node passes)", () => {
-    const raw = readFileSync(join(repoRoot, "content", "topics.json"), "utf8");
-    const tree = JSON.parse(raw);
+    const tree = readTopicTree(repoRoot);
     const problems = checkTopicNodeSchema(tree);
     expect(problems).toEqual([]);
   });

@@ -13,6 +13,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "../harness.js";
 import { measure, workingSim, MIN_TEXT } from "../../scripts/score.js";
 import { getWidget, registerWidget } from "../../src/widgets/registry.js";
+import { readTopicTree } from "../../scripts/topic-tree.js";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const readJson = (rel) => JSON.parse(readFileSync(join(root, rel), "utf8"));
@@ -67,14 +68,16 @@ describe("scripts/score", () => {
   it("credits pages under the cortical-column topics", async () => {
     const r = await score(
       [
-        node("computational-cortical-columns", "ccc.json", [node("htm", "htm.json")]),
-        node("neuroscience", "n.json", [node("cortical-columns", "nc.json"), node("cell-types", "ct.json")]),
+        node("brain", "b.json", [
+          node("computational-cortical-columns", "ccc.json", [node("htm", "htm.json")]),
+          node("neuroscience", "n.json", [node("cortical-columns", "nc.json"), node("cell-types", "ct.json")]),
+        ]),
       ],
-      { "ccc.json": page(), "htm.json": page(), "n.json": page(), "nc.json": page(), "ct.json": page() },
+      { "b.json": page(), "ccc.json": page(), "htm.json": page(), "n.json": page(), "nc.json": page(), "ct.json": page() },
     );
-    expect(r.pages).toBe(5);
+    expect(r.pages).toBe(6);
     expect(r.columnPages).toBe(3);
-    expect(r.score).toBe(5 + 2 * 3);
+    expect(r.score).toBe(6 + 2 * 3);
   });
 
   it("credits a page with a working simulator, and each distinct simulator once", async () => {
@@ -137,7 +140,7 @@ describe("scripts/score", () => {
   });
 
   it("finds every widget in the library working", async () => {
-    const topics = readJson("content/topics.json");
+    const topics = readTopicTree(root);
     const broken = [];
     const walk = (n) => {
       if (n.page) {

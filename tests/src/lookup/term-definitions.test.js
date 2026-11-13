@@ -27,6 +27,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, it, expect } from "../../harness.js";
 import { ensureDom } from "../../dom.js";
+import { readTopicTree } from "../../../scripts/topic-tree.js";
 
 const dom = await ensureDom();
 globalThis.document = dom.document;
@@ -39,7 +40,7 @@ const { renderPage } = await import("../../../src/renderer.js");
 const { fuzzyNearest } = await import("../../../src/lookup/fuzzy.js");
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..");
-const realTopics = JSON.parse(readFileSync(join(repoRoot, "content", "topics.json"), "utf8"));
+const realTopics = readTopicTree(repoRoot);
 
 // R14.8: the lookup guarantees must hold against the SPLIT glossaries, not the
 // legacy single table. Load every Glossary_File listed in the Manifest and

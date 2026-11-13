@@ -1,0 +1,253 @@
+{
+  "title": "Neural Cell Types",
+  "intro": "A brain is not built from one kind of neuron. Pyramidal cells, fast-spiking basket cells, Purkinje cells, thalamic relay cells and dozens of others differ in shape, in the ion channels they carry, in whom they talk to and in how they fire. This section walks through the cell types that matter most for building spiking models, and for each one says what computational models of it exist, from detailed multi-compartment reconstructions down to two-variable point neurons.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why cell types matter for a model builder"
+    },
+    {
+      "type": "prose",
+      "text": "Most spiking networks use one neuron model with one parameter set. Real circuits get much of their computing power from having several kinds of cell that play different roles: excitatory cells that carry information, fast inhibitory cells that set timing and enforce sparseness, dendrite-targeting cells that gate feedback, pacemakers that set rhythms, and huge integrating cells that read out learned associations. Knowing the types tells you which roles your model is missing, and the existing models of each type give you parameter sets you can start from instead of tuning from scratch."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How this section is organised"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Defining a Cell Type (#/brain/neuroscience/cell-types/classification): the four ways neuroscientists sort neurons (shape, firing, genes, connections) and the large atlases that combine them.",
+        "Modelling a Cell Type (#/brain/neuroscience/cell-types/modelling-cell-types): the ladder of model detail, how models are fitted to recordings, and where to download published models.",
+        "Firing Patterns (#/brain/neuroscience/cell-types/firing-patterns): the electrophysiological classes (regular spiking, bursting, fast spiking and so on) with an interactive Izhikevich neuron.",
+        "Cortical Excitatory Neurons (#/brain/neuroscience/cell-types/cortical-excitatory): layer 2/3, layer 4, layer 5 and layer 6 principal cells.",
+        "Cortical Interneurons (#/brain/neuroscience/cell-types/cortical-interneurons): PV basket, chandelier, SST Martinotti, VIP and neurogliaform cells.",
+        "Hippocampal and Entorhinal Neurons (#/brain/neuroscience/cell-types/hippocampal): CA1 and CA3 pyramidal cells, dentate granule cells, OLM interneurons and entorhinal stellate cells.",
+        "Cerebellar Neurons (#/brain/neuroscience/cell-types/cerebellar): Purkinje cells, granule cells, inferior olive neurons and the deep cerebellar nuclei.",
+        "Thalamic Neurons (#/brain/neuroscience/cell-types/thalamic): thalamocortical relay cells and thalamic reticular cells.",
+        "Basal Ganglia and Neuromodulatory Neurons (#/brain/neuroscience/cell-types/basal-ganglia-and-neuromodulatory): striatal medium spiny neurons, dopamine neurons, the subthalamic nucleus and globus pallidus, and serotonin and noradrenaline neurons.",
+        "Sensory and Motor Neurons (#/brain/neuroscience/cell-types/sensory-and-motor): retinal cells, cochlear hair cells, touch receptors and spinal motor neurons, the brain's input and output ends.",
+        "Glial Cells (#/brain/neuroscience/cell-types/glia): astrocytes, oligodendrocytes and microglia, which are not neurons but change what neurons compute."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Cell types at a glance"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Cell type                  Sign  Typical firing           Classic models\n-------------------------  ----  -----------------------  ------------------------------------------\nL2/3 pyramidal             E     regular spiking, adapts  Izhikevich RS; AdEx; Allen GLIF; BBP\nL5 thick-tufted pyramidal  E     bursting, BAC firing     Mainen & Sejnowski 1996; Hay et al. 2011\nL4 spiny stellate          E     regular spiking          point LIF/AdEx; BBP L4 SS\nPV basket cell             I     fast spiking             Wang & Buzsaki 1996; Izhikevich FS\nSST Martinotti cell        I     low-threshold spiking    Izhikevich LTS; BBP MC\nCA1 pyramidal              E     RS / complex bursts      Poirazi et al. 2003; Migliore et al.\nCA3 pyramidal              E     intrinsic bursting       Traub et al. 1991; Pinsky & Rinzel 1994\nDentate granule cell       E     very sparse, RS          Santhakumar et al. 2005\nEntorhinal stellate (L2)   E     theta resonance          Alonso & Klink 1993; Fransen et al. 2004\nPurkinje cell              I     simple + complex spikes  De Schutter & Bower 1994; Zang et al. 2018\nCerebellar granule cell    E     high-rate, little adapt  D'Angelo et al. 2001; Marr-Albus nets\nInferior olive neuron      E     subthreshold oscill.     Manor et al. 1997; De Gruijl et al. 2012\nThalamocortical relay      E     tonic / rebound bursts   McCormick & Huguenard 1992; Izhikevich TC\nThalamic reticular         I     rhythmic bursts          Destexhe et al. 1996\nStriatal MSN               I     up/down states, delayed  Izhikevich MSN; Humphries et al. 2009\nDopamine (VTA/SNc)         mod   pacemaker + bursts       Wilson & Callaway 1993; TD-error models\nSpinal motor neuron        E     graded, plateau          Booth, Rinzel & Kiehn 1997\nRetinal ganglion cell      E     ON/OFF, transient/sust.  Pillow et al. 2008 (GLM)\nAstrocyte                  --    calcium waves, no spikes Li & Rinzel 1994; tripartite synapse"
+    },
+    {
+      "type": "callout",
+      "text": "E = excitatory (glutamatergic), I = inhibitory (GABAergic), mod = neuromodulatory. Purkinje cells are inhibitory projection neurons: their GABAergic output leaves the cerebellar cortex. Medium spiny neurons are also GABAergic projection neurons."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Intuition: signal carriers and traffic controllers"
+    },
+    {
+      "type": "prose",
+      "text": "Think of the excitatory cells as the vehicles that carry messages, and the interneurons as different kinds of traffic control. PV cells are fast traffic lights at the intersection right next to the cell body: they decide whether, and exactly when, a pyramidal cell fires. SST cells control the on-ramps far out on the dendrites: they decide which inputs, especially top-down ones arriving in L1, are allowed to count. VIP cells mostly control the SST cells: by switching SST cells off they open the dendritic on-ramps, a 'disinhibition' that lets context or attention boost a pyramidal cell's input."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Proportions"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Excitatory neurons: roughly 70–85% of cortical neurons, most of them pyramidal cells. Rodent estimates are usually near 80–85% excitatory; primate cortex has a somewhat larger inhibitory share.",
+        "Inhibitory interneurons: roughly 15–30%. In mouse, about 40% of interneurons express parvalbumin (PV), about 30% somatostatin (SST), and about 30% the serotonin receptor 5HT3aR, of which VIP cells are the largest subgroup (Rudy et al. 2011; Tremblay, Lee & Rudy 2016).",
+        "Dale's principle holds to a very good approximation: a neuron is either excitatory or inhibitory at all its output synapses. Sign-constrained weights are therefore biologically realistic, and the sign belongs to the presynaptic neuron, not the synapse."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Excitatory cells"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Pyramidal cells"
+    },
+    {
+      "type": "prose",
+      "text": "Pyramidal neurons have a triangular cell body, several basal dendrites near the soma, one long apical dendrite running toward the pial surface and ending in a tuft (often in L1), and an axon that both branches locally and, in most cases, leaves the area. Their dendrites are covered in spines; a typical pyramidal neuron receives several thousand to a few tens of thousands of synapses (around 10,000 is a common round figure). Dendrites are not passive cables: NMDA spikes in thin basal and tuft branches (Schiller et al. 2000) and calcium spikes near the apical tuft (Larkum 2013) let one cell compute with many semi-independent subunits (Poirazi, Brannon & Mel 2003). This is the biological basis of the HTM neuron (see \"The HTM Neuron\" in the Hierarchical Temporal Memory chapter of Computational Cortical Columns) and the subject of \"Dendrites and Active Dendrites\" in the Spiking Neuron Models chapter of Computational Cortical Columns."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Firing: regular spiking with spike-frequency adaptation for most cells; intrinsically bursting for many thick-tufted L5 cells.",
+        "Typical passive properties (in vitro, approximate): membrane time constant 10–30 ms, input resistance tens to a few hundred MΩ, resting potential near −65 to −75 mV.",
+        "In vivo rates are low and skewed: many cells fire below 1 Hz, a minority fire much more. Sparse, heavy-tailed activity is the norm.",
+        "Projection classes: intratelencephalic (IT; to cortex and striatum), extratelencephalic or pyramidal-tract (ET/PT; thick-tufted L5 to brainstem, spinal cord, thalamus), and corticothalamic (CT; L6 to thalamus). Harris & Shepherd (2015) argue these projection classes are more fundamental than layer labels."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Spiny stellate cells"
+    },
+    {
+      "type": "prose",
+      "text": "In L4 of some primary sensory areas — rodent barrel cortex and primate V1 layer 4C among them — many excitatory cells are spiny stellates: star-shaped, spiny, without a prominent apical dendrite, and with axons that stay mostly within the local column, targeting L4 and L2/3. They are the main recipients of core thalamic input. Other species and areas use small 'star pyramids' in the same role. For modelling, they are local excitatory input cells with no long-range output."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/computational-cortical-columns/pyramidal-and-spiny-stellate-golgi.jpg",
+      "alt": "Two black-and-white microscope photographs of single Golgi-stained neurons. Panel a shows a pyramidal cell: a dark triangular cell body with one thick dendrite rising straight up and branching, and several thinner dendrites spreading from its base, all dotted with small spines. Panel b shows a spiny stellate cell: a round cell body with thin dendrites radiating in all directions and no single upward dendrite. A 50 micrometre scale bar is in panel b.",
+      "caption": "The two excitatory shapes under the microscope: (a) an L2/3 pyramidal cell, with its apical dendrite rising towards the surface, and (b) an L4 spiny stellate cell, whose dendrites spread like a star with no apical trunk. Image: Churchill et al. (2004), BMC Neuroscience 5:43, CC BY 2.5, via Wikimedia Commons."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Inhibitory interneurons"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "PV (parvalbumin) cells"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Morphology: basket cells, which target the soma and proximal dendrites, and chandelier cells, which target the axon initial segment.",
+        "Physiology: fast-spiking, narrow spikes, little adaptation, short membrane time constant (around 5–10 ms); can fire at hundreds of Hz.",
+        "Connectivity: receive strong, depressing excitation from local pyramidal cells and from thalamus (so they are recruited quickly), and inhibit nearby pyramidal cells densely and with little selectivity, plus each other.",
+        "Function: feedforward inhibition that narrows the time window for integration to a few milliseconds, feedback inhibition that stabilises activity and controls gain, and generation of gamma oscillations (roughly 30–80 Hz). In models, PV cells are the natural home of fast E/I balance and k-winners-take-all style competition."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "SST (somatostatin) cells"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Morphology: the best-known type is the Martinotti cell, whose axon ascends to L1 and inhibits the apical tufts of pyramidal cells.",
+        "Physiology: often low-threshold spiking and adapting; excitatory synapses onto them from pyramidal cells are facilitating, so they respond more as presynaptic activity is sustained.",
+        "Connectivity: inhibit dendrites of pyramidal cells, and also inhibit PV and VIP cells, but rarely each other (Pfeffer et al. 2013).",
+        "Function: control of dendritic integration, including gating of top-down input and dendritic calcium spikes; surround suppression; slower, activity-dependent feedback inhibition."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "VIP (vasoactive intestinal peptide) cells"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Morphology: bipolar or bitufted, concentrated in L2/3, with vertically oriented axons.",
+        "Connectivity: their main target is SST cells (Pfeffer et al. 2013; Pi et al. 2013). They receive long-range input from other cortical areas (e.g. motor to sensory cortex; Lee et al. 2013) and neuromodulatory input (e.g. cholinergic).",
+        "Function: disinhibition. VIP → SST inhibition releases pyramidal dendrites from SST inhibition. Fu et al. (2014) showed this circuit raises visual responses in mouse V1 during locomotion. It is a candidate mechanism for attention- and context-dependent gain."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Other inhibitory types. Neurogliaform cells (often in L1, many marked by NDNF in mice) release GABA diffusely and produce slow GABA-B-mediated inhibition; double-bouquet cells have narrow vertical axons. Markram et al. (2004) catalogued the morphological and electrical diversity, and transcriptomic studies list dozens of types per area. For a column model the three-class PV/SST/VIP scheme is the usual and well-motivated compression."
+    },
+    {
+      "type": "callout",
+      "text": "Going deeper: this section has a page for each of these cells (layer 2/3, 4, 5 and 6 excitatory cells; PV basket, chandelier, SST Martinotti, VIP and neurogliaform interneurons) with their computational models, plus the thalamic, hippocampal and other cell types a column interacts with."
+    },
+    {
+      "type": "prose",
+      "text": "Izhikevich's (2003) two-variable model reproduces the firing classes above with four parameters, which makes it a quick way to put the right cell types into a column model. Pick a class and a current: regular spiking (the typical pyramidal cell, adapting), intrinsically bursting (an initial burst, as in many L5 thick-tufted pyramidal cells), chattering (fast rhythmic bursts, reported in superficial pyramidal cells), fast spiking (PV basket cells: high rate, no adaptation) and low-threshold spiking (often matched to SST cells: adapting, with rebound). The step lasts 400 ms so adaptation has time to show."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Cortical firing classes (Izhikevich model)",
+        "params": [
+          {
+            "key": "preset",
+            "label": "Cell class",
+            "control": "select",
+            "options": [
+              "Regular spiking",
+              "Intrinsically bursting",
+              "Chattering",
+              "Fast spiking",
+              "Low-threshold spiking"
+            ],
+            "default": "Chattering"
+          },
+          {
+            "key": "current",
+            "label": "Input current",
+            "control": "range",
+            "min": 0,
+            "max": 20,
+            "step": 1,
+            "default": 10
+          }
+        ],
+        "config": {
+          "sim": "izhikevich",
+          "duration": 400,
+          "xLabel": "time (ms)",
+          "yLabel": "v (mV)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Connectivity motifs (the math you actually need)"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Inhibitory motif, mouse V1 (after Pfeffer et al. 2013), arrows = inhibition\n\n   PV  ──► Pyr (soma), PV            strong, dense, nonselective\n   SST ──► Pyr (dendrite), PV, VIP   almost no SST → SST\n   VIP ──► SST (main), few others    disinhibition: VIP ─┤ SST ─┤ Pyr\n\nExcitation onto interneurons\n   Pyr ──► PV   depressing, strong   (fast feedforward/feedback)\n   Pyr ──► SST  facilitating         (recruited by sustained activity)\n   long-range cortex, ACh ──► VIP     (context, behavioural state)\n\nOrder-of-magnitude local connection probabilities (within ~100–200 µm):\n   E → E   ≈ 0.05–0.2      unitary EPSP ≈ 0.2–1 mV\n   E → PV  ≈ 0.3–0.6       PV → E ≈ 0.3–0.6 (dense 'blanket' inhibition)\n   Potjans–Diesmann 2014 uses within-L2/3 E→E ≈ 0.10, E→I ≈ 0.13,\n   I→E ≈ 0.17, I→I ≈ 0.14."
+    },
+    {
+      "type": "prose",
+      "text": "The connection probabilities above are rough summaries of paired-recording and model data; they depend on distance, species, layer and age, and published values differ by a factor of two or more. What is robust is the pattern: excitatory–excitatory connections are sparse and individually weak, while PV interneurons connect densely to and from their neighbours. That pattern is why a few inhibitory cells can enforce sparse activity in many excitatory cells."
+    },
+    {
+      "type": "callout",
+      "text": "A balanced network in one sentence: each pyramidal cell receives large excitatory and inhibitory currents that nearly cancel, so it fires irregularly when fluctuations cross threshold (van Vreeswijk & Sompolinsky 1996; Brunel 2000). PV-like inhibition is what makes this balance fast enough to track input."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this means for your model"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Minimum viable: one excitatory and one fast inhibitory (PV-like) population per layer, roughly 4:1 E:I, obeying Dale's principle. This alone gives you stable, sparse, irregular activity and a k-WTA-like competition (see \"Inhibition and k-Winners-Take-All\" in the Plasticity and Learning chapter of Computational Cortical Columns).",
+        "Make PV-like cells fast: shorter $\\tau_m$ (about 5–10 ms vs 20 ms for E), no adaptation, strong and dense connections. In Diehl & Cook (2015) the inhibitory population plays exactly this role, one-to-one excited and all-but-one inhibiting.",
+        "Add SST when you have dendrites: if your excitatory neurons have an apical or contextual compartment (HTM distal segments, two-compartment models), SST-like inhibition onto that compartment is how you gate top-down or predictive input.",
+        "Add VIP when you have a context or attention signal: route it to VIP, have VIP inhibit SST, and you get multiplicative-looking gain on pyramidal responses without touching feedforward weights.",
+        "Use adaptation in excitatory cells (AdEx or Izhikevich regular-spiking parameters) and short-term plasticity on Pyr → PV (depressing) and Pyr → SST (facilitating) if timing matters.",
+        "Spiny stellates can be modelled as point neurons in L4 with local-only axons; pyramids benefit from at least two compartments if you care about feedback.",
+        "Don't over-split: dozens of transcriptomic types are real but unconstrained in a model. Start with E/PV/SST/VIP and add types only when a specific result needs them."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a cortical column model needs first"
+    },
+    {
+      "type": "prose",
+      "text": "If your goal is a spiking cortical column, the cortical pages come first: pyramidal cells per layer and the three main interneuron classes (PV, SST, VIP). The thalamic page matters next, because the column's main input and one of its output loops run through the thalamus. Hippocampal and entorhinal cells are where grid and place codes, the location signal behind the Thousand Brains Theory, were found. The cerebellum and basal ganglia are worth reading for contrast: they show that very different cell types solve very different learning problems (supervised error correction and reinforcement learning)."
+    },
+    {
+      "type": "prose",
+      "text": "Sources: Markram, H., Toledo-Rodriguez, M., Wang, Y., Gupta, A., Silberberg, G., & Wu, C. (2004). Interneurons of the neocortical inhibitory system. Nature Reviews Neuroscience; Rudy, B., Fishell, G., Lee, S., & Hjerling-Leffler, J. (2011). Three groups of interneurons account for nearly 100% of neocortical GABAergic neurons. Developmental Neurobiology; Tremblay, R., Lee, S., & Rudy, B. (2016). GABAergic interneurons in the neocortex: from cellular properties to circuits. Neuron; Pfeffer, C. K., Xue, M., He, M., Huang, Z. J., & Scanziani, M. (2013). Inhibition of inhibition in visual cortex: the logic of connections between molecularly distinct interneurons. Nature Neuroscience; Pi, H.-J., Hangya, B., Kvitsiani, D., Sanders, J. I., Huang, Z. J., & Kepecs, A. (2013). Cortical interneurons that specialize in disinhibitory control. Nature; Lee, S., Kruglikov, I., Huang, Z. J., Fishell, G., & Rudy, B. (2013). A disinhibitory circuit mediates motor integration in the somatosensory cortex. Nature Neuroscience; Fu, Y., Tucciarone, J. M., Espinosa, J. S., Sheng, N., Darcy, D. P., Nicoll, R. A., Huang, Z. J., & Stryker, M. P. (2014). A cortical circuit for gain control by behavioral state. Cell; Harris, K. D., & Shepherd, G. M. G. (2015). The neocortical circuit: themes and variations. Nature Neuroscience; Schiller, J., Major, G., Koester, H. J., & Schiller, Y. (2000). NMDA spikes in basal dendrites of cortical pyramidal neurons. Nature; Poirazi, P., Brannon, T., & Mel, B. W. (2003). Pyramidal neuron as two-layer neural network. Neuron; Larkum, M. (2013). A cellular mechanism for cortical associations. Trends in Neurosciences; Potjans, T. C., & Diesmann, M. (2014). The cell-type specific cortical microcircuit. Cerebral Cortex; van Vreeswijk, C., & Sompolinsky, H. (1996). Chaos in neuronal networks with balanced excitatory and inhibitory activity. Science; Brunel, N. (2000). Dynamics of sparsely connected networks of excitatory and inhibitory spiking neurons. Journal of Computational Neuroscience; Diehl, P. U., & Cook, M. (2015). Unsupervised learning of digit recognition using spike-timing-dependent plasticity. Frontiers in Computational Neuroscience; Zeng, H., & Sanes, J. R. (2017). Neuronal cell-type classification: challenges, opportunities and the path forward. Nature Reviews Neuroscience; Gouwens, N. W., et al. (2019). Classification of electrophysiological and morphological neuron types in the mouse visual cortex. Nature Neuroscience; Markram, H., et al. (2015). Reconstruction and simulation of neocortical microcircuitry. Cell; Izhikevich, E. M. (2003). Simple model of spiking neurons. IEEE Transactions on Neural Networks."
+    }
+  ]
+}

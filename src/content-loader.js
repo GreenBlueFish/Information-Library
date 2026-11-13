@@ -219,13 +219,84 @@ async function fetchAndParse(url) {
 }
 
 /**
- * Load the topic tree from `content/topics.json` — the single manifest of
- * topics (Requirement 1.5). Memoized by URL.
+ * Load the topic tree. `content/topics.json` is the root; it lists the shelves,
+ * each kept in a file of its own under `content/topics/` and named by a
+ * `{ "file": ... }` stub in the root's `children`. Those stubs are replaced by
+ * the shelf nodes they name, so callers get one ordinary tree. Memoized: the
+ * same assembled tree object is returned on every call, which keeps the
+ * per-tree caches (page order, scope chains) valid.
  * @returns {Promise<import("./router.js").TopicNode>} The root topic tree.
  * @throws {ContentLoadError}
  */
 export function loadTopics() {
-  return /** @type {Promise<any>} */ (loadJson(TOPICS_URL));
+  if (!assembledTopics) {
+    assembledTopics = loadJson(TOPICS_URL)
+      .then((root) => assembleTopics(root, loadJson))
+      .catch((err) => {
+        assembledTopics = null;
+        throw err;
+      });
+  }
+  return /** @type {Promise<any>} */ (assembledTopics);
+}
+
+/** @type {Promise<any>|null} */
+let assembledTopics = null;
+
+/**
+ * Replace every `{ "file": ... }` stub among `root.children` with the node that
+ * file holds. Pure apart from `load`; the parsed root is not mutated.
+ * @param {any} root The parsed `content/topics.json`.
+ * @param {(url: string) => Promise<any>} load Loads and parses one JSON file.
+ * @returns {Promise<any>} The assembled tree.
+ */
+export async function assembleTopics(root, load) {
+  if (!root || !Array.isArray(root.children)) return root;
+  const children = await Promise.all(
+    root.children.map((child) =>
+      child && typeof child.file === "string" && child.slug === undefined
+        ? load(child.file)
+        : child,
+    ),
+  );
+  return { ...root, children };
+}
+
+/** The redirects map: old route → new route (`content/redirects.json`). */
+export const REDIRECTS_URL = "content/redirects.json";
+
+/**
+ * Load the redirects map. A missing or broken file yields an empty map, since
+ * redirects only rescue old links and must never stop the library loading.
+ * @returns {Promise<Record<string, string>>}
+ */
+export async function loadRedirects() {
+  try {
+    const data = await loadJson(REDIRECTS_URL);
+    return data && typeof data.redirects === "object" && data.redirects ? data.redirects : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Where an old route now lives: the longest prefix of `segments` found in
+ * `redirects` is swapped for its target, and the rest of the path kept. Returns
+ * the new slug segments, or `null` when no prefix matches.
+ * @param {Record<string, string>} redirects
+ * @param {string[]} segments
+ * @returns {string[]|null}
+ */
+export function redirectSegments(redirects, segments) {
+  if (!redirects || !Array.isArray(segments)) return null;
+  for (let i = segments.length; i > 0; i--) {
+    const target = redirects["/" + segments.slice(0, i).join("/")];
+    if (typeof target === "string") {
+      const head = target.split("/").filter(Boolean);
+      return head.concat(segments.slice(i));
+    }
+  }
+  return null;
 }
 
 /**
@@ -337,4 +408,5 @@ export async function loadGlossaries(entries) {
  */
 export function clearContentCache() {
   cache.clear();
+  assembledTopics = null;
 }
