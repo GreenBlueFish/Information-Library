@@ -473,15 +473,21 @@ scale, and the border tokens.
 
 ### Size controls (`.size-controls`)
 
-Every figure and simulation carries a small toolbar at its top right
-(`src/resize.js`, added by `renderTopicPage`): − and + step the block's width
-through 40, 55, 70, 85 and 100% of the content column (`data-size`, centred
-when shrunk), ⤢ fills the window over the page (`data-expanded`; ✕ or Esc
-closes it) and ↺ resets. The width is remembered per block in localStorage
-(`alexandria-sizes`, keyed by page file and block position). Plots and
-simulations are SVG with a viewBox, so they scale with the block. A new block
-type that should be resizable needs only its class added to the selector in
-`installResizers`.
+Every figure and simulation sits in a full-width `.sizable` wrapper
+(`src/resize.js`, added by `renderTopicPage`): a toolbar at its top right, then
+the block. Because the toolbar belongs to the wrapper, it stays put while the
+block changes size. − and + step the width through 25, 40, 55, 70, 85 and 100%
+of the content column; dragging `.size-handle` (the block's bottom-right
+corner) sets any width from 20%. The width is the `--size` custom property
+(`data-sized` when below 100%) and a resized block is centred. ⤢ makes the
+wrapper fill the window over the page (`data-expanded`; ✕ or Esc closes it) and
+↺ resets. Sizes are remembered per block in localStorage (`alexandria-sizes`,
+keyed by page file and block position). Plots and simulations are SVG with a
+viewBox, so they scale with the block.
+
+A figure's image is as wide as the column but no wider than its height cap
+allows for its shape (`--ratio`, set when the image loads), so a tall picture
+leaves no band of `--color-figure-bg` beside it, which matters in dark mode.
 
 ### Interactive widgets (`.block--widget` / `.widget`)
 

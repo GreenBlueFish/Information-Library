@@ -1,14 +1,23 @@
 // src/resize.js
 //
 // Size controls for figures and simulations. Each `.block--figure` and
-// `.block--widget` on a page gets a small toolbar: smaller (−), larger (+),
-// expand to fill the window (⤢) and reset (↺). The width is a `data-size`
-// attribute (a percentage of the content column, styled in alexandria.css),
-// so no inline styles. Each block's choice is remembered in localStorage,
-// keyed by its page file and its position on the page, so it survives a
-// reload. Expanding is for this visit only; Esc or the button closes it.
+// `.block--widget` on a page is wrapped in a full-width `.sizable` holding a
+// toolbar and the block: smaller (−), larger (+), fill the window (⤢) and
+// reset (↺). The toolbar sits at the top right of the full-width wrapper, so
+// it stays put while the block under it changes size. A handle at the block's
+// bottom-right corner resizes it by dragging. The width is the `--size`
+// custom property (a percentage of the content column, with `data-sized` set
+// below 100%), styled in alexandria.css; a resized block is centred. Each
+// block's size is remembered in localStorage, keyed by its page file and its
+// position on the page. Filling the window is for this visit only; ✕ or Esc
+// closes it.
+//
+// Figures also get `--ratio` (the image's width / height) once the image has
+// loaded, so the image box hugs the picture when its height is capped, and no
+// band of figure background shows beside it.
 
-export const SIZES = [40, 55, 70, 85, 100];
+export const SIZES = [25, 40, 55, 70, 85, 100];
+export const MIN_SIZE = 20;
 export const STORAGE_KEY = "alexandria-sizes";
 
 function readAll(storage) {
@@ -24,7 +33,7 @@ function readAll(storage) {
 function writeOne(storage, key, size) {
   try {
     const all = readAll(storage);
-    if (size === 100) delete all[key];
+    if (size >= 100) delete all[key];
     else all[key] = size;
     storage.setItem(STORAGE_KEY, JSON.stringify(all));
   } catch {
@@ -32,17 +41,23 @@ function writeOne(storage, key, size) {
   }
 }
 
+/** Clamp a size to [MIN_SIZE, 100], whole percent. */
+export function clampSize(size) {
+  const n = Math.round(Number(size));
+  if (!Number.isFinite(n)) return 100;
+  return Math.max(MIN_SIZE, Math.min(100, n));
+}
+
 /** The saved size for a key, or 100. */
 export function savedSize(key, storage = globalThis.localStorage) {
   const v = readAll(storage)[key];
-  return SIZES.includes(v) ? v : 100;
+  return typeof v === "number" ? clampSize(v) : 100;
 }
 
-/** The next size up or down from `size`, clamped to SIZES. */
+/** The next step size above (dir +1) or below (dir -1) `size`. */
 export function stepSize(size, dir) {
-  const i = SIZES.indexOf(size);
-  const at = i === -1 ? SIZES.length - 1 : i;
-  return SIZES[Math.max(0, Math.min(SIZES.length - 1, at + dir))];
+  if (dir > 0) return SIZES.find((s) => s > size) ?? 100;
+  return [...SIZES].reverse().find((s) => s < size) ?? Math.min(size, SIZES[0]);
 }
 
 function button(doc, cls, text, label) {
@@ -55,18 +70,18 @@ function button(doc, cls, text, label) {
   return b;
 }
 
-/** @type {HTMLElement|null} The block currently expanded, if any. */
+/** @type {HTMLElement|null} The wrapper currently filling the window, if any. */
 let expanded = null;
 
-function setExpanded(block, on) {
-  if (expanded && expanded !== block) setExpanded(expanded, false);
-  const btn = block.querySelector(":scope > .size-controls .size-controls__expand");
+function setExpanded(wrap, on) {
+  if (on && expanded && expanded !== wrap) setExpanded(expanded, false);
+  const btn = wrap.querySelector(":scope > .size-controls .size-controls__expand");
   if (on) {
-    block.setAttribute("data-expanded", "true");
-    expanded = block;
+    wrap.setAttribute("data-expanded", "true");
+    expanded = wrap;
   } else {
-    block.removeAttribute("data-expanded");
-    if (expanded === block) expanded = null;
+    wrap.removeAttribute("data-expanded");
+    if (expanded === wrap) expanded = null;
   }
   if (btn) {
     btn.textContent = on ? "✕" : "⤢";
@@ -85,6 +100,19 @@ function installEsc(doc) {
   });
 }
 
+/** Give a figure's image its aspect ratio once it is known. */
+function trackRatio(block) {
+  const img = block.querySelector(".figure__image");
+  if (!img) return;
+  const set = () => {
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      img.style.setProperty("--ratio", String(img.naturalWidth / img.naturalHeight));
+    }
+  };
+  if (img.complete) set();
+  img.addEventListener("load", set);
+}
+
 /**
  * Give every figure and simulation inside `pageEl` its size controls.
  * @param {HTMLElement} pageEl The rendered `.page`.
@@ -101,13 +129,12 @@ export function installResizers(pageEl, pageKey, storage = globalThis.localStora
     const kind = block.classList.contains("block--figure") ? "figure" : "widget";
     const key = `${pageKey}#${i}`;
     const what = kind === "figure" ? "image" : "simulation";
-    const apply = (size) => {
-      if (size === 100) block.removeAttribute("data-size");
-      else block.setAttribute("data-size", String(size));
-      smaller.disabled = size === SIZES[0];
-      larger.disabled = size === 100;
-      reset.disabled = size === 100;
-    };
+    if (kind === "figure") trackRatio(block);
+
+    const wrap = doc.createElement("div");
+    wrap.className = `sizable sizable--${kind}`;
+    block.parentNode.insertBefore(wrap, block);
+
     const bar = doc.createElement("div");
     bar.className = "size-controls";
     bar.setAttribute("role", "group");
@@ -117,14 +144,64 @@ export function installResizers(pageEl, pageKey, storage = globalThis.localStora
     const expand = button(doc, "size-controls__expand", "⤢", "Fill the window");
     expand.setAttribute("aria-pressed", "false");
     const reset = button(doc, "size-controls__reset", "↺", "Reset to the normal size");
+    bar.append(smaller, larger, expand, reset);
+
+    const handle = doc.createElement("div");
+    handle.className = "size-handle";
+    handle.setAttribute("aria-hidden", "true");
+    handle.title = `Drag to resize this ${what}`;
+    block.appendChild(handle);
+
+    wrap.append(bar, block);
+
     let size = savedSize(key, storage);
-    const set = (s) => { size = s; apply(s); writeOne(storage, key, s); };
+    const apply = (s) => {
+      if (s >= 100) {
+        block.removeAttribute("data-sized");
+        block.style.removeProperty("--size");
+      } else {
+        block.setAttribute("data-sized", "");
+        block.style.setProperty("--size", `${s}%`);
+      }
+      smaller.disabled = s <= SIZES[0];
+      larger.disabled = s >= 100;
+      reset.disabled = s >= 100;
+    };
+    const set = (s, save = true) => {
+      size = clampSize(s);
+      apply(size);
+      if (save) writeOne(storage, key, size);
+    };
     smaller.addEventListener("click", () => set(stepSize(size, -1)));
     larger.addEventListener("click", () => set(stepSize(size, +1)));
     reset.addEventListener("click", () => set(100));
-    expand.addEventListener("click", () => setExpanded(block, block.getAttribute("data-expanded") !== "true"));
-    bar.append(smaller, larger, expand, reset);
-    block.insertBefore(bar, block.firstChild);
+    expand.addEventListener("click", () => setExpanded(wrap, wrap.getAttribute("data-expanded") !== "true"));
+
+    // Drag the corner: the block is centred, so it grows by twice the drag.
+    handle.addEventListener("pointerdown", (e) => {
+      if (wrap.getAttribute("data-expanded") === "true") return;
+      const full = wrap.getBoundingClientRect().width;
+      if (!(full > 0)) return;
+      e.preventDefault();
+      const startX = e.clientX;
+      const startW = block.getBoundingClientRect().width;
+      if (typeof handle.setPointerCapture === "function" && e.pointerId !== undefined) {
+        try { handle.setPointerCapture(e.pointerId); } catch { /* not capturable */ }
+      }
+      block.setAttribute("data-dragging", "");
+      const move = (ev) => set(((startW + 2 * (ev.clientX - startX)) / full) * 100, false);
+      const up = () => {
+        handle.removeEventListener("pointermove", move);
+        handle.removeEventListener("pointerup", up);
+        handle.removeEventListener("pointercancel", up);
+        block.removeAttribute("data-dragging");
+        writeOne(storage, key, size);
+      };
+      handle.addEventListener("pointermove", move);
+      handle.addEventListener("pointerup", up);
+      handle.addEventListener("pointercancel", up);
+    });
+
     apply(size);
   });
 }

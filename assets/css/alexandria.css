@@ -939,10 +939,11 @@ math.math--display,
 }
 
 /* --- Size controls (src/resize.js) ----------------------------------------
- * A small toolbar at the top right of every figure and simulation: smaller,
- * larger, fill the window, reset. The chosen width is data-size (a percentage
- * of the content column); a shrunk block is centred. data-expanded makes the
- * block fill the window over the page, scrolling inside if it is taller.
+ * Each figure and simulation sits in a full-width .sizable: a toolbar (smaller,
+ * larger, fill the window, reset) at its top right, then the block. The block's
+ * width is --size (a percentage of the column, data-sized below 100%), set by
+ * the buttons or by dragging .size-handle at its bottom-right corner; a resized
+ * block is centred. data-expanded on the wrapper fills the window over the page.
  */
 .size-controls {
   display: flex;
@@ -979,39 +980,74 @@ math.math--display,
   cursor: default;
 }
 
-[data-size="40"] { width: 40%; }
-[data-size="55"] { width: 55%; }
-[data-size="70"] { width: 70%; }
-[data-size="85"] { width: 85%; }
+/* The block keeps its own card; the wrapper is full width, so the toolbar
+ * above stays at the top right whatever the block's size. */
+.sizable {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
 
-.block--figure[data-size],
-.block--widget[data-size] {
+.sizable > .block {
+  position: relative;
+}
+
+.sizable > .block[data-sized] {
+  width: var(--size);
+  max-width: 100%;
   margin-inline: auto;
 }
 
-/* A shrunk figure's image shrinks with it instead of keeping its height cap. */
-.block--figure[data-size] .figure__image {
-  max-height: none;
+/* The drag handle: the block's bottom-right corner. */
+.size-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 1.1rem;
+  height: 1.1rem;
+  cursor: nwse-resize;
+  touch-action: none;
+  border-right: 3px solid var(--color-control-border);
+  border-bottom: 3px solid var(--color-control-border);
+  border-bottom-right-radius: var(--radius-md);
+  opacity: 0.7;
 }
 
-.block--figure[data-expanded="true"],
-.block--widget[data-expanded="true"] {
+.size-handle:hover,
+.block[data-dragging] > .size-handle {
+  border-color: var(--color-accent);
+  opacity: 1;
+}
+
+.block[data-dragging] {
+  user-select: none;
+}
+
+.sizable[data-expanded="true"] {
   position: fixed;
   inset: var(--space-4);
   z-index: 50;
-  width: auto;
-  max-width: none;
-  margin: 0;
   overflow: auto;
-  padding: var(--space-5);
+  padding: var(--space-4);
   background-color: var(--color-surface);
   border: var(--border-width) solid var(--color-border);
   border-radius: var(--radius-md);
   box-shadow: 0 0 0 100vmax var(--color-overlay);
 }
 
-.block--figure[data-expanded="true"] .figure__image {
+.sizable[data-expanded="true"] > .block {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.sizable[data-expanded="true"] .size-handle {
+  display: none;
+}
+
+.sizable[data-expanded="true"] .figure__image {
   max-height: calc(100vh - 12rem);
+  width: min(100%, calc((100vh - 12rem) * var(--ratio, 1000)));
 }
 
 /* --- Figures (.block--figure) ----------------------------------------------
@@ -1028,7 +1064,11 @@ math.math--display,
 
 .figure__image {
   display: block;
-  width: 100%;
+  /* As wide as the column, but no wider than the height cap allows for this
+   * picture's shape (--ratio, set by src/resize.js), so a tall picture leaves
+   * no band of figure background beside it. */
+  width: min(100%, calc(var(--figure-max-height) * var(--ratio, 1000)));
+  margin-inline: auto;
   height: auto;
   max-height: var(--figure-max-height);
   object-fit: contain;
