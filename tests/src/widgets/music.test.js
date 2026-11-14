@@ -100,5 +100,8 @@ describe("music-player helpers", () => {
     expect(strum[5].start > strum[0].start).toBe(true);
     const placed = schedule({ notes: ["6:3", "5:3+4:2"], play: "melody" }, 60, STANDARD);
     expect(placed.map((e) => [midiToName(e.midi), e.pos])).toEqual([["G2", "6:3"], ["C3", "5:3"], ["E3", "4:2"]]);
+    const strums = schedule({ notes: ["x32010", "1-3-3-2-1-1"], play: "melody" }, 60, STANDARD);
+    expect(strums.length).toBe(11);
+    expect(strums[5].start).toBe(1);
   });
 });
