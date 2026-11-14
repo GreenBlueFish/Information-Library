@@ -19,7 +19,7 @@
 // E2 A2 D3 G3 B3 E4). An example may then give "shape": "x32010" (or
 // "8 10 10 9 8 8"), strummed low to high; a pitch example lights every place
 // that pitch is on the neck, and a melody step may name a place, "6:3"
-// (string 6, fret 3), to light just that spot.
+// (string 6, fret 3), to light just that spot, or be a whole shape ("x32010").
 // A melody step can be "rest", or a chord written "C4+E4+G4". Notes are scientific pitch names:
 // C4 is middle C, A4 = 440 Hz; sharps "#", flats "b", doubles "##"/"bb".
 //
@@ -96,6 +96,12 @@ export function schedule(example, bpm = 90, strings = null) {
     let t = 0;
     (example.notes ?? []).forEach((step, i) => {
       const len = (Array.isArray(example.beats) ? Number(example.beats[i]) || 1 : 1) * beat;
+      // On a guitar a step may be a whole chord shape ("x32010"), strummed.
+      if (strings && /^([x0-9]{6}|([x0-9]{1,2}-){5}[x0-9]{1,2})$/i.test(String(step))) {
+        shapeToNotes(step, strings).forEach((n, k) => out.push({ ...n, start: t + k * 0.012, dur: len * 0.92 }));
+        t += len;
+        return;
+      }
       for (const part of String(step).split("+")) {
         // On a guitar a step may name a place: "6:3" is string 6, fret 3.
         const at = strings ? /^(\d):(\d{1,2})$/.exec(part) : null;
