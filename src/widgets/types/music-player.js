@@ -28,6 +28,7 @@
 
 import { registerWidget } from "../registry.js";
 import { buildFrame, buildControlPanel, buildReadout, buildStage, svgEl } from "../sim-kit.js";
+import { soundOn, onSoundChange } from "../../sound.js";
 
 const LETTERS = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
 const NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -120,6 +121,23 @@ export function schedule(example, bpm = 90, strings = null) {
   return out;
 }
 
+/**
+ * Group scheduled notes into steps: notes that start within `tol` seconds of
+ * the first note of a group (a chord, or a strum) form one step.
+ * @param {{midi:number,start:number,dur:number}[]} events
+ * @returns {Array<typeof events>}
+ */
+export function stepGroups(events, tol = 0.1) {
+  const sorted = [...events].sort((a, b) => a.start - b.start);
+  const groups = [];
+  for (const e of sorted) {
+    const g = groups[groups.length - 1];
+    if (g && e.start - g[0].start <= tol) g.push(e);
+    else groups.push([e]);
+  }
+  return groups;
+}
+
 /** Standard guitar tuning, lowest string first. */
 export const STANDARD = ["E2", "A2", "D3", "G3", "B3", "E4"];
 
@@ -172,28 +190,78 @@ function mountMusicPlayer(ctx) {
   const hi = Math.max(lo + 11, noteToMidi(spec.to ?? "C5") ?? 72);
   const tonic = noteToMidi(spec.tonic ?? "C4") ?? 60;
 
-  // Example buttons.
+  // Example buttons: pressing one selects it and plays it all.
   const row = doc.createElement("div");
   row.className = "widget__actions";
   const buttons = [];
-  for (const ex of Array.isArray(spec.examples) ? spec.examples : []) {
+  const examples = Array.isArray(spec.examples) ? spec.examples : [];
+  let current = examples[0] ?? null;
+  let stepIndex = -1;
+  examples.forEach((ex, i) => {
     const b = doc.createElement("button");
     b.type = "button";
     b.className = "widget__button widget__button--secondary";
     b.textContent = `▶ ${ex.label}`;
-    b.addEventListener("click", () => playExample(ex));
+    b.setAttribute("aria-pressed", i === 0 ? "true" : "false");
+    b.addEventListener("click", () => { select(i); playExample(ex); });
     buttons.push(b);
     row.appendChild(b);
-  }
-  if (buttons.length) {
-    const stop = doc.createElement("button");
-    stop.type = "button";
-    stop.className = "widget__button widget__button--secondary";
-    stop.textContent = "■ Stop";
-    stop.addEventListener("click", stopAll);
-    row.appendChild(stop);
-  }
+  });
   root.appendChild(row);
+
+  // Step controls: walk through the selected example one chord or note at a time.
+  let stepPos = null;
+  const stepRow = doc.createElement("div");
+  stepRow.className = "widget__actions music-steps";
+  const mk = (text, label, fn) => {
+    const b = doc.createElement("button");
+    b.type = "button";
+    b.className = "widget__button widget__button--secondary";
+    b.textContent = text;
+    b.setAttribute("aria-label", label);
+    b.addEventListener("click", fn);
+    stepRow.appendChild(b);
+    return b;
+  };
+  if (examples.length) {
+    mk("◀ Step", "Previous step", () => step(-1));
+    mk("Step ▶", "Next step", () => step(+1));
+    mk("▶ Play all", "Play the whole example", () => { if (current) playExample(current); });
+    mk("■ Stop", "Stop", () => { stopAll(); });
+    const pos = doc.createElement("span");
+    pos.className = "music-steps__pos";
+    stepRow.appendChild(pos);
+    root.appendChild(stepRow);
+    stepPos = pos;
+  }
+
+  function select(i) {
+    current = examples[i] ?? null;
+    stepIndex = -1;
+    buttons.forEach((b, k) => b.setAttribute("aria-pressed", k === i ? "true" : "false"));
+    showPos();
+  }
+  function groupsOf(ex) {
+    return stepGroups(schedule(ex, Number(panel.state.tempo) || 90, guitar ? (spec.strings ?? STANDARD) : null));
+  }
+  function showPos() {
+    if (!stepPos || !current) return;
+    const n = groupsOf(current).length;
+    stepPos.textContent = stepIndex < 0 ? `${current.label}: ${n} steps` : `Step ${stepIndex + 1} of ${n}`;
+  }
+  function step(dir) {
+    if (!current) return;
+    const groups = groupsOf(current);
+    if (!groups.length) return;
+    stepIndex = stepIndex < 0 ? (dir > 0 ? 0 : groups.length - 1) : (stepIndex + dir + groups.length) % groups.length;
+    stopAll();
+    const g = groups[stepIndex];
+    const t0 = g[0].start;
+    // Sound the step briefly, and keep its keys or frets lit until the next step.
+    playNotes(g.map((e) => ({ ...e, start: e.start - t0, dur: Math.max(0.9, e.dur) })), true);
+    readout.textContent = `${current.label}, step ${stepIndex + 1} of ${groups.length}: ${describe([...new Set(g.map((e) => e.midi))])}`;
+    showPos();
+  }
 
   // The instrument: a piano keyboard, or a guitar fretboard.
   /** @type {Map<number, Element[]>} every mark for a pitch */
@@ -297,12 +365,12 @@ function mountMusicPlayer(ctx) {
     timers.add(id);
   }
 
-  function playNotes(events) {
+  function playNotes(events, hold = false) {
     for (const e of events) {
       later(() => light(e, true), e.start * 1000);
-      later(() => light(e, false), (e.start + e.dur) * 1000);
+      if (!hold) later(() => light(e, false), (e.start + e.dur) * 1000);
     }
-    if (!AC) return;
+    if (!AC || !soundOn()) return;
     try {
       audio = audio ?? new AC();
       if (audio.state === "suspended" && audio.resume) audio.resume();
@@ -340,6 +408,8 @@ function mountMusicPlayer(ctx) {
 
   function playExample(ex) {
     stopAll();
+    stepIndex = -1;
+    showPos();
     const ev = schedule(ex, Number(panel.state.tempo) || 90, guitar ? (spec.strings ?? STANDARD) : null);
     playNotes(ev);
     const uniq = [...new Set(ev.map((e) => e.midi))];
@@ -354,10 +424,16 @@ function mountMusicPlayer(ctx) {
     for (const els of keyEls.values()) for (const el of els) el.classList.remove(litClass);
   }
 
+  const offSound = onSoundChange((on) => {
+    if (!on) for (const osc of voices) { try { osc.stop(); } catch { /* stopped */ } }
+  });
+  showPos();
+
   return {
     update(partial) { panel.update(partial); },
     destroy() {
       destroyed = true;
+      offSound();
       stopAll();
       panel.destroy();
       if (audio && audio.close) { try { audio.close(); } catch { /* closed */ } }

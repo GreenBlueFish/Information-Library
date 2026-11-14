@@ -2,7 +2,7 @@
 // of the music-player widget (src/widgets/types/music-player.js).
 import { describe, it, expect } from "../../harness.js";
 import * as m from "../../../src/widgets/sims/music.js";
-import { noteToMidi, midiToName, frequency, schedule, shapeToNotes, STANDARD } from "../../../src/widgets/types/music-player.js";
+import { noteToMidi, midiToName, frequency, schedule, shapeToNotes, STANDARD, stepGroups } from "../../../src/widgets/types/music-player.js";
 
 const close = (a, b, tol) => { if (Math.abs(a - b) > tol) throw new Error(`${a} is not within ${tol} of ${b}`); };
 
@@ -103,5 +103,14 @@ describe("music-player helpers", () => {
     const strums = schedule({ notes: ["x32010", "1-3-3-2-1-1"], play: "melody" }, 60, STANDARD);
     expect(strums.length).toBe(11);
     expect(strums[5].start).toBe(1);
+  });
+
+  it("groups a schedule into steps: one chord or strum per step", () => {
+    const prog = schedule({ notes: ["C4+E4+G4", "F4+A4+C5", "G4+B4+D5"], play: "melody" }, 60);
+    expect(stepGroups(prog).map((g) => g.length)).toEqual([3, 3, 3]);
+    const arp = schedule({ notes: ["C4", "E4", "G4"], play: "both" }, 60);
+    expect(stepGroups(arp).map((g) => g.length)).toEqual([1, 1, 1, 3]);
+    const strum = schedule({ notes: ["x32010", "320003"], play: "melody" }, 60, STANDARD);
+    expect(stepGroups(strum).map((g) => g.length)).toEqual([5, 6]);
   });
 });
