@@ -101,6 +101,7 @@ import "./widgets/types/temporal-memory.js";
 import "./widgets/types/column-voting.js";
 // The VGA scanline stepper for the communication-protocols topic.
 import "./widgets/types/vga-scanline.js";
+import "./widgets/types/music-player.js";
 
 /**
  * @typedef {import("./router.js").TopicNode} TopicNode

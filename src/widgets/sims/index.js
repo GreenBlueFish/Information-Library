@@ -18,8 +18,17 @@ import * as racing from "./racing.js";
 import * as poker from "./poker.js";
 import * as investing from "./investing.js";
 import * as pll from "./pll.js";
+import * as music from "./music.js";
 
 export const SIMS = {
+  "harmonic-series": music.harmonicSeries,
+  beating: music.beating,
+  "chord-wave": music.chordWave,
+  dissonance: music.dissonance,
+  "tuning-cents": music.tuningCents,
+  "fifths-drift": music.fifthsDrift,
+  "edo-error": music.edoError,
+  polyrhythm: music.polyrhythm,
   lif: neurons.lif,
   "fi-curve": neurons.fiCurve,
   izhikevich: neurons.izhikevich,
