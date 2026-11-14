@@ -839,6 +839,29 @@ export function installLookup(rootEl, options) {
   rootEl.addEventListener("dblclick", handleSelection);
   rootEl.addEventListener("mouseup", handleSelection);
 
+  // Phones and tablets: selecting text by touch (long-press, then the
+  // handles) fires no reliable mouseup, so also react to `selectionchange`
+  // once the selection has stopped changing for a moment. Only selections
+  // inside the content root count, and the same text is not re-shown.
+  let touchTimer = null;
+  let lastTouchText = "";
+  doc.addEventListener("selectionchange", () => {
+    const win = doc.defaultView;
+    if (!win || typeof win.setTimeout !== "function") return;
+    if (touchTimer) win.clearTimeout(touchTimer);
+    const run = () => {
+      const sel = win && typeof win.getSelection === "function" ? win.getSelection() : null;
+      const text = sel ? String(sel.toString()).trim() : "";
+      if (!text) { lastTouchText = ""; return; }
+      const node = sel.anchorNode;
+      if (!node || typeof rootEl.contains !== "function" || !rootEl.contains(node.nodeType === 1 ? node : node.parentNode)) return;
+      if (text === lastTouchText && panel && panel.isConnected) return;
+      lastTouchText = text;
+      handleSelection();
+    };
+    touchTimer = win.setTimeout(run, 450);
+  });
+
   // Click-away: a press that starts outside the panel dismisses it. We decide
   // on `mousedown` (recorded on the panel) and act on the following `mouseup`,
   // so a selection drag that ends on `mouseup` is handled by `handleSelection`
