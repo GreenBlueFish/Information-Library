@@ -361,16 +361,17 @@ export function installLookup(rootEl, options) {
     }
 
     // The Search_All control (or the results/notes it resolves to) is the
-    // last row and is counted in the "n of N" total — so the nav total below
-    // reflects the button/results too (R7.5).
+    // last row. ▼ can move onto it, but it is not a match the counter can
+    // show, so "Match n of N" counts the local matches only: two matches read
+    // 1 of 2 and 2 of 2 (the person's report, 2026-11-16, replacing R7.5).
     const extraRows = searchAllRowCount();
-    const total = matches.length + extraRows;
+    const total = matches.length;
 
     // Step through the other close matches: ▲ / "Match n of N" / ▼. The nav is
-    // shown whenever there is more than one row to move between — that now
-    // includes the Search_All row, so a lone local match with a Search_All
-    // control still gets the counter.
-    if (total > 1) {
+    // shown whenever there is more than one row to move between, including
+    // the Search_All row, so a lone local match with a Search_All control
+    // still gets the ▼ control.
+    if (total + extraRows > 1) {
       const nav = doc.createElement("div");
       nav.className = CLASS.matches;
       nav.setAttribute("role", "group");

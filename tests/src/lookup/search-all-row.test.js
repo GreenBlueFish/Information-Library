@@ -178,13 +178,13 @@ describe("Search_All row: last row, reachable, replaced by results (R7, R8.7)", 
     }
   });
 
-  it("counts the Search_All row in 'Match n of N'", () => {
+  it("does not count the Search_All row in 'Match n of N'", () => {
     const { panel, teardown } = openPanel("spike", async () => globalMatchesFor());
     try {
-      // Two local matches + the Search_All row = 3.
+      // Two local matches: the Search_All row below them is not a match.
       const count = panel().querySelector(".lookup-panel__match-count");
       expect(count).toBeTruthy();
-      expect(count.textContent).toBe("Match 1 of 3");
+      expect(count.textContent).toBe("Match 1 of 2");
     } finally {
       teardown();
     }
@@ -287,15 +287,15 @@ describe("Search_All row: last row, reachable, replaced by results (R7, R8.7)", 
     }
   });
 
-  it("counts the appended result rows in 'Match n of N' after results arrive", async () => {
+  it("keeps counting only the local matches after results arrive", async () => {
     const { panel, teardown } = openPanel("spike", async () => globalMatchesFor());
     try {
       const p = panel();
       fire(p.querySelector(".lookup-panel__search-all"), "click");
       await flush();
-      // Two local matches + one global result row = 3.
+      // Two local matches; the global result rows are listed below, uncounted.
       const count = p.querySelector(".lookup-panel__match-count");
-      expect(count.textContent).toBe("Match 1 of 3");
+      expect(count.textContent).toBe("Match 1 of 2");
     } finally {
       teardown();
     }
