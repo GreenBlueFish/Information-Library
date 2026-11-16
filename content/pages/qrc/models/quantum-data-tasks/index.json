@@ -1,0 +1,149 @@
+{
+  "title": "Quantum Data Tasks",
+  "intro": "When the inputs are themselves quantum states, a reservoir can process them without a classical encoding step: the state is fed into the reservoir, measured, and a trained readout estimates its properties. Linear properties (expectation values, tomography) are learned exactly by a linear readout of an informationally complete reservoir; nonlinear ones (purity, entanglement) need nonlinear readouts or several copies.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Quantum reservoir processing"
+    },
+    {
+      "type": "prose",
+      "text": "Ghosh, Opala, Matuszewski, Paterek and Liew proposed quantum reservoir processing: input quantum states (two optical modes) are coupled, one mode after the other through a cascaded scheme, into a fixed, disordered lattice of coupled, incoherently pumped fermionic sites; the site occupations are measured, and a linear readout trained on known states estimates a property of new ones. They demonstrated, in simulation, qualitative tasks such as recognising entangled states and quantitative ones such as estimating nonlinear functions of the input state (entropy, purity, logarithmic negativity); a follow-up paper used the same kind of network for full state reconstruction. Their readout is linear and each input passes through once, which does not contradict the argument below that no single-copy linear readout equals the purity on all states: the estimators are trained and tested on restricted families of input states (for example squeezed thermal states), on which a linear functional of $\\rho$ can track a nonlinear property closely. The advantage over textbook tomography is practical: the reservoir is not engineered to implement a particular measurement basis; any fixed, generic, rich enough dynamics will do, and the calibration is replaced by training."
+    },
+    {
+      "type": "prose",
+      "text": "The mechanism is the effective-POVM picture from Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines). An input state $\\rho$ on $d$ dimensions joins a reservoir in $\\vert0\\rangle$, a unitary $U$ acts, and the joint register is measured in the computational basis. The outcome probabilities are"
+    },
+    {
+      "type": "math",
+      "tex": "p_k=\\operatorname{Tr}\\left[E_k\\rho\\right],\\qquad E_k=A_k^\\dagger A_k,\\quad A_k=\\left(\\langle k\\vert\\otimes\\right)U\\left(\\cdot\\otimes\\vert0\\rangle\\right),",
+      "caption": "Effective POVM element on the input from outcome k."
+    },
+    {
+      "type": "prose",
+      "text": "so the readout $\\sum_kw_kp_k$ is the expectation of $O_w=\\sum_kw_kE_k$. If $\\{E_k\\}$ spans all $d\\times d$ operators (rank $d^2$), any observable is reachable, and training finds the weights that represent it. That is tomography by regression: train on states with known expectation values, and the readout learns the inverse of the measurement map without anyone writing that map down."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Linear versus nonlinear targets"
+    },
+    {
+      "type": "prose",
+      "text": "A linear readout of single-copy statistics can only produce functions of the form $\\operatorname{Tr}[O\\rho]$. Many interesting properties are not of that form. The purity $\\operatorname{Tr}\\rho^2$ is quadratic in $\\rho$; entanglement measures (concurrence, negativity, entanglement entropy) are nonlinear. A clean argument: $\\vert0\\rangle\\langle0\\vert$ and $\\vert1\\rangle\\langle1\\vert$ both have purity 1, so any linear function equal to the purity on both would give 1 on their equal mixture, whose purity is $\\tfrac12$."
+    },
+    {
+      "type": "prose",
+      "text": "There are three ways around it: a nonlinear readout (products of probabilities, which estimates $\\operatorname{Tr}[(O\\otimes O')(\\rho\\otimes\\rho)]$ when the products come from independent copies), feeding two copies of the state into the reservoir at once (then $\\operatorname{Tr}\\rho^2=\\operatorname{Tr}[\\mathrm{SWAP}\\,\\rho\\otimes\\rho]$ is linear in $\\rho\\otimes\\rho$), or a reservoir whose dynamics itself depends nonlinearly on the input (not possible for a fixed channel acting on one copy: channels are linear)."
+    },
+    {
+      "type": "prose",
+      "text": "The sample makes this concrete. Inputs are random 2-qubit states (a random pure state mixed with $I/4$ by a random weight). The reservoir has $m$ extra qubits in $\\vert0\\rangle$ and a Haar-random unitary on all $2+m$ qubits; the features are the $2^{2+m}$ exact outcome probabilities. Two targets: $\\langle X\\otimes X\\rangle$ (linear) and the purity (quadratic). Two readouts: linear in the probabilities, and quadratic (all products $p_ip_j$ as well). Then $\\langle X\\otimes X\\rangle$ is estimated from $S$ shots per state."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(2)\nI2 = np.eye(2); X = np.array([[0, 1], [1, 0]]); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1])\ndef haar(d):\n    z = (rng.normal(size=(d, d)) + 1j * rng.normal(size=(d, d))) / np.sqrt(2)\n    q, r = np.linalg.qr(z); return q * (np.diag(r) / abs(np.diag(r)))\ndef random_input():                       # a 2-qubit state, pure or partly mixed\n    v = rng.normal(size=4) + 1j * rng.normal(size=4); v /= np.linalg.norm(v)\n    p = rng.uniform(0, 1)\n    return p * np.outer(v, v.conj()) + (1 - p) * np.eye(4) / 4\ndef povm(m, U):\n    \"\"\"Effective POVM on the 2 input qubits: reservoir of m qubits in |0..0>, unitary U, Z-basis readout of all.\"\"\"\n    anc = np.zeros(2 ** m); anc[0] = 1\n    E = []\n    for k in range(2 ** (2 + m)):\n        row = U[k].reshape(4, 2 ** m) @ anc        # <k| U (. (x) |0..0>)\n        E.append(np.outer(row.conj(), row))         # E_k = A_k^dagger A_k\n    return E\ndef probs(E, rho): return np.array([np.real(np.trace(e @ rho)) for e in E])\npaulis = [np.kron(a, b) for a in (I2, X, Y, Z) for b in (I2, X, Y, Z)]\ntrain = [random_input() for _ in range(400)]; test = [random_input() for _ in range(200)]\ntargets = {\"<X(x)X>\": lambda r: np.real(np.trace(r @ np.kron(X, X))),\n           \"purity Tr rho^2\": lambda r: np.real(np.trace(r @ r))}\ndef fit(Ftr, ytr, Fte, yte):\n    A = lambda F: np.hstack([F, np.ones((len(F), 1))])\n    w = np.linalg.lstsq(A(Ftr), ytr, rcond=1e-10)[0]\n    return np.mean((A(Fte) @ w - yte) ** 2) / np.var(yte)\nquad = lambda P: np.hstack([P, np.einsum(\"ti,tj->tij\", P, P).reshape(len(P), -1)])\nfor m in (1, 2, 3):\n    E = povm(m, haar(2 ** (2 + m)))\n    rank = np.linalg.matrix_rank(np.array([[np.real(np.trace(e @ p)) for p in paulis] for e in E]), 1e-9)\n    Ptr = np.array([probs(E, r) for r in train]); Pte = np.array([probs(E, r) for r in test])\n    out = [f\"m={m} reservoir qubits: {2 ** (2 + m)} outcomes, POVM rank {rank} of 16\"]\n    for name, f in targets.items():\n        ytr = np.array([f(r) for r in train]); yte = np.array([f(r) for r in test])\n        out.append(f\"{name}: linear NMSE {fit(Ptr, ytr, Pte, yte):.3f}, quadratic NMSE {fit(quad(Ptr), ytr, quad(Pte), yte):.3f}\")\n    print(\"; \".join(out))\n# shot noise: estimate <X(x)X> from S shots per input state with m = 3\nE = povm(3, haar(32)); ytr = np.array([targets[\"<X(x)X>\"](r) for r in train]); yte = np.array([targets[\"<X(x)X>\"](r) for r in test])\nPtr = np.array([probs(E, r) for r in train]); Pte = np.array([probs(E, r) for r in test])\nfor S in (100, 1000, 10000):\n    sample = lambda P: np.array([rng.multinomial(S, np.clip(p, 0, None) / np.clip(p, 0, None).sum()) / S for p in P])\n    print(f\"<X(x)X> from {S} shots per state: NMSE {fit(sample(Ptr), ytr, sample(Pte), yte):.3f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Results:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$m=1$: 8 outcomes, POVM rank 8 of the 16 needed. $\\langle X\\otimes X\\rangle$: linear NMSE $0.480$, quadratic $0.446$. Purity: linear $0.978$, quadratic $0.249$. Not IC, so neither target is fully reachable.",
+        "$m=2$: 16 outcomes, rank 16: IC. $\\langle X\\otimes X\\rangle$ linear NMSE $0.000$; purity linear $0.986$ (impossible, as argued) and quadratic $0.000$.",
+        "$m=3$: 32 outcomes, rank still 16 (it cannot exceed $d^2$); the same scores.",
+        "Shots, $m=3$: $\\langle X\\otimes X\\rangle$ NMSE $0.552$ at 100 shots per state, $0.160$ at 1000, $0.023$ at 10000."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Two remarks on the quadratic readout. It works here because the probabilities are exact; with shot noise, products $\\hat p_i\\hat p_j$ from the same shots are biased estimates of $p_ip_j$ (for multinomial counts $\\mathbb{E}[\\hat p_i^2]=p_i^2+p_i(1-p_i)/S$ and $\\mathbb{E}[\\hat p_i\\hat p_j]=p_ip_j(1-1/S)$ for $i\\ne j$), so either correct the bias or form products from disjoint batches of shots, which is the same as using two copies. And the 136 distinct products need many more training states than the 16 linear features."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Entanglement from a reservoir"
+    },
+    {
+      "type": "prose",
+      "text": "For pure two-qubit states entanglement is a quadratic function of the state: with $\\rho_A=\\operatorname{Tr}_B\\vert\\psi\\rangle\\langle\\psi\\vert$, the concurrence satisfies $C^2=2(1-\\operatorname{Tr}\\rho_A^2)$, and $\\operatorname{Tr}\\rho_A^2=\\operatorname{Tr}[(\\mathrm{SWAP}_A\\otimes I_B)\\,\\rho\\otimes\\rho]$ is linear in two copies. So the same quadratic readout that learns purity learns pure-state entanglement. For mixed states, measures like the negativity involve eigenvalues of the partial transpose and are not polynomials of fixed degree; a reservoir with a polynomial readout approximates them, and an entanglement witness (a linear $\\operatorname{Tr}[W\\rho]<0$ test) is learnable exactly by a linear readout of an IC reservoir, but only one witness at a time."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Quantum inputs over time"
+    },
+    {
+      "type": "prose",
+      "text": "With memory, a reservoir can be fed a stream of quantum states and asked about past ones. Tran and Nakajima formulated temporal quantum tomography: a stream of input states interacts repeatedly with a quantum reservoir, and a linear readout of the reservoir's measurement data is trained to learn relations between quantum channels applied to the input stream, such as recovering a state injected several steps earlier. They also proposed a quantum short-term memory capacity to quantify this ability; reconstruction of older inputs degrades as the reservoir's memory fades, as the linear memory function does for classical inputs; see Memory and Capacity (#/qrc/foundations/memory-and-capacity). Related tasks: predicting the output state of an unknown quantum channel from its inputs, and estimating properties of a quantum process over time."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where it helps and where it does not"
+    },
+    {
+      "type": "list",
+      "items": [
+        "It helps when the measurement apparatus is uncharacterised or drifting: the reservoir plus training absorbs the unknown POVM, so no model of the device is needed, only labelled training states.",
+        "It does not reduce the sample complexity of tomography: estimating all $d^2-1$ parameters still needs a number of copies growing at least linearly with $d^2$, and the conditioning of a random POVM is worse than that of a designed one. For predicting a few observables, randomised measurement schemes (classical shadows) have provable guarantees with sample counts set by the observables, not by $d$.",
+        "Training needs labelled quantum states: states whose properties you already know, prepared reliably. Preparing that training set is often the hardest part of an experiment.",
+        "Single-copy linear readouts can never estimate nonlinear properties without bias; design for two copies, or accept the bias of products of finite-shot estimates."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Purity is not linear",
+      "text": "A linear readout is trained to output the purity and gets it right on $\\rho_1=\\vert0\\rangle\\langle0\\vert$ and $\\rho_2=\\vert1\\rangle\\langle1\\vert$. What does it output on $\\rho=\\tfrac12(\\rho_1+\\rho_2)$, and what is the true value?",
+      "solution": [
+        "Linear: $f(\\rho)=\\tfrac12f(\\rho_1)+\\tfrac12f(\\rho_2)=\\tfrac12+\\tfrac12=1$.",
+        "True: $\\operatorname{Tr}(I/2)^2=\\tfrac12$.",
+        "So no linear readout of single-copy statistics represents purity; in the sample the best linear fit leaves NMSE $0.986$."
+      ],
+      "answer": "It outputs $1$; the true purity is $\\tfrac12$."
+    },
+    {
+      "type": "problem",
+      "title": "Concurrence from reduced purity",
+      "text": "For $\\vert\\psi\\rangle=\\cos\\theta\\vert00\\rangle+\\sin\\theta\\vert11\\rangle$ with $\\theta=\\pi/8$, compute $\\operatorname{Tr}\\rho_A^2$ and the concurrence, and check $C^2=2(1-\\operatorname{Tr}\\rho_A^2)$.",
+      "solution": [
+        "$\\rho_A=\\operatorname{diag}(\\cos^2\\theta,\\sin^2\\theta)$, so $\\operatorname{Tr}\\rho_A^2=\\cos^4\\theta+\\sin^4\\theta=1-\\tfrac12\\sin^22\\theta=1-\\tfrac12\\cdot\\tfrac12=0.75$.",
+        "Concurrence $C=2\\vert ad-bc\\vert=2\\cos\\theta\\sin\\theta=\\sin2\\theta=\\sin(\\pi/4)\\approx0.707$.",
+        "Check: $C^2=0.5$ and $2(1-0.75)=0.5$."
+      ],
+      "answer": "$\\operatorname{Tr}\\rho_A^2=0.75$, $C\\approx0.707$."
+    },
+    {
+      "type": "problem",
+      "title": "Shots for one expectation value",
+      "text": "You estimate $\\langle X\\otimes X\\rangle$, whose true value is near 0, by measuring it directly (outcomes $\\pm1$). How many shots give a standard error of $0.01$? Why does the reservoir estimate in the sample, at $10^4$ shots, still leave NMSE $0.023$?",
+      "solution": [
+        "Variance per shot $1-\\langle XX\\rangle^2\\approx1$, so the standard error is $1/\\sqrt S$ and $S=10^4$.",
+        "The reservoir spreads the information over 32 outcome probabilities and the readout reconstructs $\\langle XX\\rangle$ as a weighted sum; the weights amplify the shot noise of each $\\hat p_k$, and the readout was also trained on noisy features, which biases it.",
+        "A designed measurement of $X\\otimes X$ is the best case for one observable; the reservoir's strength is learning many observables from the same data without a model of the device."
+      ],
+      "answer": "$10^4$ shots; the reservoir's readout weights amplify the noise in each probability."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "S. Ghosh, A. Opala, M. Matuszewski, T. Paterek and T. C. H. Liew, Quantum reservoir processing, npj Quantum Information 5, 35 (2019)",
+        "S. Ghosh, A. Opala, M. Matuszewski, T. Paterek and T. C. H. Liew, Reconstructing quantum states with quantum reservoir networks, IEEE Transactions on Neural Networks and Learning Systems 32, 3148 (2021)",
+        "Q. H. Tran and K. Nakajima, Learning temporal quantum tomography, Physical Review Letters 127, 260401 (2021)",
+        "L. Innocenti, S. Lorenzo, I. Palmisano, A. Ferraro, M. Paternostro and G. M. Palma, Potential and limitations of quantum extreme learning machines, Communications Physics 6, 118 (2023)",
+        "P. Mujal, R. Martínez-Peña, J. Nokkala, J. García-Beni, G. L. Giorgi, M. C. Soriano and R. Zambrini, Opportunities in quantum reservoir computing and extreme learning machines, Advanced Quantum Technologies 4, 2100027 (2021)",
+        "H.-Y. Huang, R. Kueng and J. Preskill, Predicting many properties of a quantum system from very few measurements, Nature Physics 16, 1050 (2020)",
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010)"
+      ]
+    }
+  ]
+}

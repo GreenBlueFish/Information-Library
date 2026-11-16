@@ -1,0 +1,87 @@
+{
+  "title": "Measurement and Hardware",
+  "intro": "On a real device a quantum reservoir's features are not numbers you can read off: each one is an expectation value estimated from repeated destructive measurements, and that single fact sets the cost, the protocol and the accuracy of every physical QRC. This topic covers the measurement problem, the protocols that work around it, the platforms that have run QRC, and how to count what a run really costs.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The gap between the model and the machine"
+    },
+    {
+      "type": "prose",
+      "text": "In simulation a quantum reservoir is a CPTP map $\\mathcal{T}_{s_k}$ applied to a density matrix, and the features are exact numbers $x_{k,i} = \\operatorname{Tr}(O_i \\rho_k)$. On hardware three things change at once."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Features are estimated, not read. A single projective measurement of $Z_i$ returns $\\pm 1$. The expectation value needs $S$ repetitions, and the estimate has standard deviation $\\sqrt{(1-x^2)/S}$. Shot noise is often the dominant error source in QRC experiments.",
+        "Measurement destroys memory. Projectively measuring the reservoir collapses $\\rho_k$ onto an eigenstate of the measured observables, erasing the coherences that carried the input history. The next input then meets a different state than the model assumed.",
+        "The dynamics are not the ideal Hamiltonian. Gate-based devices run a Trotterised or otherwise compiled circuit with gate errors, decoherence and crosstalk; analog devices have calibration drift and limited control. For a reservoir this matters less than for an algorithm, since the readout is trained on whatever the device does, but the device must do the same thing every time."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The first two points interact: since one run yields one bitstring per measurement, and measuring wrecks the state, the naive way to get the feature vector at every time step $k$ is to re-run the whole input sequence up to $k$, $S$ times, for every $k$. That costs $O(S T^2)$ evolution steps for a series of length $T$, and is the reason most early QRC experiments processed short sequences."
+    },
+    {
+      "type": "math",
+      "tex": "\\hat{x}_{k,i} = \\frac{1}{S}\\sum_{m=1}^{S} z^{(m)}_{k,i}, \\qquad z^{(m)}_{k,i}\\in\\{-1,+1\\}, \\qquad \\operatorname{Var}\\,\\hat{x}_{k,i} = \\frac{1 - x_{k,i}^2}{S}",
+      "caption": "A feature as it comes off the device: the mean of S single-shot outcomes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three protocol families"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Restart: run the sequence from scratch for each output time, measure at the end. Faithful to the model, quadratically expensive; with fading memory the restart only needs a window of the last $w$ inputs, which cuts the cost to $O(S T w)$.",
+        "Online with weak measurement: measure gently every step so the state is disturbed only slightly; the price is noisier outcomes and hence more shots.",
+        "Online with projective measurement of part of the system: measure (and reset) some qubits every step while the rest keep the memory, using mid-circuit measurement. The cost drops to $O(S T)$ steps in only $S$ runs."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Platforms"
+    },
+    {
+      "type": "prose",
+      "text": "QRC has been demonstrated or proposed on superconducting gate-based processors (where the device noise itself has been used as the dissipation that gives fading memory), nuclear spin ensembles in NMR (where an ensemble average arrives in one shot), Rydberg-atom arrays (the largest reservoirs run so far, above 100 atoms), single superconducting nonlinear oscillators, continuous-variable optics, and driven-dissipative lattices fed with quantum inputs. They differ most in how features are read and how fast a run is repeated, not in the abstract model."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pages in this topic"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action): why measuring breaks the recurrence, the restart protocol and its cost, and what shot noise does to memory capacity, with an interactive plot.",
+        "Online Measurement Protocols (#/qrc/hardware/online-protocols): weak (Gaussian-pointer) measurement and its information–disturbance trade-off, partial projective measurement with reset, and ensemble readout.",
+        "Gate-Based Devices (#/qrc/hardware/gate-based-devices): compiling a spin reservoir into circuits, why Trotter accuracy hardly matters, mid-circuit measurement, and device noise as a resource.",
+        "Analog Platforms (#/qrc/hardware/analog-platforms): NMR ensembles, Rydberg arrays, bosonic modes and driven-dissipative lattices, and what each gives the readout.",
+        "Resource Accounting (#/qrc/hardware/resource-accounting): counting runs, shots, evolution steps and wall-clock time for each protocol, and the shot budget a task needs."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Rule of thumb: on hardware, the useful size of a quantum reservoir is set less by its qubit count than by how many features you can estimate precisely enough within your shot budget. A feature whose variation over time is smaller than its shot noise is worse than useless: it adds noise the ridge readout has to suppress."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "P. Mujal, R. Martínez-Peña, J. Nokkala, J. García-Beni, G. L. Giorgi, M. C. Soriano and R. Zambrini, Opportunities in quantum reservoir computing and extreme learning machines, Adv. Quantum Technol. 4, 2100027 (2021)",
+        "P. Mujal, R. Martínez-Peña, G. L. Giorgi, M. C. Soriano and R. Zambrini, Time-series quantum reservoir computing with weak and projective measurements, npj Quantum Inf. 9, 16 (2023)",
+        "J. Chen, H. I. Nurdin and N. Yamamoto, Temporal information processing on noisy quantum computers, Phys. Rev. Applied 14, 024065 (2020)",
+        "M. Kornjača et al., Large-scale quantum reservoir learning with an analog quantum computer, arXiv:2407.02553 (2024)"
+      ]
+    }
+  ]
+}

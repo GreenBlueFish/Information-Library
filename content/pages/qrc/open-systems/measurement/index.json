@@ -1,0 +1,150 @@
+{
+  "title": "Measurement",
+  "intro": "A quantum reservoir's features are expectation values, and hardware can only estimate them by measuring, which costs shots and disturbs the state. This page covers POVMs and back-action, the statistics of estimating many observables, which ones can share shots, and weak measurement as a dial between information and disturbance.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "POVMs and the post-measurement state"
+    },
+    {
+      "type": "prose",
+      "text": "A general measurement is a set of measurement operators $\\{M_m\\}$ with $\\sum_m M_m^\\dagger M_m = I$. Outcome $m$ occurs with probability $p_m = \\operatorname{Tr}(E_m\\rho)$, $E_m = M_m^\\dagger M_m$ (the POVM elements), and leaves the state"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho\\ \\mapsto\\ \\frac{M_m\\rho M_m^\\dagger}{p_m}\\quad\\text{(outcome kept)},\\qquad \\rho\\ \\mapsto\\ \\sum_m M_m\\rho M_m^\\dagger\\quad\\text{(outcome discarded)}",
+      "caption": "Selective and non-selective post-measurement states. A projective measurement has $M_m = \\Pi_m$, orthogonal projectors."
+    },
+    {
+      "type": "prose",
+      "text": "Two facts matter for reservoirs. First, the non-selective map is a channel, so even a measurement whose result is thrown away changes the state: a projective $Z$ measurement deletes every coherence in the $Z$ basis (it is complete dephasing). Second, by Naimark's theorem any POVM is a projective measurement on system plus ancilla, which is how weak and generalised measurements are implemented: couple the system to an ancilla, measure the ancilla projectively."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Shot noise"
+    },
+    {
+      "type": "prose",
+      "text": "One shot of a $\\pm1$-valued observable such as $Z_i$ returns $+1$ with probability $(1+\\langle Z_i\\rangle)/2$. The mean of $S$ shots is unbiased with variance $(1-\\langle Z_i\\rangle^2)/S$, so the standard error is at most $1/\\sqrt S$. For a feature vector of $M$ observables, Hoeffding plus a union bound gives the number of shots for all estimates to be within $\\epsilon$ with probability $1-\\delta$:"
+    },
+    {
+      "type": "math",
+      "tex": "S\\ \\ge\\ \\frac{2}{\\epsilon^2}\\ln\\frac{2M}{\\delta}",
+      "caption": "Shots for $M$ estimates of $\\pm1$ observables to be simultaneously $\\epsilon$-accurate with confidence $1-\\delta$."
+    },
+    {
+      "type": "prose",
+      "text": "The $1/\\epsilon^2$ is the expensive part: one more significant digit costs 100 times the shots. The readout weights then amplify the noise: a prediction $y=\\sum_iw_ix_i$ built from independently estimated features has noise variance $\\sum_iw_i^2\\operatorname{Var}(\\hat x_i)$, so a readout that relies on large weights on nearly-collinear features (common when features are strongly correlated) magnifies shot noise. This is one reason the ridge parameter must be retuned when moving from exact simulation to finite shots; Resource Accounting (#/qrc/hardware/resource-accounting) works through full budgets, and the memory plot on The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) lets you add shot noise and watch capacity fall."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Which observables share shots"
+    },
+    {
+      "type": "prose",
+      "text": "A single shot in the computational basis returns a bit string $b\\in\\{0,1\\}^n$, from which every product of $Z$s is computed classically: $Z_i\\mapsto(-1)^{b_i}$, $Z_iZ_j\\mapsto(-1)^{b_i+b_j}$. So all $2^n-1$ diagonal Pauli strings are estimated from the same $S$ shots, at no extra quantum cost (the estimates are correlated, which does not matter for a linear readout). Observables that do not commute need different measurement settings: $\\langle X_i\\rangle$ needs a Hadamard before readout, $\\langle Y_i\\rangle$ an $S^\\dagger$ followed by a Hadamard. More generally, Pauli strings that qubit-wise commute (on every qubit the two strings carry the same Pauli, or at least one carries $I$) share a setting. Randomised measurements (classical shadows, Huang, Kueng and Preskill) estimate $M$ arbitrary $k$-local Pauli expectations to accuracy $\\epsilon$ with $O(3^k\\log M/\\epsilon^2)$ shots, a useful way to read many non-commuting features of a small reservoir."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Back-action: the core problem for time series"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir is useful because its state carries the input history. Measuring it projectively at step $k$ replaces that state with a post-measurement state that has lost the coherences carrying much of the memory, and the next shot at step $k+1$ is only meaningful if the system has been prepared again. The standard work-around in simulations and early experiments is to rerun the whole input sequence up to step $k$ for every shot at every step, which costs $O(S\\,T^2)$ evolution steps for a series of length $T$ instead of $O(T)$. Ways around it (restarting with a short window, weak measurements, rewinding, measuring only part of the system) are the subject of Measurement Back-Action (#/qrc/hardware/measurement-back-action) and Online Protocols (#/qrc/hardware/online-protocols). The physics behind all of them is the information–disturbance trade-off below."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Weak measurement: information against disturbance"
+    },
+    {
+      "type": "prose",
+      "text": "Take the two-outcome measurement with operators"
+    },
+    {
+      "type": "math",
+      "tex": "M_\\pm = \\sqrt{\\frac{I\\pm\\varepsilon Z}{2}},\\qquad 0\\le\\varepsilon\\le1",
+      "caption": "A weak $Z$ measurement; $\\varepsilon=1$ is projective, $\\varepsilon\\to0$ learns nothing and disturbs nothing."
+    },
+    {
+      "type": "prose",
+      "text": "Outcome $+$ has probability $p_+ = (1+\\varepsilon\\langle Z\\rangle)/2$, so $\\hat z = (2\\hat p_+-1)/\\varepsilon$ is unbiased with variance $(1-\\varepsilon^2\\langle Z\\rangle^2)/(\\varepsilon^2S)$: information per shot falls as $\\varepsilon^2$. The disturbance, with the outcome discarded, leaves populations alone and multiplies the coherence by $2\\sqrt{(1+\\varepsilon)(1-\\varepsilon)}/2 = \\sqrt{1-\\varepsilon^2}$. For small $\\varepsilon$ the information per shot is of order $\\varepsilon^2$ and the coherence loss is of order $\\varepsilon^2/2$ too, which is the trade-off at its sharpest: you cannot learn about $Z$ without dephasing in proportion. In a reservoir, a sequence of weak measurements on an ensemble (as in NMR) or on a repeated single system gives an online signal while preserving most of the memory; Mujal et al. show for time-series QRC that weak measurements operated online at the right strength extract the features accurately without destroying the needed memory, and compare this with protocols that rerun part of the experiment after each projective measurement."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(0)\nZ = np.diag([1., -1.])\n\ndef weak_kraus(eps):\n    \"\"\"M_pm = sqrt((I pm eps Z)/2): eps = 1 is a projective Z measurement, eps -> 0 learns nothing.\"\"\"\n    return [np.diag(np.sqrt((1 + sgn * eps * np.diag(Z)) / 2)) for sgn in (+1, -1)]\n\ntheta = np.pi / 3                        # true state: <Z> = cos(theta) = 0.5, coherence |rho01| = sin(theta)/2\npsi = np.array([np.cos(theta / 2), np.sin(theta / 2)]); rho = np.outer(psi, psi)\nshots = 20000\nfor eps in [1.0, 0.5, 0.1]:\n    Mp, Mm = weak_kraus(eps)\n    p_plus = np.trace(Mp @ rho @ Mp).real\n    clicks = rng.random(shots) < p_plus\n    z_hat = (2 * clicks.mean() - 1) / eps            # unbiased estimator of <Z>\n    sd_theory = np.sqrt((1 - (eps * 0.5) ** 2) / (eps ** 2 * shots))\n    after = Mp @ rho @ Mp + Mm @ rho @ Mm             # state after one measurement, outcome discarded\n    print(f\"eps={eps}: <Z> estimate {z_hat:.3f} (sd {sd_theory:.4f}); \"\n          f\"coherence {abs(rho[0, 1]):.3f} -> {abs(after[0, 1]):.3f} (factor sqrt(1-eps^2) = {np.sqrt(1 - eps ** 2):.3f})\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "With 20,000 shots on a state with $\\langle Z\\rangle=0.5$: the projective measurement ($\\varepsilon=1$) estimates 0.496 with standard deviation 0.006 and destroys the coherence (0.433 to 0); $\\varepsilon=0.5$ gives 0.501 with sd 0.014 and keeps 87% of the coherence; $\\varepsilon=0.1$ gives 0.521 with sd 0.071 and keeps 99.5% of it. The estimate's standard deviation grows about elevenfold from $\\varepsilon=1$ to $0.1$, so matching the projective accuracy at $\\varepsilon=0.1$ needs about 130 times the shots (the variance ratio is $99.75/0.75$)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ensembles versus single systems"
+    },
+    {
+      "type": "prose",
+      "text": "In an ensemble platform such as NMR, $10^{15}$ or more identical molecules evolve together and the signal is directly the ensemble average $\\operatorname{Tr}(O\\rho)$, read weakly and continuously with negligible back-action per molecule. That is why the first QRC proposals by Fujii and Nakajima were phrased for disordered ensembles and why expectation values were treated as directly available. On a single-system platform (superconducting qubits, trapped ions, neutral atoms) each shot is one projective measurement of one copy, and the expectation is only reached by repetition; the cost analysis on Resource Accounting (#/qrc/hardware/resource-accounting) is about this difference."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Shots for one feature",
+      "text": "A feature has $\\langle Z\\rangle = 0.5$. How many shots give a standard error of 0.01? How many with a weak measurement at $\\varepsilon=0.1$?",
+      "solution": [
+        "Projective: variance per shot $1-0.25 = 0.75$; need $0.75/S = 10^{-4}$, so $S=7500$.",
+        "Weak: variance per shot $(1-\\varepsilon^2\\langle Z\\rangle^2)/\\varepsilon^2 = (1-0.0025)/0.01 = 99.75$; need $99.75/S = 10^{-4}$, so $S\\approx 997{,}500$, about $10^6$.",
+        "The weak measurement costs about 133 times more shots here, in exchange for keeping 99.5% of the coherence."
+      ],
+      "answer": "7,500 projective; about $10^6$ weak"
+    },
+    {
+      "type": "problem",
+      "title": "A whole feature vector",
+      "text": "A readout uses $M=20$ features, each a $\\pm1$ observable. How many shots make all 20 estimates accurate to $\\pm0.01$ with 99% confidence (Hoeffding plus union bound)? If they are all $Z$-type products, how many measurement settings is that?",
+      "solution": [
+        "$S\\ge(2/\\epsilon^2)\\ln(2M/\\delta) = 2\\times10^4\\times\\ln(4000)$.",
+        "$\\ln 4000 = 8.29$, so $S\\approx165{,}900$ shots.",
+        "All $Z$-type products are computed from the same computational-basis bit strings, so it is one setting: 165,900 shots in total, not per feature."
+      ],
+      "answer": "about 166,000 shots, one setting"
+    },
+    {
+      "type": "problem",
+      "title": "Disturbance of a projective readout",
+      "text": "After a projective measurement of all $Z_i$ with the outcome discarded, what remains of a reservoir state's Pauli coordinates $r_P$?",
+      "solution": [
+        "The non-selective map is complete dephasing in the computational basis: $\\rho\\mapsto\\sum_b\\vert b\\rangle\\langle b\\vert\\rho\\vert b\\rangle\\langle b\\vert$.",
+        "Diagonal Pauli strings (products of $I$ and $Z$) are unchanged; every string containing an $X$ or a $Y$ has zero expectation in a diagonal state.",
+        "So only the $2^n$ diagonal coordinates survive out of $4^n$; all coherence-carried memory is erased."
+      ],
+      "answer": "Only the $2^n-1$ non-trivial $Z$-type coordinates survive; all others become 0"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010)",
+        "M. M. Wilde, Quantum Information Theory, 2nd edition, Cambridge University Press (2017)",
+        "H.-Y. Huang, R. Kueng and J. Preskill, Predicting many properties of a quantum system from very few measurements, Nat. Phys. 16, 1050 (2020)",
+        "P. Mujal, R. Martínez-Peña, G. L. Giorgi, M. C. Soriano and R. Zambrini, Time-series quantum reservoir computing with weak and projective measurements, npj Quantum Inf. 9, 16 (2023)",
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Phys. Rev. Applied 8, 024030 (2017)",
+        "J. Chen, H. I. Nurdin and N. Yamamoto, Temporal information processing on noisy quantum computers, Phys. Rev. Applied 14, 024065 (2020)"
+      ]
+    }
+  ]
+}

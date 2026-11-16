@@ -1,0 +1,208 @@
+{
+  "title": "Concentration and Scalability",
+  "intro": "Why adding qubits does not automatically add usable features: expectation values concentrate exponentially under scrambling and noise, every feature must be estimated from shots, measurement forces restarts, and classical simulation has its own scaling.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The promise and the catch"
+    },
+    {
+      "type": "prose",
+      "text": "The case for quantum reservoirs starts from dimension: $n$ qubits carry a state with $4^n - 1$ real parameters, so the reservoir could in principle offer exponentially many features. The catch is that a feature is an expectation value $\\operatorname{Tr}(O\\rho_k)$, and what the readout sees is its estimate from $S$ single-shot measurements, with standard error about $\\sqrt{(1 - \\langle O\\rangle^2)/S}$ for a Pauli $O$. A feature is useful only if it moves with the input by more than that error. Concentration is the statement that, for generic dynamics, it does not."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Exponential concentration under scrambling"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose the reservoir dynamics are scrambling enough that, as the input varies, the state $\\vert\\psi\\rangle$ behaves like a Haar-random state on $D = 2^n$ dimensions (it suffices that the induced ensemble of unitaries is a unitary 2-design). For a Pauli string $P \\ne I$, $\\operatorname{Tr}P = 0$ and $P^2 = I$, and the Haar second moment gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathbb{E}\\,\\langle\\psi\\vert P\\vert\\psi\\rangle = \\frac{\\operatorname{Tr}P}{D} = 0, \\qquad \\mathbb{E}\\,\\langle\\psi\\vert P\\vert\\psi\\rangle^2 = \\frac{(\\operatorname{Tr}P)^2 + \\operatorname{Tr}(P^2)}{D(D+1)} = \\frac{1}{D+1}",
+      "caption": "Variance of a Pauli expectation over Haar-random states: $1/(2^n + 1)$."
+    },
+    {
+      "type": "prose",
+      "text": "So the spread of every Pauli feature across inputs falls as $1/\\sqrt{2^n+1}$: 0.24 at 4 qubits, 0.031 at 10, $3\\times10^{-5}$ at 30. Chebyshev then says that for all but a fraction $\\delta$ of inputs the feature sits within $1/\\sqrt{\\delta(2^n+1)}$ of its mean: the features of different inputs become exponentially hard to tell apart. Xiong and co-authors analyse this for quantum extreme learning machines (memoryless reservoirs), identifying randomness, hardware noise, entanglement and global measurements as sources of concentration, alongside a Fourier-spectrum view of what the encoding can express; Thanasilp and co-authors give the matching result for quantum kernels, and the same mechanism underlies barren plateaus in trained circuits (McClean and co-authors)."
+    },
+    {
+      "type": "prose",
+      "text": "Resolving a change of a fraction $\\varepsilon$ of that spread needs a standard error below $\\varepsilon/\\sqrt{D+1}$, so"
+    },
+    {
+      "type": "math",
+      "tex": "S \\gtrsim \\frac{2^n + 1}{\\varepsilon^2}",
+      "caption": "Shots per feature per time step to resolve input dependence under full scrambling."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Concentration: the spread of a feature and the shots to read it",
+        "params": [
+          {
+            "key": "eps",
+            "label": "Resolution ε (fraction of the spread)",
+            "control": "range",
+            "min": 0.01,
+            "max": 0.5,
+            "step": 0.01,
+            "default": 0.1
+          },
+          {
+            "key": "nmax",
+            "label": "Largest qubit count",
+            "control": "range",
+            "min": 5,
+            "max": 40,
+            "step": 1,
+            "default": 30
+          }
+        ],
+        "config": {
+          "sim": "concentration",
+          "xLabel": "qubits n",
+          "yLabel": "log10"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The two curves are mirror images: every halving of the spread quadruples the shots. At $\\varepsilon = 0.1$, 10 qubits need about $10^5$ shots per feature per step and 30 qubits about $10^{11}$. Set $\\varepsilon$ to 0.5 and the shot line drops by $\\log_{10} 25 \\approx 1.4$ but keeps the same slope: no constant-factor trick escapes $2^n$."
+    },
+    {
+      "type": "callout",
+      "text": "Concentration is about generic, fully scrambled dynamics. Reservoirs that work stay away from it: they read local, low-weight observables after short evolution, so the light cone limits scrambling; they use disorder or symmetries that keep the dynamics from exploring the whole space; and the reset injection keeps refreshing a qubit with a state that depends strongly on the input. The Dynamical Regimes (#/qrc/models/dynamical-regimes) page shows that performance peaks at intermediate fields, not in the most chaotic regime."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Concentration from noise"
+    },
+    {
+      "type": "prose",
+      "text": "Noise produces the same symptom by another road. Under a global depolarizing channel of strength $p$ per step, $\\rho \\mapsto (1-p)\\rho + p\\,I/D$, every traceless feature shrinks by $(1-p)$ each step. Local noise on deep circuits behaves similarly: with depolarizing probability $p$ per gate on a weight-$w$ observable the signal falls roughly like $(1-p)^{\\#\\text{gates in its light cone}}$. A reservoir needs some dissipation to forget (the echo state property), so the design question is a window: enough contraction to fade old inputs within the memory you need, not so much that the input-dependent part of every feature drowns. Sannia and co-authors and Kubota and co-authors study this window; see Dissipation as a Resource (#/qrc/models/dissipation-as-resource)."
+    },
+    {
+      "type": "math",
+      "tex": "\\underbrace{\\Vert \\rho_k - \\rho_k' \\Vert_1 \\lesssim \\lambda^k}_{\\text{forgetting: wanted}} \\qquad \\text{vs.} \\qquad \\underbrace{\\big\\vert \\operatorname{Tr}O(\\rho_k - \\rho_*)\\big\\vert \\lesssim (1-p)^{t}}_{\\text{signal loss: unwanted}}",
+      "caption": "Both come from contraction; they differ in what contracts and how fast."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The effective number of features"
+    },
+    {
+      "type": "prose",
+      "text": "Put the two effects into one quantity. Let $\\Sigma$ be the covariance of the exact features over the input distribution, with eigenvalues $\\sigma_1^2 \\ge \\sigma_2^2 \\ge \\dots$, and let shot noise add roughly independent variance $1/S$ per feature. A ridge readout can use a direction only if its signal variance beats the noise, so a useful proxy is"
+    },
+    {
+      "type": "math",
+      "tex": "N_{\\text{eff}}(S) \\approx \\sum_i \\frac{\\sigma_i^2}{\\sigma_i^2 + 1/S}",
+      "caption": "Effective number of features: each direction counts fully if its signal variance exceeds the noise variance $1/S$, and hardly at all if not."
+    },
+    {
+      "type": "prose",
+      "text": "Adding qubits raises the number of directions but, under concentration, lowers each $\\sigma_i^2$; past some size $N_{\\text{eff}}$ stops growing at fixed $S$. The hands-on sample shows the onset on a small system: a 4-qubit, 20-feature reservoir has memory capacity 3.86 exact, 3.53 at $10^4$ shots, 2.80 at $10^3$ and 1.94 at $10^2$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The cost of measurement in time"
+    },
+    {
+      "type": "prose",
+      "text": "A projective measurement of the reservoir destroys the state the next steps need. The simplest faithful protocol therefore restarts: to get the features at step $k$, prepare the initial state, feed inputs $1..k$, measure, and repeat $S$ times. Over a series of length $T$ that costs"
+    },
+    {
+      "type": "math",
+      "tex": "\\text{steps executed} = S \\sum_{k=1}^{T} k = S\\,\\frac{T(T+1)}{2}",
+      "caption": "Restart protocol: quadratic in the series length."
+    },
+    {
+      "type": "prose",
+      "text": "Fading memory rescues most of it: only the last $L$ inputs matter (to precision $\\lambda^L$), so each feature can be computed from a run that starts $L$ steps back, costing $S\\,T\\,L$. Online protocols go further, using weak measurements, partial measurements or rewinding to keep the run going; see Measurement Back-Action (#/qrc/hardware/measurement-back-action) and Online Protocols (#/qrc/hardware/online-protocols) (Mujal and co-authors; Yasuda and co-authors)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Classical simulation cost"
+    },
+    {
+      "type": "prose",
+      "text": "The other side of scalability is what a classical computer pays to reproduce the reservoir, which sets the bar any advantage claim has to clear."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Exact density matrix: $4^n$ complex numbers, 16 bytes each, so $16 \\cdot 4^n$ bytes: 4 GiB at $n = 14$, 16 GiB at $n = 15$, and each step costs $O(8^n)$ with dense matrices.",
+        "Quantum trajectories: the reset is a measure-and-prepare channel, so averaging over random measurement outcomes of qubit 1 reproduces $\\rho_k$ exactly. A state-vector simulation of one trajectory needs $16 \\cdot 2^n$ bytes (16 GiB at $n = 30$), and $M$ trajectories give each feature to precision about $1/\\sqrt{M}$, the same scaling as $S$ hardware shots. The classical simulation inherits the same shot-noise problem the device has, but not more.",
+        "Structured dynamics: a one-dimensional nearest-neighbour transverse-field Ising chain maps to free fermions, so its unitary part is simulable in polynomial time; Gaussian continuous-variable reservoirs are simulable through their covariance matrices; low-entanglement dynamics yield to tensor networks. A reservoir in one of these classes can still be a good reservoir, but not a quantum advantage."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Shots for ten scrambled qubits",
+      "text": "A fully scrambling 10-qubit reservoir is read through Pauli features. How many shots per feature per time step are needed to resolve input-driven changes of 10% of a feature's spread?",
+      "hint": "Use $S \\gtrsim (2^n+1)/\\varepsilon^2$.",
+      "solution": [
+        "The spread is $1/\\sqrt{2^{10}+1} = 1/\\sqrt{1025} \\approx 0.031$.",
+        "We need standard error $1/\\sqrt{S}$ below $0.1 \\times 0.031$, so $S \\ge 1025/0.01$.",
+        "$S \\approx 1.0 \\times 10^5$."
+      ],
+      "answer": "about $10^5$ ($102{,}500$)"
+    },
+    {
+      "type": "problem",
+      "title": "Restart versus windowed restart",
+      "text": "A time series of $T = 1000$ steps is processed with $S = 1000$ shots per step. How many reservoir steps are executed with full restarts, and with restarts from a window of $L = 20$ steps?",
+      "solution": [
+        "Full restarts: $S\\,T(T+1)/2 = 1000 \\times 1000 \\times 1001/2 = 5.005 \\times 10^8$.",
+        "Windowed: $S\\,T\\,L = 1000 \\times 1000 \\times 20 = 2 \\times 10^7$.",
+        "The window is justified if the reservoir's contraction factor $\\lambda$ satisfies $\\lambda^{20}$ well below the shot error; for the 4-qubit reservoir of the hands-on sample, which contracts by about 0.82 per step, $0.82^{20} \\approx 0.019$, comparable to the shot error at $S = 1000$ (about 0.03)."
+      ],
+      "answer": "$5.0 \\times 10^8$ against $2 \\times 10^7$ (25 times fewer)"
+    },
+    {
+      "type": "problem",
+      "title": "Memory for an exact simulation",
+      "text": "How many qubits can an exact density-matrix simulation hold in 64 GiB, storing one complex128 matrix?",
+      "solution": [
+        "Memory is $16 \\cdot 4^n$ bytes, and 64 GiB is $2^{36}$ bytes.",
+        "$16 \\cdot 4^n = 2^{4 + 2n} \\le 2^{36}$ gives $n \\le 16$.",
+        "In practice the propagator and a work copy need two or three more matrices of the same size, so 15 qubits is the realistic limit."
+      ],
+      "answer": "16 (15 in practice)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "W. Xiong, G. Facelli, M. Sahebi, O. Agnel, T. Chotibut, S. Thanasilp and Z. Holmes, On fundamental aspects of quantum extreme learning machines, arXiv:2312.15124 (2023)",
+        "S. Thanasilp, S. Wang, M. Cerezo and Z. Holmes, Exponential concentration in quantum kernel methods, Nat. Commun. 15, 5200 (2024)",
+        "J. R. McClean, S. Boixo, V. N. Smelyanskiy, R. Babbush and H. Neven, Barren plateaus in quantum neural network training landscapes, Nat. Commun. 9, 4812 (2018)",
+        "M. Cerezo et al., Variational quantum algorithms, Nat. Rev. Phys. 3, 625 (2021)",
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary ed., Cambridge University Press (2010)",
+        "A. Sannia, R. Martínez-Peña, M. C. Soriano, G. L. Giorgi and R. Zambrini, Dissipation as a resource for quantum reservoir computing, Quantum 8, 1291 (2024)",
+        "T. Kubota, Y. Suzuki, S. Kobayashi, Q. H. Tran, N. Yamamoto and K. Nakajima, Temporal information processing induced by quantum noise, Phys. Rev. Research 5, 023057 (2023)",
+        "P. Mujal, R. Martínez-Peña, G. L. Giorgi, M. C. Soriano and R. Zambrini, Time-series quantum reservoir computing with weak and projective measurements, npj Quantum Inf. 9, 16 (2023)",
+        "T. Yasuda et al., Quantum reservoir computing with repeated measurements on superconducting devices, arXiv:2310.06706 (2023)",
+        "R. Martínez-Peña, G. L. Giorgi, J. Nokkala, M. C. Soriano and R. Zambrini, Dynamical phase transitions in quantum reservoir computing, Phys. Rev. Lett. 127, 100502 (2021)"
+      ]
+    }
+  ]
+}

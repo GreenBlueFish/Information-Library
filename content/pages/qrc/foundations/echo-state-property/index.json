@@ -1,0 +1,231 @@
+{
+  "title": "The Echo State Property",
+  "intro": "A reservoir has the echo state property when its state, after enough input, is a function of the input history alone and not of where it started. It is what makes a reservoir a well-defined filter that a readout can learn, and its quantum form, contractivity of the input-driven channel, decides which quantum systems can be reservoirs at all.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Definition"
+    },
+    {
+      "type": "prose",
+      "text": "Let $F$ be the reservoir map and let the inputs come from a compact set $U$. $F$ has the echo state property (Jaeger 2001) if for every left-infinite input sequence $(\\dots, u_{-1}, u_0)$ there is exactly one state sequence compatible with it. Equivalent working forms:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "State forgetting: for any two initial states $x_0, x_0'$ and any input sequence, $\\Vert x_k - x_k' \\Vert \\to 0$ as $k \\to \\infty$.",
+        "Uniform contraction: there is a null sequence $\\delta_k \\to 0$ with $\\Vert x_k - x_k'\\Vert \\le \\delta_k$ for all inputs and all starts."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "With the property, the reservoir defines a filter $u \\mapsto x_k = H(u_k, u_{k-1}, \\dots)$, and the readout learns a function of that filter. Without it, the state also encodes the arbitrary initial condition, two runs of the same input give different features, and a readout trained on one run fails on the next."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Conditions for tanh networks"
+    },
+    {
+      "type": "prose",
+      "text": "Write $x_k = \\tanh(W x_{k-1} + W_{\\mathrm{in}}u_k)$ (leak rate 1, no bias for clarity). tanh is 1-Lipschitz, so for two states driven by the same input"
+    },
+    {
+      "type": "math",
+      "tex": "\\Vert x_k - x_k' \\Vert \\le \\Vert W (x_{k-1}-x_{k-1}') \\Vert \\le \\sigma_{\\max}(W)\\,\\Vert x_{k-1}-x_{k-1}'\\Vert"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Sufficient: $\\sigma_{\\max}(W) < 1$ (largest singular value). The map is then a contraction for every input, and the gap shrinks at least as $\\sigma_{\\max}^k$. A less strict sufficient condition uses a diagonally scaled norm, $\\inf_D \\sigma_{\\max}(DWD^{-1}) < 1$ over positive diagonal $D$ (Buehner and Young 2006).",
+        "Necessary for the zero input: $\\rho(W) < 1$. If $\\rho(W)>1$ the origin is an unstable fixed point of the undriven network, so with $u \\equiv 0$ several state sequences coexist.",
+        "In practice: $\\rho(W) < 1$ is what everyone uses, although Yildiz, Jaeger and Kiebel (2012) gave explicit examples where it is not sufficient for every input. Because $\\rho(W) \\le \\sigma_{\\max}(W)$ and the gap is often large for non-normal random matrices, the sufficient condition is far too strict; a random $100\\times100$ matrix scaled to $\\rho = 0.8$ has $\\sigma_{\\max} \\approx 1.5$ and still forgets its initial state."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The input matters. Manjunath and Jaeger (2013) showed the property is really a property of the system together with its input process: a strong input drives the units into saturation, where $\\tanh' \\ll 1$, and the effective Jacobian $\\mathrm{diag}(1-x_k^2)\\,W$ contracts even when $W$ alone does not. The run below shows both effects:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# Two copies of one tanh ESN, different initial states, same input: does the gap close?\ndef gap_after(radius, in_scale, steps=200, N=100, seed=0):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N)); W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-1, 1, N) * in_scale\n    u = r.uniform(-1, 1, steps)\n    x, z = r.uniform(-1, 1, N), r.uniform(-1, 1, N)\n    for t in range(steps):\n        x = np.tanh(W @ x + w_in * u[t]); z = np.tanh(W @ z + w_in * u[t])\n    return np.linalg.norm(x - z), np.linalg.norm(W, 2)\nfor radius in (0.8, 1.1, 1.5):\n    for in_scale in (0.1, 2.0):\n        g, smax = gap_after(radius, in_scale)\n        print(f\"rho(W)={radius}  sigma_max(W)={smax:.2f}  input scale {in_scale}: gap after 200 steps = {g:.1e}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output: at $\\rho(W)=0.8$ ($\\sigma_{\\max} = 1.51$) the gap after 200 steps is at rounding level ($10^{-16}$) for either input scale. At $\\rho(W) = 1.1$ a weak input (0.1) leaves a gap of 0.58, but a strong input (2.0) brings it to $10^{-15}$. At $\\rho(W)=1.5$ a strong input still pulls it down to $8\\times 10^{-7}$, slowly."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Dynamical view: Lyapunov exponents and generalised synchronisation"
+    },
+    {
+      "type": "prose",
+      "text": "The rate of forgetting is the largest conditional Lyapunov exponent $\\lambda_1 = \\lim_{k\\to\\infty}\\frac{1}{k}\\ln\\Vert J_k J_{k-1}\\cdots J_1 v\\Vert$, with $J_k$ the Jacobian of the driven map along the trajectory. $\\lambda_1<0$ means two copies driven by the same input synchronise: the state becomes a function of the input (generalised synchronisation). The echo state property is this condition holding for the input class of interest. The edge-of-chaos heuristic says performance often peaks for $\\lambda_1$ slightly below 0, where memory is longest; it is a rule of thumb, not a theorem, and fails on tasks that need only recent inputs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Fading memory and universality"
+    },
+    {
+      "type": "prose",
+      "text": "A filter $H$ has fading memory (Boyd and Chua 1985) if it is continuous with respect to a weighted norm $\\Vert u\\Vert_w = \\sup_{j\\ge 0} w_j\\,|u_{-j}|$ with $w_j \\to 0$: inputs far in the past can change the output only a little. Boyd and Chua proved that every time-invariant fading-memory filter on uniformly bounded inputs can be approximated uniformly by a finite Volterra series"
+    },
+    {
+      "type": "math",
+      "tex": "y_k \\approx h_0 + \\sum_{i} h_1(i)\\,u_{k-i} + \\sum_{i,j} h_2(i,j)\\,u_{k-i}u_{k-j} + \\cdots"
+    },
+    {
+      "type": "prose",
+      "text": "and Grigoryeva and Ortega (2018) proved that echo state networks with linear readouts are universal approximants of such filters. So a reservoir family is universal when it has the echo state property (so it is a fading-memory filter) and is rich enough to approximate the Volterra terms. Quantum reservoirs have been shown universal in this same sense (Chen and Nurdin 2019; Nokkala et al. 2021), as covered in Expressivity and Universality (#/qrc/theory/expressivity-and-universality)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: two copies, one input"
+    },
+    {
+      "type": "prose",
+      "text": "The plot drives two copies of the same 30-unit ESN from different random states with the same input and shows $\\log_{10}$ of the distance between them. At radius 0.5 the gap falls by about $10^{-14}$ in 40 steps; at 0.95 by about $10^{-5}$. At 1.2 it still falls (to about $10^{-2.6}$ after 60 steps): the input's saturation restores contraction. At 1.5 the gap stays of order one and the network never forgets. Switch the model to the quantum reservoir to see the same test on a 3-qubit spin reservoir, whose forgetting comes from resetting one qubit at every input; with the defaults its trace distance falls much more slowly, to about $10^{-1.5}$ after 60 steps."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Do two copies of a reservoir forget where they started?",
+        "params": [
+          {
+            "key": "model",
+            "label": "Reservoir",
+            "control": "select",
+            "options": [
+              "classical ESN",
+              "quantum reservoir"
+            ],
+            "default": "classical ESN"
+          },
+          {
+            "key": "radius",
+            "label": "Classical: weight scale (≈ spectral radius)",
+            "control": "range",
+            "min": 0.1,
+            "max": 2.5,
+            "step": 0.05,
+            "default": 0.9
+          },
+          {
+            "key": "steps",
+            "label": "Steps",
+            "control": "range",
+            "min": 10,
+            "max": 100,
+            "step": 5,
+            "default": 60
+          },
+          {
+            "key": "qubits",
+            "label": "Quantum: qubits",
+            "control": "range",
+            "min": 2,
+            "max": 4,
+            "step": 1,
+            "default": 3
+          },
+          {
+            "key": "h",
+            "label": "Quantum: field h",
+            "control": "range",
+            "min": 0.01,
+            "max": 20,
+            "step": 0.01,
+            "default": 1
+          },
+          {
+            "key": "dt",
+            "label": "Quantum: evolution time per input",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          }
+        ],
+        "config": {
+          "sim": "esp-contraction",
+          "xLabel": "input step k",
+          "yLabel": "log10 distance between the copies"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The quantum version, in one paragraph"
+    },
+    {
+      "type": "prose",
+      "text": "For a quantum reservoir $\\rho_k = \\mathcal{T}_{u_k}(\\rho_{k-1})$ the natural distance is the trace distance $D(\\rho,\\sigma) = \\tfrac12\\Vert\\rho-\\sigma\\Vert_1$, and every CPTP map is non-expansive in it. Unitary evolution preserves it exactly, so a closed quantum system never forgets and can never have the echo state property. Forgetting needs a strictly contractive channel: resetting an input qubit, measuring, or coupling to a bath. The quantum echo state property is then $\\sup_{u} D(\\mathcal{T}_{u_k}\\circ\\cdots\\circ\\mathcal{T}_{u_1}(\\rho), \\mathcal{T}_{u_k}\\circ\\cdots\\circ\\mathcal{T}_{u_1}(\\sigma)) \\to 0$; Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points) gives the tools to check it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Spectral radius against norm",
+      "text": "Take $W$ with rows $(0, 2)$ and $(0.1, 0)$. Find $\\rho(W)$ and $\\sigma_{\\max}(W)$. Does a linear network $x_k = Wx_{k-1}+w u_k$ forget its initial state, and how fast?",
+      "solution": [
+        "The characteristic polynomial is $\\lambda^2 - 0.2$, so $\\lambda = \\pm\\sqrt{0.2}$ and $\\rho(W) \\approx 0.447$.",
+        "$W^\\top W$ is diagonal with entries $0.01$ and $4$, so the singular values are 2 and 0.1: $\\sigma_{\\max} = 2$.",
+        "One step can stretch a difference by 2, but $W^2 = 0.2\\,I$, so every two steps the gap shrinks by exactly 0.2. The gap decays like $0.447^k$ on average: the network forgets, although the sufficient condition fails."
+      ],
+      "answer": "$\\rho \\approx 0.447$, $\\sigma_{\\max} = 2$; it forgets, by a factor 0.2 every two steps"
+    },
+    {
+      "type": "problem",
+      "title": "How long a washout?",
+      "text": "A tanh ESN has $\\sigma_{\\max}(W) = 0.8$ and the initial state gap is at most $\\Vert x_0 - x_0'\\Vert = 10$. How many washout steps guarantee the gap is below $10^{-3}$?",
+      "hint": "Take logs of $0.8^k \\le 10^{-4}$.",
+      "solution": [
+        "The Lipschitz bound gives $\\Vert x_k - x_k'\\Vert \\le 0.8^k \\times 10$.",
+        "Need $0.8^k \\le 10^{-4}$: $k \\ge 4/\\log_{10}(1/0.8) = 4/0.0969 \\approx 41.3$.",
+        "So 42 steps suffice; in practice the gap closes faster because saturation shrinks the Jacobian."
+      ],
+      "answer": "42 steps"
+    },
+    {
+      "type": "problem",
+      "title": "Why a unitary reservoir fails",
+      "text": "A quantum reservoir applies only input-dependent unitaries: $\\rho_k = U(u_k)\\rho_{k-1}U(u_k)^\\dagger$. Show that it cannot have the echo state property.",
+      "solution": [
+        "The trace norm is unitarily invariant: $\\Vert U(\\rho-\\sigma)U^\\dagger\\Vert_1 = \\Vert\\rho-\\sigma\\Vert_1$.",
+        "So $D(\\rho_k,\\sigma_k) = D(\\rho_0,\\sigma_0)$ for every $k$ and every input sequence: two different starts never converge.",
+        "Any input-driven reservoir needs a non-unitary (strictly contractive) part."
+      ],
+      "answer": "trace distance is conserved, so nothing is forgotten"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Jaeger, The \"echo state\" approach to analysing and training recurrent neural networks, GMD Report 148, German National Research Center for Information Technology (2001)",
+        "M. Buehner and P. Young, A tighter bound for the echo state property, IEEE Transactions on Neural Networks 17, 820 (2006)",
+        "I. B. Yildiz, H. Jaeger and S. J. Kiebel, Re-visiting the echo state property, Neural Networks 35, 1 (2012)",
+        "G. Manjunath and H. Jaeger, Echo state property linked to an input: exploring a fundamental characteristic of recurrent neural networks, Neural Computation 25, 671 (2013)",
+        "S. Boyd and L. O. Chua, Fading memory and the problem of approximating nonlinear operators with Volterra series, IEEE Transactions on Circuits and Systems 32, 1150 (1985)",
+        "L. Grigoryeva and J.-P. Ortega, Echo state networks are universal, Neural Networks 108, 495 (2018)",
+        "J. Chen and H. I. Nurdin, Learning nonlinear input-output maps with dissipative quantum systems, Quantum Information Processing 18, 198 (2019)",
+        "J. Nokkala et al., Gaussian states of continuous-variable quantum systems provide universal and versatile reservoir computing, Communications Physics 4, 53 (2021)",
+        "M. Lukoševičius and H. Jaeger, Reservoir computing approaches to recurrent neural network training, Computer Science Review 3, 127 (2009)"
+      ]
+    }
+  ]
+}

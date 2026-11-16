@@ -1,0 +1,223 @@
+{
+  "title": "Input Encoding",
+  "intro": "How a classical number becomes a quantum operation decides which functions of the input a quantum reservoir can represent, which parts of the state the readout can see, and how fast old inputs are forgotten. This page compares reset encodings (amplitude, angle, phase, multi-copy), drive encodings and their polynomial structure, with a simulation of each.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two ways to put a number in"
+    },
+    {
+      "type": "list",
+      "items": [
+        "State injection (reset encoding): discard one or more qubits and re-prepare them in $\\rho_{\\mathrm{in}}(s)$. It writes the input and supplies the dissipation in one step. The update is linear in $\\rho_{\\mathrm{in}}(s)$, so the input nonlinearity is entirely in the map $s\\mapsto\\rho_{\\mathrm{in}}(s)$.",
+        "Parameter drive: the input changes the Hamiltonian or gate angles, $\\rho_k = U(s_k)\\rho_{k-1}U(s_k)^\\dagger$, for example $H(s) = H_0 + s\\,\\Omega\\sum_i X_i$. This gives nonlinearity through $e^{-iH(s)\\Delta t}$, which contains all powers of $s$; but a unitary map never contracts, so a drive encoding needs separate dissipation (resets, measurement, natural noise) to give an echo state property."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reset encodings of one qubit"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho_{\\mathrm{in}}(s) = \\tfrac12\\left(I + a(s) X + b(s) Y + c(s) Z\\right)",
+      "caption": "Any single-qubit encoding is a curve in the Bloch ball; the reservoir is linear in (a, b, c)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Amplitude: $\\vert\\psi\\rangle = \\sqrt{1-s}\\vert0\\rangle + \\sqrt{s}\\vert1\\rangle$, so $c = 1-2s$, $a = 2\\sqrt{s(1-s)}$, $b=0$. $P(1) = s$ is linear in the input.",
+        "Angle: $\\vert\\psi\\rangle = R_y(\\pi s)\\vert0\\rangle$, so $c = \\cos\\pi s$, $a = \\sin\\pi s$. $P(1)=\\sin^2(\\pi s/2)$.",
+        "Phase: $\\vert\\psi\\rangle = R_z(\\pi s)\\vert+\\rangle$, so $a = \\cos\\pi s$, $b = \\sin\\pi s$, $c = 0$. The input sits entirely in the coherences.",
+        "Mixed: $\\rho_{\\mathrm{in}} = (1-s)\\vert0\\rangle\\langle0\\vert + s\\vert1\\rangle\\langle1\\vert$, so only $c=1-2s$. Fully classical; the reservoir sees one linear function of each input."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Since each feature is linear in the encoding of each past input, the readout can only form linear combinations of products $\\prod_j f_j(s_{k-j})$ with each $f_j \\in \\{1, a, b, c\\}$. The span of $\\{1, a, b, c\\}$ as functions of $s$ is the library of single-input nonlinearities: for amplitude encoding it is $\\{1, s, \\sqrt{s(1-s)}\\}$, for angle encoding $\\{1, \\cos\\pi s, \\sin\\pi s\\}$. Neither contains $s^2$ exactly; both approximate it."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The symmetry trap"
+    },
+    {
+      "type": "prose",
+      "text": "Phase encoding looks as rich as the others, but in the spin-network reservoir it performs badly with Z readouts. The reason is the Z-parity symmetry of $H=\\sum J_{ij}X_iX_j + \\sum h_iZ_i$. The Heisenberg-picture observables $Z_i(t)$ are parity-even, while $X_1\\otimes I$ and $Y_1\\otimes I$ are parity-odd, so $\\operatorname{Tr}[Z_i(t)\\,(X_1\\otimes R)]$ vanishes unless the rest of the register $R$ itself carries parity-odd coherences, which come only from earlier phase-encoded inputs. The current input becomes visible only multiplied by an older one. Amplitude encoding puts part of the input in $Z_1$, which is even, and avoids the trap. Rule: check that the encoding has a component along the symmetry sectors your observables can see."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulated comparison"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1, -1]).astype(complex)\ndef op(o, i, n):\n    m = np.array([[1]], complex)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\n\nn, dt, V = 4, 10.0, 5\nrng = np.random.default_rng(1)\nH = sum(rng.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\nH = H + 1.0 * sum(op(Z, i, n) for i in range(n))\nE, P = np.linalg.eigh(H)\nU = P @ np.diag(np.exp(-1j * E * dt / V)) @ P.conj().T\nD = 2 ** n\nzd = [np.real(np.diag(op(Z, i, n))) for i in range(n)]\n\ndef amp(x):   return np.array([np.sqrt(1 - x), np.sqrt(x)], complex)            # amplitude: P(1) = s\ndef angle(x): return np.array([np.cos(np.pi * x / 2), np.sin(np.pi * x / 2)], complex)  # R_y(pi s)|0>\ndef phase(x): return np.array([1, np.exp(1j * np.pi * x)], complex) / np.sqrt(2)   # R_z(pi s)|+>\n\ndef run(s, enc, k):\n    \"\"\"reset the first k qubits to enc(s) each step\"\"\"\n    rho = np.eye(D) / D; out = []\n    for x in s:\n        r = rho.reshape(2 ** k, D // 2 ** k, 2 ** k, D // 2 ** k)\n        rest = np.einsum('aiaj->ij', r)\n        psi = enc(x); pin = np.outer(psi, psi.conj())\n        rin = pin\n        for _ in range(k - 1): rin = np.kron(rin, pin)\n        rho = np.kron(rin, rest); f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T; d = np.real(np.diag(rho)); f += [z @ d for z in zd]\n        out.append(f)\n    return np.hstack([np.array(out), np.ones((len(s), 1))])\n\ns = np.random.default_rng(101).uniform(0, 1, 1400)\ntasks = {\"s(k)\": s, \"s(k)^2\": s ** 2, \"s(k)s(k-1)\": s * np.roll(s, 1),\n         \"s(k)^3\": s ** 3}\nwash, tr = 200, 800\nprint(\"NMSE on the test window (lower is better)\")\nfor name, enc, k in [(\"amplitude, 1 qubit\", amp, 1), (\"angle, 1 qubit\", angle, 1),\n                     (\"phase, 1 qubit\", phase, 1), (\"amplitude, 2 copies\", amp, 2)]:\n    F = run(s, enc, k); row = []\n    for t, y in tasks.items():\n        A = F[wash:wash + tr]\n        w = np.linalg.solve(A.T @ A + 1e-8 * np.eye(A.shape[1]), A.T @ y[wash:wash + tr])\n        p = F[wash + tr:] @ w; yt = y[wash + tr:]\n        row.append(f\"{t}: {np.mean((p - yt) ** 2) / np.var(yt):.4f}\")\n    print(f\"{name:22s}\", \"  \".join(row))\n"
+    },
+    {
+      "type": "prose",
+      "text": "The run (4 qubits, $h=1$, $\\Delta t=10$, $V=5$) gives these test NMSEs:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Amplitude, 1 qubit: $s_k$ 0.0040, $s_k^2$ 0.027, $s_ks_{k-1}$ 0.049, $s_k^3$ 0.076.",
+        "Angle, 1 qubit: 0.018, 0.046, 0.085, 0.11; worse than amplitude here because $s$ itself is not in the span of $\\{\\cos\\pi s,\\sin\\pi s\\}$ and must be approximated.",
+        "Phase, 1 qubit: 0.18, 0.23, 0.20, 0.29; the symmetry trap.",
+        "Amplitude written into 2 qubits at once: 0.0001, 0.0028, 0.082, 0.0092. Two copies give $\\rho_{\\mathrm{in}}\\otimes\\rho_{\\mathrm{in}}$, so products of two encoding functions of the same input appear and $s^2$ is nearly exact; but half the register is wiped each step, so the cross-time product $s_ks_{k-1}$ gets worse."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "The last line is the central trade-off of encoding: the more of the register the input overwrites, the richer the instantaneous nonlinearity and the shorter the memory. Re-uploading the same input into $m$ qubits gives degree $m$ in that input; it also discards $m$ qubits of stored history per step."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Other encoding choices"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Input scaling: using only part of the range (for example $s\\in[0,0.2]$ in amplitude encoding) keeps the map closer to linear, as a small input scaling does in an echo state network; using the full range exploits the curvature of $\\sqrt{s(1-s)}$.",
+        "Multi-dimensional inputs: write different components into different qubits, or time-multiplex them into successive sub-steps.",
+        "Quantum inputs: the injected state can be an unknown quantum state rather than an encoding of a number; see Quantum Data Tasks (#/qrc/models/quantum-data-tasks).",
+        "Hardware: on a gate-based device, reset encoding needs fast mid-circuit reset and re-preparation; drive encoding is natural for analogue simulators (detunings or Rabi frequencies set by $s$). See Analog Platforms (#/qrc/hardware/analog-platforms)."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Encoding sets the nonlinearity: compare tasks",
+        "params": [
+          {
+            "key": "task",
+            "label": "Task",
+            "control": "select",
+            "options": [
+              "recall s(k−3)",
+              "product s(k)·s(k−1)",
+              "NARMA2"
+            ],
+            "default": "product s(k)·s(k−1)"
+          },
+          {
+            "key": "qubits",
+            "label": "Qubits",
+            "control": "range",
+            "min": 2,
+            "max": 5,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "h",
+            "label": "Field h",
+            "control": "range",
+            "min": 0.01,
+            "max": 20,
+            "step": 0.01,
+            "default": 1
+          },
+          {
+            "key": "W",
+            "label": "Disorder W",
+            "control": "range",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "dt",
+            "label": "Evolution time per input Δt",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          },
+          {
+            "key": "V",
+            "label": "Virtual nodes V",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 5
+          },
+          {
+            "key": "shots",
+            "label": "Shots per expectation (0 = exact)",
+            "control": "range",
+            "min": 0,
+            "max": 100000,
+            "step": 10,
+            "default": 0
+          }
+        ],
+        "config": {
+          "sim": "qrc-task",
+          "xLabel": "test step",
+          "yLabel": "target and prediction"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "The simulator uses amplitude reset encoding. The product task is reachable because products across time are exactly what the structure provides; compare it with NARMA2, which needs $s_{k-1}^3$ and products of its own past outputs, and so is only approximated."
+    },
+    {
+      "type": "problem",
+      "title": "Angle versus amplitude",
+      "text": "For $s=0.25$, what is $P(1)$ of the injected qubit in amplitude and in angle encoding? Which encoding's $P(1)$ is a linear function of $s$?",
+      "solution": [
+        "Amplitude: $P(1)=s=0.25$.",
+        "Angle: $P(1)=\\sin^2(\\pi s/2)=\\sin^2(\\pi/8)\\approx0.146$.",
+        "Amplitude encoding is linear in $P(1)$ (and hence in $\\langle Z\\rangle=1-2s$); angle encoding is linear in neither."
+      ],
+      "answer": "0.25 and 0.146; amplitude"
+    },
+    {
+      "type": "problem",
+      "title": "Degree of a multi-copy encoding",
+      "text": "An input is written into $m$ qubits as $\\rho_{\\mathrm{in}}(s)^{\\otimes m}$ with amplitude encoding. What is the highest power of $s$ that a linear readout can represent exactly, as a function of the current input alone?",
+      "solution": [
+        "The features are linear in $\\rho_{\\mathrm{in}}^{\\otimes m}$, whose entries are products of $m$ entries of $\\rho_{\\mathrm{in}}$, each in $\\{1-s, s, \\sqrt{s(1-s)}\\}$.",
+        "Products of $m$ such factors include $s^m$, so the degree is $m$ (with square-root terms in addition).",
+        "The sample confirms it: with $m=2$ the NMSE for $s^2$ drops from 0.027 to 0.0028."
+      ],
+      "answer": "m"
+    },
+    {
+      "type": "problem",
+      "title": "Why the phase encoding is weak",
+      "text": "In the spin-network reservoir, the register is maximally mixed and a phase-encoded input $\\tfrac12(I+\\cos\\pi s\\,X+\\sin\\pi s\\,Y)$ is injected on qubit 1. What is $\\langle Z_2\\rangle$ at any later time, before the next input?",
+      "hint": "Z_2(t) is parity-even; X_1 is parity-odd.",
+      "solution": [
+        "The state is $\\tfrac12(I+\\cos\\pi s X_1+\\sin\\pi s Y_1)\\otimes I/2^{n-1}$.",
+        "$\\operatorname{Tr}[Z_2(t)\\,I] = 0$ since $Z_2(t)$ is traceless, and $\\operatorname{Tr}[Z_2(t)\\,X_1]=\\operatorname{Tr}[Z_2(t)Y_1]=0$ by parity: an even operator has no overlap with an odd one.",
+        "So $\\langle Z_2\\rangle = 0$ for every $s$: the first input is invisible to Z readouts. Only later inputs, combined with this one's coherences, reveal it."
+      ],
+      "answer": "0 for every s"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Phys. Rev. Applied 8, 024030 (2017)",
+        "J. Chen and H. I. Nurdin, Learning nonlinear input–output maps with dissipative quantum systems, Quantum Inf. Process. 18, 198 (2019)",
+        "P. Mujal, R. Martínez-Peña, J. Nokkala, J. García-Beni, G. L. Giorgi, M. C. Soriano and R. Zambrini, Opportunities in quantum reservoir computing and extreme learning machines, Adv. Quantum Technol. 4, 2100027 (2021)",
+        "L. Innocenti, S. Lorenzo, I. Palmisano, A. Ferraro, M. Paternostro and G. M. Palma, Potential and limitations of quantum extreme learning machines, Commun. Phys. 6, 118 (2023)",
+        "L. Grigoryeva and J.-P. Ortega, Echo state networks are universal, Neural Netw. 108, 495 (2018)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,220 @@
+{
+  "title": "The Spin-Network Reservoir",
+  "intro": "The founding QRC model (Fujii and Nakajima 2017) is a few qubits with random all-to-all XX couplings and a Z field, fed by resetting one qubit to an input-dependent state each step and read out through single-qubit Z expectations. This page builds it completely, explains why it remembers and forgets, and runs it.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Hamiltonian"
+    },
+    {
+      "type": "math",
+      "tex": "H = \\sum_{i<j} J_{ij}\\, X_i X_j + \\sum_{i} h_i\\, Z_i, \\qquad J_{ij} \\sim \\mathcal{U}\\!\\left[-\\tfrac{J}{2}, \\tfrac{J}{2}\\right], \\quad h_i = h + \\delta_i,\\ \\delta_i \\sim \\mathcal{U}\\!\\left[-\\tfrac{W}{2},\\tfrac{W}{2}\\right]",
+      "caption": "The Fujii–Nakajima Hamiltonian has a uniform field; the site disorder W is added on this shelf and in its simulators to explore dynamical regimes."
+    },
+    {
+      "type": "prose",
+      "text": "The XX terms move excitations between qubits and create correlations; the field gives each qubit a precession frequency $2h_i$. Neither alone is enough. With $h=0$ every $X_iX_j$ commutes with every other, so $H$ is diagonal in the X basis and the dynamics is a set of independent phases (integrable, no scrambling). With $J=0$ each qubit precesses alone and nothing ever leaves the input qubit. Random $J_{ij}$ break the permutation symmetry, so the system is generic apart from one exact symmetry."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The parity symmetry"
+    },
+    {
+      "type": "prose",
+      "text": "Each $X_iX_j$ anticommutes with $Z_i$ and with $Z_j$, so it commutes with their product; the field terms commute trivially. Hence $[H, \\Pi]=0$ with $\\Pi = Z_1 Z_2\\cdots Z_n$: the dynamics conserves Z-parity and splits into two blocks of dimension $2^{n-1}$. Two consequences matter for design. First, level statistics must be taken within one parity block (see Dynamical Regimes (#/qrc/models/dynamical-regimes)). Second, parity-even observables such as $Z_i$ and $Z_iZ_j$ never pick up a contribution from parity-odd parts of the state, which decides which encodings are visible (see Input Encoding (#/qrc/models/input-encoding))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The input step"
+    },
+    {
+      "type": "prose",
+      "text": "The input $s_k\\in[0,1]$ is written by discarding qubit 1 and replacing it with a pure state, then letting the whole register evolve for a time $\\Delta t$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho_k = U\\left(\\vert\\psi_{s_k}\\rangle\\langle\\psi_{s_k}\\vert \\otimes \\operatorname{Tr}_1 \\rho_{k-1}\\right)U^\\dagger, \\qquad \\vert\\psi_s\\rangle = \\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt{s}\\,\\vert1\\rangle,\\quad U = e^{-iH\\Delta t}"
+    },
+    {
+      "type": "prose",
+      "text": "The reset is the reservoir's only dissipation, and it is enough. Each step throws away whatever information sat on qubit 1, so information about an old input survives only if the dynamics moved it onto qubits $2\\ldots n$ in time, and it keeps leaking back onto qubit 1 where it is erased again. That is a fading memory with a rate set by how fast $H$ exchanges information between qubit 1 and the rest. In the Pauli picture, the map contracts the Bloch vector: the components on qubit 1 are replaced by those of $\\vert\\psi_s\\rangle$, and the trace distance between any two states never increases and, for generic $H$, strictly decreases over a few steps."
+    },
+    {
+      "type": "prose",
+      "text": "The prepared state has density matrix $\\tfrac12\\left(I + (1-2s)Z + 2\\sqrt{s(1-s)}\\,X\\right)$: the input enters through two functions, $1-2s$ and $2\\sqrt{s(1-s)}$. Because the channel is linear in this prepared state, every feature is a linear combination of products of these functions of past inputs, at most one factor per past step. That fixes the nonlinearity the model can offer: products across time, and the square-root shape, but no pure powers like $s_k^2$ of a single input."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Readout and virtual nodes"
+    },
+    {
+      "type": "prose",
+      "text": "After injection the register evolves for $\\Delta t$. Instead of reading only at the end, split $\\Delta t$ into $V$ equal sub-steps and record $\\langle Z_i\\rangle$ after each; these are the virtual nodes, borrowed from delay-based photonic reservoirs (see Physical Reservoirs (#/qrc/foundations/physical-reservoirs)). An $n$-qubit reservoir with $V$ virtual nodes gives $M = nV$ features per input. In the original proposal the system is an ensemble (an NMR-like sample of many identical molecules), so expectation values come out directly from a macroscopic signal without collapsing each copy; on a single device every feature must be estimated from repeated runs, which is the measurement problem treated in Measurement Back-Action (#/qrc/hardware/measurement-back-action)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Training and evaluating"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Drive with an i.i.d. input stream, discard a washout (here 200 steps) so the initial state is forgotten.",
+        "Record features for a training window (800 steps), append a constant, and solve the ridge problem $w = (F^\\top F + \\lambda I)^{-1}F^\\top y$.",
+        "Score on a held-out window (400 steps): $r^2(d)$ between prediction and $s_{k-d}$ for the memory function, NMSE for a task."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\n# Pauli operators on n qubits (qubit 0 = leftmost tensor factor)\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1, -1]).astype(complex)\ndef op(o, i, n):\n    m = np.array([[1]], complex)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\n\nn, h, dt, V = 4, 1.0, 10.0, 5          # qubits, field, time per input, virtual nodes\nrng = np.random.default_rng(1)\nH = sum(rng.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\nH = H + h * sum(op(Z, i, n) for i in range(n))\nE, P = np.linalg.eigh(H)\nU = P @ np.diag(np.exp(-1j * E * dt / V)) @ P.conj().T       # one virtual-node step\nD = 2 ** n\nzdiag = [np.real(np.diag(op(Z, i, n))) for i in range(n)]\n\ndef features(s):\n    rho = np.eye(D) / D\n    out = []\n    for x in s:\n        r4 = rho.reshape(2, D // 2, 2, D // 2)\n        rest = r4[0, :, 0, :] + r4[1, :, 1, :]                 # Tr_1 rho\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)])\n        rho = np.kron(np.outer(psi, psi), rest)                 # reset qubit 1 to the input state\n        f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T\n            d = np.real(np.diag(rho))\n            f += [z @ d for z in zdiag]                        # <Z_i>\n        out.append(f)\n    return np.array(out)\n\ns = np.random.default_rng(101).uniform(0, 1, 1400)\nF = np.hstack([features(s), np.ones((len(s), 1))])\nwash, tr = 200, 800\nmc = 0.0\nfor d in range(0, 13):\n    A, y = F[wash:wash + tr], s[wash - d:wash + tr - d]\n    w = np.linalg.solve(A.T @ A + 1e-6 * np.eye(A.shape[1]), A.T @ y)\n    r2 = np.corrcoef(F[wash + tr:] @ w, s[wash + tr - d:len(s) - d])[0, 1] ** 2\n    if d > 0: mc += r2\n    print(f\"d={d:2d}  r2={r2:.3f}\")\nprint(f\"memory capacity (d=1..12): {mc:.2f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Run as written (4 qubits, $h=1$, $\\Delta t=10$, $V=5$), recall is near perfect for the current input ($r^2=0.996$), still 0.82 two steps back, 0.58 at four, and gone by ten; the memory capacity over delays 1 to 12 is 3.75, out of a ceiling of 20 features. The JavaScript simulator below is the same model with different random draws, so its numbers differ by a few tenths."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Memory function of the spin reservoir",
+        "params": [
+          {
+            "key": "qubits",
+            "label": "Qubits",
+            "control": "range",
+            "min": 2,
+            "max": 5,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "h",
+            "label": "Field h",
+            "control": "range",
+            "min": 0.01,
+            "max": 20,
+            "step": 0.01,
+            "default": 1
+          },
+          {
+            "key": "W",
+            "label": "Disorder W",
+            "control": "range",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "dt",
+            "label": "Evolution time per input Δt",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          },
+          {
+            "key": "V",
+            "label": "Virtual nodes V",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 1
+          },
+          {
+            "key": "shots",
+            "label": "Shots per expectation (0 = exact)",
+            "control": "range",
+            "min": 0,
+            "max": 100000,
+            "step": 10,
+            "default": 0
+          }
+        ],
+        "config": {
+          "sim": "qrc-memory",
+          "xLabel": "delay d (input steps)",
+          "yLabel": "r² of recalling s(k−d)"
+        }
+      }
+    },
+    {
+      "type": "list",
+      "items": [
+        "Start at the defaults (4 qubits, $V=1$): MC is about 2.1 from only 4 features.",
+        "Set $V$ to 5: MC rises to about 5.1. The extra features are the same qubits seen at different times during the evolution; they are linearly independent because the dynamics rotates information through the register.",
+        "Keep $V=5$ and set shots to 100: MC falls to about 1.9, below the exact $V=1$ result. Each feature now has noise of order $0.1$, and the readout can no longer separate small contributions of old inputs.",
+        "Set disorder $W$ to 5 with $V=5$: MC falls from about 5.1 to about 4.1 as the qubits detune from each other; at the much stronger disorder on Dynamical Regimes (#/qrc/models/dynamical-regimes) the qubits stop exchanging information and memory collapses."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What sets the memory"
+    },
+    {
+      "type": "prose",
+      "text": "Three time scales compete. The coupling scale $J$ sets how fast information leaves qubit 1; the input period $\\Delta t$ sets how much happens between resets; and the number of qubits sets how much room there is to park information away from the reset. If $J\\Delta t \\ll 1$, most of the information is still on qubit 1 when it is reset and the reservoir mostly sees the current input. If $J\\Delta t$ is large, information is spread through the register before the next reset, and what limits memory is the feature count and the rate at which the register leaks back into qubit 1. Because the dynamics is unitary between resets, nothing but the reset forgets; that is why a 4-qubit reservoir can recall several steps with as few as 20 features."
+    },
+    {
+      "type": "callout",
+      "text": "A frequent misreading: the $2^n$ dimension does not appear in the memory capacity directly. The register stores at most $4^n-1$ numbers, but a linear readout of $M$ observables can expose at most $M$ independent combinations, and each must be estimated from shots. Growing the reservoir helps only together with a readout that grows with it."
+    },
+    {
+      "type": "problem",
+      "title": "Check the parity symmetry",
+      "text": "Show that $X_1X_2$ commutes with $\\Pi=Z_1Z_2Z_3$, and say what this implies for $\\langle Z_1Z_2\\rangle$ if the initial state is $\\vert 000\\rangle$ and $H$ is the spin-network Hamiltonian (no input).",
+      "hint": "Count anticommuting pairs.",
+      "solution": [
+        "$X_1 Z_1 = -Z_1 X_1$ and $X_2 Z_2 = -Z_2 X_2$; $X_1X_2$ commutes with $Z_3$. Two sign flips give $X_1X_2\\,\\Pi = \\Pi\\, X_1X_2$.",
+        "$\\vert000\\rangle$ has parity $+1$, and $H$ conserves parity, so the state stays in the even block: only $\\vert000\\rangle, \\vert011\\rangle, \\vert101\\rangle, \\vert110\\rangle$ are ever populated.",
+        "In every even basis state $Z_1Z_2Z_3=+1$, so $\\langle Z_1Z_2\\rangle = \\langle Z_3\\rangle$ at all times: the correlator carries no new information beyond $\\langle Z_3\\rangle$ for this initial state. With reset injection the parity is not conserved step to step (the reset mixes sectors), so in the reservoir proper the two features do differ."
+      ],
+      "answer": "They commute; Z1Z2 equals Z3 in expectation"
+    },
+    {
+      "type": "problem",
+      "title": "The prepared input state",
+      "text": "For $s=0.25$, give $\\langle Z\\rangle$ and $\\langle X\\rangle$ of $\\vert\\psi_s\\rangle$, and the probability of measuring 1.",
+      "solution": [
+        "$\\langle Z\\rangle = 1-2s = 0.5$.",
+        "$\\langle X\\rangle = 2\\sqrt{s(1-s)} = 2\\sqrt{0.1875} \\approx 0.866$.",
+        "$P(1) = s = 0.25$. The state is pure: $0.5^2 + 0.866^2 = 1$."
+      ],
+      "answer": "<Z> = 0.5, <X> ≈ 0.866, P(1) = 0.25"
+    },
+    {
+      "type": "problem",
+      "title": "Reading the memory function",
+      "text": "The sample prints $r^2(d)$ = 0.942, 0.817, 0.676, 0.582 for $d$ = 1 to 4 and a total MC of 3.75 for $d$ = 1 to 12. What fraction of the capacity comes from delays 1 to 4, and what is the ceiling on MC with this readout?",
+      "solution": [
+        "Delays 1 to 4: $0.942+0.817+0.676+0.582 = 3.017$, about 80% of 3.75.",
+        "Ceiling: $M = nV = 4\\times5 = 20$ features (the bias does not count). The reservoir uses under a fifth of it: the features are far from independent recall channels, because the readout must also undo the nonlinear mixing of each past input."
+      ],
+      "answer": "About 80%; ceiling 20"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Phys. Rev. Applied 8, 024030 (2017)",
+        "K. Nakajima, K. Fujii, M. Negoro, K. Mitarai and M. Kitagawa, Boosting computational power through spatial multiplexing in quantum reservoir computing, Phys. Rev. Applied 11, 034021 (2019)",
+        "J. Chen and H. I. Nurdin, Learning nonlinear input–output maps with dissipative quantum systems, Quantum Inf. Process. 18, 198 (2019)",
+        "H. Jaeger, Short term memory in echo state networks, GMD Report 152 (2002)",
+        "L. Appeltant et al., Information processing using a single dynamical node as complex system, Nat. Commun. 2, 468 (2011)",
+        "P. Mujal, R. Martínez-Peña, J. Nokkala, J. García-Beni, G. L. Giorgi, M. C. Soriano and R. Zambrini, Opportunities in quantum reservoir computing and extreme learning machines, Adv. Quantum Technol. 4, 2100027 (2021)"
+      ]
+    }
+  ]
+}

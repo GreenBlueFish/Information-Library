@@ -1,0 +1,245 @@
+{
+  "title": "Dissipation as a Resource",
+  "intro": "A closed quantum system never forgets its initial state, so a quantum reservoir needs some non-unitary ingredient (a reset, a measurement or genuine dissipation) to have the echo state property. How much dissipation, of which kind, and where it enters decide both whether the reservoir works and how long its memory is.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why unitary dynamics cannot have the echo state property"
+    },
+    {
+      "type": "prose",
+      "text": "Write one input step as a map $\\rho_k = \\mathcal{T}_{s_k}(\\rho_{k-1})$. The echo state property asks that two different initial states $\\rho_0$ and $\\sigma_0$ fed the same input sequence end up indistinguishable: $\\Vert \\mathcal{T}_{s_k}\\circ\\cdots\\circ\\mathcal{T}_{s_1}(\\rho_0-\\sigma_0)\\Vert_1 \\to 0$. If every $\\mathcal{T}_{s}$ is unitary, $\\mathcal{T}_s(\\rho)=U_s\\rho U_s^\\dagger$, the trace distance is exactly conserved: $\\Vert U(\\rho-\\sigma)U^\\dagger\\Vert_1 = \\Vert\\rho-\\sigma\\Vert_1$, because the eigenvalues of $\\rho-\\sigma$ do not change. The reservoir then remembers its initial condition forever, with full weight, and its output depends on when you switched it on. No washout ever happens."
+    },
+    {
+      "type": "prose",
+      "text": "There is a second, quieter failure. The maximally mixed state $I/D$ is a fixed point of every unitary channel, so a reservoir started there (the natural thermal start at high temperature) never moves: every $\\langle Z_i\\rangle$ stays at zero and the readout sees constant features. The input has to enter through something that changes the spectrum of $\\rho$, not just its basis."
+    },
+    {
+      "type": "prose",
+      "text": "So a working quantum reservoir needs a channel that is strictly contractive (in the sense of Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points)): $\\Vert\\mathcal{T}_s(\\rho)-\\mathcal{T}_s(\\sigma)\\Vert_1 \\le c\\,\\Vert\\rho-\\sigma\\Vert_1$ with $c<1$ uniformly in $s$, or at least a composition of steps that contracts. Chen and Nurdin made a condition of this kind central to their universality result: for every input, the step map restricted to traceless operators must have induced Hilbert–Schmidt norm at most $1-\\epsilon$, which makes any two initial states converge. Convergent dissipative systems of this kind, combined as non-interacting subsystems and read out by a polynomial in the single-qubit expectations, can approximate any fading-memory input–output map arbitrarily well."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three places dissipation can come from"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Reset injection. The Fujii–Nakajima scheme replaces qubit 1 by a fresh state at each step: $\\rho\\mapsto \\vert\\psi(s)\\rangle\\langle\\psi(s)\\vert\\otimes\\operatorname{Tr}_1\\rho$. Tracing out the old qubit throws away information each step; this alone makes the map contractive on the remaining qubits once the Hamiltonian spreads information from the rest onto qubit 1. This is the model of The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "Measurement. A projective or weak measurement followed by discarding the outcome is a dephasing channel; keeping the outcome and conditioning on it is a different, stochastic map. Either way it removes coherence and gives contraction; see Measurement Back-Action (#/qrc/hardware/measurement-back-action).",
+        "Engineered or natural environmental noise. Amplitude damping (energy relaxation at rate $\\gamma = 1/T_1$), dephasing (rate $1/T_\\phi$) and depolarisation. On hardware this noise is free; in simulation it is a Lindblad term. Here the reservoir can encode the input unitarily (a rotation, a field) and still have the echo state property."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A model: unitary encoding plus amplitude damping"
+    },
+    {
+      "type": "prose",
+      "text": "Take the spin reservoir $H=\\sum_{i<j}J_{ij}X_iX_j + h\\sum_i Z_i$ with $J_{ij}\\sim U[-\\tfrac12,\\tfrac12]$ and $h=1$ on $n=4$ qubits. Encode the input unitarily, with no reset: rotate qubit 1 by $R_y(\\pi s_k)$. Then evolve for $\\Delta t=3$ under the Lindblad equation with amplitude damping on every qubit,"
+    },
+    {
+      "type": "math",
+      "tex": "\\dot\\rho = -i[H,\\rho] + \\gamma\\sum_{i=1}^{n}\\left(\\sigma_i^-\\rho\\,\\sigma_i^+ - \\tfrac12\\{\\sigma_i^+\\sigma_i^-,\\rho\\}\\right),"
+    },
+    {
+      "type": "prose",
+      "text": "and read $\\langle Z_i\\rangle$ once per step. The step map is $\\mathcal{T}_{s}=e^{\\mathcal{L}\\Delta t}\\circ\\mathcal{R}_s$, a unitary rotation followed by a fixed contractive semigroup. The sample below sweeps $\\gamma$ and reports two numbers: the linear memory capacity summed over delays 1 to 10, and the trace distance after 60 steps between copies started in $\\vert0000\\rangle$ and $\\vert1111\\rangle$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\n\nn = 4; D = 2 ** n\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1]); Sm = np.array([[0, 1], [0, 0]])  # sigma^- = |0><1|\ndef op(o, i):\n    m = np.array([[1.]])\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\nrng = np.random.default_rng(1)\nH = sum(rng.uniform(-.5, .5) * op(X, i) @ op(X, j) for i in range(n) for j in range(i + 1, n))\nH = H + sum(1.0 * op(Z, i) for i in range(n))\nI = np.eye(D)\ndef liouvillian(gamma):\n    \"\"\"Lindblad generator with amplitude damping at rate gamma on every qubit (column-stacked vec).\"\"\"\n    L = -1j * (np.kron(I, H) - np.kron(H.T, I))\n    for i in range(n):\n        c = np.sqrt(gamma) * op(Sm, i); cdc = c.conj().T @ c\n        L += np.kron(c.conj(), c) - 0.5 * np.kron(I, cdc) - 0.5 * np.kron(cdc.T, I)\n    return L\ndef ry(t): return np.array([[np.cos(t / 2), -np.sin(t / 2)], [np.sin(t / 2), np.cos(t / 2)]])\ndef run(s, gamma, dt=3.0, rho0=None):\n    P = expm(liouvillian(gamma) * dt)\n    rho = np.eye(D) / D if rho0 is None else rho0\n    Zd = [np.diag(op(Z, i)) for i in range(n)]; feats = []\n    for x in s:\n        R = op(ry(np.pi * x), 0)            # unitary input: rotate qubit 1 by pi*s (no reset)\n        rho = R @ rho @ R.T\n        rho = (P @ rho.reshape(-1, order=\"F\")).reshape(D, D, order=\"F\")\n        feats.append([np.real(z @ np.diag(rho)) for z in Zd])\n    return np.array(feats), rho\ndef r2(p, y):\n    if np.std(p) < 1e-12: return 0.0       # constant features carry no information\n    return np.corrcoef(p, y)[0, 1] ** 2\ndef mc(F, s, w0=100, tr=600, dmax=10):\n    A = np.hstack([F, np.ones((len(F), 1))]); out = 0\n    for d in range(1, dmax + 1):\n        w = np.linalg.lstsq(A[w0:w0 + tr], s[w0 - d:w0 + tr - d], rcond=1e-8)[0]\n        out += r2(A[w0 + tr:] @ w, s[w0 + tr - d:len(s) - d])\n    return out\ns = np.random.default_rng(5).uniform(0, 1, 1000)\nup = np.zeros((D, D)); up[0, 0] = 1; dn = np.zeros((D, D)); dn[-1, -1] = 1\nfor g in [0.0, 0.003, 0.03, 0.1, 0.3, 1.0, 3.0]:\n    F, _ = run(s, g)\n    _, ra = run(s[:60], g, rho0=up); _, rb = run(s[:60], g, rho0=dn)   # echo-state check\n    td = 0.5 * np.abs(np.linalg.eigvalsh(ra - rb)).sum()\n    print(f\"gamma={g:<6} MC(1..10)={mc(F, s):.2f}  trace distance after 60 steps={td:.1e}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of that run:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\gamma=0$: MC $=0.00$, trace distance $1.0$ (unitary: no echo state property, and from $I/D$ nothing moves at all).",
+        "$\\gamma=0.003$: MC $0.36$, distance $0.39$ (contracts, but far too slowly: 60 steps are not a washout).",
+        "$\\gamma=0.03$: MC $1.01$, distance $1.8\\times10^{-4}$.",
+        "$\\gamma=0.1$: MC $1.33$, distance $1.1\\times10^{-9}$.",
+        "$\\gamma=0.3$: MC $1.57$, distance at machine precision. Best of the sweep.",
+        "$\\gamma=1$: MC $1.24$.",
+        "$\\gamma=3$: MC $0.05$: each step's input is wiped out before the next arrives ($e^{-\\gamma\\Delta t}=e^{-9}\\approx10^{-4}$ survives)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The sweep shows the general lesson, in line with Sannia et al., who found that tuning local loss rates boosts reservoir performance: performance is non-monotonic in the dissipation rate. Too little and the reservoir neither forgets its initial state nor settles to an input-determined trajectory; too much and it forgets the inputs too. The optimum sits where the contraction time (a few steps) matches the memory the task needs. The memory is set by the dissipation, not by the Hilbert-space dimension: here MC stays below 2 although 4 qubits give 4 features per step and the classical bound is $\\mathrm{MC}\\le$ number of features."
+    },
+    {
+      "type": "callout",
+      "text": "Rule of thumb: the per-step contraction factor $c$ sets the memory horizon. Inputs older than about $1/\\ln(1/c)$ steps are attenuated by $e$ or more. Tune $\\gamma\\Delta t$ (or the reset rate, or the measurement strength) until that horizon covers the delays your task needs, then stop."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where the nonlinearity comes from"
+    },
+    {
+      "type": "prose",
+      "text": "All the maps above are linear in $\\rho$. The nonlinearity in the input–output map comes from two places: the encoding $s\\mapsto\\rho(s)$ (here $R_y(\\pi s)$ makes the state depend on $\\cos\\pi s$ and $\\sin\\pi s$), and the products of encodings that build up over successive steps, since $\\rho_k$ is multilinear in the encoded inputs $\\rho(s_k),\\rho(s_{k-1}),\\dots$ when each enters through a tensor or rotation. Dissipation does not add nonlinearity in $s$; it decides which of these products survive. A strongly dissipative reservoir keeps only short products (low-order, short-memory Volterra terms); a weakly dissipative one keeps long ones but cannot separate them from the initial condition. Sannia et al. show that continuous local losses in spin-network reservoirs can take over the role of the discontinuous reset (erasing) maps of earlier proposals, improve linear and nonlinear memory tasks and chaotic-series forecasting, and still form a universal class; the sample above shows a reservoir with no dissipation failing at memory altogether."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Noise on real devices"
+    },
+    {
+      "type": "prose",
+      "text": "On a superconducting device the $T_1$ and $T_2$ of the qubits already supply this. Chen, Nurdin and Yamamoto ran small, noisy reservoirs on cloud-based superconducting quantum computers and solved nonlinear temporal tasks; Suzuki et al. went further and let the natural noise of the qubits supply the dissipation (natural quantum reservoir computing). Kubota et al. showed that abstract quantum noise models alone can induce useful temporal information processing, and on IBM processors found the processing capacity grew with the noise level. Which channel matters: amplitude damping, a non-unital channel, gives fading memory with an input-dependent fixed point, whereas unital noise such as depolarisation drives every state toward $I/D$ and, alone, shrinks all features toward zero together. With unital noise only, the signal shrinks each step by the same factor that gives the memory, so the useful window is narrow; non-unital noise keeps the state away from the uninformative centre of the Bloch ball."
+    },
+    {
+      "type": "prose",
+      "text": "The depolarising case can be done by hand. A global depolarising channel $\\mathcal{D}_p(\\rho)=(1-p)\\rho+p\\,I/D$ maps a difference $\\rho-\\sigma$ to $(1-p)(\\rho-\\sigma)$, so the trace distance falls by exactly $1-p$ per step. It also shrinks every traceless observable's expectation by $1-p$. Memory and signal decay together; with shot noise on top, a deep memory is unreadable."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Two copies of a reservoir, same inputs: does the initial state wash out?",
+        "params": [
+          {
+            "key": "model",
+            "label": "Reservoir",
+            "control": "select",
+            "options": [
+              "quantum reservoir",
+              "classical ESN"
+            ],
+            "default": "quantum reservoir"
+          },
+          {
+            "key": "qubits",
+            "label": "Qubits (quantum)",
+            "control": "range",
+            "min": 2,
+            "max": 4,
+            "step": 1,
+            "default": 3
+          },
+          {
+            "key": "h",
+            "label": "Field h (quantum)",
+            "control": "range",
+            "min": 0.01,
+            "max": 10,
+            "step": 0.01,
+            "default": 1
+          },
+          {
+            "key": "dt",
+            "label": "Evolution time per input (quantum)",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          },
+          {
+            "key": "radius",
+            "label": "Weight scale (classical)",
+            "control": "range",
+            "min": 0.2,
+            "max": 2,
+            "step": 0.05,
+            "default": 0.9
+          },
+          {
+            "key": "steps",
+            "label": "Steps",
+            "control": "range",
+            "min": 10,
+            "max": 80,
+            "step": 5,
+            "default": 40
+          }
+        ],
+        "config": {
+          "sim": "esp-contraction",
+          "xLabel": "input step",
+          "yLabel": "log10 distance"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "This plot uses the reset-injection reservoir (3 qubits by default), whose dissipation is the reset itself. At the defaults the distance falls by about one decade in 40 steps: reset injection on one qubit of three contracts slowly. Lower dt from 10 to 1 and it falls only about 0.4 decades in 40 steps, because less information is carried from the untouched qubits onto the reset qubit and thrown away there between resets. Setting h to 0.01 changes little at dt = 10, since the XX couplings alone still move Z information onto qubit 1. Switch to the classical ESN: at weight scale 0.9 the distance falls more than five decades in 40 steps; at 1.5 or more it stalls, and the echo state property fails."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing the dissipation"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Match the time scale: contraction factor per step $c\\approx e^{-\\gamma_\\mathrm{eff}\\Delta t}$; choose $\\gamma_\\mathrm{eff}\\Delta t$ so $c^{d_\\mathrm{max}}$ is around $0.1$ for the longest delay $d_\\mathrm{max}$ the task needs.",
+        "Prefer non-unital channels (amplitude damping, reset) when the readout is $\\langle Z\\rangle$: they pull toward an input-dependent state, not toward zero.",
+        "Local dissipation on every qubit and dissipation on one qubit behave differently: a single dissipative site contracts the whole register only through the Hamiltonian, so the coupling strength and evolution time join the dissipation rate in setting the memory.",
+        "Check the echo state property numerically: run two copies from orthogonal states and confirm the distance falls below the readout's noise floor within the washout.",
+        "On hardware, decoherence varies between qubits and drifts between calibrations; a reservoir whose readout was trained last week has effectively changed. Retrain the readout, which is cheap, rather than trusting a fixed weight vector $w$."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Washout from a measured contraction",
+      "text": "Two copies of a reservoir started in orthogonal states have trace distance $1$ at the start and $1.8\\times10^{-4}$ after 60 steps. Assuming geometric contraction, what is the per-step factor, and how many steps of washout bring the distance to $10^{-6}$?",
+      "hint": "Take the 60th root, then solve $c^N=10^{-6}$.",
+      "solution": [
+        "Per step: $c=(1.8\\times10^{-4})^{1/60}=e^{\\ln(1.8\\times10^{-4})/60}=e^{-8.62/60}=e^{-0.144}\\approx0.866$.",
+        "Steps to $10^{-6}$: $N=\\ln10^{-6}/\\ln c = -13.8/-0.144\\approx96$.",
+        "So discard about 100 steps before training (here $\\gamma=0.03$, $\\Delta t=3$ in the sample)."
+      ],
+      "answer": "$c\\approx0.866$ per step; about 96 steps."
+    },
+    {
+      "type": "problem",
+      "title": "Depolarising memory half-life",
+      "text": "A reservoir step includes a global depolarising channel with $p=0.05$. After how many steps has the trace distance between two copies halved, and what happens to a feature $\\langle Z_1\\rangle$ that the last input set to $0.8$ if no further input moved it?",
+      "hint": "Depolarising noise scales $\\rho-I/D$ by $1-p$.",
+      "solution": [
+        "Each step multiplies differences, and traceless expectations, by $1-p=0.95$.",
+        "Half-life: $N=\\ln2/(-\\ln0.95)=0.693/0.0513\\approx13.5$ steps.",
+        "The same factor applies to $\\langle Z_1\\rangle$: after 13.5 steps it is $0.4$, after 27 it is $0.2$. Memory and signal fade together, which is the weakness of unital noise."
+      ],
+      "answer": "About 13.5 steps; $\\langle Z_1\\rangle$ halves on the same schedule."
+    },
+    {
+      "type": "problem",
+      "title": "The frozen mixed state",
+      "text": "A reservoir with unitary input encoding $\\rho\\mapsto R(s)\\rho R(s)^\\dagger$ and unitary evolution starts in $\\rho_0=I/D$. Show that its features never depend on the input, and name two changes that fix it.",
+      "solution": [
+        "$R(I/D)R^\\dagger = I/D$ and $U(I/D)U^\\dagger=I/D$ for any unitaries, so $\\rho_k=I/D$ for all $k$.",
+        "Then $\\langle Z_i\\rangle=\\operatorname{Tr}(Z_i)/D=0$ for every step and input.",
+        "Fixes: start in a pure state (but then there is still no echo state property), or add a non-unital channel such as amplitude damping or a reset, which moves $I/D$ toward an input-dependent fixed point. The second fixes both problems."
+      ],
+      "answer": "$\\rho_k=I/D$ always; add a non-unital channel (reset or amplitude damping)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A. Sannia, R. Martínez-Peña, M. C. Soriano, G. L. Giorgi and R. Zambrini, Dissipation as a resource for quantum reservoir computing, Quantum 8, 1291 (2024)",
+        "J. Chen and H. I. Nurdin, Learning nonlinear input–output maps with dissipative quantum systems, Quantum Information Processing 18, 198 (2019)",
+        "J. Chen, H. I. Nurdin and N. Yamamoto, Temporal information processing on noisy quantum computers, Physical Review Applied 14, 024065 (2020)",
+        "Y. Suzuki, Q. Gao, K. C. Pradel, K. Yasuoka and N. Yamamoto, Natural quantum reservoir computing for temporal information processing, Scientific Reports 12, 1353 (2022)",
+        "T. Kubota, Y. Suzuki, S. Kobayashi, Q. H. Tran, N. Yamamoto and K. Nakajima, Temporal information processing induced by quantum noise, Physical Review Research 5, 023057 (2023)",
+        "R. Martínez-Peña and J.-P. Ortega, Quantum reservoir computing in finite dimensions, Physical Review E 107, 035306 (2023)",
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Physical Review Applied 8, 024030 (2017)",
+        "H.-P. Breuer and F. Petruccione, The Theory of Open Quantum Systems, Oxford University Press (2002)"
+      ]
+    }
+  ]
+}

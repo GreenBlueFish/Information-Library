@@ -1,0 +1,200 @@
+{
+  "title": "Resource Accounting",
+  "intro": "Whether a quantum reservoir is practical comes down to arithmetic: how many runs, shots, evolution steps and seconds a task costs on a given protocol and device, set against what the task needs. This page builds that cost model, gives the shot budget a task needs from the signal-to-noise of its features, and compares protocols on concrete numbers.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The cost model"
+    },
+    {
+      "type": "prose",
+      "text": "Let a task have $T$ inputs (washout plus training plus test), let each feature vector need $S$ shots, let $w$ be the memory window for restarts, and let the device have per-run overhead $t_{\\text{rep}}$, time per evolution step $t_{\\text{step}}$ and time per measurement $t_{\\text{meas}}$. Then"
+    },
+    {
+      "type": "math",
+      "tex": "t_{\\text{total}} = N_{\\text{runs}}\\,t_{\\text{rep}} + N_{\\text{steps}}\\,t_{\\text{step}} + N_{\\text{meas}}\\,t_{\\text{meas}}"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Full restart: $N_{\\text{runs}} = S\\,T$, $N_{\\text{steps}} = S\\,T(T+1)/2$, $N_{\\text{meas}} = S\\,T$.",
+        "Windowed restart: $N_{\\text{runs}} = S\\,T$, $N_{\\text{steps}} = S\\,T\\,w$, $N_{\\text{meas}} = S\\,T$.",
+        "Online (mid-circuit or weak): $N_{\\text{runs}} = S$, $N_{\\text{steps}} = S\\,T$, $N_{\\text{meas}} = S\\,T$ (with $S$ inflated by the weak-measurement noise factor where relevant)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "With $T = 1000$, $S = 10^4$, $w = 20$ and assumed device times $t_{\\text{step}} = 2$ µs, $t_{\\text{meas}} = 5$ µs, $t_{\\text{rep}} = 100$ µs, the sample below gives about 3.1 hours for the full restart, 0.40 hours windowed and 0.02 hours (71 s) online. The full restart is dominated by evolution steps, the windowed one by per-run overhead, and the online one by measurement. Change the assumed times to your device's; the structure of the comparison rarely changes."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Cost of getting reservoir features for T inputs when each feature vector needs S shots.\nT, S, w = 1000, 10_000, 20          # inputs, shots per feature vector, memory window (steps)\nt_step, t_meas = 2e-6, 5e-6          # assumed: one input step (gates), one readout + reset, in seconds\nrep = 100e-6                         # assumed: overhead per circuit run (repetition delay, compile, etc.)\nprotocols = {\n    \"full restart\":     dict(runs=S * T, steps=S * T * (T + 1) // 2, meas=S * T),\n    \"windowed restart\": dict(runs=S * T, steps=S * T * w,            meas=S * T),\n    \"online (mid-circuit / weak)\": dict(runs=S, steps=S * T,          meas=S * T),\n}\nfor name, c in protocols.items():\n    secs = c[\"runs\"] * rep + c[\"steps\"] * t_step + c[\"meas\"] * t_meas\n    print(f\"{name:28s} runs {c['runs']:.1e}  evolution steps {c['steps']:.1e}  wall clock ~ {secs/3600:8.2f} h\")\n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How many shots does a task need?"
+    },
+    {
+      "type": "prose",
+      "text": "The useful precision is set by how much each feature varies with the inputs. If feature $i$ has temporal standard deviation $\\Sigma_i$ (its signal) and shot noise $\\sigma_i \\approx \\sqrt{(1-\\bar{x}_i^2)/S}$, the per-feature signal-to-noise ratio is $\\Sigma_i\\sqrt{S}/\\sqrt{1-\\bar{x}_i^2}$. For the 4-qubit, 5-virtual-node reservoir the mean $\\Sigma_i$ is 0.23; asking for noise at most 10% of that ($\\sigma\\le 0.023$) needs $S\\ge 1/0.023^2\\approx 1900$ shots in the worst case $\\bar{x}=0$."
+    },
+    {
+      "type": "prose",
+      "text": "How much SNR a task needs depends on how deep into the feature space its solution lies. Recalling the last input uses large, robust feature differences; recalling an input 8 steps back, or computing a high-degree nonlinear function, uses small differences combined with large weights, so its error grows like $\\sigma^2\\Vert w\\Vert^2$. The plot below shows this directly: the memory function at modest shot counts keeps the short delays almost intact and loses the long ones."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Memory capacity against the shot budget",
+        "params": [
+          {
+            "key": "shots",
+            "label": "Shots per feature vector (0 = exact)",
+            "control": "range",
+            "min": 0,
+            "max": 100000,
+            "step": 10,
+            "default": 300
+          },
+          {
+            "key": "V",
+            "label": "Virtual nodes V",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 5
+          },
+          {
+            "key": "qubits",
+            "label": "Qubits",
+            "control": "range",
+            "min": 2,
+            "max": 5,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "h",
+            "label": "Field h",
+            "control": "range",
+            "min": 0.01,
+            "max": 20,
+            "step": 0.01,
+            "default": 1
+          },
+          {
+            "key": "dt",
+            "label": "Evolution time per input",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          }
+        ],
+        "config": {
+          "sim": "qrc-memory",
+          "xLabel": "delay d (steps)",
+          "yLabel": "r² of recalling s(k−d)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try: start at 300 shots, note MC, and step through 1000, 3000, 10000, 30000. (MC goes about 2.6, 3.3, 3.8, 4.3, 4.6, against 5.1 exact.) Then compare 4 qubits with 5: for this draw of couplings the 5-qubit reservoir is no better even with exact features (MC 4.8 against 5.1), and at 1000 shots it falls further behind (2.8 against 3.3), because each extra feature also brings its own noise. More qubits do not guarantee more usable capacity; on hardware the right reservoir size is the one whose features you can afford to estimate."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Features per shot"
+    },
+    {
+      "type": "prose",
+      "text": "A computational-basis snapshot of $n$ qubits gives estimates of all $2^n - 1$ diagonal Pauli expectation values at once. One- and two-body correlators ($n + n(n-1)/2$ features) are the usual choice. Higher-order correlators of a well-mixed reservoir are typically exponentially small in their weight, so their SNR is poor at any affordable $S$; Xiong and coauthors (2023) list global measurements, together with reservoir randomness, hardware noise and entanglement, among the sources of exponential concentration of measured observables (see Concentration and Scalability (#/qrc/theory/concentration-and-scalability)). Off-diagonal observables need extra measurement bases: classical shadows (randomised single-qubit Pauli bases; Huang, Kueng and Preskill 2020) estimate any $M$ Pauli observables of weight at most $k$ to precision $\\epsilon$ with of order $3^k\\log M/\\epsilon^2$ snapshots (general $k$-local observables cost up to $4^k$ instead of $3^k$), which can be cheaper than measuring each basis separately when many low-weight observables are wanted."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Comparing with a classical simulation"
+    },
+    {
+      "type": "prose",
+      "text": "Exact density-matrix simulation of $n$ qubits stores $4^n$ complex numbers and an input step costs of order $8^n$ operations as dense matrix products, so 5 qubits (as on these pages) is trivial, 12 qubits costs about $1.7\\times 10^7$ numbers (some 270 MB in double-precision complex) and $\\sim 7\\times10^{10}$ operations per step, and by about 15 qubits (17 GB, $\\sim 4\\times 10^{13}$ operations per step) dense density-matrix simulation becomes impractical for long series. But this is only an upper bound on classical cost: the relevant comparison is with the best classical reservoir of similar trainable size and the same data, and with simulation methods that exploit the structure (low entanglement, few measured observables, noise that makes the state nearly classical). A hardware QRC is worth its cost only if it beats those, at equal shot-limited accuracy. See Quantum Advantage (#/qrc/theory/quantum-advantage)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A checklist before running on hardware"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Estimate the memory window $w$ from simulation and pick the protocol: online if $T\\gg w$ and mid-circuit measurement is available.",
+        "Estimate the temporal spread $\\Sigma_i$ of each candidate feature in simulation and drop features whose $\\Sigma_i$ is below the noise you can afford.",
+        "Set the ridge parameter by cross-validation on features with simulated shot noise at the planned $S$.",
+        "Budget washout as well as training and test inputs: washout costs shots too in restart protocols (each window is a short washout) and in online ones.",
+        "Interleave training and test data across calibration drift, or re-train periodically."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Wall clock for two protocols",
+      "text": "$S = 5000$, $T = 2000$, windowed restart with $w = 10$, per-run overhead 50 µs (ignore step and measurement time) against an online protocol with 5 µs per step (ignore run overhead). Which is faster, and by how much?",
+      "hint": "Each protocol has one dominant term here.",
+      "solution": [
+        "Restart: $S\\,T = 10^7$ runs at 50 µs $= 500$ s.",
+        "Online: $S\\,T = 10^7$ steps at 5 µs $= 50$ s.",
+        "The online protocol is 10 times faster here."
+      ],
+      "answer": "Online: 50 s against 500 s."
+    },
+    {
+      "type": "problem",
+      "title": "Shot budget from feature spread",
+      "text": "Your features vary over time with standard deviation 0.15 and have means near 0. How many shots make the shot noise one fifth of the signal?",
+      "hint": "$\\sigma = \\sqrt{(1-x^2)/S}$ with $x\\approx 0$.",
+      "solution": [
+        "Target noise $0.15/5 = 0.03$.",
+        "$S \\ge (1 - 0)/0.03^2 \\approx 1111$, so about 1100 shots."
+      ],
+      "answer": "About 1100 shots."
+    },
+    {
+      "type": "problem",
+      "title": "Correlators from one batch",
+      "text": "With $n = 8$ qubits measured in the computational basis, how many one- and two-body $Z$-correlators does each batch of shots give, and how many distinct diagonal Pauli expectations in total?",
+      "hint": "Each non-identity product of $Z$s is one diagonal Pauli.",
+      "solution": [
+        "One- and two-body: $8 + \\binom{8}{2} = 8 + 28 = 36$.",
+        "All diagonal Paulis except the identity: $2^8 - 1 = 255$."
+      ],
+      "answer": "36, out of 255 in total."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "P. Mujal, R. Martínez-Peña, G. L. Giorgi, M. C. Soriano and R. Zambrini, Time-series quantum reservoir computing with weak and projective measurements, npj Quantum Inf. 9, 16 (2023)",
+        "P. Mujal, R. Martínez-Peña, J. Nokkala, J. García-Beni, G. L. Giorgi, M. C. Soriano and R. Zambrini, Opportunities in quantum reservoir computing and extreme learning machines, Adv. Quantum Technol. 4, 2100027 (2021)",
+        "T. Yasuda et al., Quantum reservoir computing with repeated measurements on superconducting devices, arXiv:2310.06706 (2023)",
+        "M. Kornjača et al., Large-scale quantum reservoir learning with an analog quantum computer, arXiv:2407.02553 (2024)",
+        "W. Xiong, G. Facelli, M. Sahebi, O. Agnel, T. Chotibut, S. Thanasilp and Z. Holmes, On fundamental aspects of quantum extreme learning machines, arXiv:2312.15124 (2023)",
+        "H.-Y. Huang, R. Kueng and J. Preskill, Predicting many properties of a quantum system from very few measurements, Nat. Phys. 16, 1050 (2020)"
+      ]
+    }
+  ]
+}

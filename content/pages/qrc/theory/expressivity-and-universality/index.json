@@ -1,0 +1,251 @@
+{
+  "title": "Expressivity and Universality",
+  "intro": "Which input-output maps a quantum reservoir with a linear readout can approximate: universality for fading-memory filters, the polynomial structure that the input encoding imposes, and hard bounds from feature rank and capacity.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The function class: fading-memory filters"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir maps an input sequence $(\\dots, s_{k-1}, s_k)$ to an output $\\hat y_k$. The natural target class is the causal, time-invariant filters with fading memory: $y_k = G(s_k, s_{k-1}, s_{k-2}, \\dots)$ where inputs far in the past matter less and less. Formally, with a decreasing weight sequence $\\lambda_j \\to 0$, $G$ is continuous in the weighted norm $\\sup_j \\lambda_j |s_{k-j}|$. Boyd and Chua showed that every such filter on bounded inputs is uniformly approximated by a finite Volterra series, a polynomial in finitely many past inputs:"
+    },
+    {
+      "type": "math",
+      "tex": "y_k \\approx h_0 + \\sum_{j} h_1(j)\\, s_{k-j} + \\sum_{j \\le l} h_2(j,l)\\, s_{k-j} s_{k-l} + \\dots",
+      "caption": "A truncated Volterra series: the benchmark class for what a reservoir should reach."
+    },
+    {
+      "type": "prose",
+      "text": "So the expressivity question splits in two. Memory: how far back $j$ can the reservoir reach, which is set by contraction (the echo state property). Nonlinearity: which monomials, and of what degree, can a linear readout of its features form. A classical echo state network gets both from $\\tanh$ and a spectral radius below about one; a quantum reservoir gets memory from dissipation and nonlinearity from somewhere less obvious, because quantum mechanics is linear in $\\rho$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where nonlinearity comes from when the dynamics are linear"
+    },
+    {
+      "type": "prose",
+      "text": "The channel acts linearly on $\\rho$, and the features are linear in $\\rho$. The only route for nonlinearity in $s$ is the dependence of the channel on the input. For the reset (state-injection) encoding of Input Encoding (#/qrc/models/input-encoding), qubit 1 is replaced by $\\vert\\psi(s)\\rangle = \\sqrt{1-s}\\vert 0\\rangle + \\sqrt{s}\\vert 1\\rangle$, whose density matrix has entries $1-s$, $s$ and $\\sqrt{s(1-s)}$. The whole step is therefore an affine combination of three fixed channels:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{T}_s = \\mathcal{T}_0 + s\\,\\mathcal{T}_1 + \\sqrt{s(1-s)}\\,\\mathcal{T}_2",
+      "caption": "Each $\\mathcal{T}_m$ is a fixed linear map; $\\mathcal{T}_0$ is the channel for $s = 0$, while $\\mathcal{T}_1$ and $\\mathcal{T}_2$ are not channels on their own. $\\mathcal{T}_s$ is CPTP for every $s \\in [0,1]$."
+    },
+    {
+      "type": "prose",
+      "text": "Unrolling $L$ steps and replacing the state $L$ steps back by a fixed state $\\rho_*$ gives the reservoir's own Volterra-like expansion:"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho_k \\approx \\sum_{m_0, \\dots, m_{L-1} \\in \\{0,1,2\\}} g_{m_0}(s_k)\\, g_{m_1}(s_{k-1}) \\cdots g_{m_{L-1}}(s_{k-L+1})\\; \\mathcal{T}_{m_0}\\mathcal{T}_{m_1}\\cdots \\mathcal{T}_{m_{L-1}}(\\rho_*)",
+      "caption": "With $g_0 = 1$, $g_1(s) = s$, $g_2(s) = \\sqrt{s(1-s)}$. The error is exponentially small in $L$ when the channel contracts."
+    },
+    {
+      "type": "prose",
+      "text": "Read the structure off this sum. Every output is a sum of products across time, each factor drawn from $\\mathrm{span}\\{1, s, \\sqrt{s(1-s)}\\}$ of one past input. Cross-time products such as $s_k s_{k-1}$ come for free (they are terms with two non-trivial factors). But the dependence on any single input is confined to a three-dimensional function space, however many qubits or virtual nodes you add. The target $s_k^2$ is outside that span and can only be approximated, through $\\sqrt{s(1-s)}$; the sample in Hands-on Implementation (#/qrc/theory/hands-on-implementation) measures the best possible NMSE inside the span as 0.0018 on its test set (0.0020 exactly for uniform $s$) and a 4-qubit reservoir with 40 features at 0.0113."
+    },
+    {
+      "type": "callout",
+      "text": "This is the quantum counterpart of a classical fact: a linear reservoir driven additively by the input can only produce a linear filter. Nonlinearity in a quantum reservoir is a property of the encoding (and of the readout), not of the Hamiltonian. A richer Hamiltonian changes which combinations of the monomials are reachable and how well conditioned they are, not which monomials exist."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ways to enrich the encoding"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Upload the same input more than once. Writing $s_k$ into two qubits gives $c(s) \\otimes c(s)$ with $c(s) = (1, s, \\sqrt{s(1-s)})$, whose span is $\\{1, s, \\sqrt{s(1-s)}, s^2, s\\sqrt{s(1-s)}\\}$: five functions, now including $s^2$. With $r$ copies the per-input degree grows linearly in $r$. This is the time-series version of data re-uploading.",
+        "Encode in an angle. A rotation $e^{-i\\theta s X/2}$ makes the state depend on $\\cos(\\theta s)$ and $\\sin(\\theta s)$, so each use contributes frequencies $\\{0, \\pm\\theta\\}$; $r$ uses give a truncated Fourier series with frequencies up to $r\\theta$ (Schuld, Sweke and Meyer). The spectrum is fixed by the encoding generator's eigenvalue differences, and the reservoir only sets the coefficients.",
+        "Encode in the Hamiltonian. Driving a field $h(s)$ for time $\\tau$ gives $e^{-i(H_0 + s H_1)\\tau}$, whose dependence on $s$ contains all eigenvalue differences of $H_0 + sH_1$, a much richer (and harder to analyse) function class.",
+        "Make the readout nonlinear. Products of measured features $x_{k,i}x_{k,j}$ are not linear in $\\rho_k$ but are linear in $\\rho_k \\otimes \\rho_k$, the state of two copies. Polynomial readouts are the cheapest classical route to the missing degree; the price is that the readout is no longer what makes the quantum system interesting."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Universality: the Stone–Weierstrass route"
+    },
+    {
+      "type": "prose",
+      "text": "Many universality theorems for reservoirs follow one template, which goes back to Boyd and Chua's Volterra-series result and was carried to dissipative qubit networks by Chen and Nurdin. (Grigoryeva and Ortega proved that echo state networks themselves are universal by a different route, through the topology of the fading-memory property and approximation of the reservoir map.) Consider a family $\\mathcal{F}$ of reservoir-plus-readout filters. If (i) every member has the echo state property and fading memory, (ii) $\\mathcal{F}$ contains the constants, (iii) $\\mathcal{F}$ separates points (two input histories that differ give different outputs for some member) and (iv) $\\mathcal{F}$ is closed under addition and multiplication, then by Stone–Weierstrass on the compact space of input sequences $\\mathcal{F}$ is dense in the fading-memory filters."
+    },
+    {
+      "type": "prose",
+      "text": "Quantum mechanics hands you closure under products almost for free. Run two reservoirs side by side; the joint state is $\\rho^{(1)}_k \\otimes \\rho^{(2)}_k$, and"
+    },
+    {
+      "type": "math",
+      "tex": "\\operatorname{Tr}\\!\\left[(O_1 \\otimes O_2)\\,(\\rho^{(1)}_k \\otimes \\rho^{(2)}_k)\\right] = \\operatorname{Tr}(O_1 \\rho^{(1)}_k)\\,\\operatorname{Tr}(O_2 \\rho^{(2)}_k)",
+      "caption": "Products of outputs are outputs of the product reservoir."
+    },
+    {
+      "type": "prose",
+      "text": "Sums are a linear readout over the disjoint union of the two reservoirs. So the hard parts are (i) and (iii): contraction for every input, and separation. Chen and Nurdin proved universality in this sense for a class of dissipative qubit-network reservoirs; Nokkala and co-authors did so for Gaussian continuous-variable reservoirs with suitable readouts. Martínez-Peña and Ortega gave conditions for the echo state and fading-memory properties of finite-dimensional quantum reservoirs, including when contraction holds for every input."
+    },
+    {
+      "type": "callout",
+      "text": "Universality is existence, not efficiency. The theorem says some member of the family, of some size, approximates the target; it says nothing about how many qubits, how many observables or how many shots that takes. Every practical limit on this shelf lives in that gap."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Hard bounds: feature rank and capacity"
+    },
+    {
+      "type": "prose",
+      "text": "Features are linear functionals of $\\rho_k$, and $\\rho_k$ lives in the real vector space of Hermitian $2^n \\times 2^n$ matrices with unit trace, which has dimension $4^n - 1$. Hence at any time step at most $4^n - 1$ features are linearly independent, no matter how many observables or virtual nodes are read. Time multiplexing (virtual nodes) reads $\\rho$ at $V$ sub-steps; it adds independent features only until it reaches the dimension of the set of states the reservoir actually visits, which is often far smaller than $4^n - 1$."
+    },
+    {
+      "type": "prose",
+      "text": "Capacity is bounded by the same count. Jaeger showed that the linear memory capacity $\\mathrm{MC} = \\sum_{d \\ge 1} r^2(d)$ of a reservoir with $N$ readout features driven by i.i.d. input is at most $N$; Dambre and co-authors extended this to the total information-processing capacity summed over all orthogonal polynomial targets of the past inputs, which is also at most $N$ and reaches $N$ exactly for a fading-memory system whose features are linearly independent. For a quantum reservoir $N$ is the number of linearly independent features, so"
+    },
+    {
+      "type": "math",
+      "tex": "\\sum_{\\text{targets}} C[\\text{target}] \\le N_{\\text{eff}} \\le \\min\\left(nV,\\; 4^n - 1\\right)",
+      "caption": "Total capacity is budgeted: memory and nonlinearity draw on the same $N_{\\text{eff}}$."
+    },
+    {
+      "type": "prose",
+      "text": "The budget explains the memory–nonlinearity trade-off seen in every reservoir: capacity spent on reproducing old inputs linearly is not available for products, and vice versa. With finite shots the budget shrinks further, because a feature whose input-driven variance is below the shot-noise variance contributes almost nothing; see Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "A product target exposes the cross-time terms",
+        "params": [
+          {
+            "key": "task",
+            "label": "Task",
+            "control": "select",
+            "options": [
+              "recall s(k−3)",
+              "product s(k)·s(k−1)",
+              "NARMA2"
+            ],
+            "default": "product s(k)·s(k−1)"
+          },
+          {
+            "key": "qubits",
+            "label": "Qubits",
+            "control": "range",
+            "min": 2,
+            "max": 5,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "V",
+            "label": "Virtual nodes V",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 5
+          },
+          {
+            "key": "h",
+            "label": "Field h",
+            "control": "range",
+            "min": 0.05,
+            "max": 10,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "dt",
+            "label": "Evolution time per input",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          },
+          {
+            "key": "shots",
+            "label": "Shots per expectation (0 = exact)",
+            "control": "range",
+            "min": 0,
+            "max": 100000,
+            "step": 100,
+            "default": 0
+          }
+        ],
+        "config": {
+          "sim": "qrc-task",
+          "xLabel": "test step",
+          "yLabel": "value"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try the product task first: with the default 4 qubits and $V = 5$ the reservoir predicts $s_k s_{k-1}$ well, because cross-time products are native to the expansion above. Then set $V = 1$ (4 features) and watch NMSE rise: the products are still in the span, but four features cannot hold them together with the linear terms. Switch to NARMA2 and raise $V$ to 10 to see NMSE fall to roughly half its $V = 5$ value. Finally add shots (1000) and watch the fit degrade, though the function class has not changed."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Feature rank of a three-qubit reservoir",
+      "text": "A 3-qubit reservoir is read out through $\\langle Z_i\\rangle$ at $V$ virtual nodes. Above what $V$ can the extra virtual nodes no longer add linearly independent features, whatever the dynamics?",
+      "hint": "Count the real dimension of unit-trace Hermitian matrices.",
+      "solution": [
+        "Features are linear in $\\rho_k$, which lies in the affine space of unit-trace Hermitian $8 \\times 8$ matrices.",
+        "That space has real dimension $4^3 - 1 = 63$, so at most 63 independent features exist (plus the constant, which the readout bias supplies).",
+        "Each virtual node adds $n = 3$ features, so $3V \\le 63$ gives $V \\le 21$. From $V = 22$ on, extra nodes are linearly dependent on earlier ones; in practice the reachable set is smaller and saturation comes sooner."
+      ],
+      "answer": "$V = 21$ ($3V$ reaches $4^3 - 1 = 63$)"
+    },
+    {
+      "type": "problem",
+      "title": "What a second upload buys",
+      "text": "With reset encoding each use of the input contributes $c(s) = (1, s, \\sqrt{s(1-s)})$. If $s_k$ is written into two qubits at the same step, what is the dimension of the space of single-input functions the reservoir can now form?",
+      "hint": "Expand $(1, s, r)\\otimes(1, s, r)$ with $r^2 = s(1-s)$.",
+      "solution": [
+        "The step depends on $s$ through the products of entries of $c(s) \\otimes c(s)$: $1, s, \\sqrt{s(1-s)}, s^2, s\\sqrt{s(1-s)}$ and $\\sqrt{s(1-s)}^2 = s - s^2$.",
+        "The last is a combination of $s$ and $s^2$, and the cross terms repeat, so the distinct span is $\\{1, s, \\sqrt{s(1-s)}, s^2, s\\sqrt{s(1-s)}\\}$.",
+        "These five functions are linearly independent on $[0,1]$."
+      ],
+      "answer": "5 (up from 3)"
+    },
+    {
+      "type": "problem",
+      "title": "Capacity budget",
+      "text": "A 4-qubit reservoir with $V = 5$ reads 20 features. Its linear memory capacity (delays 1 to 12) is measured at 3.86. If its features are linearly independent and it has fading memory, how much capacity is left for nonlinear targets of past inputs, at most?",
+      "solution": [
+        "The total information-processing capacity over all orthogonal targets is at most the number of independent features, here 20 (with equality for a fading-memory system with independent features).",
+        "Linear memory already uses 3.86; the delay-0 recall ($r^2 \\approx 1$) is also a linear target and uses about 1 more.",
+        "That leaves at most about $20 - 3.86 - 1 \\approx 15$ for nonlinear targets (products, squares, higher degrees), shared among all of them."
+      ],
+      "answer": "about 15 (out of 20)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "S. Boyd and L. O. Chua, Fading memory and the problem of approximating nonlinear operators with Volterra series, IEEE Trans. Circuits Syst. 32, 1150 (1985)",
+        "L. Grigoryeva and J.-P. Ortega, Echo state networks are universal, Neural Netw. 108, 495 (2018)",
+        "J. Chen and H. I. Nurdin, Learning nonlinear input–output maps with dissipative quantum systems, Quantum Inf. Process. 18, 198 (2019)",
+        "J. Nokkala, R. Martínez-Peña, G. L. Giorgi, V. Parigi, M. C. Soriano and R. Zambrini, Gaussian states of continuous-variable quantum systems provide universal and versatile reservoir computing, Commun. Phys. 4, 53 (2021)",
+        "R. Martínez-Peña and J.-P. Ortega, Quantum reservoir computing in finite dimensions, Phys. Rev. E 107, 035306 (2023)",
+        "H. Jaeger, Short term memory in echo state networks, GMD Report 152 (2002)",
+        "J. Dambre, D. Verstraeten, B. Schrauwen and S. Massar, Information processing capacity of dynamical systems, Sci. Rep. 2, 514 (2012)",
+        "M. Schuld, R. Sweke and J. J. Meyer, Effect of data encoding on the expressive power of variational quantum-machine-learning models, Phys. Rev. A 103, 032430 (2021)",
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Phys. Rev. Applied 8, 024030 (2017)",
+        "P. Mujal, R. Martínez-Peña, J. Nokkala, J. García-Beni, G. L. Giorgi, M. C. Soriano and R. Zambrini, Opportunities in quantum reservoir computing and extreme learning machines, Adv. Quantum Technol. 4, 2100027 (2021)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,252 @@
+{
+  "title": "Echo State Networks",
+  "intro": "An echo state network is a large random recurrent network driven by the input, whose weights are never trained; a linear readout fitted by ridge regression does all the learning. Its handful of hyperparameters (size, spectral radius, input scaling, leak rate, bias) set the memory and nonlinearity the readout can use.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The update rule"
+    },
+    {
+      "type": "prose",
+      "text": "A leaky-integrator ESN with $N$ units, input $u_k \\in \\mathbb{R}^{K}$ and state $x_k \\in \\mathbb{R}^N$ evolves as"
+    },
+    {
+      "type": "math",
+      "tex": "x_k = (1-a)\\,x_{k-1} + a \\tanh\\left(W x_{k-1} + W_{\\mathrm{in}} u_k + b\\right)",
+      "caption": "$W$ is $N\\times N$ and random; $W_{\\mathrm{in}}$ is $N\\times K$ and random; $a \\in (0,1]$ is the leak rate; $b$ is a bias vector."
+    },
+    {
+      "type": "prose",
+      "text": "Jaeger introduced the model in 2001 (GMD Report 148), and Maass, Natschläger and Markram introduced the spiking-neuron equivalent, the liquid state machine, in 2002; both now go under the name reservoir computing (reviewed by Lukoševičius and Jaeger 2009). The readout is affine in the state, sometimes with the input appended:"
+    },
+    {
+      "type": "math",
+      "tex": "\\hat y_k = W_{\\mathrm{out}} z_k, \\qquad z_k = [x_k;\\, u_k;\\, 1] \\in \\mathbb{R}^{N+K+1}"
+    },
+    {
+      "type": "prose",
+      "text": "Optionally the output is fed back into the reservoir ($+W_{\\mathrm{fb}} \\hat y_{k-1}$ inside the tanh). Fed back during training as the true $y_{k-1}$ (teacher forcing) and then switched to $\\hat y_{k-1}$, the network runs autonomously as a generator: this is how ESNs forecast chaotic systems many steps ahead."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Training the readout"
+    },
+    {
+      "type": "prose",
+      "text": "Run the reservoir over the training input, discard the first $T_0$ washout steps (they still remember the arbitrary initial state), and stack the remaining feature vectors as rows of $Z \\in \\mathbb{R}^{T\\times M}$ and targets as $Y \\in \\mathbb{R}^{T\\times L}$. Ridge (Tikhonov) regression gives"
+    },
+    {
+      "type": "math",
+      "tex": "W_{\\mathrm{out}}^{\\top} = \\left(Z^{\\top} Z + \\lambda I\\right)^{-1} Z^{\\top} Y",
+      "caption": "Normal-equation form; costs $O(TM^2)$ to form $Z^\\top Z$ and $O(M^3)$ to solve."
+    },
+    {
+      "type": "prose",
+      "text": "With the singular value decomposition $Z = U\\Sigma V^{\\top}$ the same solution reads $W_{\\mathrm{out}}^{\\top} = V\\,\\mathrm{diag}\\!\\left(\\tfrac{\\sigma_i}{\\sigma_i^2+\\lambda}\\right) U^{\\top} Y$: ridge shrinks each principal direction of the state cloud by $\\sigma_i^2/(\\sigma_i^2+\\lambda)$, and the sum of these factors is the effective number of parameters. Directions with $\\sigma_i^2 \\ll \\lambda$ are effectively dropped, which is why $\\lambda$ also acts as a noise filter: weak state directions are where noise dominates. The dual form $W_{\\mathrm{out}}^{\\top} = Z^{\\top}(ZZ^{\\top}+\\lambda I)^{-1}Y$ is a kernel regression with the linear kernel on reservoir states; it is cheaper when $T < M$, which matters for quantum extreme learning machines with exponentially many observables."
+    },
+    {
+      "type": "prose",
+      "text": "The three forms agree to rounding error, as this check shows; it also prints the effective number of parameters, which equals $M$ when $\\lambda$ is tiny compared with every $\\sigma_i^2$:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# Readout training three ways on the same reservoir states: they must agree.\nrng = np.random.default_rng(0)\nN, T, lam = 100, 2000, 1e-4\nX = np.tanh(rng.normal(size=(T, N)) @ rng.normal(size=(N, N)) * 0.1)   # stand-in states\ny = np.sin(X[:, :3].sum(1)) + 0.01 * rng.normal(size=T)\nA = np.hstack([X, np.ones((T, 1))])\nw1 = np.linalg.solve(A.T @ A + lam * np.eye(N + 1), A.T @ y)            # normal equations\nU, s, Vt = np.linalg.svd(A, full_matrices=False)                       # SVD form\nw2 = Vt.T @ (s / (s**2 + lam) * (U.T @ y))\nw3 = A.T @ np.linalg.solve(A @ A.T + lam * np.eye(T), y)               # dual (kernel) form\nprint(\"max |w1-w2| =\", f\"{abs(w1 - w2).max():.1e}\", \" max |w1-w3| =\", f\"{abs(w1 - w3).max():.1e}\")\nprint(\"effective degrees of freedom sum s^2/(s^2+lam) =\", f\"{(s**2 / (s**2 + lam)).sum():.1f}\", \"of\", N + 1)\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output: max |w1-w2| of order $10^{-15}$ and max |w1-w3| of order $10^{-10}$ (the exact digits vary with the linear-algebra library; the dual form is solved through a worse-conditioned $T\\times T$ system), effective degrees of freedom 101.0 of 101."
+    },
+    {
+      "type": "prose",
+      "text": "Because the loss is quadratic, choosing $\\lambda$ by validation is cheap: compute the SVD once and evaluate every $\\lambda$ on a grid. Other readouts (logistic regression for classification, a small MLP) are possible, but then the reservoir is no longer trained in closed form; most quantum papers keep ridge so that any gain can be credited to the reservoir."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The hyperparameters and what each controls"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Size $N$: the number of features. The linear memory capacity and the total processing capacity are both at most $N$ (see Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)). Running costs $O(N^2)$ per step dense, $O(N d)$ with $d$ nonzeros per row.",
+        "Spectral radius $\\rho(W)$, the largest eigenvalue modulus $\\max_i |\\lambda_i|$: sets how slowly perturbations decay in the linearised network, roughly a memory timescale of $-1/\\ln \\rho(W)$ steps. Values near but below 1 suit tasks needing long memory; small values suit tasks that depend on the last few inputs. Above 1 the zero state of the autonomous network is unstable, though a strong input can still restore the echo state property.",
+        "Input scaling (the size of $W_{\\mathrm{in}}$): sets how far into the tanh nonlinearity the input pushes the units. Small scaling keeps the network near-linear (long memory, little nonlinearity); large scaling saturates units (strong nonlinearity, short memory).",
+        "Leak rate $a$: a per-unit low-pass filter with time constant about $1/a$ steps. It slows the dynamics to match a slowly varying input, and smooths it; for an i.i.d. input it usually lowers recall of single past inputs.",
+        "Bias $b$: breaks the odd symmetry of tanh. With $b=0$ and $\\pm$-symmetric inputs every state is an odd function of the input history, so no linear readout can produce an even function such as $u_k u_{k-1}$ or 2-bit parity (Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks) shows this failure).",
+        "Sparsity and topology of $W$: matter much less than the scalings above; random sparse, ring or delay-line topologies with the same spectral radius perform similarly on most tasks."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "To set the spectral radius, draw $W$ and rescale: $W \\leftarrow \\rho_{\\mathrm{target}}\\, W/\\rho(W)$. For large $N$ the circular law makes this predictable: an $N\\times N$ matrix with i.i.d. entries of variance $\\sigma^2$ has its eigenvalues spread nearly uniformly over a disc of radius $\\sigma\\sqrt N$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: memory against hyperparameters"
+    },
+    {
+      "type": "prose",
+      "text": "The plot shows the memory function: the squared correlation $r^2(d)$ between the best linear readout and the input $d$ steps ago, for an ESN of $N$ units on i.i.d. uniform input. The label sums $d \\ge 1$ into the memory capacity. With the defaults (30 units, radius 0.9, input scaling 0.5) MC is about 9.8. Raise the radius to 0.99 and drop the input scaling to 0.1 and MC climbs to about 15: a nearly linear, slowly decaying network remembers longest. Push the input scaling to 2 and MC collapses to about 5, as saturation destroys linear memory. A leak rate of 0.2 also lowers MC to about 5 on this i.i.d. input."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Memory function of an echo state network",
+        "params": [
+          {
+            "key": "N",
+            "label": "Units N",
+            "control": "range",
+            "min": 10,
+            "max": 100,
+            "step": 5,
+            "default": 30
+          },
+          {
+            "key": "radius",
+            "label": "Spectral radius",
+            "control": "range",
+            "min": 0.1,
+            "max": 1.5,
+            "step": 0.01,
+            "default": 0.9
+          },
+          {
+            "key": "inScale",
+            "label": "Input scaling",
+            "control": "range",
+            "min": 0.05,
+            "max": 2,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "leak",
+            "label": "Leak rate a",
+            "control": "range",
+            "min": 0.05,
+            "max": 1,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "dmax",
+            "label": "Largest delay shown",
+            "control": "range",
+            "min": 10,
+            "max": 60,
+            "step": 5,
+            "default": 40
+          }
+        ],
+        "config": {
+          "sim": "esn-memory",
+          "xLabel": "delay d (steps)",
+          "yLabel": "r² of recalling u(k−d)"
+        }
+      }
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A complete ESN on NARMA10"
+    },
+    {
+      "type": "prose",
+      "text": "NARMA10 (Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks)) needs ten steps of memory and a product of inputs. The sample builds an ESN, trains ridge on 2800 steps and tests on 1000, against a purely linear model on the last ten inputs:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(0)\n\ndef narma10(u):\n    y = np.zeros_like(u)\n    for t in range(9, len(u) - 1):\n        y[t + 1] = (0.3 * y[t] + 0.05 * y[t] * y[t - 9:t + 1].sum()\n                    + 1.5 * u[t - 9] * u[t] + 0.1)\n    return y\n\nT, washout, ntrain = 4000, 200, 3000\nu = rng.uniform(0, 0.5, T)\ny = narma10(u)\n\ndef esn_states(u, N=200, radius=0.9, in_scale=0.5, leak=1.0, seed=1):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N))\n    W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-in_scale, in_scale, N)\n    x, X = np.zeros(N), np.zeros((len(u), N))\n    for t, ut in enumerate(u):\n        x = (1 - leak) * x + leak * np.tanh(W @ x + w_in * ut)\n        X[t] = x\n    return X\n\ndef fit_eval(X, y, lam=1e-8):\n    A = np.hstack([X, np.ones((len(X), 1))])\n    tr = slice(washout, ntrain); te = slice(ntrain, None)\n    w = np.linalg.solve(A[tr].T @ A[tr] + lam * np.eye(A.shape[1]), A[tr].T @ y[tr])\n    p = A[te] @ w\n    return np.mean((p - y[te])**2) / np.var(y[te])\n\nfor N in (50, 200):\n    X = esn_states(u, N=N)\n    print(f\"N={N:4d}  NMSE(test) = {fit_eval(X, y):.3f}\")\n# baseline: linear regression on the last 10 inputs\nlags = np.stack([np.roll(u, k) for k in range(10)], 1)\nprint(f\"linear on 10 lags NMSE = {fit_eval(lags, y):.3f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output: N=50 gives test NMSE 0.154, N=200 gives 0.081, and linear regression on ten lags gives 0.680. The linear model has all the memory it needs but none of the product term $u_{k-9}u_k$; the reservoir supplies both."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Relatives worth knowing"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Liquid state machines: the same idea with spiking neurons, motivated by cortical microcircuits (Maass et al. 2002).",
+        "Next-generation reservoir computing (Gauthier et al. 2021): drop the random network and use the delayed inputs and their low-order monomials directly as features. It is equivalent to a linear reservoir followed by a polynomial readout, and is the classical baseline a quantum reservoir with polynomial-in-input features should be compared against.",
+        "Extreme learning machines: a random nonlinear feature map with no recurrence (no memory). The quantum analogue, the quantum extreme learning machine, is covered in Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Scaling a random matrix",
+      "text": "You draw $W$ with $N=400$ and i.i.d. Gaussian entries and want spectral radius 0.9 without computing eigenvalues. What entry standard deviation should you use?",
+      "hint": "The circular law gives the radius of the eigenvalue disc.",
+      "solution": [
+        "By the circular law the eigenvalues fill a disc of radius $\\sigma\\sqrt N$.",
+        "Set $\\sigma\\sqrt{400} = 0.9$, so $\\sigma = 0.9/20 = 0.045$."
+      ],
+      "answer": "$\\sigma = 0.045$"
+    },
+    {
+      "type": "problem",
+      "title": "Timescale of a leaky unit",
+      "text": "A unit with leak rate $a = 0.1$ is driven to a new value and then left alone (ignore the recurrent term). After how many steps has its old value decayed by a factor $e$, and by half?",
+      "hint": "Solve $0.9^k = e^{-1}$.",
+      "solution": [
+        "Without drive, $x_k = (1-a)x_{k-1} = 0.9\\,x_{k-1}$, so $x_k = 0.9^k x_0$.",
+        "Factor $e$: $k = 1/(-\\ln 0.9) \\approx 9.5$ steps.",
+        "Half: $k = \\ln 2/(-\\ln 0.9) \\approx 6.6$ steps."
+      ],
+      "answer": "about 9.5 steps (factor e), 6.6 steps (half)"
+    },
+    {
+      "type": "problem",
+      "title": "Cost of training",
+      "text": "An ESN with $N = 1000$ units is trained on $T = 10^5$ steps with ridge regression in normal-equation form. Estimate the floating-point operations for forming $Z^\\top Z$ and for solving the system, and say which dominates.",
+      "solution": [
+        "Forming $Z^\\top Z$: about $T N^2 = 10^5 \\times 10^6 = 10^{11}$ multiply-adds.",
+        "Cholesky solve: about $N^3/3 \\approx 3\\times 10^8$.",
+        "Forming the Gram matrix dominates by a factor of about 300; running the reservoir costs another $T N^2 = 10^{11}$ for a dense $W$."
+      ],
+      "answer": "$\\sim 10^{11}$ for $Z^\\top Z$, $\\sim 3\\times10^{8}$ for the solve"
+    },
+    {
+      "type": "problem",
+      "title": "Symmetry and the bias",
+      "text": "An ESN has $b = 0$, inputs $u_k \\in \\{-1,+1\\}$ and zero initial state. Show that its readout cannot learn $y_k = u_k u_{k-1}$ and say what fixes it.",
+      "solution": [
+        "tanh is odd, so flipping the sign of every input flips the sign of every state: $x_k(-u) = -x_k(u)$ by induction from $x_0 = 0$.",
+        "The readout $\\hat y_k = w^\\top x_k + c$ gives $\\hat y_k(-u) = -w^\\top x_k(u) + c$, while the target is unchanged: $(-u_k)(-u_{k-1}) = u_k u_{k-1}$.",
+        "With the input distribution symmetric under $u \\to -u$, averaging over $u$ and $-u$ gives $\\langle x_k\\, y_k\\rangle = 0$: every feature is uncorrelated with the target, so the best linear fit is the constant. A nonzero bias $b$ (or an input offset) breaks the symmetry."
+      ],
+      "answer": "it cannot; add a bias"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Jaeger, The \"echo state\" approach to analysing and training recurrent neural networks, GMD Report 148, German National Research Center for Information Technology (2001)",
+        "W. Maass, T. Natschläger and H. Markram, Real-time computing without stable states: a new framework for neural computation based on perturbations, Neural Computation 14, 2531 (2002)",
+        "M. Lukoševičius and H. Jaeger, Reservoir computing approaches to recurrent neural network training, Computer Science Review 3, 127 (2009)",
+        "M. Lukoševičius, A practical guide to applying echo state networks, in Neural Networks: Tricks of the Trade, LNCS 7700, Springer (2012)",
+        "D. J. Gauthier, E. Bollt, A. Griffith and W. A. S. Barbosa, Next generation reservoir computing, Nature Communications 12, 5564 (2021)",
+        "A. F. Atiya and A. G. Parlos, New results on recurrent network training: unifying the algorithms and accelerating convergence, IEEE Transactions on Neural Networks 11, 697 (2000)"
+      ]
+    }
+  ]
+}
