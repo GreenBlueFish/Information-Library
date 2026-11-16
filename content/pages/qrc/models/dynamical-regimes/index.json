@@ -1,0 +1,174 @@
+{
+  "title": "Dynamical Regimes",
+  "intro": "The same spin-network reservoir behaves very differently depending on whether its Hamiltonian is integrable, ergodic or many-body localised, and only some regimes compute well. This page connects reservoir performance to level statistics and to how fast information spreads, following Martínez-Peña and coauthors (2021).",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three regimes of a disordered spin network"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Integrable or nearly so: for $h\\to0$ the $X_iX_j$ terms all commute, so the dynamics is a product of phases in the X basis with no scrambling; for a very large uniform field the magnetisation is almost conserved. Energy levels are uncorrelated (Poisson statistics).",
+        "Ergodic (chaotic): $h$ comparable to $J$ and weak disorder. Eigenstates look random within each symmetry sector, local information spreads through the register in a few coupling times, and levels repel (Wigner–Dyson statistics; GOE here, since $H$ is real).",
+        "Localised: disorder $W$ much larger than $J$ detunes neighbouring spins, so excitations cannot hop and local information stays where it was written. Levels are again Poisson. In large systems this is many-body localisation; in a handful of qubits it is simply strong detuning."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Level statistics as a diagnostic"
+    },
+    {
+      "type": "prose",
+      "text": "Sort the eigenvalues within one symmetry block (here one Z-parity sector), take consecutive gaps $g_k = E_{k+1}-E_k$ and the ratio"
+    },
+    {
+      "type": "math",
+      "tex": "r_k = \\frac{\\min(g_k, g_{k+1})}{\\max(g_k, g_{k+1})}, \\qquad \\langle r\\rangle_{\\text{Poisson}} \\approx 0.386, \\qquad \\langle r\\rangle_{\\text{GOE}} \\approx 0.531",
+      "caption": "The gap ratio needs no unfolding of the density of states."
+    },
+    {
+      "type": "prose",
+      "text": "Mixing the two parity sectors pushes even an ergodic spectrum toward Poisson, because levels from different blocks do not repel: for the weakly disordered reservoir below ($h=1$, $W=1$), the full spectrum gives $\\langle r\\rangle\\approx0.44$ at 8 qubits and $0.41$ at 10, against $0.53$ and $0.55$ within one block. That is why the symmetry on The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) matters here."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulation: regimes against memory"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1, -1]).astype(complex)\ndef op(o, i, n):\n    m = np.array([[1]], complex)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\ndef hamiltonian(n, h, W, rng):\n    H = sum(rng.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\n    return H + sum((h + rng.uniform(-W / 2, W / 2)) * op(Z, i, n) for i in range(n))\n\ndef gap_ratio(n, h, W, reals=10):\n    \"\"\"mean r = min(g_k, g_{k+1}) / max(...) in the even Z-parity sector: Poisson ~0.386, GOE ~0.531\"\"\"\n    par = np.array([(-1) ** bin(a).count(\"1\") for a in range(2 ** n)])\n    rs = []\n    for k in range(reals):\n        H = np.real(hamiltonian(n, h, W, np.random.default_rng(k)))\n        E = np.linalg.eigvalsh(H[np.ix_(par == 1, par == 1)])\n        E = E[len(E) // 4: 3 * len(E) // 4]             # middle of the spectrum\n        g = np.diff(E); rs += list(np.minimum(g[1:], g[:-1]) / np.maximum(g[1:], g[:-1]))\n    return np.mean(rs)\n\ndef memory_capacity(n, h, W, seed, dt=10.0, V=3):\n    H = hamiltonian(n, h, W, np.random.default_rng(seed)); D = 2 ** n\n    E, P = np.linalg.eigh(H); U = P @ np.diag(np.exp(-1j * E * dt / V)) @ P.conj().T\n    zd = [np.real(np.diag(op(Z, i, n))) for i in range(n)]\n    s = np.random.default_rng(seed + 100).uniform(0, 1, 900); rho = np.eye(D) / D; F = []\n    for x in s:\n        r4 = rho.reshape(2, D // 2, 2, D // 2); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)]); rho = np.kron(np.outer(psi, psi), rest); f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T; d = np.real(np.diag(rho)); f += [z @ d for z in zd]\n        F.append(f)\n    F = np.hstack([np.array(F), np.ones((len(s), 1))]); wash, tr = 100, 500; mc = 0\n    for d in range(1, 9):\n        A = F[wash:wash + tr]; y = s[wash - d:wash + tr - d]\n        w = np.linalg.solve(A.T @ A + 1e-7 * np.eye(A.shape[1]), A.T @ y)\n        mc += np.corrcoef(F[wash + tr:] @ w, s[wash + tr - d:len(s) - d])[0, 1] ** 2\n    return mc\n\nprint(\"regime                      h      W   MC(4 qubits)  <r>(8 qubits)\")\nfor name, h, W in [(\"pure XX (commuting)\", 0.001, 0), (\"clean, h ~ J\", 1, 0), (\"weak disorder\", 1, 1),\n                   (\"strong disorder\", 1, 10), (\"very strong disorder\", 1, 50)]:\n    mc = np.mean([memory_capacity(4, h, W, k) for k in range(3)])\n    print(f\"{name:24s} {h:6g} {W:4g}   {mc:10.2f}   {gap_ratio(8, h, W, 4):10.3f}\")\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Pure XX ($h=0.001$, $W=0$): $\\langle r\\rangle \\approx 0.40$ (Poisson), MC 2.24.",
+        "Clean, $h=J$-scale ($h=1$, $W=0$): $\\langle r\\rangle \\approx 0.52$ (near GOE), MC 3.30.",
+        "Weak disorder ($W=1$): $\\langle r\\rangle\\approx0.53$, MC 3.10.",
+        "Strong disorder ($W=10$): $\\langle r\\rangle\\approx0.41$, MC 1.94.",
+        "Very strong disorder ($W=50$): $\\langle r\\rangle\\approx0.40$, MC 0.16."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Level ratios use 8 qubits (one parity block of 128 levels, middle half, 4 disorder draws); memory capacity uses 4 qubits with $V=3$ and delays 1 to 8, averaged over 3 draws. The two kinds of Poisson regime fail differently. Localisation is catastrophic for this reservoir: written on qubit 1, information never leaves it, and the next reset deletes it, so the memory goes to zero. The integrable XX limit keeps some memory, because the XX terms still move information, but without scrambling the features are less independent. The ergodic regime is best."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Memory capacity across the field strength",
+        "params": [
+          {
+            "key": "qubits",
+            "label": "Qubits",
+            "control": "range",
+            "min": 2,
+            "max": 4,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "W",
+            "label": "Disorder W",
+            "control": "range",
+            "min": 0,
+            "max": 50,
+            "step": 0.5,
+            "default": 1
+          },
+          {
+            "key": "dt",
+            "label": "Evolution time per input Δt",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          },
+          {
+            "key": "V",
+            "label": "Virtual nodes V",
+            "control": "range",
+            "min": 1,
+            "max": 5,
+            "step": 1,
+            "default": 3
+          },
+          {
+            "key": "realizations",
+            "label": "Disorder draws averaged",
+            "control": "range",
+            "min": 1,
+            "max": 4,
+            "step": 1,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "qrc-phase",
+          "xLabel": "log10 h",
+          "yLabel": "memory capacity (delays 1 to 8)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "At $W=1$ the curve is fairly flat around 3.3 across four decades of $h$: four qubits are too few for a sharp transition, and with $\\Delta t=10$ even a small field acts over a long time. Raise $W$ to 10 and the capacity halves, falling below 1 for large $h$ as the detunings grow; at $W=30$ it is erratic and mostly below 0.5, reaching near zero for $h\\gtrsim10$. Lower $\\Delta t$ to 1 and the small-$h$ end weakens, because $h\\Delta t$ is then too small to break the commuting XX structure in one input period."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why ergodicity helps and where it stops helping"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir needs two things from its dynamics: information must leave the input site before it is overwritten (transport), and different past inputs must end up in linearly independent directions of the observable space (mixing). Ergodic dynamics provides both. But fully scrambled dynamics over many qubits drives local observables of most states toward their thermal values, so the differences the readout must see shrink, which in large systems turns into the concentration problem of Concentration and Scalability (#/qrc/theory/concentration-and-scalability). The practical optimum sits in the ergodic regime but near its edge, with enough structure that local features still vary appreciably with the inputs. Martínez-Peña and coauthors, comparing the thermalising and many-body-localised phases of a disordered spin reservoir, found the thermal phase naturally suited to QRC and reported the best performance around the thermalisation transition."
+    },
+    {
+      "type": "callout",
+      "text": "Rule of thumb for spin reservoirs: pick $h\\sim J$, disorder $W \\lesssim J$, and $J\\Delta t$ of a few. Check $\\langle r\\rangle$ in one symmetry block; if it reads Poisson, the reservoir is either integrable or localised and will waste qubits."
+    },
+    {
+      "type": "problem",
+      "title": "Interpreting a gap ratio",
+      "text": "A colleague's 10-qubit reservoir gives $\\langle r\\rangle = 0.42$ computed over the full spectrum. Can you conclude it is integrable or localised?",
+      "solution": [
+        "No. 0.42 is close to the Poisson value 0.386, but the full spectrum mixes symmetry blocks (here the two Z-parity sectors), which never repel each other. Two independent GOE blocks superposed already give about 0.41 to 0.44 (a 10-qubit reservoir with $h=1$, $W=1$ gives 0.41 over its full spectrum and 0.55 within one block).",
+        "Recompute within one parity block. If it is then near 0.53 the reservoir is ergodic; if it stays near 0.39 it is integrable or localised, and a small-$h$ or large-$W$ check tells which."
+      ],
+      "answer": "No: recompute within one symmetry block"
+    },
+    {
+      "type": "problem",
+      "title": "Detuning stops transfer",
+      "text": "Two qubits coupled by $J X_1X_2$ with fields $h_1Z_1 + h_2Z_2$ start in $\\vert10\\rangle$. In the odd-parity block $\\{\\vert01\\rangle,\\vert10\\rangle\\}$ the Hamiltonian is a two-level system with coupling $J$ and diagonal $\\pm(h_1-h_2)$. With $J=0.25$, what is the maximal probability of transferring the excitation for $h_1-h_2$ = 0, 0.5 and 5?",
+      "solution": [
+        "Rabi formula: $P_{\\max} = J^2/(J^2+\\delta^2)$ with $\\delta = h_1-h_2$.",
+        "$\\delta=0$: 1. $\\delta=0.5$: $0.0625/0.3125=0.20$. $\\delta=5$: $0.0625/25.06\\approx0.0025$.",
+        "With disorder $W=50$ a typical $\\vert\\delta\\vert$ is $W/3\\approx16.7$, giving $P_{\\max}\\approx2\\times10^{-4}$: information essentially never leaves qubit 1, which is why MC falls to about 0.16."
+      ],
+      "answer": "1, 0.20, 0.0025"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "R. Martínez-Peña, G. L. Giorgi, J. Nokkala, M. C. Soriano and R. Zambrini, Dynamical phase transitions in quantum reservoir computing, Phys. Rev. Lett. 127, 100502 (2021)",
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Phys. Rev. Applied 8, 024030 (2017)",
+        "P. Mujal, R. Martínez-Peña, J. Nokkala, J. García-Beni, G. L. Giorgi, M. C. Soriano and R. Zambrini, Opportunities in quantum reservoir computing and extreme learning machines, Adv. Quantum Technol. 4, 2100027 (2021)",
+        "R. Martínez-Peña and J.-P. Ortega, Quantum reservoir computing in finite dimensions, Phys. Rev. E 107, 035306 (2023)",
+        "V. Oganesyan and D. A. Huse, Localization of interacting fermions at high temperature, Phys. Rev. B 75, 155111 (2007)",
+        "Y. Y. Atas, E. Bogomolny, O. Giraud and G. Roux, Distribution of the ratio of consecutive level spacings in random matrix ensembles, Phys. Rev. Lett. 110, 084101 (2013)"
+      ]
+    }
+  ]
+}

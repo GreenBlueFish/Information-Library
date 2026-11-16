@@ -1,0 +1,220 @@
+{
+  "title": "Measurement Back-Action and Shot Noise",
+  "intro": "Reading a quantum reservoir disturbs it, and each reading gives only a $\\pm 1$ outcome, so a hardware QRC must both protect the memory carried by the state and pay in repetitions for every feature value. This page works through both costs quantitatively: what projective measurement does to the recurrence, the restart protocol, and how finite shots shrink memory capacity.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a projective measurement does to the recurrence"
+    },
+    {
+      "type": "prose",
+      "text": "The ideal reservoir update is $\\rho_k = \\mathcal{T}_{s_k}(\\rho_{k-1})$, with features $x_{k,i}=\\operatorname{Tr}(Z_i\\rho_k)$. If after step $k$ we measure every qubit in the computational basis and obtain the bitstring $b$, the state becomes $|b\\rangle\\langle b|$. Averaged over outcomes, the state passed on is the dephased state"
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta(\\rho) = \\sum_{b\\in\\{0,1\\}^n} |b\\rangle\\langle b|\\,\\rho\\,|b\\rangle\\langle b|",
+      "caption": "Non-selective computational-basis measurement: all off-diagonal elements are erased."
+    },
+    {
+      "type": "prose",
+      "text": "So measuring everything every step replaces the map $\\mathcal{T}_s$ by $\\Delta\\circ\\mathcal{T}_s$. The reservoir now only carries a classical probability distribution over $2^n$ bitstrings from step to step, which is a Markov chain driven by the input. Worse, in a single run it does not even carry the distribution, it carries one sampled bitstring, so the next step's dynamics starts from a random basis state. Memory that lived in the coherences of $\\rho$ is gone, and the information that survives has to pass through one sample per step."
+    },
+    {
+      "type": "prose",
+      "text": "This is why the textbook models of QRC (the Fujii–Nakajima spin reservoir among them, see Spin-Network Reservoirs (#/qrc/models/spin-network-reservoir)) assume the features are ensemble averages taken without disturbing the evolution. In NMR that is literally true (a macroscopic ensemble of identical molecules gives the average in one run); on a single-copy device it has to be emulated."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The restart protocol"
+    },
+    {
+      "type": "prose",
+      "text": "The faithful emulation: for each output time $k$, prepare the initial state, feed inputs $s_1,\\dots,s_k$, measure, and repeat $S$ times. Every run is a fresh, undisturbed copy of the trajectory up to $k$, so the estimate $\\hat{x}_k$ is unbiased. The cost in evolution steps for a series of length $T$ is"
+    },
+    {
+      "type": "math",
+      "tex": "N_{\\text{steps}}^{\\text{full}} = S\\sum_{k=1}^{T} k = \\frac{S\\,T(T+1)}{2}"
+    },
+    {
+      "type": "prose",
+      "text": "With fading memory (the echo state property, see The Echo State Property (#/qrc/foundations/echo-state-property)) the state at time $k$ depends on inputs older than some window $w$ only negligibly. The run can then start at $k-w$ from any fixed state, and"
+    },
+    {
+      "type": "math",
+      "tex": "N_{\\text{steps}}^{\\text{window}} = S\\,T\\,w, \\qquad \\frac{N^{\\text{full}}}{N^{\\text{window}}} = \\frac{T+1}{2w}"
+    },
+    {
+      "type": "prose",
+      "text": "The window $w$ should be a few times the decay time of the reservoir's state distance (the slope you see in the esp-contraction plot on the echo state property page): if the distance between two copies shrinks by a factor $e^{-1/\\tau}$ per step, then $w \\approx \\tau \\ln(1/\\epsilon)$ makes the truncation error $\\epsilon$. Mujal and coauthors (2023) analysed this rewinding protocol (replaying only the fading-memory window) and found it reaches ideal performance on memory and forecasting tasks. Both versions still need $S\\,T$ separate runs, each ending in a measurement, and on most hardware the per-run overhead (reset, repetition delay, classical control) dominates the time per evolution step."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Shot noise on the features"
+    },
+    {
+      "type": "prose",
+      "text": "Measuring $Z_i$ on a state with $\\langle Z_i\\rangle = x$ gives $+1$ with probability $(1+x)/2$. The sample mean of $S$ shots is unbiased with"
+    },
+    {
+      "type": "math",
+      "tex": "\\sigma(\\hat{x}) = \\sqrt{\\frac{1-x^2}{S}} \\le \\frac{1}{\\sqrt{S}}"
+    },
+    {
+      "type": "prose",
+      "text": "Two facts make this cheaper than it looks. First, one computational-basis shot returns all $n$ bits at once, so all $\\langle Z_i\\rangle$ and all correlators $\\langle Z_iZ_j\\rangle$, $\\langle Z_iZ_jZ_k\\rangle,\\dots$ come from the same $S$ shots: a feature vector of size $2^n-1$ (every diagonal Pauli) costs the same shots as one feature, although the higher-order correlators of a reservoir near the maximally mixed state are small and so have poor signal to noise. Second, $1-x^2$ is below 1 for any non-zero signal. Observables outside the $Z$ basis (say $\\langle X_i\\rangle$) need a basis rotation before measuring and therefore separate batches of shots."
+    },
+    {
+      "type": "prose",
+      "text": "What matters for learning is not $\\sigma$ itself but its ratio to how much a feature moves as the input changes. In the 4-qubit reservoir of the numpy sample below, with $V=5$ virtual nodes, the $\\langle Z_i\\rangle$ traces vary over time with a standard deviation of only about 0.23. At $S=1000$ the shot noise is about 0.03, a signal-to-noise ratio near 8 per feature, and the memory capacity (delays 1 to 12) drops from 3.8 to 2.9. The plot runs the same model with a different random draw of couplings and inputs: it gives MC 5.1 with exact features and 3.3 at 1000 shots."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Memory function with finite shots",
+        "params": [
+          {
+            "key": "shots",
+            "label": "Shots per feature vector (0 = exact)",
+            "control": "range",
+            "min": 0,
+            "max": 100000,
+            "step": 10,
+            "default": 1000
+          },
+          {
+            "key": "V",
+            "label": "Virtual nodes V",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 5
+          },
+          {
+            "key": "qubits",
+            "label": "Qubits",
+            "control": "range",
+            "min": 2,
+            "max": 5,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "h",
+            "label": "Field h",
+            "control": "range",
+            "min": 0.01,
+            "max": 20,
+            "step": 0.01,
+            "default": 1
+          },
+          {
+            "key": "dt",
+            "label": "Evolution time per input",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          }
+        ],
+        "config": {
+          "sim": "qrc-memory",
+          "xLabel": "delay d (steps)",
+          "yLabel": "r² of recalling s(k−d)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try: set shots to 0 (exact) and note MC; then 100000, 10000, 1000, 100, 10. Capacity falls steadily as the shot budget shrinks, and faster the fewer shots you have: each tenfold cut removes about 0.2 of capacity near $10^5$ shots but about 1 near 100, and the long delays (whose signal is weakest in the features) go first. Then raise V with shots fixed at 1000: more virtual nodes still help, because the readout averages noise across more features, but less than in the exact case."
+    },
+    {
+      "type": "prose",
+      "text": "The sample below reproduces this with the same model in numpy. Its output (from an actual run):"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else I2)\n    return m\ndef reservoir(n=4, h=1.0, dt=10.0, V=5, seed=1):\n    r = np.random.default_rng(seed); H = np.zeros((2**n, 2**n))\n    for i in range(n):\n        for j in range(i + 1, n): H += r.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n)\n    for i in range(n): H += h * op(Z, i, n)\n    E, Q = np.linalg.eigh(H)\n    return Q @ np.diag(np.exp(-1j * E * dt / V)) @ Q.T, [np.diag(op(Z, i, n)) for i in range(n)]\ndef features(s, n=4, V=5):\n    U, Zd = reservoir(n, V=V); D = 2**n; rho = np.eye(D) / D; F = []\n    for x in s:\n        r4 = rho.reshape(2, D // 2, 2, D // 2); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)]); rho = np.kron(np.outer(psi, psi), rest)\n        f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T; p = np.real(np.diag(rho)); f += [z @ p for z in Zd]\n        F.append(f)\n    return np.array(F)\ndef mc(F, s, w=200, tr=800, dmax=12):\n    A = np.hstack([F, np.ones((len(F), 1))]); tot = 0\n    for d in range(1, dmax + 1):\n        y = s[w - d:len(s) - d]; Atr, Ate = A[w:w + tr], A[w + tr:]\n        wts = np.linalg.solve(Atr.T @ Atr + 1e-6 * np.eye(A.shape[1]), Atr.T @ y[:tr])\n        tot += np.corrcoef(Ate @ wts, y[tr:])[0, 1]**2\n    return tot\nrng = np.random.default_rng(0); s = rng.uniform(0, 1, 1400)\nF = features(s)\nprint(f\"exact features: MC = {mc(F, s):.2f}\")\nfor S in [10, 100, 1000, 10000, 100000]:\n    vals = []\n    for rep in range(3):\n        noise = rng.normal(size=F.shape) * np.sqrt((1 - F**2) / S)\n        vals.append(mc(F + noise, s))\n    print(f\"S = {S:>6} shots: MC = {np.mean(vals):.2f}\")\nprint(f\"spread of the features over time: std <Z_i> = {F.std(axis=0).mean():.3f}\")\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "exact features: MC = 3.84",
+        "S = 10: 0.99; S = 100: 1.98; S = 1000: 2.87; S = 10000: 3.46; S = 100000: 3.73",
+        "mean temporal std of the features: 0.232"
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Shot noise as an implicit regulariser"
+    },
+    {
+      "type": "prose",
+      "text": "Independent zero-mean noise $\\eta$ of variance $\\sigma^2$ added to the training features turns the least-squares objective, in expectation, into ridge regression: for $T$ training rows, $\\mathbb{E}\\Vert y - (X+\\eta)w\\Vert^2 = \\Vert y - Xw\\Vert^2 + T\\sigma^2\\Vert w\\Vert^2$. So training on noisy features automatically shrinks the weights, which is why a QRC readout fitted on hardware data is often less over-fitted than one fitted on exact simulated features. But the test features are noisy too, and that noise passes straight through the weights to the output, with variance $\\sigma^2\\Vert w\\Vert^2$. The two effects together are why the memory function decays faster with fewer shots: recalling an old input needs large, finely balanced weights on small feature differences, exactly what noise forbids."
+    },
+    {
+      "type": "callout",
+      "text": "Practical consequence: tune the ridge parameter on noisy features, never on exact ones. A readout regularised for exact simulation will have weights that amplify shot noise on the device."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Shot noise on one feature",
+      "text": "A feature has true value $\\langle Z_1\\rangle = 0.6$. What is the standard deviation of its estimate from $S=1000$ shots, and how many shots bring it below 0.01?",
+      "hint": "Use $\\sigma = \\sqrt{(1-x^2)/S}$.",
+      "solution": [
+        "$\\sigma = \\sqrt{(1-0.36)/1000} = \\sqrt{0.00064} \\approx 0.0253$.",
+        "For $\\sigma \\le 0.01$: $S \\ge 0.64/0.01^2 = 6400$ shots."
+      ],
+      "answer": "About 0.025; 6400 shots."
+    },
+    {
+      "type": "problem",
+      "title": "Full versus windowed restart",
+      "text": "A series has $T=500$ inputs, you take $S=2000$ shots per output time, and the reservoir forgets inputs older than $w=15$ steps. Count the evolution steps for the full and the windowed restart protocols and their ratio.",
+      "hint": "Sum $k$ from 1 to $T$ for the full protocol.",
+      "solution": [
+        "Full: $S\\,T(T+1)/2 = 2000\\times 500\\times 501/2 = 2.505\\times 10^{8}$ steps.",
+        "Windowed: $S\\,T\\,w = 2000\\times 500\\times 15 = 1.5\\times 10^{7}$ steps.",
+        "Ratio $= (T+1)/(2w) = 501/30 \\approx 16.7$. Both use $S\\,T = 10^6$ runs."
+      ],
+      "answer": "$2.5\\times 10^{8}$ against $1.5\\times 10^{7}$: about 16.7 times fewer."
+    },
+    {
+      "type": "problem",
+      "title": "Choosing the window",
+      "text": "Two copies of a reservoir fed the same inputs approach each other in trace distance by a factor 0.7 per step. How long a window $w$ keeps the truncation error below $10^{-3}$ of the initial distance?",
+      "hint": "Solve $0.7^w = 10^{-3}$.",
+      "solution": [
+        "After $w$ steps the distance is $0.7^w$ of its start.",
+        "$0.7^w \\le 10^{-3} \\Rightarrow w \\ge \\ln(10^{3})/\\ln(1/0.7) = 6.908/0.357 \\approx 19.4$, so $w = 20$."
+      ],
+      "answer": "$w = 20$ steps."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Phys. Rev. Applied 8, 024030 (2017)",
+        "P. Mujal, R. Martínez-Peña, G. L. Giorgi, M. C. Soriano and R. Zambrini, Time-series quantum reservoir computing with weak and projective measurements, npj Quantum Inf. 9, 16 (2023)",
+        "P. Mujal, R. Martínez-Peña, J. Nokkala, J. García-Beni, G. L. Giorgi, M. C. Soriano and R. Zambrini, Opportunities in quantum reservoir computing and extreme learning machines, Adv. Quantum Technol. 4, 2100027 (2021)",
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010)"
+      ]
+    }
+  ]
+}

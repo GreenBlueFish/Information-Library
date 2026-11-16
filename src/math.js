@@ -50,7 +50,7 @@ const OPS = {
   parallel: "∥", perp: "⊥", angle: "∠", deg: "°", prime: "′", ldots: "…", cdots: "⋯",
   dots: "…", vdots: "⋮", forall: "∀", exists: "∃", neg: "¬", wedge: "∧", vee: "∨",
   oplus: "⊕", otimes: "⊗", langle: "⟨", rangle: "⟩", lfloor: "⌊", rfloor: "⌋",
-  lceil: "⌈", rceil: "⌉", vert: "|", Vert: "‖", lbrace: "{", rbrace: "}",
+  lceil: "⌈", rceil: "⌉", dagger: "†", dag: "†", lesssim: "≲", gtrsim: "≳", top: "⊤", succeq: "⪰", preceq: "⪯", succ: "≻", vert: "|", Vert: "‖", lbrace: "{", rbrace: "}",
   "{": "{", "}": "}", "|": "‖", "%": "%", "#": "#", "&": "&", "_": "_", "$": "$",
 };
 

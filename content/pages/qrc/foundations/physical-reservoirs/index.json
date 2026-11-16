@@ -1,0 +1,142 @@
+{
+  "title": "Physical Reservoirs",
+  "intro": "Because a reservoir is never trained, any physical system with fading memory, nonlinearity and a measurable state can compute: water, light, spins, mechanics. Physical reservoir computing is the direct ancestor of quantum reservoir computing, and its tricks (virtual nodes, time multiplexing, masks) carry straight over.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a physical system must provide"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Echo state property for the input range used: the system forgets its initial condition and its slow drifts on a timescale shorter than the task's.",
+        "Nonlinearity in the input-to-state map, or at least in the state-to-measurement map (a photodiode measures intensity, the square of a field).",
+        "High-dimensional, measurable state: many independent signals read fast enough, with noise low enough that the capacity bound is not spent on noise.",
+        "Repeatability: the same input must give the same state between training and use, so temperature drift or ageing is a direct generalisation error."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Tanaka et al. (2019) review the field across mechanical, electronic, photonic, spintronic, biological and quantum substrates. The appeal is speed and energy: the physics does the recurrent part for free, and only the readout runs digitally."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A gallery"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Water: Fernando and Sojakka (2003) drove a tank of water with motors, filmed the ripples, and trained a linear readout on the video to do XOR and spoken-digit discrimination. Their point: the waves are a high-dimensional nonlinear medium with fading memory.",
+        "Photonics and optoelectronics: Appeltant et al. (2011) used one nonlinear node in a delay loop (an electronic Mackey-Glass circuit) as a reservoir of 400 virtual nodes, with node spacing $\\theta = 0.2$ times the node's response time; Paquot et al. (2012) and Larger et al. (2012) built optoelectronic versions with a Mach-Zehnder modulator, whose sinusoidal transfer function is the nonlinearity, reaching speech-recognition, channel-equalisation and time-series results comparable to digital implementations; Paquot et al. used a fibre loop of 8.5 $\\mu$s carrying 50 virtual nodes, fast enough for real-time processing.",
+        "Spintronics: Torrejon et al. (2017) used a single nanoscale spin-torque oscillator, time-multiplexed, for spoken-digit recognition.",
+        "Soft bodies: Nakajima et al. (2015) showed that the passive body dynamics of a soft silicone arm (octopus-inspired) supply nonlinearity and memory with which a linear readout can emulate nonlinear dynamical systems.",
+        "Quantum systems: Fujii and Nakajima (2017) proposed disordered spin ensembles (like nuclear spins in NMR) as reservoirs, which is the starting point of this shelf (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir))."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Delay lines and virtual nodes"
+    },
+    {
+      "type": "prose",
+      "text": "A single nonlinear node with a feedback delay $\\tau$ has an infinite-dimensional state (the whole signal in the loop). Time multiplexing turns that into $N$ discrete nodes:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Hold each input $u_k$ for a time $\\tau_{\\mathrm{in}} = N\\theta$ and multiply it by a fixed mask $m_1,\\dots,m_N$ (random values, one per slot of length $\\theta$). Slot $i$ of input period $k$ is virtual node $i$.",
+        "The node responds with time constant $T$. With $\\theta \\lesssim T$ the node has not settled when the next slot starts, so neighbouring virtual nodes are coupled, with weight about $c = e^{-\\theta/T}$ on the previous slot. That is the reservoir's internal connectivity.",
+        "The delay loop feeds the node's output back one round later. With loop delay exactly $\\tau = \\tau_{\\mathrm{in}}$, node $i$ is fed only from node $i$ one input ago; with $\\tau = (N+1)\\theta$ (desynchronised) it is fed from node $i-1$, which chains all nodes into a ring and enriches the dynamics.",
+        "The readout samples the node's output once per slot: $N$ features per input from one physical device."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A discrete-time model of this, with a tanh node, run on NARMA10:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# A delay-line reservoir: ONE nonlinear node and N virtual nodes along a delay loop.\n# The input is held for tau_in = N*theta and multiplied by a mask; the loop delay is\n# (N+1)*theta, so virtual node i is fed back from node i-1 one round ago.\n# c = exp(-theta/T): the node (response time T) has not settled when the next\n# virtual node is sampled, which couples neighbours.\nrng = np.random.default_rng(0)\ndef narma10(u):\n    y = np.zeros_like(u)\n    for t in range(9, len(u) - 1):\n        y[t+1] = 0.3*y[t] + 0.05*y[t]*y[t-9:t+1].sum() + 1.5*u[t-9]*u[t] + 0.1\n    return y\nu = rng.uniform(0, 0.5, 4000); y = narma10(u)\n\ndef delay_reservoir(u, N=50, theta_over_T=1.0, eta=0.8, gamma=0.3, desync=1):\n    mask = np.random.default_rng(1).uniform(-1, 1, N)\n    c = np.exp(-theta_over_T)\n    X = np.zeros((len(u), N)); prev = np.zeros(N)\n    for k, uk in enumerate(u):\n        x = np.zeros(N); last = prev[-1]\n        for i in range(N):\n            x[i] = c * last + (1 - c) * np.tanh(eta * prev[i - desync] + gamma * mask[i] * uk)\n            last = x[i]\n        X[k] = prev = x\n    return X\n\ndef nmse(X, y, wash=200, ntr=3000, lam=1e-8):\n    A = np.hstack([X, np.ones((len(X), 1))])\n    w = np.linalg.solve(A[wash:ntr].T @ A[wash:ntr] + lam*np.eye(A.shape[1]), A[wash:ntr].T @ y[wash:ntr])\n    return np.mean((A[ntr:] @ w - y[ntr:])**2) / np.var(y[ntr:])\nfor N in (10, 50, 100):\n    print(f\"{N:3d} virtual nodes: NARMA10 NMSE = {nmse(delay_reservoir(u, N=N), y):.3f}\")\nprint(f\" 50 virtual nodes, loop synchronised with the input (desync=0): \"\n      f\"NMSE = {nmse(delay_reservoir(u, N=50, desync=0), y):.3f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output: 10 virtual nodes give NMSE 0.606, 50 give 0.151, 100 give 0.136; with the loop synchronised to the input (no ring coupling) 50 nodes give 0.308. The one-node reservoir matches a 50-unit ESN (0.154 on the Echo State Networks (#/qrc/foundations/echo-state-networks) page)."
+    },
+    {
+      "type": "prose",
+      "text": "The quantum analogue is direct: in the Fujii-Nakajima model the spins evolve for time $\\Delta t$ between inputs and are sampled $V$ times in that window, each sample a set of virtual nodes. The coupling between virtual nodes comes from the Hamiltonian, as it comes from the finite response time here (Readout and Multiplexing (#/qrc/models/readout-and-multiplexing))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Engineering constraints that carry over to quantum"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Readout bandwidth: $N$ features per input period means a digitiser at $N/\\tau_{\\mathrm{in}}$ samples per second. For quantum reservoirs the matching constraint is far harsher: each feature is an expectation value that needs many shots.",
+        "Noise sets the usable capacity, not the nominal number of nodes (Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)).",
+        "Fixed hyperparameters: in software you tune the spectral radius; in hardware you tune what the physics exposes (feedback gain, bias point, mask). Quantum platforms expose couplings, fields, evolution time and dissipation rates.",
+        "Partial observability: you rarely read the whole state. The readout sees only what the measurement apparatus exposes, which is the reservoir that matters."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Throughput of a delay reservoir",
+      "text": "A delay reservoir has $N = 50$ virtual nodes with slot length $\\theta = 0.2$ ns. What input rate can it process, what digitiser sample rate does the readout need, and what loop delay gives the desynchronised ring?",
+      "solution": [
+        "$\\tau_{\\mathrm{in}} = N\\theta = 10$ ns, so $10^8$ inputs per second.",
+        "One sample per slot: $1/\\theta = 5\\times 10^9$ samples per second.",
+        "Desynchronised: $\\tau = (N+1)\\theta = 10.2$ ns."
+      ],
+      "answer": "100 M inputs/s, 5 GS/s, 10.2 ns"
+    },
+    {
+      "type": "problem",
+      "title": "Coupling between virtual nodes",
+      "text": "In the model above, the coupling to the previous virtual node is $c = e^{-\\theta/T}$. What is $c$ for $\\theta/T = 1$ and for $\\theta/T = 0.2$, and what goes wrong if $\\theta \\gg T$?",
+      "solution": [
+        "$\\theta/T = 1$: $c = e^{-1} \\approx 0.37$. $\\theta/T = 0.2$: $c = e^{-0.2} \\approx 0.82$.",
+        "For $\\theta \\gg T$, $c \\to 0$: each virtual node settles to $f(\\text{its own input})$ and sees only its own past through the loop. The nodes decouple into $N$ independent one-dimensional systems, losing much of the mixing (the synchronised variant above shows a milder form of the same loss)."
+      ],
+      "answer": "0.37 and 0.82; nodes decouple"
+    },
+    {
+      "type": "problem",
+      "title": "A slow quantum reservoir",
+      "text": "A quantum reservoir needs 1000 shots per expectation value, each shot including state preparation and a $10\\ \\mu$s run, and the protocol must re-run the whole input history for each shot. If you read 20 features from each shot simultaneously, how long does one input step of feature estimation take, ignoring the history re-run? Compare with the delay reservoir above.",
+      "solution": [
+        "20 features from one shot means all 20 come from the same 1000 shots: $1000 \\times 10\\ \\mu\\text{s} = 10$ ms per input.",
+        "The delay reservoir takes 10 ns per input, a factor $10^6$ faster. The re-run of the history (covered in Measurement Back-Action (#/qrc/hardware/measurement-back-action)) makes the quantum figure worse still."
+      ],
+      "answer": "10 ms per input, a million times slower"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "G. Tanaka et al., Recent advances in physical reservoir computing: a review, Neural Networks 115, 100 (2019)",
+        "C. Fernando and S. Sojakka, Pattern recognition in a bucket, in Advances in Artificial Life (ECAL 2003), LNCS 2801, Springer (2003)",
+        "L. Appeltant et al., Information processing using a single dynamical node as complex system, Nature Communications 2, 468 (2011)",
+        "Y. Paquot et al., Optoelectronic reservoir computing, Scientific Reports 2, 287 (2012)",
+        "L. Larger et al., Photonic information processing beyond Turing: an optoelectronic implementation of reservoir computing, Optics Express 20, 3241 (2012)",
+        "J. Torrejon et al., Neuromorphic computing with nanoscale spintronic oscillators, Nature 547, 428 (2017)",
+        "K. Nakajima, H. Hauser, T. Li and R. Pfeifer, Information processing via physical soft body, Scientific Reports 5, 10487 (2015)",
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Physical Review Applied 8, 024030 (2017)"
+      ]
+    }
+  ]
+}

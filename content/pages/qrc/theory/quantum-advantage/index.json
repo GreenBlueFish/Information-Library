@@ -1,0 +1,142 @@
+{
+  "title": "Quantum Advantage",
+  "intro": "What a quantum advantage in reservoir computing would have to mean, the arguments for and against it, which reservoirs are classically simulable, and how to compare against classical models fairly.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three meanings of advantage"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Task advantage: on a practical task, a quantum reservoir reaches a given accuracy with fewer resources (energy, time, hardware cost, data) than the best classical method. This is the claim users care about and the hardest to establish, because the best classical method keeps improving.",
+        "Complexity advantage: the feature map is hard to compute classically (under standard conjectures) and some learning task provably needs it. This is clean but says nothing about usefulness on real data.",
+        "Quantum-data advantage: the input is itself quantum (states from a sensor, a quantum simulator or a communication channel), and the reservoir processes it without tomography. Here the competition is a classical model that must first measure the states, and sample-complexity separations are known in related settings. See Quantum Data Tasks (#/qrc/models/quantum-data-tasks) (Ghosh and co-authors)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The arguments for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Dimension. The state space grows as $4^n$ and the dynamics mix it nontrivially; a modest device has more internal degrees of freedom than any classical reservoir of the same physical size.",
+        "No quantum training. Only the linear readout is trained, a convex least-squares problem with a closed-form solution. That sidesteps barren plateaus and the costly gradient estimation of variational circuits.",
+        "Natural dynamics. Analog hardware (Rydberg arrays, NMR ensembles, superconducting circuits left to evolve) does the computation by physics, with no gate compilation; noise can be part of the reservoir instead of an error to correct.",
+        "Cross-time products are native. Unrolled reset-injection dynamics are a sum over products of past inputs (see Expressivity and Universality (#/qrc/theory/expressivity-and-universality)), with exponentially many terms available to the readout in principle."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The arguments against"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Only polynomially many features can be read. The readout sees $N$ estimated expectation values, each costing shots; the exponentially many internal parameters are not accessible. Usable feature count is set by $N_{\\text{eff}}(S)$, not by $4^n$.",
+        "Concentration. Generic scrambling dynamics make features exponentially insensitive to the input, so the shots to read them grow as $2^n$ (see Concentration and Scalability (#/qrc/theory/concentration-and-scalability)).",
+        "Simulable regimes. One-dimensional nearest-neighbour transverse-field Ising chains (free fermions), Gaussian bosonic reservoirs and low-entanglement dynamics are classically efficient; a reservoir that works because it stays in such a regime gives no complexity advantage.",
+        "Data beats hardness. Huang and co-authors showed for quantum kernels that classical learners given data can often match a model whose features are classically hard to compute, and gave a geometric test (comparing kernel matrices) for when a quantum model can even possibly win. The same logic applies to reservoir features.",
+        "Strong classical baselines. Classical reservoirs are cheap at thousands of nodes, and next-generation reservoir computing (Gauthier and co-authors), a linear readout of polynomial monomials of recent inputs, solves many standard benchmarks with tens of features and no reservoir at all."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A small case study"
+    },
+    {
+      "type": "prose",
+      "text": "The hands-on NARMA2 sample makes the last point concrete. On the same input series (200 washout, 1000 train, 500 test), with the test NMSE as score:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "4-qubit reservoir, $V = 5$, 20 features: 0.121; $V = 10$, 40 features: 0.057; 5 qubits, $V = 5$, 25 features: 0.103.",
+        "Linear readout of the last 20 raw inputs, 20 features: 0.157.",
+        "Polynomial readout of the last 5 inputs (linear, pairwise products including squares, cubes), 25 features: 0.024; of the last 8 inputs, 52 features: 0.0019."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "NARMA2 is a low-degree polynomial of the recent past, so a model that builds exactly those monomials wins by more than an order of magnitude at equal feature count. This is not evidence against quantum reservoirs in general; it is evidence that a benchmark whose target is a short low-degree polynomial cannot show an advantage, and that small reservoirs need comparison with explicit polynomial baselines, not only with a linear readout of raw inputs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Running a fair comparison"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Match the readout: same number of trainable weights, same regularisation search, same train/test split and washout.",
+        "Match the measurement budget: report the quantum result at the shot count actually used, not with exact expectation values, and count restarts in the time budget.",
+        "Use strong baselines: a tuned echo state network of the same feature count, a next-generation RC polynomial readout, and a linear model of lagged inputs.",
+        "Report spread: NMSE (or accuracy) averaged over several random reservoirs and input seeds, with its standard deviation; one seed of one reservoir proves little.",
+        "Separate the parts: test the classical simulation of the same reservoir at the same shot count; if it matches the device, any gain comes from the model class, which a classical computer can run too, at least at that size.",
+        "State the scaling: show how accuracy and cost change with $n$; an advantage is a trend, not a point."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where things stand"
+    },
+    {
+      "type": "prose",
+      "text": "Experiments have run quantum reservoirs on superconducting processors (Chen, Nurdin and Yamamoto on IBM devices; Yasuda and co-authors with repeated mid-circuit measurements), on NMR spin ensembles, and on analog neutral-atom arrays: Kornjača and co-authors ran reservoir learning on a Rydberg-atom processor with up to 108 qubits on classification and time-series tasks, reporting competitive performance on the tasks tried; they also report a comparative quantum-kernel advantage on synthetic datasets constructed from the geometric difference between quantum and classical kernels (in the sense of Huang and co-authors), which is not a task advantage on natural data. None of these establishes a task advantage in the sense above, and the literature reviews (Mujal and co-authors) frame the field's open question the same way: identify tasks, ideally with quantum or physically generated data, where the reservoir's dynamics are both hard to simulate and the source of the predictive power."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Is this reservoir a complexity candidate?",
+      "text": "A proposed reservoir is a 1D chain with Hamiltonian $H = \\sum_i J_i X_i X_{i+1} + \\sum_i h_i Z_i$, read out through $\\langle Z_i \\rangle$. Ignoring the input step, is its unitary dynamics a candidate for a classical-hardness argument?",
+      "hint": "Think Jordan–Wigner.",
+      "solution": [
+        "Nearest-neighbour $XX$ couplings and $Z$ fields on a chain map under the Jordan–Wigner transformation to a quadratic fermion Hamiltonian.",
+        "Quadratic (free-fermion) dynamics are simulable in polynomial time through the $2n \\times 2n$ single-particle correlation matrix, and $\\langle Z_i\\rangle$ is a single-particle quantity.",
+        "So the unitary part is classically easy; a hardness argument would have to come from the input step or from non-local couplings (the all-to-all random $J_{ij}$ of the Fujii–Nakajima model breaks the free-fermion mapping)."
+      ],
+      "answer": "No: it maps to free fermions"
+    },
+    {
+      "type": "problem",
+      "title": "Reading a benchmark table",
+      "text": "A paper reports a 6-qubit reservoir reaching NMSE 0.05 on NARMA2 with 30 exact features and compares only with a 30-node echo state network at 0.08. What baseline would you ask for first, and why?",
+      "solution": [
+        "NARMA2 is a quadratic-and-cubic recurrence driven by the previous input, with feedback through $y_{t-1}$ and $y_{t-2}$ that makes older inputs fade quickly, so its target is close to a low-degree polynomial of a short input window.",
+        "A polynomial readout of the last few inputs (as in next-generation RC) of matched size is therefore the natural strongest cheap baseline; in the hands-on sample it reaches 0.024 at 25 features and 0.0019 at 52.",
+        "Second, the same reservoir at a realistic shot count, since exact features overstate what hardware gives."
+      ],
+      "answer": "A matched-size polynomial (next-generation RC) readout, then the finite-shot result"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H.-Y. Huang, M. Broughton, M. Mohseni, R. Babbush, S. Boixo, H. Neven and J. R. McClean, Power of data in quantum machine learning, Nat. Commun. 12, 2631 (2021)",
+        "D. J. Gauthier, E. Bollt, A. Griffith and W. A. S. Barbosa, Next generation reservoir computing, Nat. Commun. 12, 5564 (2021)",
+        "S. Ghosh, A. Opala, M. Matuszewski, T. Paterek and T. C. H. Liew, Quantum reservoir processing, npj Quantum Inf. 5, 35 (2019)",
+        "J. Chen, H. I. Nurdin and N. Yamamoto, Temporal information processing on noisy quantum computers, Phys. Rev. Applied 14, 024065 (2020)",
+        "T. Yasuda et al., Quantum reservoir computing with repeated measurements on superconducting devices, arXiv:2310.06706 (2023)",
+        "M. Kornjača et al., Large-scale quantum reservoir learning with an analog quantum computer, arXiv:2407.02553 (2024)",
+        "P. Mujal, R. Martínez-Peña, J. Nokkala, J. García-Beni, G. L. Giorgi, M. C. Soriano and R. Zambrini, Opportunities in quantum reservoir computing and extreme learning machines, Adv. Quantum Technol. 4, 2100027 (2021)",
+        "W. Xiong, G. Facelli, M. Sahebi, O. Agnel, T. Chotibut, S. Thanasilp and Z. Holmes, On fundamental aspects of quantum extreme learning machines, arXiv:2312.15124 (2023)",
+        "L. Innocenti, S. Lorenzo, I. Palmisano, A. Ferraro, M. Paternostro and G. M. Palma, Potential and limitations of quantum extreme learning machines, Commun. Phys. 6, 118 (2023)",
+        "A. F. Atiya and A. G. Parlos, New results on recurrent network training: unifying the algorithms and accelerating convergence, IEEE Trans. Neural Netw. 11, 697 (2000)"
+      ]
+    }
+  ]
+}

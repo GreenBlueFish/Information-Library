@@ -19,8 +19,16 @@ import * as poker from "./poker.js";
 import * as investing from "./investing.js";
 import * as pll from "./pll.js";
 import * as music from "./music.js";
+import * as qrc from "./qrc.js";
 
 export const SIMS = {
+  "esn-memory": qrc.esnMemory,
+  "qrc-memory": qrc.qrcMemory,
+  "qrc-phase": qrc.qrcPhase,
+  "esp-contraction": qrc.espContraction,
+  "lindblad-decay": qrc.lindbladDecay,
+  concentration: qrc.concentration,
+  "qrc-task": qrc.qrcTask,
   "harmonic-series": music.harmonicSeries,
   beating: music.beating,
   "chord-wave": music.chordWave,

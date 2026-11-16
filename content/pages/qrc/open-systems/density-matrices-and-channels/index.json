@@ -1,0 +1,162 @@
+{
+  "title": "Density Matrices and Channels",
+  "intro": "A quantum reservoir's state is a density matrix and every input step is a channel acting on it. This page sets up both in the form QRC uses: the Pauli expansion that defines the reservoir's feature space, and the Kraus, Stinespring, Choi and Pauli-transfer-matrix descriptions of a channel.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Density operators and the Pauli expansion"
+    },
+    {
+      "type": "prose",
+      "text": "A state of $n$ qubits is a positive semidefinite operator with unit trace, $\\rho\\ge 0$, $\\operatorname{Tr}\\rho=1$, on a space of dimension $d=2^n$. It is pure when $\\rho = \\vert\\psi\\rangle\\langle\\psi\\vert$, equivalently when the purity $\\operatorname{Tr}\\rho^2$ equals 1; the minimum purity is $1/d$, reached by the maximally mixed state $I/d$. The $4^n$ Pauli strings $P \\in \\{I,X,Y,Z\\}^{\\otimes n}$ are an orthogonal basis of operators under $\\langle A,B\\rangle = \\operatorname{Tr}(A^\\dagger B)$, with $\\operatorname{Tr}(PQ) = d\\,\\delta_{PQ}$, so"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho = \\frac{1}{2^n}\\sum_{P} r_P\\, P,\\qquad r_P = \\operatorname{Tr}(P\\rho)\\in[-1,1],\\quad r_{I\\cdots I}=1",
+      "caption": "The generalised Bloch vector: $4^n-1$ real numbers fix the state."
+    },
+    {
+      "type": "prose",
+      "text": "For one qubit this is the Bloch vector $\\vec r = (\\langle X\\rangle,\\langle Y\\rangle,\\langle Z\\rangle)$, $\\rho = \\tfrac12(I + \\vec r\\cdot\\vec\\sigma)$, with $\\vert\\vec r\\vert\\le1$ and purity $(1+\\vert\\vec r\\vert^2)/2$. In general $\\operatorname{Tr}\\rho^2 = 2^{-n}\\sum_P r_P^2$."
+    },
+    {
+      "type": "callout",
+      "text": "This is the single most useful fact for QRC: every expectation value the readout can use is a linear function of the $r_P$, and the reservoir dynamics act linearly (affinely) on them. The vector $(r_P)$ is the reservoir's full internal state, $4^n-1 = 1023$ numbers for $n=5$; the readout sees only the handful you choose to measure, typically the $n$ values $\\langle Z_i\\rangle$ or the $n(n+1)/2$ values $\\langle Z_i\\rangle,\\langle Z_iZ_j\\rangle$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Partial trace and reduced states"
+    },
+    {
+      "type": "prose",
+      "text": "For a bipartite state $\\rho_{AB}$, the reduced state of $B$ is $\\rho_B = \\operatorname{Tr}_A\\rho_{AB} = \\sum_a (\\langle a\\vert\\otimes I)\\rho_{AB}(\\vert a\\rangle\\otimes I)$. It is the unique operator that reproduces every local expectation, $\\operatorname{Tr}(O_B\\rho_B) = \\operatorname{Tr}((I\\otimes O_B)\\rho_{AB})$. In a computer with qubit 1 as the most significant index, reshape $\\rho$ to shape $(2,d/2,2,d/2)$ and sum the diagonal of the first and third axes. Reduced states of entangled pure states are mixed: for a Bell pair each qubit is exactly $I/2$, so local measurements on one half see nothing of the correlations."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Channels: three equivalent descriptions"
+    },
+    {
+      "type": "prose",
+      "text": "A physical map on states must be linear, trace preserving and completely positive: $\\mathcal{E}\\otimes\\mathrm{id}_k$ must map positive operators to positive operators for every ancilla size $k$, because the system might be entangled with something else. Positivity alone is not enough (the transpose is positive but not completely positive). Three standard ways to write a CPTP map:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Kraus (operator-sum) form: $\\mathcal{E}(\\rho) = \\sum_{m=1}^{K} K_m\\rho K_m^\\dagger$ with $\\sum_m K_m^\\dagger K_m = I$. At most $d^2$ Kraus operators are ever needed; the minimal number is the Kraus rank. Two Kraus sets give the same channel iff they are related by an isometry, $K'_m = \\sum_l u_{ml}K_l$.",
+        "Stinespring dilation: $\\mathcal{E}(\\rho) = \\operatorname{Tr}_E\\left[V(\\rho\\otimes\\vert0\\rangle\\langle0\\vert_E)V^\\dagger\\right]$ for a unitary $V$ on system plus environment. Every channel is a unitary on a bigger system followed by forgetting part of it. This is the physical picture behind every reservoir: the 'environment' may be a reset qubit, a bath, or a measurement record.",
+        "Choi–Jamiołkowski: $J(\\mathcal{E}) = \\sum_{ij}\\vert i\\rangle\\langle j\\vert\\otimes\\mathcal{E}(\\vert i\\rangle\\langle j\\vert)$, a $d^2\\times d^2$ matrix. $\\mathcal{E}$ is CP iff $J\\ge0$, TP iff $\\operatorname{Tr}_2 J = I$, and the Kraus rank is $\\operatorname{rank}J$. This is the quickest numerical test that a map you wrote down is physical."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Pauli transfer matrix"
+    },
+    {
+      "type": "prose",
+      "text": "Because a channel is linear and trace preserving, it acts on the Pauli coordinates as a real $4^n\\times4^n$ matrix $R_{PQ} = 2^{-n}\\operatorname{Tr}(P\\,\\mathcal{E}(Q))$ whose first row is $(1,0,\\ldots,0)$. For one qubit it splits into a $3\\times3$ matrix $T$ and a vector $\\vec t$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\vec r\\ \\mapsto\\ T\\vec r + \\vec t",
+      "caption": "A qubit channel is an affine map of the Bloch ball into itself; $\\vec t = 0$ exactly when the channel is unital, $\\mathcal{E}(I)=I$."
+    },
+    {
+      "type": "prose",
+      "text": "For a reservoir this is the cleanest way to see the dynamics: a fixed-input step is a linear map on the Bloch vector, the input enters through which map is applied, and the readout is a linear projection of the result. All nonlinearity in $s$ comes from how $T$ and $\\vec t$ depend on $s$, not from the evolution itself."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The channels QRC actually uses"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Amplitude damping (energy relaxation to $\\vert0\\rangle$ with probability $\\gamma$): $K_0 = \\vert0\\rangle\\langle0\\vert + \\sqrt{1-\\gamma}\\,\\vert1\\rangle\\langle1\\vert$, $K_1 = \\sqrt\\gamma\\,\\vert0\\rangle\\langle1\\vert$. Bloch map $(x,y,z)\\mapsto(\\sqrt{1-\\gamma}\\,x,\\ \\sqrt{1-\\gamma}\\,y,\\ (1-\\gamma)z+\\gamma)$; not unital. Over time $t$ with relaxation time $T_1$, $\\gamma = 1-e^{-t/T_1}$.",
+        "Dephasing (a random $Z$ with probability $p$): $K_0=\\sqrt{1-p}\\,I$, $K_1=\\sqrt p\\,Z$. Bloch map $(x,y,z)\\mapsto((1-2p)x,(1-2p)y,z)$; unital. Populations survive, coherences shrink.",
+        "Depolarising: $\\rho\\mapsto(1-p)\\rho + p\\,I/d$; on a qubit $\\vec r\\mapsto(1-p)\\vec r$. The standard crude model of gate noise, and the simplest strictly contracting channel.",
+        "Reset (replacement) of qubit 1 to an input-dependent state: $\\rho\\mapsto\\rho_s\\otimes\\operatorname{Tr}_1\\rho$. This is the input map of the Fujii–Nakajima reservoir with $\\vert\\psi_s\\rangle = \\sqrt{1-s}\\,\\vert0\\rangle+\\sqrt s\\,\\vert1\\rangle$. Kraus operators $K_i = \\vert\\psi_s\\rangle\\langle i\\vert\\otimes I$, $i=0,1$. On qubit 1 alone the Bloch map is $T=0$, $\\vec t = (2\\sqrt{s(1-s)},0,1-2s)$: it forgets the old state of that qubit entirely and writes the input."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "The reset channel is where the data enters and where the memory is lost: it destroys qubit 1's state and all of its correlations with the rest, while the reduced state of the other qubits is untouched. Information about earlier inputs survives only if the unitary has already spread it from qubit 1 into the others. See Input Encoding (#/qrc/models/input-encoding) for other encodings."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Checking all of this numerically"
+    },
+    {
+      "type": "prose",
+      "text": "The script builds the three one-qubit channels above as Kraus lists, checks trace preservation, checks complete positivity from the Choi eigenvalues, prints their Pauli transfer matrices (row and column order $I,X,Y,Z$), and applies the reset to half of a Bell pair."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nI = np.eye(2); X = np.array([[0, 1], [1, 0]]); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1, -1])\npaulis = [I, X, Y, Z]\n\ndef apply(kraus, rho):\n    return sum(K @ rho @ K.conj().T for K in kraus)\n\ndef ptm(kraus):\n    \"\"\"Pauli transfer matrix R_ij = Tr(P_i E(P_j)) / 2 of a one-qubit channel.\"\"\"\n    return np.real([[np.trace(Pi @ apply(kraus, Pj)) / 2 for Pj in paulis] for Pi in paulis])\n\ndef choi(kraus, d=2):\n    \"\"\"Choi matrix sum_ij |i><j| (x) E(|i><j|); the map is CP iff this is positive semidefinite.\"\"\"\n    C = np.zeros((d * d, d * d), complex)\n    for i in range(d):\n        for j in range(d):\n            E = np.zeros((d, d)); E[i, j] = 1\n            C += np.kron(E, apply(kraus, E))\n    return C\n\ng = 0.3   # amplitude damping, gamma = 1 - exp(-t/T1)\namp = [np.array([[1, 0], [0, np.sqrt(1 - g)]]), np.array([[0, np.sqrt(g)], [0, 0]])]\np = 0.2   # dephasing: Z applied with probability p\ndeph = [np.sqrt(1 - p) * I, np.sqrt(p) * Z]\ns = 0.36  # the QRC input: replace the qubit by sqrt(1-s)|0> + sqrt(s)|1>\npsi = np.array([np.sqrt(1 - s), np.sqrt(s)])\nreset = [np.outer(psi, [1, 0]), np.outer(psi, [0, 1])]\n\nnp.set_printoptions(precision=3, suppress=True)\nfor name, k in [(\"amplitude damping\", amp), (\"dephasing\", deph), (\"input reset\", reset)]:\n    tp = sum(K.conj().T @ K for K in k)\n    print(name, \"| trace preserving:\", np.allclose(tp, I),\n          \"| Choi eigenvalues:\", np.round(np.linalg.eigvalsh(choi(k)), 3))\n    print(ptm(k))\n\n# the same reset acting on qubit 1 of a Bell pair: entanglement is cut, qubit 2 is untouched\nbell = np.zeros(4); bell[0] = bell[3] = 1 / np.sqrt(2); rho = np.outer(bell, bell)\nout = apply([np.kron(K, I) for K in reset], rho)\nr2 = out.reshape(2, 2, 2, 2).trace(axis1=0, axis2=2)  # reduced state of qubit 2\nprint(\"purity before %.3f after %.3f; qubit 2 still\" % (np.trace(rho @ rho).real, np.trace(out @ out).real), np.round(r2.real, 3).tolist())\n"
+    },
+    {
+      "type": "prose",
+      "text": "Running it: every map is trace preserving and has non-negative Choi eigenvalues (amplitude damping: 0, 0, 0.3, 1.7; Kraus rank 2). The amplitude-damping transfer matrix has $T = \\mathrm{diag}(0.837, 0.837, 0.7)$ and $\\vec t = (0,0,0.3)$; dephasing has $T=\\mathrm{diag}(0.6,0.6,1)$; the reset has $T=0$ and $\\vec t = (0.96, 0, 0.28)$ for $s=0.36$. Applied to half of a Bell pair, the reset drops the purity from 1 to 0.5 and leaves the other qubit at $I/2$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked problems"
+    },
+    {
+      "type": "problem",
+      "title": "Amplitude damping on a superposition",
+      "text": "A qubit in $\\vert+\\rangle$ goes through amplitude damping with $\\gamma=0.3$. Give its Bloch vector and purity afterwards.",
+      "hint": "Use the Bloch map of amplitude damping and purity $=(1+\\vert\\vec r\\vert^2)/2$.",
+      "solution": [
+        "Initially $\\vec r=(1,0,0)$.",
+        "The map is $(x,y,z)\\mapsto(\\sqrt{1-\\gamma}\\,x,\\sqrt{1-\\gamma}\\,y,(1-\\gamma)z+\\gamma)$, so $\\vec r' = (\\sqrt{0.7},0,0.3) = (0.837,0,0.3)$.",
+        "$\\vert\\vec r'\\vert^2 = 0.7+0.09 = 0.79$, purity $(1+0.79)/2 = 0.895$."
+      ],
+      "answer": "$\\vec r = (0.837, 0, 0.3)$, purity $0.895$"
+    },
+    {
+      "type": "problem",
+      "title": "What the input reset writes",
+      "text": "In the Fujii–Nakajima encoding, input $s\\in[0,1]$ resets qubit 1 to $\\sqrt{1-s}\\vert0\\rangle+\\sqrt s\\vert1\\rangle$. Give the Bloch vector of the written state as a function of $s$, and say which input values give the largest $\\langle X\\rangle$ and which make the state an eigenstate of $Z$.",
+      "solution": [
+        "$\\langle Z\\rangle = (1-s) - s = 1-2s$.",
+        "$\\langle X\\rangle = 2\\,\\mathrm{Re}(\\psi_0^*\\psi_1) = 2\\sqrt{s(1-s)}$, $\\langle Y\\rangle = 0$.",
+        "$\\langle X\\rangle$ is largest (equal to 1) at $s=1/2$; the state is a $Z$ eigenstate at $s=0$ and $s=1$, where $\\langle X\\rangle=0$.",
+        "The written Bloch vector is already a nonlinear function of $s$: the square root in $\\langle X\\rangle$ is one source of the reservoir's nonlinearity."
+      ],
+      "answer": "$(2\\sqrt{s(1-s)},\\,0,\\,1-2s)$; max $\\langle X\\rangle$ at $s=1/2$; $Z$ eigenstate at $s\\in\\{0,1\\}$"
+    },
+    {
+      "type": "problem",
+      "title": "Counting the state space",
+      "text": "A 6-qubit reservoir is read out through all $\\langle Z_i\\rangle$ and $\\langle Z_iZ_j\\rangle$. How many features is that, and what fraction of the real parameters of the state does it see?",
+      "solution": [
+        "$\\langle Z_i\\rangle$: 6; $\\langle Z_iZ_j\\rangle$: $\\binom{6}{2} = 15$; total 21.",
+        "The state has $4^6-1 = 4095$ real parameters.",
+        "$21/4095 \\approx 0.5\\%$. Most of the reservoir's state is never read directly; it matters only through how the dynamics feed it back into the measured coordinates."
+      ],
+      "answer": "21 features, about $0.5\\%$ of 4095"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010)",
+        "M. M. Wilde, Quantum Information Theory, 2nd edition, Cambridge University Press (2017)",
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Phys. Rev. Applied 8, 024030 (2017)",
+        "J. Chen and H. I. Nurdin, Learning nonlinear input–output maps with dissipative quantum systems, Quantum Inf. Process. 18, 198 (2019)"
+      ]
+    }
+  ]
+}

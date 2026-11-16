@@ -1,0 +1,192 @@
+{
+  "title": "Benchmark Tasks and Evaluation",
+  "intro": "Reservoir papers, classical and quantum, report the same handful of tasks: short-term memory, NARMA, parity, Mackey-Glass and similar chaotic series, and channel equalisation. Knowing what each task demands, how to evaluate it fairly and which simple baseline it must beat is what lets you read a quantum reservoir result critically.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Evaluation protocol"
+    },
+    {
+      "type": "list",
+      "items": [
+        "One input stream, split in time: washout (discarded), training, optional validation, test. Never shuffle: the state at step $k$ depends on all earlier inputs.",
+        "Washout long enough for the initial state to be forgotten (several memory timescales; see the washout problem in The Echo State Property (#/qrc/foundations/echo-state-property)).",
+        "Hyperparameters (spectral radius, input scaling, $\\lambda$; for quantum: field, evolution time, number of virtual nodes) chosen on validation data, never on the test window.",
+        "Several random reservoirs (seeds) and several input streams; report the mean and spread. Single-seed differences of 10 to 20 percent in NMSE are common noise.",
+        "For physical and quantum reservoirs, state the measurement budget: shots per expectation value and whether the reported features are exact (simulated) or estimated."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Metrics"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{NMSE} = \\frac{\\langle(\\hat y_k - y_k)^2\\rangle}{\\operatorname{var}(y_k)}, \\qquad \\mathrm{NRMSE} = \\sqrt{\\mathrm{NMSE}}"
+    },
+    {
+      "type": "prose",
+      "text": "NMSE = 1 is what predicting the mean achieves, so anything near 1 has learned nothing. Some papers normalise by $\\langle y^2\\rangle$ instead of the variance, which makes results look better when the target has a large mean; check which. Classification tasks report accuracy or symbol error rate; capacity tasks report $\\mathrm{MC}$ or $C[z]$ (Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)). For autonomous forecasting of chaotic systems, report the valid time: how long the free-running prediction stays within a tolerance, in units of the Lyapunov time."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The tasks"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Short-term memory"
+    },
+    {
+      "type": "prose",
+      "text": "Target $y_k = u_{k-d}$ for each delay $d$; the summed score is MC. It tests memory only. The quantum version is the default plot on the The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) page."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "NARMA"
+    },
+    {
+      "type": "prose",
+      "text": "Nonlinear autoregressive moving-average targets, introduced for recurrent-network training by Atiya and Parlos (2000). The order-$n$ form commonly used with input $u_k \\sim U[0, 0.5]$ is"
+    },
+    {
+      "type": "math",
+      "tex": "y_{k+1} = 0.3\\,y_k + 0.05\\,y_k \\sum_{i=0}^{n-1} y_{k-i} + 1.5\\,u_{k-n+1}u_k + 0.1",
+      "caption": "NARMA10 is n = 10. Higher orders sometimes use smaller coefficients to stay bounded, and NARMA10 itself very occasionally diverges for some input draws."
+    },
+    {
+      "type": "prose",
+      "text": "and the second-order version used on many QRC pages is"
+    },
+    {
+      "type": "math",
+      "tex": "y_k = 0.4\\,y_{k-1} + 0.4\\,y_{k-1}y_{k-2} + 0.6\\,u_{k-1}^3 + 0.1"
+    },
+    {
+      "type": "prose",
+      "text": "NARMA needs memory of length $n$ and products of inputs and outputs. Fujii and Nakajima (2017) benchmarked their quantum reservoirs on NARMA tasks of several orders, and most QRC papers since report at least one. Reference points from this shelf's samples: a 50-unit ESN reaches NARMA10 NMSE 0.154 and a 200-unit ESN 0.081, against 0.680 for linear regression on ten lags."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Parity and XOR"
+    },
+    {
+      "type": "prose",
+      "text": "For random bits $b_k$, target $y_k = b_k \\oplus b_{k-1} \\oplus \\cdots \\oplus b_{k-n+1}$. In $\\pm1$ coding, $n$-bit parity is the product $\\prod_i u_{k-i}$, a degree-$n$ term: it isolates nonlinear memory. It also exposes symmetry: a tanh ESN with no bias produces only odd functions of the inputs, so it solves 1- and 3-bit parity (odd degree) and fails 2- and 4-bit parity completely."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Mackey-Glass and other chaotic series"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{dx}{dt} = \\beta\\frac{x(t-\\tau)}{1+x(t-\\tau)^{p}} - \\gamma x(t), \\qquad \\beta = 0.2,\\ \\gamma = 0.1,\\ p = 10,\\ \\tau = 17",
+      "caption": "Mackey and Glass (1977). With τ = 17 the attractor is chaotic."
+    },
+    {
+      "type": "prose",
+      "text": "Typical tasks: predict $x(t+h)$ from the past (open loop), or close the loop and generate. One step at unit sampling is nearly trivial (the series is smooth); difficulty grows with the horizon. The Lorenz system, the Santa Fe laser data and the Kuramoto-Sivashinsky equation (Pathak et al. 2018) are the other standard chaotic tests."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Channel equalisation"
+    },
+    {
+      "type": "prose",
+      "text": "Recover transmitted symbols from a signal distorted by a nonlinear channel with memory and noise; reported as symbol error rate against signal-to-noise ratio. Jaeger and Haas (2004) showed an ESN improving the symbol error rate of a nonlinear channel equaliser by about two orders of magnitude over earlier methods, which put reservoir computing on the map."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "All of them in one run"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(0)\n\ndef mackey_glass(n, tau=17, beta=0.2, gamma=0.1, p=10, dt=0.1, sample=1.0, x0=1.2):\n    \"\"\"Euler steps of dx/dt = beta x(t-tau)/(1+x(t-tau)^p) - gamma x, sampled every `sample`.\"\"\"\n    lag, every = int(tau / dt), int(sample / dt)\n    steps = (n + 500) * every\n    x = np.empty(lag + 1 + steps); x[:lag + 1] = x0\n    for k in range(lag, lag + steps):\n        xd = x[k - lag]\n        x[k + 1] = x[k] + dt * (beta * xd / (1 + xd**p) - gamma * x[k])\n    out = x[lag + 1::every]\n    return out[500:500 + n]          # drop the transient\n\ndef esn(u, N=200, radius=0.95, in_scale=1.0, bias=0.0, seed=1):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N)); W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-in_scale, in_scale, N); b = r.uniform(-bias, bias, N)\n    x = np.zeros(N); X = []\n    for ut in u:\n        x = np.tanh(W @ x + w_in * ut + b); X.append(x)\n    return np.array(X)\n\ndef fit(X, y, tr, te, lam=1e-8):\n    A = np.hstack([X, np.ones((len(X), 1))])\n    w = np.linalg.solve(A[tr].T @ A[tr] + lam * np.eye(A.shape[1]), A[tr].T @ y[tr])\n    return A[te] @ w\n\n# 1) Mackey-Glass, predict 1 time unit ahead from the series itself\ns = mackey_glass(3000); u = np.tanh(s - 1)        # centred, squashed input\nX = esn(u, in_scale=0.5)\nfor h in (1, 20, 50):\n    p = fit(X[:-h], s[h:], slice(200, 2000), slice(2000, None)); t = s[h:][2000:]\n    print(f\"Mackey-Glass {h:2d} steps ahead: NRMSE = {np.sqrt(np.mean((p - t)**2) / np.var(t)):.4f}\")\n\n# 2) Delayed parity of random bits: y_k = u_k XOR u_{k-1} XOR ... XOR u_{k-n+1}\nbits = rng.integers(0, 2, 5000)\nfor bias in (0.0, 0.5):\n  X = esn(2.0 * bits - 1, in_scale=1.0, bias=bias)\n  for n in (1, 2, 3, 4):\n    y = np.zeros(len(bits))\n    for k in range(n - 1, len(bits)): y[k] = bits[k - n + 1:k + 1].sum() % 2\n    acc = np.mean((fit(X, y, slice(200, 4000), slice(4000, None)) > 0.5) == y[4000:])\n    print(f\"bias {bias}: parity of the last {n} bits, test accuracy = {acc:.3f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output: Mackey-Glass NRMSE 0.0003 at 1 step ahead, 0.0141 at 20 and 0.0867 at 50. Without bias, parity accuracy is 1.000, 0.497, 1.000 and 0.499 for 1 to 4 bits; with bias 0.5 all four reach 1.000."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Baselines a quantum result should beat"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The mean (NMSE 1) and linear regression on the last $L$ inputs (memory without nonlinearity).",
+        "A polynomial on the last $L$ inputs, or next-generation reservoir computing (Gauthier et al. 2021): the same features a small quantum reservoir is known to produce (Expressivity and Universality (#/qrc/theory/expressivity-and-universality)).",
+        "An ESN with the same number of readout features as the quantum reservoir. A 5-qubit reservoir read through 25 observables should be compared with a 25-unit ESN, not a 500-unit one, and also with a 25-unit ESN plus the same measurement noise.",
+        "The same quantum reservoir with the quantum part replaced by a classical stochastic model of equal dimension, where possible: it separates what is quantum from what is merely high-dimensional."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "A quick sanity check for any reported QRC result: is the task's NMSE far below what linear regression on recent inputs achieves, and were the features exact or estimated from a stated number of shots?"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Converting metrics",
+      "text": "One paper reports NRMSE 0.15 on NARMA10, another NMSE 0.03. Which is better?",
+      "solution": [
+        "NMSE = NRMSE$^2$, so NRMSE 0.15 is NMSE 0.0225.",
+        "0.0225 < 0.03, so the first is better (if both normalise by the variance)."
+      ],
+      "answer": "the first (NMSE 0.0225)"
+    },
+    {
+      "type": "problem",
+      "title": "One NARMA2 step",
+      "text": "With $y_{k-1} = 0.2$, $y_{k-2} = 0.1$ and $u_{k-1} = 0.5$, compute the NARMA2 target $y_k$.",
+      "solution": [
+        "$0.4 \\times 0.2 = 0.08$.",
+        "$0.4 \\times 0.2 \\times 0.1 = 0.008$.",
+        "$0.6 \\times 0.5^3 = 0.075$.",
+        "Sum with the constant: $0.08 + 0.008 + 0.075 + 0.1 = 0.263$."
+      ],
+      "answer": "0.263"
+    },
+    {
+      "type": "problem",
+      "title": "Which degree?",
+      "text": "In $\\pm1$ coding, what is the polynomial degree of 3-bit parity, and which capacity term from Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity) must the reservoir have to solve it?",
+      "solution": [
+        "$y_k = \\tfrac12(1 - u_k u_{k-1} u_{k-2})$ in $\\{0,1\\}$ form, so the nonconstant part is the product of three distinct delayed inputs.",
+        "Degree 3: it needs capacity in the basis function $P_1(u_k)P_1(u_{k-1})P_1(u_{k-2})$. A reservoir whose budget sits in degrees 1 and 2 cannot solve it, however large."
+      ],
+      "answer": "degree 3, the term u(k)u(k−1)u(k−2)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A. F. Atiya and A. G. Parlos, New results on recurrent network training: unifying the algorithms and accelerating convergence, IEEE Transactions on Neural Networks 11, 697 (2000)",
+        "M. C. Mackey and L. Glass, Oscillation and chaos in physiological control systems, Science 197, 287 (1977)",
+        "H. Jaeger and H. Haas, Harnessing nonlinearity: predicting chaotic systems and saving energy in wireless communication, Science 304, 78 (2004)",
+        "J. Pathak, B. Hunt, M. Girvan, Z. Lu and E. Ott, Model-free prediction of large spatiotemporally chaotic systems from data: a reservoir computing approach, Physical Review Letters 120, 024102 (2018)",
+        "D. J. Gauthier, E. Bollt, A. Griffith and W. A. S. Barbosa, Next generation reservoir computing, Nature Communications 12, 5564 (2021)",
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Physical Review Applied 8, 024030 (2017)",
+        "M. Lukoševičius and H. Jaeger, Reservoir computing approaches to recurrent neural network training, Computer Science Review 3, 127 (2009)"
+      ]
+    }
+  ]
+}
