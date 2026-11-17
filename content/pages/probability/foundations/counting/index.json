@@ -1,0 +1,104 @@
+{
+  "title": "Counting",
+  "intro": "With equally likely outcomes, probability is counting. A few principles (multiply choices, divide out orderings that do not matter) handle almost every case.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The multiplication principle"
+    },
+    {
+      "type": "prose",
+      "text": "If a task is done in stages with $n_1$ choices at the first, $n_2$ at the second and so on (whatever was chosen before), there are $n_1n_2\\cdots$ ways in all. Everything below is this principle plus division by overcounting."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Permutations and combinations"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Ordered selections of $k$ from $n$ without repetition: $n(n-1)\\cdots(n-k+1) = \\frac{n!}{(n-k)!}$.",
+        "Unordered selections: each unordered set appears $k!$ times among the ordered ones, so divide: $\\binom{n}{k} = \\frac{n!}{k!(n-k)!}$.",
+        "Arrangements of a word with repeated letters: $\\frac{n!}{n_1!n_2!\\cdots}$, the multinomial coefficient.",
+        "With repetition allowed, $k$ ordered draws from $n$: $n^k$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stars and bars"
+    },
+    {
+      "type": "prose",
+      "text": "The number of ways to put $k$ identical balls into $n$ distinguishable boxes is $\\binom{n+k-1}{k}$: line up $k$ stars and $n-1$ bars and choose where the bars go. The same count gives the number of non-negative integer solutions of $x_1 + \\cdots + x_n = k$. Note that these arrangements are not equally likely if the balls are thrown at random, a classic trap."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The birthday problem"
+    },
+    {
+      "type": "prose",
+      "text": "Among $n$ people with birthdays independent and uniform over 365 days, the chance that all are different is $\\frac{365}{365}\\cdot\\frac{364}{365}\\cdots\\frac{365-n+1}{365}$. Since there are $\\binom{n}{2}$ pairs, each matching with probability $1/365$, collisions arrive much sooner than intuition suggests: roughly when $n^2/730\\approx\\ln 2$, that is $n\\approx23$. The same square-root effect sets the strength of hash functions against collision attacks."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "from math import comb, perm, prod\nimport numpy as np\ndeck = comb(52, 5)\nfull_house = 13 * comb(4, 3) * 12 * comb(4, 2)\nflush = 4 * comb(13, 5) - 40                        # remove straight flushes (incl. royal)\nprint(f\"5-card hands: {deck:,}\")\nprint(f\"full house: {full_house:,}  P = {full_house / deck:.6f}\")\nprint(f\"flush (not straight flush): {flush:,}  P = {flush / deck:.6f}\")\n# Birthday problem: P(some shared birthday among n people), 365 equally likely days\ndef p_shared(n): return 1 - prod((365 - k) / 365 for k in range(n))\nfor n in (10, 23, 40, 70):\n    print(f\"n = {n}: P(shared birthday) = {p_shared(n):.4f}\")\nrng = np.random.default_rng(2)\nsim = np.mean([len(set(rng.integers(0, 365, 23))) < 23 for _ in range(50000)])\nprint(f\"simulated, n = 23: {sim:.4f}\")\nprint(\"ordered vs unordered: P(10, 3) =\", perm(10, 3), \" C(10, 3) =\", comb(10, 3))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: there are 2 598 960 five-card hands; 3 744 are full houses (probability 0.00144) and 5 108 are flushes that are not straight flushes (0.00197). The probability of a shared birthday is 0.117 for 10 people, 0.507 for 23, 0.891 for 40 and 0.9992 for 70; a simulation for 23 gives 0.509."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Mississippi",
+      "text": "How many distinct arrangements of the letters of MISSISSIPPI are there?",
+      "solution": [
+        "11 letters: M once, I four times, S four times, P twice.",
+        "$\\frac{11!}{1!\\,4!\\,4!\\,2!} = \\frac{39\\,916\\,800}{1152} = 34\\,650$."
+      ],
+      "answer": "34 650"
+    },
+    {
+      "type": "problem",
+      "title": "Two pair",
+      "text": "Find the probability that a five-card poker hand is two pair.",
+      "solution": [
+        "Choose the two ranks for the pairs: $\\binom{13}{2} = 78$; the suits of each pair: $\\binom42^2 = 36$; the fifth card from the other 11 ranks: 44.",
+        "$78\\times36\\times44 = 123\\,552$ hands, so $P = 123\\,552/2\\,598\\,960\\approx0.0475$."
+      ],
+      "answer": "≈ 0.0475"
+    },
+    {
+      "type": "problem",
+      "title": "Stars and bars",
+      "text": "In how many ways can 10 identical sweets be shared among 4 children (some may get none)? And if each must get at least one?",
+      "solution": [
+        "$\\binom{10 + 3}{3} = \\binom{13}{3} = 286$.",
+        "Give each child one first, then share the remaining 6 freely: $\\binom{6 + 3}{3} = 84$."
+      ],
+      "answer": "286; 84"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 1",
+        "W. Feller, An Introduction to Probability Theory and Its Applications, Volume 1, 3rd edition, Wiley (1968), chapter 2",
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 1"
+      ]
+    }
+  ]
+}

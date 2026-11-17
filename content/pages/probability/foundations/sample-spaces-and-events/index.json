@@ -1,0 +1,126 @@
+{
+  "title": "Sample Spaces and Events",
+  "intro": "A probability model starts with a sample space, the set of all possible outcomes. Events are subsets of it, so the logic of events is the algebra of sets.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Outcomes and the sample space"
+    },
+    {
+      "type": "prose",
+      "text": "An experiment is anything with an uncertain result: rolling two dice, measuring a lifetime, recording tomorrow's weather. The sample space $\\Omega$ is the set of all possible outcomes, chosen fine enough that exactly one outcome occurs. For two dice the natural choice is the 36 ordered pairs $(i, j)$; recording only the sum would lose information you might need later, such as whether a double was rolled."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Events are sets"
+    },
+    {
+      "type": "prose",
+      "text": "An event is a subset $A\\subseteq\\Omega$: the event occurs when the outcome lies in $A$. The logical operations become set operations:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "'A or B': the union $A\\cup B$.",
+        "'A and B': the intersection $A\\cap B$, often written $AB$.",
+        "'not A': the complement $A^c = \\Omega$ minus $A$.",
+        "'A and B cannot both happen': $A$ and $B$ are disjoint, $A\\cap B = \\emptyset$.",
+        "De Morgan's laws: $(A\\cup B)^c = A^c\\cap B^c$ and $(A\\cap B)^c = A^c\\cup B^c$. 'Not (A or B)' means 'neither'."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Equally likely outcomes"
+    },
+    {
+      "type": "prose",
+      "text": "When $\\Omega$ is finite and symmetry makes every outcome equally likely, probability is counting:"
+    },
+    {
+      "type": "math",
+      "tex": "P(A) = \\frac{\\vert A\\vert}{\\vert\\Omega\\vert}",
+      "caption": "The classical definition. It only applies when the outcomes really are equally likely."
+    },
+    {
+      "type": "prose",
+      "text": "The two-dice example: the sum is 7 for 6 of the 36 pairs, so $P(\\text{sum} = 7) = 1/6$. At least one six occurs in 11 pairs (six with a six first, six with a six second, minus the double six counted twice). Counting larger sets is the subject of Counting (#/probability/foundations/counting)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The probability of a union"
+    },
+    {
+      "type": "prose",
+      "text": "Adding $P(A)$ and $P(B)$ counts the outcomes in both twice, so"
+    },
+    {
+      "type": "math",
+      "tex": "P(A\\cup B) = P(A) + P(B) - P(A\\cap B)",
+      "caption": "The two-event case of inclusion–exclusion."
+    },
+    {
+      "type": "prose",
+      "text": "and the complement rule $P(A^c) = 1 - P(A)$ is often the fastest route: 'at least one' is usually easiest as one minus 'none'."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom itertools import product\n# The sample space of two fair dice: 36 equally likely ordered pairs.\nomega = list(product(range(1, 7), repeat=2))\nP = lambda event: sum(1 for w in omega if event(w)) / len(omega)\nA = lambda w: w[0] + w[1] == 7          # the sum is 7\nB = lambda w: w[0] == 6 or w[1] == 6    # at least one six\nprint(f\"P(A) = {P(A):.4f}  (6/36)\")\nprint(f\"P(B) = {P(B):.4f}  (11/36)\")\nprint(f\"P(A and B) = {P(lambda w: A(w) and B(w)):.4f}  (2/36)\")\nprint(f\"P(A or B) = {P(lambda w: A(w) or B(w)):.4f} = P(A) + P(B) - P(A and B) = {P(A) + P(B) - P(lambda w: A(w) and B(w)):.4f}\")\n# The same probabilities by simulation: relative frequencies settle on them\nrng = np.random.default_rng(0)\nrolls = rng.integers(1, 7, size=(100000, 2))\nprint(\"simulated P(A) =\", np.mean(rolls.sum(1) == 7), \" simulated P(B) =\", np.mean((rolls == 6).any(1)))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: $P(A) = 0.1667$, $P(B) = 0.3056$, $P(A\\cap B) = 0.0556$, and both ways of computing $P(A\\cup B)$ give 0.4167. Over 100 000 simulated rolls the relative frequencies are 0.168 and 0.305: frequencies settle on probabilities, a fact made precise by The Law of Large Numbers (#/probability/limit-theorems/law-of-large-numbers)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Three coins",
+      "text": "Three fair coins are tossed. Write the sample space and find the probability of at least two heads.",
+      "solution": [
+        "$\\Omega$ has $2^3 = 8$ equally likely outcomes: HHH, HHT, HTH, THH, HTT, THT, TTH, TTT.",
+        "At least two heads: HHH, HHT, HTH, THH, which is 4 outcomes, so the probability is $4/8 = 1/2$."
+      ],
+      "answer": "1/2"
+    },
+    {
+      "type": "problem",
+      "title": "Union from the parts",
+      "text": "$P(A) = 0.5$, $P(B) = 0.4$ and $P(A\\cap B) = 0.2$. Find $P(A\\cup B)$ and the probability that neither occurs.",
+      "solution": [
+        "$P(A\\cup B) = 0.5 + 0.4 - 0.2 = 0.7$.",
+        "Neither is the complement of the union (De Morgan): $1 - 0.7 = 0.3$."
+      ],
+      "answer": "0.7 and 0.3"
+    },
+    {
+      "type": "problem",
+      "title": "At least one six",
+      "text": "What is the probability of at least one six in four rolls of a fair die?",
+      "solution": [
+        "The complement is 'no six in four rolls': $(5/6)^4 = 625/1296 \\approx 0.482$.",
+        "So $P(\\text{at least one six}) = 1 - 0.482 = 0.518$, a little better than even. (This is de Méré's old wager.)"
+      ],
+      "answer": "1 − (5/6)⁴ ≈ 0.518"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 1",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 2"
+      ]
+    }
+  ]
+}

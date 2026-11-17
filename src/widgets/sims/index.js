@@ -21,6 +21,7 @@ import * as pll from "./pll.js";
 import * as music from "./music.js";
 import * as qrc from "./qrc.js";
 import * as quantum from "./quantum.js";
+import * as probability from "./probability.js";
 
 export const SIMS = {
   "esn-memory": qrc.esnMemory,
@@ -35,6 +36,11 @@ export const SIMS = {
   "coherent-photons": quantum.coherentPhotons,
   "trotter-fidelity": quantum.trotterFidelity,
   "tfim-sweep": quantum.tfimSweep,
+  lln: probability.lln,
+  clt: probability.clt,
+  markov: probability.markov,
+  "random-walk": probability.randomWalk,
+  "bayes-update": probability.bayesUpdate,
   "harmonic-series": music.harmonicSeries,
   beating: music.beating,
   "chord-wave": music.chordWave,

@@ -1,0 +1,109 @@
+{
+  "title": "Entropy and Information",
+  "intro": "Shannon entropy measures how uncertain a random variable is, in bits. Its relatives, KL divergence and mutual information, measure how different two distributions are and how much one variable tells you about another.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Entropy"
+    },
+    {
+      "type": "math",
+      "tex": "H(X) = -\\sum_x p(x)\\log_2 p(x)",
+      "caption": "Shannon entropy in bits. Terms with p(x) = 0 contribute 0."
+    },
+    {
+      "type": "prose",
+      "text": "A fair coin has 1 bit; a fair die $\\log_26\\approx2.585$ bits; a certain outcome 0. Entropy is largest for the uniform distribution on a given set. Its operational meaning: the best possible lossless code uses $H(X)$ bits per symbol on average (Shannon's source coding theorem). For two variables, $H(X, Y) = H(X) + H(Y\\mid X)$, with equality $H(X, Y) = H(X) + H(Y)$ exactly when they are independent."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "KL divergence"
+    },
+    {
+      "type": "math",
+      "tex": "D(p\\,\\Vert\\,q) = \\sum_x p(x)\\log_2\\frac{p(x)}{q(x)} \\ge 0",
+      "caption": "Relative entropy: the extra bits paid for coding data from p with a code built for q."
+    },
+    {
+      "type": "prose",
+      "text": "It is zero only when $p = q$ (Gibbs' inequality, from Jensen), but it is not symmetric and not a distance. Maximum likelihood estimation is minimising the KL divergence from the data's distribution to the model, and variational inference minimises it the other way round, which is why the two behave differently."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mutual information"
+    },
+    {
+      "type": "prose",
+      "text": "$I(X; Y) = D(p_{X,Y}\\,\\Vert\\,p_Xp_Y) = H(X) - H(X\\mid Y)$: how far the joint is from independence, or how many bits about $X$ one learns from $Y$. Unlike correlation it detects any dependence, linear or not, and is zero only under independence. The capacity of a noisy channel is the largest mutual information between its input and output."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Continuous variables and maximum entropy"
+    },
+    {
+      "type": "prose",
+      "text": "For densities, differential entropy $h(X) = -\\int f\\log_2 f$ plays the same role, though it can be negative and is not invariant under change of variables. Among densities with a given variance, the normal has the largest differential entropy, $\\tfrac12\\log_2(2\\pi e\\sigma^2)$; among those on $[0, \\infty)$ with a given mean, the exponential does. Choosing the maximum-entropy distribution consistent with known constraints is a principled way to assume nothing more (Jaynes)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nH = lambda p: -sum(q * np.log2(q) for q in p if q > 0)\nprint(f\"fair coin {H([.5, .5]):.3f} bit, biased 0.9/0.1 {H([.9, .1]):.3f} bit, fair die {H([1/6]*6):.3f} bits (log2 6)\")\n# KL divergence is not symmetric, and it is zero only for identical distributions\nKL = lambda p, q: sum(a * np.log2(a / b) for a, b in zip(p, q) if a > 0)\np, q = [0.5, 0.5], [0.9, 0.1]\nprint(f\"KL(p||q) = {KL(p, q):.4f} bit, KL(q||p) = {KL(q, p):.4f} bit\")\n# Mutual information of a binary symmetric channel with flip probability 0.1 and a fair input\ne = 0.1\njoint = np.array([[0.5 * (1 - e), 0.5 * e], [0.5 * e, 0.5 * (1 - e)]])\nI = sum(joint[i, j] * np.log2(joint[i, j] / (joint[i].sum() * joint[:, j].sum())) for i in range(2) for j in range(2))\nprint(f\"I(X;Y) for a channel flipping 10% of bits: {I:.4f} bit = 1 - H(0.1) = {1 - H([e, 1 - e]):.4f}\")\n# Differential entropy of N(0, s^2) is 0.5 log2(2 pi e s^2); the normal maximises it for a given variance\nfor s in (1, 2):\n    print(f\"N(0, {s}^2): {0.5 * np.log2(2 * np.pi * np.e * s * s):.4f} bits; uniform with the same variance: {np.log2(s * np.sqrt(12)):.4f} bits\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: entropies of 1.000 bit (fair coin), 0.469 (a 0.9/0.1 coin) and 2.585 bits (fair die). $D(p\\Vert q) = 0.737$ bit but $D(q\\Vert p) = 0.531$ bit: not symmetric. A binary channel that flips 10% of bits carries 0.531 bit per use, $1 - H(0.1)$. The normal's differential entropy beats a uniform of equal variance by 0.255 bit, at any scale."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Entropy of a loaded die",
+      "text": "A die shows 6 with probability 1/2 and each other face with probability 1/10. Find its entropy.",
+      "solution": [
+        "$H = -\\tfrac12\\log_2\\tfrac12 - 5\\times\\tfrac1{10}\\log_2\\tfrac1{10} = 0.5 + 0.5\\times3.322 = 2.161$ bits.",
+        "Less than the fair die's 2.585 bits."
+      ],
+      "answer": "≈ 2.16 bits"
+    },
+    {
+      "type": "problem",
+      "title": "Independence and entropy",
+      "text": "$X$ and $Y$ are independent fair coins and $Z = X\\oplus Y$. Find $H(Z)$, $H(X, Y, Z)$ and $I(X; Z)$.",
+      "solution": [
+        "$Z$ is a fair coin: $H(Z) = 1$.",
+        "$Z$ is determined by $(X, Y)$: $H(X, Y, Z) = H(X, Y) = 2$.",
+        "$X$ and $Z$ are independent (as on Independence (#/probability/foundations/independence)): $I(X; Z) = 0$."
+      ],
+      "answer": "1, 2, 0"
+    },
+    {
+      "type": "problem",
+      "title": "KL between coins",
+      "text": "Compute $D(\\text{Bernoulli}(0.5)\\,\\Vert\\,\\text{Bernoulli}(0.9))$.",
+      "solution": [
+        "$0.5\\log_2(0.5/0.9) + 0.5\\log_2(0.5/0.1) = 0.5(-0.848) + 0.5(2.322) = 0.737$ bit, matching the sample."
+      ],
+      "answer": "0.737 bit"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "C. E. Shannon, A mathematical theory of communication, Bell System Technical Journal 27, 379 and 623 (1948)",
+        "T. M. Cover and J. A. Thomas, Elements of Information Theory, 2nd edition, Wiley (2006)",
+        "E. T. Jaynes, Information theory and statistical mechanics, Physical Review 106, 620 (1957)"
+      ]
+    }
+  ]
+}

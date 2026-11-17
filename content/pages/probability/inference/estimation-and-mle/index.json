@@ -1,0 +1,95 @@
+{
+  "title": "Estimation and Maximum Likelihood",
+  "intro": "An estimator is a rule that turns data into a guess for a parameter. Maximum likelihood chooses the parameter that makes the observed data most probable, and for large samples it is close to the best possible.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Estimators and their errors"
+    },
+    {
+      "type": "prose",
+      "text": "Data $X_1, \\dots, X_n$ are modelled as i.i.d. from a distribution with unknown parameter $\\theta$. An estimator $\\hat\\theta$ is any function of the data. Its quality is measured by its bias $E[\\hat\\theta] - \\theta$ and its variance, combined in the mean squared error: $\\mathrm{MSE} = \\mathrm{bias}^2 + \\mathrm{variance}$. A biased estimator can beat an unbiased one: dividing a sum of squares by $n + 1$ instead of $n - 1$ gives a smaller MSE for normal data."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Maximum likelihood"
+    },
+    {
+      "type": "math",
+      "tex": "L(\\theta) = \\prod_{i=1}^n f(X_i;\\theta), \\qquad \\hat\\theta_{\\text{MLE}} = \\arg\\max_\\theta\\,\\ell(\\theta), \\quad \\ell = \\ln L",
+      "caption": "The likelihood is the joint density of the observed data, read as a function of the parameter."
+    },
+    {
+      "type": "prose",
+      "text": "Taking logs turns the product into a sum, and setting the derivative (the score) to zero usually gives the estimator. For a Bernoulli parameter it is the sample proportion; for an exponential rate, one over the sample mean; for a normal variance, the average squared deviation (dividing by $n$, so slightly biased). Maximum likelihood is invariant: the MLE of $g(\\theta)$ is $g(\\hat\\theta)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Fisher information and the large-sample theory"
+    },
+    {
+      "type": "prose",
+      "text": "The Fisher information $I(\\theta) = -E[\\ell''(\\theta)]$ for one observation measures how sharply the likelihood peaks. Under regularity conditions the MLE is consistent and asymptotically normal: $\\hat\\theta\\approx N(\\theta, 1/(nI(\\theta)))$. The Cramér–Rao bound says no unbiased estimator has smaller variance than $1/(nI(\\theta))$, so for large samples the MLE is as good as it gets. The approximation gives the standard confidence interval $\\hat\\theta\\pm1.96/\\sqrt{nI(\\hat\\theta)}$, which covers the true value in about 95% of repeated experiments. A confidence interval is a statement about the procedure, not about this particular interval."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(30)\n# MLE of an exponential rate: lambda_hat = 1 / sample mean; Fisher information n / lambda^2\nlam, n = 2.0, 50\ndata = rng.exponential(1 / lam, n)\nlam_hat = 1 / data.mean()\nse = lam_hat / np.sqrt(n)\nprint(f\"lambda_hat = {lam_hat:.3f}, approximate standard error {se:.3f}, 95% CI ({lam_hat - 1.96*se:.3f}, {lam_hat + 1.96*se:.3f})\")\n# Repeat the experiment: how often does the 95% interval cover the true rate?\nhats = 1 / rng.exponential(1 / lam, (20000, n)).mean(1)\ncover = np.mean(abs(hats - lam) < 1.96 * hats / np.sqrt(n))\nprint(f\"coverage over 20000 repeats: {cover:.3f}; bias of lambda_hat: {hats.mean() - lam:+.4f} (exact n/(n-1) factor: {lam * n / (n - 1) - lam:+.4f})\")\n# Method of moments vs MLE for a Uniform(0, theta): MLE is the sample maximum\ntheta = 10.0\nu = rng.uniform(0, theta, (20000, 20))\nmle, mom = u.max(1), 2 * u.mean(1)\nprint(f\"Uniform(0,10), n = 20: MLE max mean {mle.mean():.3f}, MSE {np.mean((mle - theta)**2):.3f}; moments 2*mean MSE {np.mean((mom - theta)**2):.3f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: from 50 exponential observations with true rate 2, the MLE is 1.94 with standard error 0.27 and 95% interval (1.40, 2.48). Over 20 000 repetitions the interval covers the true rate 95.0% of the time, and the MLE is biased upwards by 0.040, matching the exact factor $n/(n-1)$. For Uniform(0, 10) with 20 observations, the MLE (the sample maximum) is biased low (mean 9.53) yet has mean squared error 0.43, against 1.65 for the unbiased method-of-moments estimator $2\\bar x$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Bernoulli MLE and its information",
+      "text": "Find the MLE of $p$ from $k$ successes in $n$ Bernoulli trials, and the Fisher information per trial.",
+      "solution": [
+        "$\\ell(p) = k\\ln p + (n - k)\\ln(1 - p)$; setting $\\ell' = 0$ gives $\\hat p = k/n$.",
+        "$-\\ell''$ for one trial has expectation $\\frac{1}{p} + \\frac{1}{1-p} = \\frac{1}{p(1-p)}$. So the standard error is $\\sqrt{p(1-p)/n}$."
+      ],
+      "answer": "k/n; 1/(p(1 − p))"
+    },
+    {
+      "type": "problem",
+      "title": "Normal MLE",
+      "text": "Find the MLEs of $\\mu$ and $\\sigma^2$ for a normal sample.",
+      "solution": [
+        "$\\ell = -\\tfrac n2\\ln(2\\pi\\sigma^2) - \\sum(x_i - \\mu)^2/(2\\sigma^2)$.",
+        "$\\hat\\mu = \\bar x$ and $\\hat\\sigma^2 = \\frac1n\\sum(x_i - \\bar x)^2$, which has expectation $\\frac{n-1}{n}\\sigma^2$."
+      ],
+      "answer": "x̄ and (1/n)Σ(xᵢ − x̄)²"
+    },
+    {
+      "type": "problem",
+      "title": "Invariance",
+      "text": "From exponential data with sample mean 4, what is the MLE of the median lifetime?",
+      "solution": [
+        "$\\hat\\lambda = 1/4$, and the median is $\\ln2/\\lambda$.",
+        "By invariance, the MLE of the median is $4\\ln2\\approx2.77$."
+      ],
+      "answer": "4 ln 2 ≈ 2.77"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "G. Casella and R. L. Berger, Statistical Inference, 2nd edition, Duxbury (2002), chapters 7 to 10",
+        "R. A. Fisher, On the mathematical foundations of theoretical statistics, Philosophical Transactions of the Royal Society A 222, 309 (1922)",
+        "L. Wasserman, All of Statistics, Springer (2004)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,96 @@
+{
+  "title": "Poisson Processes",
+  "intro": "A Poisson process scatters events at random in time at a constant rate. Its counts are Poisson, its gaps are exponential, and it can be split and merged freely. With state-dependent exponential clocks it becomes a continuous-time Markov chain.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three equivalent definitions"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Counts: the number of events in any interval of length $t$ is Poisson($\\lambda t$), and counts in disjoint intervals are independent.",
+        "Gaps: the times between consecutive events are independent Exp($\\lambda$).",
+        "Infinitesimal: in a short interval $dt$, one event occurs with probability $\\lambda\\,dt$ and two or more with negligible probability, independently of the past."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Each version implies the others. Given that $n$ events fell in $[0, T]$, their times are distributed as $n$ independent uniforms on $[0, T]$, sorted: the Poisson process is 'completely random' scattering."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Splitting and merging"
+    },
+    {
+      "type": "prose",
+      "text": "Merging independent Poisson processes of rates $\\lambda$ and $\\mu$ gives a Poisson process of rate $\\lambda + \\mu$, and each merged event came from the first with probability $\\lambda/(\\lambda + \\mu)$. Thinning, keeping each event independently with probability $p$, gives a Poisson process of rate $\\lambda p$, independent of the discarded events. A non-homogeneous Poisson process lets the rate $\\lambda(t)$ vary, with the count in $[a, b]$ Poisson with mean $\\int_a^b\\lambda(t)\\,dt$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Continuous-time Markov chains"
+    },
+    {
+      "type": "prose",
+      "text": "Let a system sit in state $i$ for an Exp($q_i$) time and then jump to $j$ with probability $q_{ij}/q_i$. That is a continuous-time Markov chain with generator $Q$ ($Q_{ij} = q_{ij}$ off the diagonal and rows summing to 0). Its transition probabilities are $P(t) = e^{tQ}$, and its stationary distribution solves $\\pi Q = 0$. Queues, chemical reactions and population models are of this form, and the Lindblad equation on the QRC shelf is its quantum analogue."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(28)\nlam, T = 2.0, 1000.0\narrivals = np.cumsum(rng.exponential(1 / lam, int(lam * T * 1.2)))\narrivals = arrivals[arrivals < T]\ncounts = np.histogram(arrivals, bins=np.arange(0, T + 1, 1))[0]\nprint(f\"events per unit time: mean {counts.mean():.3f}, variance {counts.var():.3f} (both lambda = 2)\")\n# Given the number of events in [0, T], their times are independent uniforms on [0, T]\nprint(f\"mean arrival time {arrivals.mean():.1f} (T/2 = {T/2}), fraction in the first quarter {np.mean(arrivals < T/4):.4f}\")\n# Thinning: keep each event with probability 0.3 -> a Poisson process of rate 0.6\nkept = arrivals[rng.random(len(arrivals)) < 0.3]\nprint(f\"thinned rate {len(kept) / T:.3f} (0.6)\")\n# A two-state continuous-time Markov chain: off -> on at rate a, on -> off at rate b\na, b = 1.0, 3.0\nt, state, on_time = 0.0, 0, 0.0\nwhile t < 10 ** 5:\n    rate = a if state == 0 else b\n    dt = rng.exponential(1 / rate)\n    on_time += dt if state == 1 else 0.0\n    t += dt; state = 1 - state\nprint(f\"fraction of time 'on': {on_time / t:.4f}; stationary a/(a+b) = {a / (a + b)}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: over 1000 unit windows the counts have mean 1.92 and variance 1.98, close to $\\lambda = 2$ with the noise of 1000 windows. Arrival times average 508 over $[0, 1000]$ and 23.9% fall in the first quarter, consistent with uniform scattering. Thinning with $p = 0.3$ gives rate 0.585. A two-state chain switching on at rate 1 and off at rate 3 spends 0.2504 of its time on, against $a/(a + b) = 0.25$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A quiet half-minute",
+      "text": "Requests arrive at 4 per minute. What is the probability of none in 30 seconds?",
+      "solution": [
+        "The count in half a minute is Poisson(2): $P(0) = e^{-2}\\approx0.135$."
+      ],
+      "answer": "≈ 0.135"
+    },
+    {
+      "type": "problem",
+      "title": "All early",
+      "text": "Exactly 3 events of a Poisson process occurred in $[0, 1]$. What is the probability that all occurred before $t = 1/2$?",
+      "solution": [
+        "Given the count, the times are independent uniforms: $(1/2)^3 = 1/8$."
+      ],
+      "answer": "1/8"
+    },
+    {
+      "type": "problem",
+      "title": "Which comes first",
+      "text": "Buses on route A arrive as a Poisson process of rate 3 per hour and on route B at rate 1 per hour. What is the probability the next bus is an A? What is the mean wait?",
+      "solution": [
+        "Merged rate 4 per hour: mean wait 15 minutes.",
+        "The next bus is an A with probability $3/4$."
+      ],
+      "answer": "3/4; 15 minutes"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. F. C. Kingman, Poisson Processes, Oxford University Press (1993)",
+        "J. R. Norris, Markov Chains, Cambridge University Press (1997), chapters 2 and 3",
+        "G. R. Grimmett and D. R. Stirzaker, Probability and Random Processes, 4th edition, Oxford University Press (2020), chapter 6"
+      ]
+    }
+  ]
+}

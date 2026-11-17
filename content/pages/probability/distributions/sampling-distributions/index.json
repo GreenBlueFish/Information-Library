@@ -1,0 +1,108 @@
+{
+  "title": "Sampling Distributions",
+  "intro": "Statistics computed from normal samples have their own distributions: chi-square for sums of squares, Student's t for standardised means with an estimated variance, F for ratios of variances. The beta family describes proportions and order statistics.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Chi-square"
+    },
+    {
+      "type": "prose",
+      "text": "If $Z_1, \\dots, Z_k$ are independent standard normals, $Q = Z_1^2 + \\cdots + Z_k^2$ has the chi-square distribution with $k$ degrees of freedom, $\\chi^2_k$, with mean $k$ and variance $2k$. It is a gamma distribution (shape $k/2$, rate $1/2$). For a normal sample of size $n$, $(n-1)s^2/\\sigma^2\\sim\\chi^2_{n-1}$: one degree of freedom is spent estimating the mean."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Student's t"
+    },
+    {
+      "type": "math",
+      "tex": "T = \\frac{Z}{\\sqrt{Q/\\nu}} \\sim t_\\nu, \\qquad Z\\sim N(0,1),\\ Q\\sim\\chi^2_\\nu \\text{ independent}"
+    },
+    {
+      "type": "prose",
+      "text": "Its use: for a normal sample, $(\\bar x - \\mu)/(s/\\sqrt n)\\sim t_{n-1}$ exactly. Replacing the unknown $\\sigma$ by the estimate $s$ adds uncertainty, and the t distribution's heavier tails account for it. With 1 degree of freedom it is the Cauchy distribution (no mean); as $\\nu\\to\\infty$ it tends to the normal. W. S. Gosset derived it in 1908 while working for the Guinness brewery, publishing as 'Student'."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "F"
+    },
+    {
+      "type": "prose",
+      "text": "The ratio of two independent chi-squares, each divided by its degrees of freedom, $F = (Q_1/\\nu_1)/(Q_2/\\nu_2)$, has the F distribution. It is the distribution of a ratio of two sample variances from normal populations with equal variance, which is what analysis of variance tests. And $t_\\nu^2$ is $F(1, \\nu)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Beta"
+    },
+    {
+      "type": "math",
+      "tex": "f(x) = \\frac{x^{a-1}(1-x)^{b-1}}{B(a, b)}, \\quad 0 < x < 1, \\qquad E[X] = \\frac{a}{a+b}",
+      "caption": "Beta(a, b); B(a, b) = Γ(a)Γ(b)/Γ(a + b)."
+    },
+    {
+      "type": "prose",
+      "text": "The beta lives on $[0, 1]$, so it models proportions and probabilities. It appears as the $k$-th smallest of $n$ independent uniforms (Beta($k$, $n - k + 1$)), as $G_1/(G_1 + G_2)$ for independent gammas with a common rate, and as the conjugate prior for a binomial probability (Bayesian Inference (#/probability/inference/bayesian-inference)). Beta(1, 1) is uniform."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy import stats\nrng = np.random.default_rng(14)\n# Sum of k squared standard normals is chi-square with k degrees of freedom\nz = rng.normal(size=(10 ** 6, 5))\nq = (z ** 2).sum(1)\nprint(f\"chi-square(5): mean {q.mean():.3f} (5), variance {q.var():.3f} (10), P(Q > 11.07) = {np.mean(q > 11.07):.4f} (0.05)\")\n# t statistic from small normal samples has heavier tails than the normal\nn = 5\nx = rng.normal(10, 3, (10 ** 6, n))\nt = (x.mean(1) - 10) / (x.std(1, ddof=1) / np.sqrt(n))\nprint(f\"t with {n - 1} df: P(|T| > 1.96) = {np.mean(abs(t) > 1.96):.4f} (normal would give 0.05; t table gives {2 * stats.t.sf(1.96, n - 1):.4f})\")\nprint(f\"95% critical value: t(4) = {stats.t.ppf(0.975, 4):.3f} vs z = 1.960\")\n# Beta as the distribution of an order statistic: the 2nd smallest of 5 uniforms is Beta(2, 4)\nu = np.sort(rng.random((10 ** 6, 5)), axis=1)[:, 1]\nprint(f\"2nd smallest of 5 uniforms: mean {u.mean():.4f} (Beta(2,4) mean 1/3), P(<0.2) = {np.mean(u < 0.2):.4f} vs {stats.beta.cdf(0.2, 2, 4):.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: sums of five squared normals have mean 5.00 and variance 9.97, and exceed the tabulated 95% point 11.07 with frequency 0.0497. For samples of size 5, the t statistic exceeds 1.96 in absolute value 12.2% of the time, not 5%, matching the $t_4$ value 0.1216; the correct 95% critical value is 2.776. The second smallest of five uniforms has mean 0.333 and $P(< 0.2) = 0.264$, as Beta(2, 4) predicts."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Chi-square moments",
+      "text": "Use $E[Z^2] = 1$ and $E[Z^4] = 3$ to find the mean and variance of $\\chi^2_k$.",
+      "solution": [
+        "Each $Z_i^2$ has mean 1 and variance $3 - 1 = 2$.",
+        "Independence: $\\chi^2_k$ has mean $k$ and variance $2k$."
+      ],
+      "answer": "k and 2k"
+    },
+    {
+      "type": "problem",
+      "title": "A small-sample interval",
+      "text": "Five measurements have mean 12.0 and sample standard deviation 0.8. Give a 95% confidence interval for the true mean, assuming normal errors.",
+      "solution": [
+        "Standard error $0.8/\\sqrt5 = 0.358$; the $t_4$ critical value is 2.776.",
+        "$12.0\\pm2.776\\times0.358 = 12.0\\pm0.99$, so roughly (11.0, 13.0). Using 1.96 would give a falsely narrow $\\pm0.70$."
+      ],
+      "answer": "12.0 ± 0.99"
+    },
+    {
+      "type": "problem",
+      "title": "A beta order statistic",
+      "text": "What is the expected value of the largest of 4 independent uniform(0, 1) numbers?",
+      "solution": [
+        "The largest of $n$ uniforms is Beta($n$, 1), with mean $n/(n + 1)$.",
+        "For $n = 4$: $4/5 = 0.8$."
+      ],
+      "answer": "0.8"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Student, The probable error of a mean, Biometrika 6, 1 (1908)",
+        "G. Casella and R. L. Berger, Statistical Inference, 2nd edition, Duxbury (2002), chapter 5",
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 10"
+      ]
+    }
+  ]
+}

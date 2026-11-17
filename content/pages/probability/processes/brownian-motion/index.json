@@ -1,0 +1,108 @@
+{
+  "title": "Brownian Motion",
+  "intro": "Brownian motion is a random walk taken to the limit of infinitely many tiny steps. Its paths are continuous but nowhere differentiable, its increments are independent normals, and it is the foundation of stochastic calculus.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Definition"
+    },
+    {
+      "type": "prose",
+      "text": "A standard Brownian motion (Wiener process) $B(t)$, $t\\ge0$, satisfies:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$B(0) = 0$.",
+        "Independent increments: $B(t) - B(s)$ is independent of the path up to time $s$.",
+        "Normal increments: $B(t) - B(s)\\sim N(0, t - s)$.",
+        "Continuous paths."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "It follows that $\\operatorname{Cov}(B(s), B(t)) = \\min(s, t)$. Donsker's theorem makes the random-walk picture precise: a simple random walk with $n$ steps, rescaled by $1/\\sqrt n$ in space and $1/n$ in time, converges to Brownian motion. Wiener constructed it rigorously in 1923; physically it is Einstein's 1905 model of a pollen grain buffeted by molecules."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Strange paths"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Nowhere differentiable: the increment over time $h$ is of size $\\sqrt h$, so difference quotients blow up like $1/\\sqrt h$.",
+        "Quadratic variation: summing squared increments over a fine partition of $[0, t]$ gives exactly $t$, not 0 as for a smooth path. Formally $(dB)^2 = dt$, the rule behind Itô's formula.",
+        "Scaling: $c^{-1/2}B(ct)$ is again a standard Brownian motion, so the paths look statistically the same at every zoom level.",
+        "Reflection principle: $P\\left(\\max_{s\\le t}B(s)\\ge a\\right) = 2P(B(t)\\ge a)$, since every path that reaches $a$ can be reflected after its first hitting time."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where it leads"
+    },
+    {
+      "type": "prose",
+      "text": "Adding drift and scale gives $X(t) = \\mu t + \\sigma B(t)$; exponentiating gives geometric Brownian motion, the Black–Scholes model of stock prices. Stochastic differential equations $dX = a(X)\\,dt + b(X)\\,dB$ model diffusions in physics, biology and finance; their densities satisfy the Fokker–Planck equation, and the Ornstein–Uhlenbeck process (a mean-reverting Brownian motion) is the continuous-time cousin of an autoregressive model and of a leaky integrator."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy import stats\nrng = np.random.default_rng(29)\nn, paths = 1000, 20000\ndB = rng.normal(0, np.sqrt(1 / n), (paths, n))      # increments over [0, 1]\nB = np.cumsum(dB, axis=1)\nprint(f\"Var B(1) = {B[:, -1].var():.4f} (1), Var B(1/2) = {B[:, n//2 - 1].var():.4f} (1/2)\")\nprint(f\"Cov(B(1/4), B(3/4)) = {np.cov(B[:, n//4 - 1], B[:, 3*n//4 - 1])[0, 1]:.4f} (min(s,t) = 1/4)\")\n# Quadratic variation: the sum of squared increments over [0, 1] equals t = 1, path by path\nprint(f\"sum of (dB)^2 on one path: {np.sum(dB[0] ** 2):.4f}; spread across paths {np.std((dB ** 2).sum(1)):.4f}\")\n# Reflection principle: P(max_{t<=1} B(t) > a) = 2 P(B(1) > a)\na = 1.0\nprint(f\"P(max B > 1): simulated {np.mean(B.max(1) > a):.4f}, reflection 2 P(B(1) > 1) = {2 * stats.norm.sf(a):.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: from 20 000 discretised paths, $\\operatorname{Var}B(1) = 0.995$, $\\operatorname{Var}B(1/2) = 0.496$ and $\\operatorname{Cov}(B(1/4), B(3/4)) = 0.248$, matching $t$ and $\\min(s, t)$. The sum of squared increments on one path is 1.009, with a spread across paths of only 0.045: quadratic variation is essentially deterministic. The probability that the maximum exceeds 1 is 0.304 by simulation against 0.317 from the reflection principle; the discretised paths miss excursions between grid points, so they slightly undercount."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "An increment",
+      "text": "Find $P(B(4) > 2)$ and the distribution of $B(3) - B(1)$.",
+      "solution": [
+        "$B(4)\\sim N(0, 4)$: $P(B(4) > 2) = P(Z > 1) = 0.159$.",
+        "$B(3) - B(1)\\sim N(0, 2)$."
+      ],
+      "answer": "0.159; N(0, 2)"
+    },
+    {
+      "type": "problem",
+      "title": "Hitting a level",
+      "text": "What is the probability that Brownian motion reaches 1 by time 1? By time 4?",
+      "solution": [
+        "Reflection: $2P(B(1)\\ge1) = 2\\times0.1587 = 0.317$.",
+        "By time 4: $2P(B(4)\\ge1) = 2P(Z\\ge0.5) = 2\\times0.3085 = 0.617$."
+      ],
+      "answer": "0.317; 0.617"
+    },
+    {
+      "type": "problem",
+      "title": "Scaling",
+      "text": "Show that $W(t) = \\tfrac12B(4t)$ is a standard Brownian motion (check the variance of its increments).",
+      "solution": [
+        "$W(t) - W(s) = \\tfrac12(B(4t) - B(4s))\\sim N(0, \\tfrac14\\cdot4(t - s)) = N(0, t - s)$.",
+        "Independence of increments and continuity carry over, so $W$ is a standard Brownian motion."
+      ],
+      "answer": "increments N(0, t − s)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A. Einstein, Über die von der molekularkinetischen Theorie der Wärme geforderte Bewegung von in ruhenden Flüssigkeiten suspendierten Teilchen, Annalen der Physik 17, 549 (1905)",
+        "P. Mörters and Y. Peres, Brownian Motion, Cambridge University Press (2010)",
+        "B. Øksendal, Stochastic Differential Equations, 6th edition, Springer (2003)"
+      ]
+    }
+  ]
+}

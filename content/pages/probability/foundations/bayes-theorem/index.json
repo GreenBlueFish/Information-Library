@@ -1,0 +1,119 @@
+{
+  "title": "Bayes' Theorem",
+  "intro": "Bayes' theorem turns P(evidence | hypothesis) into P(hypothesis | evidence). It is one line of algebra with large consequences: base rates matter, and evidence updates belief by a likelihood ratio.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The theorem"
+    },
+    {
+      "type": "math",
+      "tex": "P(H\\mid E) = \\frac{P(E\\mid H)\\,P(H)}{P(E)} = \\frac{P(E\\mid H)\\,P(H)}{P(E\\mid H)P(H) + P(E\\mid H^c)P(H^c)}",
+      "caption": "Bayes' theorem, with the denominator expanded by the law of total probability."
+    },
+    {
+      "type": "prose",
+      "text": "Read it as: posterior equals likelihood times prior, normalised. $P(H)$ is how plausible the hypothesis was before the evidence; $P(E\\mid H)$ is how well the hypothesis predicts the evidence; the result is how plausible it is after."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Base rates"
+    },
+    {
+      "type": "prose",
+      "text": "The standard example is a diagnostic test. A test that catches 99% of cases (sensitivity) and correctly clears 95% of healthy people (specificity) sounds conclusive, but if only 1% of those tested have the condition, most positives are false: the 5% of the healthy 99% outnumber the true cases. Ignoring the base rate $P(H)$ is the base-rate fallacy, and it is not a subtle error; it is the most common mistake in reasoning about evidence."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/probability/bayes-tree.svg",
+      "alt": "A tree starting from 10 000 people: 100 have the condition and 9 900 do not. Of the 100, 99 test positive and 1 negative; of the 9 900, 495 test positive and 9 405 negative. Of 594 positives, 99 have the condition, about 0.17.",
+      "caption": "The diagnostic test as natural frequencies: most positives come from the large healthy group."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The odds form"
+    },
+    {
+      "type": "prose",
+      "text": "Dividing Bayes' theorem for $H$ by the same for $H^c$ removes the awkward denominator:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{P(H\\mid E)}{P(H^c\\mid E)} = \\frac{P(H)}{P(H^c)}\\times\\frac{P(E\\mid H)}{P(E\\mid H^c)}",
+      "caption": "Posterior odds = prior odds × likelihood ratio."
+    },
+    {
+      "type": "prose",
+      "text": "Each independent piece of evidence multiplies the odds by its own likelihood ratio, so on a log scale evidence simply adds. Yesterday's posterior is today's prior."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# A test with 99% sensitivity and 95% specificity for a condition with 1% prevalence\nprev, sens, spec = 0.01, 0.99, 0.95\np_pos = sens * prev + (1 - spec) * (1 - prev)\npost = sens * prev / p_pos\nprint(f\"P(positive) = {p_pos:.4f}, P(condition | positive) = {post:.4f}\")\n# A second independent positive test: yesterday's posterior is today's prior\npost2 = sens * post / (sens * post + (1 - spec) * (1 - post))\nprint(f\"after two positives: {post2:.4f}\")\nrng = np.random.default_rng(4)\nN = 1_000_000\nhas = rng.random(N) < prev\npos = np.where(has, rng.random(N) < sens, rng.random(N) < 1 - spec)\nprint(f\"simulated P(condition | positive) = {has[pos].mean():.4f} from {pos.sum():,} positives\")\n# Odds form: posterior odds = prior odds x likelihood ratio\nlr = sens / (1 - spec)\nodds = prev / (1 - prev) * lr\nprint(f\"likelihood ratio {lr:.1f}; posterior odds {odds:.4f} -> probability {odds / (1 + odds):.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: $P(\\text{positive}) = 0.0594$ and $P(\\text{condition}\\mid\\text{positive}) = 0.167$: only one positive in six is real. A second independent positive raises it to 0.798. Simulating a million people gives 0.164 from 59 581 positives. In odds form: the likelihood ratio is $0.99/0.05 = 19.8$, prior odds $1/99$, posterior odds $0.2$, probability $0.167$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where it leads"
+    },
+    {
+      "type": "prose",
+      "text": "Applied to a parameter instead of a yes/no hypothesis, the same rule is Bayesian inference: a prior distribution, a likelihood from the data, and a posterior distribution (Bayesian Inference (#/probability/inference/bayesian-inference))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A rarer condition",
+      "text": "A condition has prevalence 0.1%; the test has 99% sensitivity and 99% specificity. What is $P(\\text{condition}\\mid\\text{positive})$?",
+      "solution": [
+        "True positives: $0.99\\times0.001 = 0.00099$. False positives: $0.01\\times0.999 = 0.00999$.",
+        "$P = 0.00099/(0.00099 + 0.00999) = 0.091$: still only about 1 in 11."
+      ],
+      "answer": "≈ 0.091"
+    },
+    {
+      "type": "problem",
+      "title": "Two urns",
+      "text": "Urn 1 has 3 red and 1 blue ball; urn 2 has 1 red and 3 blue. An urn is chosen by a fair coin and a ball drawn: it is red. What is the probability it came from urn 1?",
+      "solution": [
+        "Likelihoods: $P(\\text{red}\\mid1) = 3/4$, $P(\\text{red}\\mid2) = 1/4$; priors 1/2 each.",
+        "$P(1\\mid\\text{red}) = \\frac{3/8}{3/8 + 1/8} = 3/4$. Equivalently, prior odds 1 times likelihood ratio 3 gives odds 3."
+      ],
+      "answer": "3/4"
+    },
+    {
+      "type": "problem",
+      "title": "Evidence adds in log-odds",
+      "text": "Starting from even odds, you see three independent pieces of evidence with likelihood ratios 4, 0.5 and 10. What is the final probability?",
+      "solution": [
+        "Posterior odds $= 1\\times4\\times0.5\\times10 = 20$.",
+        "Probability $= 20/21\\approx0.952$. In log-odds (base 10): $0 + 0.602 - 0.301 + 1 = 1.301$."
+      ],
+      "answer": "20/21 ≈ 0.952"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "T. Bayes, An essay towards solving a problem in the doctrine of chances, Philosophical Transactions of the Royal Society 53, 370 (1763)",
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 2",
+        "D. Kahneman and A. Tversky, On the psychology of prediction, Psychological Review 80, 237 (1973)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "title": "Bernoulli, Binomial and Geometric",
+  "intro": "Independent trials with a fixed success probability produce a family of distributions, depending on what you count: the outcome of one trial, the successes in n trials, or the trials until the first (or r-th) success.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bernoulli and binomial"
+    },
+    {
+      "type": "prose",
+      "text": "A Bernoulli($p$) variable is 1 with probability $p$ and 0 otherwise. The number of successes in $n$ independent Bernoulli($p$) trials is Binomial($n, p$):"
+    },
+    {
+      "type": "math",
+      "tex": "P(X = k) = \\binom{n}{k}p^k(1-p)^{n-k}, \\qquad E[X] = np, \\qquad \\operatorname{Var}(X) = np(1-p)"
+    },
+    {
+      "type": "prose",
+      "text": "The coefficient counts which $k$ of the $n$ trials succeed; each such pattern has probability $p^k(1-p)^{n-k}$. The mean and variance follow from writing $X$ as a sum of $n$ independent indicators, each with mean $p$ and variance $p(1-p)$. Sampling without replacement from a finite population gives the hypergeometric instead, which approaches the binomial when the population is large."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Geometric and negative binomial"
+    },
+    {
+      "type": "prose",
+      "text": "The number of trials up to and including the first success is Geometric($p$): $P(X = k) = (1-p)^{k-1}p$ for $k = 1, 2, \\dots$, with mean $1/p$ and variance $(1-p)/p^2$. (Some books count failures before the first success instead, shifting everything by one; always check.) The trials until the $r$-th success are a sum of $r$ independent geometrics, the negative binomial, with mean $r/p$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Memorylessness"
+    },
+    {
+      "type": "math",
+      "tex": "P(X > s + t\\mid X > s) = P(X > t)",
+      "caption": "The geometric is the only memoryless distribution on the positive integers."
+    },
+    {
+      "type": "prose",
+      "text": "Having waited $s$ trials without success tells you nothing about how much longer you will wait. This is a direct consequence of independence, and the source of the gambler's fallacy: after a long run of losses, the next bet is not 'due'."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom math import comb\nn, p = 10, 0.3\npmf = [comb(n, k) * p**k * (1 - p)**(n - k) for k in range(n + 1)]\nprint(\"Binomial(10, 0.3):\", \" \".join(f\"{q:.3f}\" for q in pmf))\nprint(f\"mean {sum(k * q for k, q in enumerate(pmf)):.3f} (np = 3), variance {sum(k*k*q for k, q in enumerate(pmf)) - 9:.3f} (np(1-p) = 2.1)\")\nrng = np.random.default_rng(10)\n# Geometric memorylessness: P(X > s + t | X > s) = P(X > t)\ng = rng.geometric(0.2, 10 ** 6)\nprint(f\"P(X > 8 | X > 5) = {np.mean(g[g > 5] > 8):.4f},  P(X > 3) = {np.mean(g > 3):.4f},  0.8^3 = {0.8**3:.4f}\")\n# Negative binomial: trials until the 3rd success, mean r/p\nnb = rng.geometric(0.2, (10 ** 5, 3)).sum(1)\nprint(f\"trials to the 3rd success: mean {nb.mean():.3f} (r/p = 15), variance {nb.var():.2f} (r(1-p)/p^2 = 60)\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the Binomial(10, 0.3) PMF peaks at 3 (0.267) with mean 3 and variance 2.1. For a geometric with $p = 0.2$, $P(X > 8\\mid X > 5) = 0.511$ and $P(X > 3) = 0.513$, both $0.8^3 = 0.512$. The trials until the third success average 14.99 with variance 60.3, against $r/p = 15$ and $r(1-p)/p^2 = 60$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Three heads in ten",
+      "text": "What is the probability of exactly 3 heads in 10 fair tosses?",
+      "solution": [
+        "$\\binom{10}{3}/2^{10} = 120/1024\\approx0.117$."
+      ],
+      "answer": "≈ 0.117"
+    },
+    {
+      "type": "problem",
+      "title": "Waiting for a six",
+      "text": "How many rolls does it take on average to roll a six, and what is the chance it takes more than 10?",
+      "solution": [
+        "Geometric with $p = 1/6$: mean 6.",
+        "$P(X > 10) = (5/6)^{10}\\approx0.162$."
+      ],
+      "answer": "6; ≈ 0.162"
+    },
+    {
+      "type": "problem",
+      "title": "The most likely count",
+      "text": "For Binomial($n, p$), show that the ratio $P(k)/P(k-1) = \\frac{(n - k + 1)p}{k(1 - p)}$ and use it to find the mode of Binomial(10, 0.3).",
+      "solution": [
+        "The ratio of consecutive terms simplifies to the expression given.",
+        "It exceeds 1 while $k < (n + 1)p = 3.3$, so the PMF rises up to $k = 3$ and falls after: the mode is 3, matching the sample."
+      ],
+      "answer": "the mode is ⌊(n + 1)p⌋ = 3"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 3",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 4",
+        "W. Feller, An Introduction to Probability Theory and Its Applications, Volume 1, 3rd edition, Wiley (1968), chapter 6"
+      ]
+    }
+  ]
+}

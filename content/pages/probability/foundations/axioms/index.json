@@ -1,0 +1,117 @@
+{
+  "title": "The Axioms of Probability",
+  "intro": "Kolmogorov's three axioms turn probability into mathematics. Everything else, from the complement rule to inclusion–exclusion and continuity, is a theorem.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Kolmogorov's axioms"
+    },
+    {
+      "type": "prose",
+      "text": "A probability measure $P$ assigns a number to each event so that"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Non-negativity: $P(A)\\ge0$ for every event $A$.",
+        "Normalisation: $P(\\Omega) = 1$.",
+        "Countable additivity: if $A_1, A_2, \\dots$ are pairwise disjoint, $P\\left(\\bigcup_i A_i\\right) = \\sum_i P(A_i)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "That is the whole definition (Kolmogorov 1933). It says nothing about what probability means, frequencies or degrees of belief; both interpretations satisfy it, which is why the same mathematics serves both. For infinite sample spaces the 'events' must form a σ-algebra, a technicality treated on Measure-Theoretic Probability (#/probability/measure-theory)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Consequences"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$P(\\emptyset) = 0$, and $P(A^c) = 1 - P(A)$.",
+        "Monotonicity: if $A\\subseteq B$ then $P(A)\\le P(B)$, so $0\\le P(A)\\le1$.",
+        "Union bound (Boole's inequality): $P\\left(\\bigcup_i A_i\\right)\\le\\sum_i P(A_i)$, whether or not the events overlap.",
+        "Continuity: if $A_1\\subseteq A_2\\subseteq\\cdots$ then $P\\left(\\bigcup_n A_n\\right) = \\lim_n P(A_n)$; if $B_1\\supseteq B_2\\supseteq\\cdots$ then $P\\left(\\bigcap_n B_n\\right) = \\lim_n P(B_n)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Continuity is where countable (not just finite) additivity earns its place: it lets probabilities pass through limits, which the limit theorems later rely on."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Inclusion–exclusion"
+    },
+    {
+      "type": "math",
+      "tex": "P\\left(\\bigcup_{i=1}^{n} A_i\\right) = \\sum_i P(A_i) - \\sum_{i<j}P(A_iA_j) + \\sum_{i<j<k}P(A_iA_jA_k) - \\cdots + (-1)^{n+1}P(A_1\\cdots A_n)",
+      "caption": "Add singles, subtract pairs, add triples, and so on."
+    },
+    {
+      "type": "prose",
+      "text": "A classic application is the matching problem: shuffle $n$ labelled letters into $n$ labelled envelopes. With $A_i$ the event that letter $i$ is in its own envelope, $P(A_{i_1}\\cdots A_{i_k}) = (n-k)!/n!$, and inclusion–exclusion gives the probability of at least one match as $1 - 1/2! + 1/3! - \\cdots$. The probability of no match tends to $1/e\\approx0.368$, and gets there very quickly."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom math import factorial, e\n# Inclusion-exclusion: the chance that a random permutation of n items has no fixed point\ndef p_derangement(n):\n    return sum((-1) ** k / factorial(k) for k in range(n + 1))\nrng = np.random.default_rng(1)\nfor n in (3, 5, 10, 20):\n    sim = np.mean([np.all(rng.permutation(n) != np.arange(n)) for _ in range(20000)])\n    print(f\"n = {n:2d}: inclusion-exclusion {p_derangement(n):.5f}, simulation {sim:.4f}\")\nprint(f\"limit 1/e = {1 / e:.5f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the probability of no fixed point is 0.33333 at $n = 3$, 0.36667 at $n = 5$, and 0.36788 from $n = 10$ on, which is $1/e$ to five places. The simulations agree to within their noise."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "The empty set",
+      "text": "Use only the axioms to show $P(\\emptyset) = 0$.",
+      "solution": [
+        "The sets $\\Omega, \\emptyset, \\emptyset, \\dots$ are pairwise disjoint with union $\\Omega$.",
+        "Countable additivity gives $P(\\Omega) = P(\\Omega) + \\sum_{k\\ge1}P(\\emptyset)$, so the sum of infinitely many copies of $P(\\emptyset)\\ge0$ is 0. Hence $P(\\emptyset) = 0$."
+      ],
+      "answer": "P(∅) = 0"
+    },
+    {
+      "type": "problem",
+      "title": "Divisible by 2, 3 or 5",
+      "text": "A number is chosen uniformly from 1 to 100. Find the probability that it is divisible by 2, 3 or 5.",
+      "solution": [
+        "Singles: 50 multiples of 2, 33 of 3, 20 of 5.",
+        "Pairs: 16 of 6, 10 of 10, 6 of 15. Triple: 3 of 30.",
+        "Inclusion–exclusion: $50 + 33 + 20 - 16 - 10 - 6 + 3 = 74$, so the probability is 0.74."
+      ],
+      "answer": "0.74"
+    },
+    {
+      "type": "problem",
+      "title": "A union bound",
+      "text": "Each of 20 components fails with probability 0.01 (with no assumption about independence). Bound the probability that at least one fails.",
+      "solution": [
+        "Boole's inequality: $P(\\text{some failure})\\le 20\\times0.01 = 0.2$.",
+        "If the failures were independent the exact value would be $1 - 0.99^{20} = 0.182$; the bound holds whatever the dependence."
+      ],
+      "answer": "at most 0.2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A. N. Kolmogorov, Grundbegriffe der Wahrscheinlichkeitsrechnung, Springer (1933); English translation Foundations of the Theory of Probability, Chelsea (1956)",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 2",
+        "G. R. Grimmett and D. R. Stirzaker, Probability and Random Processes, 4th edition, Oxford University Press (2020), chapter 1"
+      ]
+    }
+  ]
+}

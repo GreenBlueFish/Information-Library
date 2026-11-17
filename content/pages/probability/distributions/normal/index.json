@@ -1,0 +1,103 @@
+{
+  "title": "The Normal Distribution",
+  "intro": "The normal (Gaussian) distribution is the shape of sums of many small independent effects. Every normal is a shifted, stretched copy of one standard normal, so one table, or one function, covers them all.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Definition"
+    },
+    {
+      "type": "math",
+      "tex": "f(x) = \\frac{1}{\\sigma\\sqrt{2\\pi}}\\exp\\left(-\\frac{(x - \\mu)^2}{2\\sigma^2}\\right)",
+      "caption": "The N(μ, σ²) density: mean μ, variance σ²."
+    },
+    {
+      "type": "prose",
+      "text": "The standard normal $Z\\sim N(0, 1)$ has density $\\varphi(z) = e^{-z^2/2}/\\sqrt{2\\pi}$ and CDF $\\Phi(z)$, which has no closed form. Any $X\\sim N(\\mu, \\sigma^2)$ is $\\mu + \\sigma Z$, so $P(X\\le x) = \\Phi((x - \\mu)/\\sigma)$: subtract the mean, divide by the standard deviation, look up $\\Phi$. That subtraction and division, standardisation, is the most-used calculation in statistics."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The numbers to know"
+    },
+    {
+      "type": "list",
+      "items": [
+        "About 68.3% of the probability lies within one standard deviation of the mean, 95.4% within two and 99.7% within three.",
+        "The two-sided 95% point is $1.96\\sigma$; the one-sided 95% point is $1.645\\sigma$.",
+        "Tails fall off faster than exponentially: $P(Z > t)\\approx\\varphi(t)/t$ for large $t$. Six-sigma events have probability about $10^{-9}$, which is why heavy-tailed data (finance, networks) badly embarrass normal models."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why it is everywhere"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The central limit theorem: standardised sums of many independent variables with finite variance are approximately normal, whatever they are individually (The Central Limit Theorem (#/probability/limit-theorems/central-limit-theorem)).",
+        "Closure: linear combinations of independent (indeed of jointly) normal variables are normal, so normal models stay normal under linear operations (The Multivariate Normal (#/probability/multivariate/multivariate-normal)).",
+        "Maximum entropy: among all distributions with a given mean and variance, the normal has the largest entropy (Entropy and Information (#/probability/toolkit/entropy)). It assumes the least beyond those two numbers."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy import stats\nfor k in (1, 2, 3):\n    print(f\"P(|Z| < {k}) = {stats.norm.cdf(k) - stats.norm.cdf(-k):.4f}\")\nprint(f\"z for a 95% two-sided interval: {stats.norm.ppf(0.975):.4f}\")\n# Standardising: heights ~ N(170, 8^2). P(H > 185)?\nmu, sd = 170, 8\nprint(f\"P(H > 185) = P(Z > {(185 - mu) / sd:.3f}) = {1 - stats.norm.cdf((185 - mu) / sd):.4f}\")\n# Sums of independent normals are normal; a linear combination keeps normality\nrng = np.random.default_rng(13)\na, b = rng.normal(1, 2, 10 ** 6), rng.normal(-3, 1, 10 ** 6)\nc = 2 * a - b\nprint(f\"2A - B: mean {c.mean():.3f} (5), variance {c.var():.3f} (4*4 + 1 = 17), excess kurtosis {stats.kurtosis(c):+.3f}\")\n# The normal tail is light: P(Z > t) compared with the bound phi(t)/t\nfor t in (2, 4, 6):\n    print(f\"P(Z > {t}) = {stats.norm.sf(t):.3e},  phi(t)/t = {stats.norm.pdf(t) / t:.3e}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: $P(\\vert Z\\vert < 1, 2, 3) = 0.6827, 0.9545, 0.9973$, and the 97.5% point is 1.9600. With heights $N(170, 8^2)$, $P(H > 185) = P(Z > 1.875) = 0.0304$. The combination $2A - B$ of independent normals has mean 5.00, variance 17.01 and excess kurtosis 0.001 (normal). The tail ratio $\\varphi(t)/t$ overestimates $P(Z > t)$ by 19% at $t = 2$, 6% at 4 and 3% at 6."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Exam scores",
+      "text": "IQ scores are modelled as $N(100, 15^2)$. What fraction exceed 130? What score is the 90th percentile?",
+      "solution": [
+        "$P(X > 130) = P(Z > 2) = 0.0228$.",
+        "The 90th percentile of $Z$ is 1.2816, so $100 + 1.2816\\times15 = 119.2$."
+      ],
+      "answer": "2.3%; 119.2"
+    },
+    {
+      "type": "problem",
+      "title": "Which is larger",
+      "text": "$X\\sim N(2, 9)$ and $Y\\sim N(1, 16)$ are independent. Find $P(X > Y)$.",
+      "solution": [
+        "$X - Y\\sim N(1, 9 + 16) = N(1, 25)$.",
+        "$P(X - Y > 0) = P(Z > -1/5) = \\Phi(0.2) = 0.579$."
+      ],
+      "answer": "≈ 0.579"
+    },
+    {
+      "type": "problem",
+      "title": "The normalising constant",
+      "text": "Show that $\\int_{-\\infty}^\\infty e^{-x^2/2}\\,dx = \\sqrt{2\\pi}$.",
+      "solution": [
+        "Square it and write the product as a double integral: $I^2 = \\iint e^{-(x^2 + y^2)/2}\\,dx\\,dy$.",
+        "In polar coordinates, $I^2 = \\int_0^{2\\pi}\\int_0^\\infty e^{-r^2/2}r\\,dr\\,d\\theta = 2\\pi\\times1$. So $I = \\sqrt{2\\pi}$."
+      ],
+      "answer": "√(2π)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 5",
+        "S. M. Stigler, The History of Statistics, Harvard University Press (1986)",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 5"
+      ]
+    }
+  ]
+}

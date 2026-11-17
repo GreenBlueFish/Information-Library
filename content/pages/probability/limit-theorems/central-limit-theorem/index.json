@@ -1,0 +1,158 @@
+{
+  "title": "The Central Limit Theorem",
+  "intro": "Sums of many independent random variables with finite variance are approximately normal, whatever the individual distribution. This is why the normal distribution is everywhere, and why error bars are ±1.96 standard errors.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Statement"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{X_1 + \\cdots + X_n - n\\mu}{\\sigma\\sqrt n} \\to N(0, 1) \\text{ in distribution}",
+      "caption": "For i.i.d. variables with mean μ and finite variance σ² > 0 (Lindeberg–Lévy)."
+    },
+    {
+      "type": "prose",
+      "text": "Equivalently, $\\bar X_n\\approx N(\\mu, \\sigma^2/n)$. The law of large numbers says $\\bar X_n\\to\\mu$; the central limit theorem says the error is of order $\\sigma/\\sqrt n$ and normally distributed. It is proved by showing the characteristic function of the standardised sum tends to $e^{-t^2/2}$, using a second-order Taylor expansion."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How good is the approximation?"
+    },
+    {
+      "type": "prose",
+      "text": "The Berry–Esseen theorem bounds the worst CDF error: $\\sup_x\\vert F_n(x) - \\Phi(x)\\vert\\le C\\rho/(\\sigma^3\\sqrt n)$, with $\\rho = E\\vert X - \\mu\\vert^3$ and $C < 0.48$. The error falls like $1/\\sqrt n$, and skewed distributions (exponential, rare-event Bernoullis) need larger $n$ than symmetric ones. The famous 'n = 30' is a rule of thumb, not a theorem. For discrete variables, a continuity correction of a half helps noticeably."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Generalisations and failures"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Independent but not identical variables: the Lindeberg condition (no single term dominates) is enough.",
+        "Weakly dependent sequences, martingale differences and Markov chains: central limit theorems hold with a modified variance.",
+        "In several dimensions: standardised sums of random vectors tend to a multivariate normal.",
+        "Infinite variance: sums converge, suitably scaled, to other stable laws with heavy tails instead (Cauchy, Lévy). Finance and network traffic often live here."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Watch a sum become normal",
+        "params": [
+          {
+            "key": "dist",
+            "label": "Each term is",
+            "control": "select",
+            "options": [
+              "exponential (skewed)",
+              "uniform",
+              "coin flip (0/1)",
+              "die roll"
+            ],
+            "default": "exponential (skewed)"
+          },
+          {
+            "key": "n",
+            "label": "Terms per sum n",
+            "control": "range",
+            "min": 1,
+            "max": 100,
+            "step": 1,
+            "default": 5
+          },
+          {
+            "key": "samples",
+            "label": "Number of sums simulated",
+            "control": "range",
+            "min": 1000,
+            "max": 50000,
+            "step": 1000,
+            "default": 20000
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 9999,
+            "step": 1,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "clt",
+          "xLabel": "standardised sum (S − nμ)/(σ√n)",
+          "yLabel": "density"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try it: with one exponential term the histogram is the exponential itself, nothing like the normal curve. At 5 terms it is already bell-shaped but leans right; by 30 the two are hard to tell apart. Uniform terms converge much faster (they are symmetric), and coin flips show a comb of separate values that only blends into the curve as $n$ grows."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy import stats\nrng = np.random.default_rng(24)\n# Standardised sums of Exp(1) variables approach N(0,1); measure the worst CDF gap (Kolmogorov distance)\nfor n in (1, 2, 5, 30, 100):\n    s = rng.exponential(1, (200000, n)).sum(1)\n    z = (s - n) / np.sqrt(n)\n    ks = stats.kstest(z, \"norm\").statistic\n    print(f\"n = {n:3d}: sup |F_n - Phi| = {ks:.4f}   (Berry-Esseen scale 1/sqrt(n) = {1/np.sqrt(n):.3f})\")\n# Normal approximation to Binomial(100, 0.5), with and without the continuity correction\nexact = stats.binom.cdf(55, 100, 0.5)\nprint(f\"P(X <= 55): exact {exact:.4f}, normal {stats.norm.cdf((55 - 50) / 5):.4f}, with continuity correction {stats.norm.cdf((55.5 - 50) / 5):.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the largest CDF gap between standardised sums of exponentials and the normal is 0.159, 0.095, 0.060, 0.026 and 0.012 for $n = 1, 2, 5, 30, 100$: it shrinks roughly like $1/\\sqrt n$. For Binomial(100, 1/2), $P(X\\le55) = 0.8644$ exactly, 0.8413 by the plain normal approximation, and 0.8643 with the continuity correction."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A hundred dice",
+      "text": "Approximate the probability that the total of 100 dice is at least 380.",
+      "solution": [
+        "Mean $350$; variance $100\\times35/12 = 291.7$; standard deviation 17.08.",
+        "With continuity correction: $P(S\\ge380)\\approx P\\left(Z\\ge\\frac{379.5 - 350}{17.08}\\right) = P(Z\\ge1.727) = 0.042$."
+      ],
+      "answer": "≈ 0.042"
+    },
+    {
+      "type": "problem",
+      "title": "A polling margin",
+      "text": "A poll of 1000 people finds 52% in favour. Give an approximate 95% interval for the true proportion.",
+      "solution": [
+        "Standard error $\\sqrt{0.52\\times0.48/1000} = 0.0158$.",
+        "$0.52\\pm1.96\\times0.0158 = 0.52\\pm0.031$: the familiar 'plus or minus 3 points'."
+      ],
+      "answer": "0.52 ± 0.031"
+    },
+    {
+      "type": "problem",
+      "title": "Rounding errors",
+      "text": "A sum of 400 numbers is computed with each rounded to the nearest integer, errors independent and uniform on $(-0.5, 0.5)$. What is the probability the total error exceeds 5 in absolute value?",
+      "solution": [
+        "Each error has variance $1/12$; the total has variance $400/12 = 33.3$, standard deviation 5.77.",
+        "$P(\\vert E\\vert > 5)\\approx P(\\vert Z\\vert > 0.866) = 0.386$."
+      ],
+      "answer": "≈ 0.39"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A. C. Berry, The accuracy of the Gaussian approximation to the sum of independent variates, Transactions of the AMS 49, 122 (1941)",
+        "C.-G. Esseen, On the Liapunoff limit of error in the theory of probability, Arkiv för Matematik, Astronomi och Fysik 28A, 1 (1942)",
+        "R. Durrett, Probability: Theory and Examples, 5th edition, Cambridge University Press (2019), chapter 3",
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 10"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "title": "Joint Distributions",
+  "intro": "The joint distribution of two random variables assigns probabilities to statements about both at once. From it you can recover each variable alone (the marginals) and each given the other (the conditionals), but not the other way round.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Joint PMFs and densities"
+    },
+    {
+      "type": "math",
+      "tex": "p_{X,Y}(x, y) = P(X = x, Y = y) \\qquad\\text{or}\\qquad P((X, Y)\\in A) = \\iint_A f_{X,Y}(x, y)\\,dx\\,dy"
+    },
+    {
+      "type": "prose",
+      "text": "The joint CDF $F(x, y) = P(X\\le x, Y\\le y)$ covers every case. For continuous variables the joint density is a surface over the plane, and probabilities are volumes under it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Marginals"
+    },
+    {
+      "type": "math",
+      "tex": "p_X(x) = \\sum_y p_{X,Y}(x, y), \\qquad f_X(x) = \\int f_{X,Y}(x, y)\\,dy",
+      "caption": "Sum or integrate out the other variable."
+    },
+    {
+      "type": "prose",
+      "text": "Marginals lose information: many different joint distributions share the same marginals. Two fair coins can be independent, always equal, or always different, and each coin alone looks the same in all three cases. Copulas are the general theory of what the marginals leave unspecified."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Conditionals"
+    },
+    {
+      "type": "math",
+      "tex": "p_{Y\\mid X}(y\\mid x) = \\frac{p_{X,Y}(x, y)}{p_X(x)}, \\qquad f_{Y\\mid X}(y\\mid x) = \\frac{f_{X,Y}(x, y)}{f_X(x)}"
+    },
+    {
+      "type": "prose",
+      "text": "A conditional is a slice of the joint distribution, renormalised. For densities this conditions on an event of probability zero, $X = x$, which the elementary definition cannot handle; the formula is still the right answer, and Measure-Theoretic Probability (#/probability/measure-theory) explains why."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Independence of random variables"
+    },
+    {
+      "type": "prose",
+      "text": "$X$ and $Y$ are independent if the joint factorises: $p_{X,Y}(x, y) = p_X(x)p_Y(y)$ for all $x, y$ (or the same for densities or CDFs). Then every event about $X$ is independent of every event about $Y$, functions $g(X)$ and $h(Y)$ are independent, and $E[g(X)h(Y)] = E[g(X)]\\,E[h(Y)]$. A quick test for densities: the support must be a product set (a rectangle), and the formula must split into a function of $x$ times a function of $y$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# A joint PMF: X = number of heads in 2 coin flips, Y = 1 if the first flip is heads\njoint = np.array([[0.25, 0.00],     # X = 0: (Y=0, Y=1)\n                  [0.25, 0.25],     # X = 1\n                  [0.00, 0.25]])    # X = 2\npX, pY = joint.sum(1), joint.sum(0)\nprint(\"marginal of X:\", pX, \" marginal of Y:\", pY)\nprint(\"product of marginals equals the joint?\", np.allclose(joint, np.outer(pX, pY)))\nprint(\"conditional of X given Y = 1:\", joint[:, 1] / pY[1])\n# A continuous joint density on the unit square: f(x, y) = x + y\nrng = np.random.default_rng(15)\npts = rng.random((4 * 10 ** 6, 3))\nacc = pts[pts[:, 2] * 2 < pts[:, 0] + pts[:, 1]][:, :2]     # rejection sampling under the bound 2\nprint(f\"P(X + Y < 1) under f(x,y) = x + y: simulated {np.mean(acc.sum(1) < 1):.4f}, exact 1/3\")\nprint(f\"marginal density of X at 0.5 = 0.5 + 1/2 = 1.0; simulated {np.mean(abs(acc[:, 0] - 0.5) < 0.01) / 0.02:.3f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: for $X$ = number of heads in two flips and $Y$ = the first flip, the marginals are (0.25, 0.5, 0.25) and (0.5, 0.5), but the joint is not their product: knowing $Y = 1$ rules out $X = 0$. For the density $f(x, y) = x + y$ on the unit square, rejection sampling gives $P(X + Y < 1) = 0.334$ (exactly 1/3) and a marginal density of 1.005 at $x = 0.5$ (exactly $x + 1/2 = 1$)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Marginal of a joint density",
+      "text": "For $f(x, y) = x + y$ on the unit square, find $f_X$ and $P(X + Y < 1)$.",
+      "solution": [
+        "$f_X(x) = \\int_0^1(x + y)\\,dy = x + 1/2$.",
+        "$P(X + Y < 1) = \\int_0^1\\int_0^{1-x}(x + y)\\,dy\\,dx = \\int_0^1\\left(x(1-x) + \\tfrac12(1-x)^2\\right)dx = \\int_0^1\\tfrac12(1 - x^2)\\,dx = 1/3$."
+      ],
+      "answer": "x + 1/2; 1/3"
+    },
+    {
+      "type": "problem",
+      "title": "Uniform on a disk",
+      "text": "$(X, Y)$ is uniform on the unit disk. Find the marginal density of $X$. Are $X$ and $Y$ independent?",
+      "solution": [
+        "The joint density is $1/\\pi$ on the disk. $f_X(x) = \\int_{-\\sqrt{1-x^2}}^{\\sqrt{1-x^2}}\\frac1\\pi\\,dy = \\frac2\\pi\\sqrt{1 - x^2}$.",
+        "Not independent: the support is not a rectangle. Knowing $X = 0.99$ forces $Y$ near 0."
+      ],
+      "answer": "(2/π)√(1 − x²); no"
+    },
+    {
+      "type": "problem",
+      "title": "Same marginals, different joints",
+      "text": "Give three joint distributions of two fair coins with the same marginals but $P(X = Y)$ equal to 1/2, 1 and 0.",
+      "solution": [
+        "Independent: all four outcomes 1/4, so $P(X = Y) = 1/2$.",
+        "Always equal: (H, H) and (T, T) with 1/2 each.",
+        "Always different: (H, T) and (T, H) with 1/2 each. Each coin is fair in all three."
+      ],
+      "answer": "independent, copies, opposites"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 7",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 6",
+        "R. B. Nelsen, An Introduction to Copulas, 2nd edition, Springer (2006)"
+      ]
+    }
+  ]
+}
