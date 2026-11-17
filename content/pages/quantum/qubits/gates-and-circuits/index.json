@@ -1,0 +1,130 @@
+{
+  "title": "Gates and Circuits",
+  "intro": "On a gate-based quantum computer every evolution is a sequence of one- and two-qubit unitaries. This page covers the gates a reservoir circuit needs, how an $XX$ coupling is built from two CNOTs, and how Trotter steps turn a Hamiltonian into a circuit.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Single-qubit gates"
+    },
+    {
+      "type": "prose",
+      "text": "Any single-qubit gate is a rotation (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)). Three have names worth knowing: the Pauli gates themselves, the Hadamard $H_d = (X+Z)/\\sqrt2$, which swaps the $Z$ and $X$ bases ($H_d\\vert0\\rangle = \\vert+\\rangle$), and the phase gate $S = \\mathrm{diag}(1, i)$. Hardware typically offers arbitrary $R_Z$ cheaply (often as a software frame change) and builds the rest from a few calibrated pulses."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The CNOT and entanglement"
+    },
+    {
+      "type": "prose",
+      "text": "The controlled-NOT flips the target qubit when the control is $\\vert1\\rangle$: $\\vert c, t\\rangle \\to \\vert c, t\\oplus c\\rangle$. On basis states it is a reversible XOR; on superpositions it creates entanglement. A Hadamard on the control followed by a CNOT turns $\\vert00\\rangle$ into the Bell state $(\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$ (Entanglement and Reduced States (#/quantum/many-body/entanglement)). CNOT plus single-qubit rotations is a universal gate set: any unitary on any number of qubits can be built from them."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "An XX coupling from two CNOTs"
+    },
+    {
+      "type": "prose",
+      "text": "The reservoir Hamiltonian couples qubits through $X_iX_j$. On hardware the corresponding unitary $e^{-i\\theta X\\otimes X/2}$ is built as follows. Conjugating $I\\otimes Z$ by a CNOT gives $Z\\otimes Z$, so"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{CNOT}\\,(I\\otimes R_Z(\\theta))\\,\\mathrm{CNOT} = e^{-i\\theta\\,Z\\otimes Z/2}",
+      "caption": "A ZZ rotation from two CNOTs and one single-qubit rotation."
+    },
+    {
+      "type": "prose",
+      "text": "Sandwiching that between Hadamards on both qubits turns each $Z$ into an $X$, giving $e^{-i\\theta\\,X\\otimes X/2}$. So every coupling term costs two CNOTs, and an all-to-all reservoir on $n$ qubits costs $n(n-1)$ CNOTs per time slice. The sample checks this identity numerically."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Trotter steps"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir Hamiltonian $H = A + B$ (here $A$ the couplings, $B$ the field) has parts that do not commute, so $e^{-iHt} \\ne e^{-iAt}e^{-iBt}$. Splitting the time into $r$ short steps fixes this in the limit (the Lie–Trotter product formula):"
+    },
+    {
+      "type": "math",
+      "tex": "e^{-i(A+B)t} = \\lim_{r\\to\\infty}\\left(e^{-iAt/r}\\,e^{-iBt/r}\\right)^{r}, \\qquad \\text{error per step} \\approx \\frac{t^2}{2r^2}\\,\\Vert[A, B]\\Vert",
+      "caption": "First-order Trotterisation. The total error falls roughly as t²/r."
+    },
+    {
+      "type": "prose",
+      "text": "The symmetric (second-order) version $e^{-iBt/2r}e^{-iAt/r}e^{-iBt/2r}$ has error per step of order $(t/r)^3$. This is how quantum computers simulate Hamiltonians (Lloyd 1996). For a reservoir the accuracy matters less than you might think: the readout is trained on whatever the circuit does, so a coarse Trotter step can be a perfectly good reservoir even when it is a poor simulation of $H$ (Gate-Based Devices (#/qrc/hardware/gate-based-devices) makes this point with numbers)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1., -1.]).astype(complex); I = np.eye(2)\nH = np.array([[1, 1], [1, -1]]) / np.sqrt(2)\nCNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], complex)   # control = left qubit\n# Hadamard then CNOT makes a Bell state from |00>\npsi = CNOT @ np.kron(H, I) @ np.array([1, 0, 0, 0])\nprint(\"CNOT (H (x) I)|00> =\", np.round(psi.real, 3))\n# R_XX(theta) = exp(-i theta X(x)X / 2) from two CNOTs, one R_Z and Hadamards on both qubits\nRX = lambda t: expm(-1j * t * X / 2)\nfor t in (0.3, 1.1, 2.5):\n    direct = expm(-1j * t * np.kron(X, X) / 2)\n    # CNOT . (I (x) R_Z) . CNOT = exp(-i theta Z(x)Z / 2); Hadamards turn Z's into X's\n    HH = np.kron(H, H)\n    RZ = lambda a: expm(-1j * a * Z / 2)\n    circuit = HH @ CNOT @ np.kron(I, RZ(t)) @ CNOT @ HH\n    print(f\"theta={t}: two-CNOT circuit equals exp(-i theta XX/2): {np.allclose(direct, circuit)}\")\n# A first-order Trotter step for H = J XX + h(Z1 + Z2) against the exact evolution\nJ, h = 0.5, 1.0\nHxx = J * np.kron(X, X); Hz = h * (np.kron(Z, I) + np.kron(I, Z))\nfor steps in (1, 4, 16, 64):\n    dt = 2.0 / steps\n    U = np.linalg.matrix_power(expm(-1j * Hz * dt) @ expm(-1j * Hxx * dt), steps)\n    F = abs(np.trace(expm(-1j * (Hxx + Hz) * 2.0).conj().T @ U) / 4) ** 2\n    print(f\"t = 2, {steps:2d} Trotter steps: gate fidelity {F:.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: Hadamard then CNOT on $\\vert00\\rangle$ gives amplitudes $(0.707, 0, 0, 0.707)$, the Bell state. The two-CNOT circuit equals $e^{-i\\theta XX/2}$ for $\\theta = 0.3, 1.1, 2.5$. For $H = 0.5\\,XX + Z_1 + Z_2$ evolved to $t = 2$, the gate fidelity of the Trotterised circuit is 0.670 with 1 step, 0.977 with 4, 0.9987 with 16 and 0.9999 with 64."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Compiling the spin reservoir into circuits, and why Trotter accuracy hardly matters: Gate-Based Devices (#/qrc/hardware/gate-based-devices).",
+        "Mid-circuit measurement and reset, the gate-level version of the input reset: Online Measurement Protocols (#/qrc/hardware/online-protocols).",
+        "Haar-random unitaries as reservoirs in the extreme-learning-machine examples: Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "CNOT on basis and superposition states",
+      "text": "Apply a CNOT (control qubit 1) to $\\vert10\\rangle$ and to $\\vert+\\rangle\\otimes\\vert0\\rangle$.",
+      "solution": [
+        "$\\vert10\\rangle$: control is 1, so the target flips: $\\vert11\\rangle$.",
+        "$\\vert+\\rangle\\vert0\\rangle = (\\vert00\\rangle + \\vert10\\rangle)/\\sqrt2 \\to (\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$, a Bell state."
+      ],
+      "answer": "|11⟩, and the Bell state (|00⟩ + |11⟩)/√2"
+    },
+    {
+      "type": "problem",
+      "title": "CNOT budget",
+      "text": "A 5-qubit reservoir has an $X_iX_j$ coupling on every pair and uses 3 first-order Trotter steps per input. How many CNOTs per input?",
+      "solution": [
+        "Pairs: $\\binom52 = 10$, at 2 CNOTs each: 20 per Trotter step.",
+        "Three steps: 60 CNOTs per input, before any SWAPs needed for limited connectivity."
+      ],
+      "answer": "60"
+    },
+    {
+      "type": "problem",
+      "title": "Halving the Trotter error",
+      "text": "A first-order Trotter simulation to time $t$ with $r$ steps has error about $c\\,t^2/r$. How many steps halve the error? What does the second-order formula need?",
+      "solution": [
+        "First order: error $\\propto 1/r$, so double the steps.",
+        "Second order: error per step $\\propto (t/r)^3$, total $\\propto t^3/r^2$, so multiplying $r$ by $\\sqrt2 \\approx 1.41$ halves it."
+      ],
+      "answer": "2× the steps; about 1.41× for second order"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), chapter 4",
+        "S. Lloyd, Universal quantum simulators, Science 273, 1073 (1996)",
+        "M. Suzuki, Generalized Trotter's formula and systematic approximants of exponential operators and inner derivations with applications to many-body problems, Communications in Mathematical Physics 51, 183 (1976)"
+      ]
+    }
+  ]
+}

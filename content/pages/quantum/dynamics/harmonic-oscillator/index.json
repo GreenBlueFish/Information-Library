@@ -1,0 +1,129 @@
+{
+  "title": "The Harmonic Oscillator",
+  "intro": "A single mode of light, a microwave resonator or a mechanical vibration is a quantum harmonic oscillator. Its ladder operators, number states, coherent states and quadratures are the vocabulary of continuous-variable quantum reservoirs.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ladder operators"
+    },
+    {
+      "type": "prose",
+      "text": "The oscillator Hamiltonian, in units where the frequency is 1, is $H = a^\\dagger a + \\tfrac12$, built from the annihilation operator $a$ and its adjoint, the creation operator $a^\\dagger$. Everything follows from one commutator:"
+    },
+    {
+      "type": "math",
+      "tex": "[a, a^\\dagger] = 1, \\qquad a\\vert n\\rangle = \\sqrt n\\,\\vert n-1\\rangle, \\qquad a^\\dagger\\vert n\\rangle = \\sqrt{n+1}\\,\\vert n+1\\rangle"
+    },
+    {
+      "type": "prose",
+      "text": "The number states (Fock states) $\\vert n\\rangle$, $n = 0, 1, 2, \\dots$, are eigenstates of the number operator $a^\\dagger a$ with eigenvalue $n$, and of the Hamiltonian with energies $n + \\tfrac12$: an evenly spaced ladder. $\\vert0\\rangle$ is the vacuum. In a photonic system $n$ counts photons."
+    },
+    {
+      "type": "callout",
+      "text": "Notation clash: $\\vert0\\rangle$ and $\\vert1\\rangle$ here are the vacuum and the one-photon state, not qubit states. Context always makes it clear, and the QRC continuous-variable page uses the oscillator meaning."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Simulating an infinite-dimensional system"
+    },
+    {
+      "type": "prose",
+      "text": "The state space is infinite, so a simulation keeps only $\\vert0\\rangle, \\dots, \\vert N-1\\rangle$. In that truncation $[a, a^\\dagger] = 1$ holds on every level except the top one, where it fails badly. The fix is to choose $N$ large enough that the top levels are never populated, and to check that numerically, as the QRC shelf's Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs) does."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Quadratures and coherent states"
+    },
+    {
+      "type": "prose",
+      "text": "The quadratures $x = (a + a^\\dagger)/\\sqrt2$ and $p = i(a^\\dagger - a)/\\sqrt2$ are the oscillator's position and momentum, with $[x, p] = i$ and hence $\\sigma_x\\sigma_p \\ge 1/2$. Homodyne detection measures a quadrature directly, giving a continuous outcome."
+    },
+    {
+      "type": "prose",
+      "text": "A coherent state is the closest quantum analogue of a classical oscillation: an eigenstate of the annihilation operator, $a\\vert\\alpha\\rangle = \\alpha\\vert\\alpha\\rangle$, with"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\alpha\\rangle = e^{-\\vert\\alpha\\vert^2/2}\\sum_{n=0}^{\\infty}\\frac{\\alpha^n}{\\sqrt{n!}}\\vert n\\rangle, \\qquad P(n) = e^{-\\vert\\alpha\\vert^2}\\frac{\\vert\\alpha\\vert^{2n}}{n!}",
+      "caption": "Photon numbers in a coherent state are Poisson distributed with mean |α|²."
+    },
+    {
+      "type": "prose",
+      "text": "Its quadrature means follow the classical motion, and its quadrature variances are $1/2$ each, the vacuum value: it is a minimum-uncertainty state. A laser produces (approximately) coherent states, and a linear drive on a damped oscillator settles into one. Squeezed states trade noise between $x$ and $p$, keeping the product at $1/4$ while making one variance smaller than $1/2$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom math import factorial\nN = 30                                          # Fock-space truncation |0> ... |N-1>\na = np.diag(np.sqrt(np.arange(1, N)), 1); ad = a.T; num = ad @ a\ncomm = a @ ad - ad @ a\nprint(\"[a, a^dagger] = 1 on the first N-1 levels:\", np.allclose(np.diag(comm)[:-1], 1),\n      \"| last diagonal entry:\", round(np.diag(comm)[-1], 3), \"(a truncation artefact)\")\nprint(\"number operator eigenvalues 0..4:\", np.diag(num)[:5])\n# Coherent state |alpha>: Poisson photon numbers, <a> = alpha\nalpha = 1.5 + 0.5j\nc = np.array([np.exp(-abs(alpha)**2 / 2) * alpha**n / float(factorial(n)) ** 0.5 for n in range(N)])\nprint(\"norm:\", round(np.linalg.norm(c), 6), \" <a> =\", np.round(np.vdot(c, a @ c), 4),\n      \" <n> =\", round(np.vdot(c, num @ c).real, 4), \" |alpha|^2 =\", abs(alpha)**2)\nx = (a + ad) / np.sqrt(2); p = 1j * (ad - a) / np.sqrt(2)\nvar = lambda O: (np.vdot(c, O @ O @ c) - np.vdot(c, O @ c) ** 2).real\nprint(\"Var x =\", round(var(x), 4), \" Var p =\", round(var(p), 4), \" (vacuum value 1/2 each)\")\n# Energy levels of H = a^dagger a + 1/2 are evenly spaced\nprint(\"lowest energies:\", np.round(np.linalg.eigvalsh(num + 0.5 * np.eye(N))[:4], 3))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: with 30 levels, $[a, a^\\dagger] = 1$ on the first 29 levels and the last diagonal entry is $-29$, the truncation artefact. The number operator has eigenvalues 0 to 4 on the first five levels. The coherent state with $\\alpha = 1.5 + 0.5i$ is normalised, has $\\langle a\\rangle = \\alpha$ and $\\langle n\\rangle = 2.5 = \\vert\\alpha\\vert^2$, and quadrature variances of exactly 0.5. The lowest energies are 0.5, 1.5, 2.5, 3.5."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gaussian networks of oscillators and the single Kerr oscillator reservoir: Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs).",
+        "Bosonic platforms (microwave resonators, optical modes) and their readout: Analog Platforms (#/qrc/hardware/analog-platforms).",
+        "Photon loss, the oscillator's dissipation, is a Lindblad term with jump operator $a$: Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Ladder arithmetic",
+      "text": "Compute $a^\\dagger\\vert2\\rangle$, $a\\vert2\\rangle$ and $a^\\dagger a\\vert2\\rangle$.",
+      "solution": [
+        "$a^\\dagger\\vert2\\rangle = \\sqrt3\\,\\vert3\\rangle$.",
+        "$a\\vert2\\rangle = \\sqrt2\\,\\vert1\\rangle$.",
+        "$a^\\dagger a\\vert2\\rangle = a^\\dagger\\sqrt2\\vert1\\rangle = \\sqrt2\\sqrt2\\vert2\\rangle = 2\\vert2\\rangle$: the number operator counts."
+      ],
+      "answer": "√3|3⟩, √2|1⟩, 2|2⟩"
+    },
+    {
+      "type": "problem",
+      "title": "Vacuum probability of a coherent state",
+      "text": "For $\\alpha = 2$, what are the mean photon number and the probability of finding no photons?",
+      "solution": [
+        "$\\langle n\\rangle = \\vert\\alpha\\vert^2 = 4$.",
+        "$P(0) = e^{-4} \\approx 0.0183$."
+      ],
+      "answer": "4 photons; P(0) ≈ 0.018"
+    },
+    {
+      "type": "problem",
+      "title": "Choosing a truncation",
+      "text": "You simulate a coherent state with $\\vert\\alpha\\vert^2 = 2.5$. Is a truncation at 10 levels safe, judging by the Poisson tail?",
+      "solution": [
+        "$P(n\\ge10)$ for a Poisson distribution of mean 2.5 is about $2.8\\times10^{-4}$.",
+        "That is small but not negligible for precise work; 15 levels bring it below $10^{-7}$. The safe rule: check the population of the top level stays below your tolerance."
+      ],
+      "answer": "Marginal (about 3×10⁻⁴ outside); use ~15 levels"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), section 2.3",
+        "C. Gerry and P. Knight, Introductory Quantum Optics, Cambridge University Press (2005)",
+        "R. J. Glauber, Coherent and incoherent states of the radiation field, Physical Review 131, 2766 (1963)"
+      ]
+    }
+  ]
+}
