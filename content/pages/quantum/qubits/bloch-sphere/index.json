@@ -1,0 +1,121 @@
+{
+  "title": "The Qubit and the Bloch Sphere",
+  "intro": "Every pure state of a qubit, up to global phase, is a point on the unit sphere. The coordinates of that point are the three expectation values $\\langle X\\rangle$, $\\langle Y\\rangle$, $\\langle Z\\rangle$, which is why the QRC pages can treat a qubit state as a vector of features.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two angles are enough"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit state $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$ has four real parameters. Normalisation removes one and the irrelevant global phase another, leaving two. Choosing them as angles gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi\\rangle = \\cos\\frac{\\theta}{2}\\,\\vert0\\rangle + e^{i\\phi}\\sin\\frac{\\theta}{2}\\,\\vert1\\rangle, \\qquad 0\\le\\theta\\le\\pi,\\ 0\\le\\phi<2\\pi",
+      "caption": "θ and φ are the polar and azimuthal angles of a point on the unit sphere."
+    },
+    {
+      "type": "prose",
+      "text": "The north pole ($\\theta = 0$) is $\\vert0\\rangle$, the south pole is $\\vert1\\rangle$, and the equator holds the equal superpositions: $\\vert+\\rangle$ at $\\phi = 0$, $\\vert+i\\rangle$ at $\\phi = \\pi/2$, $\\vert-\\rangle$ at $\\phi = \\pi$. The half-angles are not a typo: orthogonal states, which are 90° apart as vectors in the state space, sit at opposite poles, 180° apart on the sphere."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Bloch vector is the vector of expectation values"
+    },
+    {
+      "type": "prose",
+      "text": "The Cartesian coordinates of the point are"
+    },
+    {
+      "type": "math",
+      "tex": "\\vec r = \\left(\\langle X\\rangle, \\langle Y\\rangle, \\langle Z\\rangle\\right) = (\\sin\\theta\\cos\\phi,\\ \\sin\\theta\\sin\\phi,\\ \\cos\\theta)",
+      "caption": "The Bloch vector. For a pure state its length is 1."
+    },
+    {
+      "type": "prose",
+      "text": "So the geometry and the measurement statistics are the same thing. Knowing the three numbers $\\langle X\\rangle$, $\\langle Y\\rangle$, $\\langle Z\\rangle$ fixes the state, and the overlap between two states is set by the angle between their Bloch vectors: $\\vert\\langle\\psi\\vert\\varphi\\rangle\\vert^2 = (1 + \\vec r\\cdot\\vec r\\,')/2$. Mixed states (Mixed States (#/quantum/many-body/mixed-states)) fill the inside of the ball, with $\\vert\\vec r\\vert < 1$; the centre is the maximally mixed state."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The QRC input state on the sphere"
+    },
+    {
+      "type": "prose",
+      "text": "The reset encoding of the Fujii–Nakajima reservoir writes $s\\in[0,1]$ as $\\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt s\\,\\vert1\\rangle$. Its amplitudes are real and non-negative, so $\\phi = 0$: the input moves along the meridian in the $xz$ plane, from the north pole ($s = 0$) through $\\vert+\\rangle$ ($s = 1/2$) to the south pole ($s = 1$), with Bloch vector $(2\\sqrt{s(1-s)}, 0, 1 - 2s)$. Two functions of $s$, one linear and one with a square root, which is exactly the nonlinearity budget analysed on Expressivity and Universality (#/qrc/theory/expressivity-and-universality)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\ndef bloch(v): return np.real([np.vdot(v, P @ v) for P in (X, Y, Z)])\ndef state(theta, phi): return np.array([np.cos(theta / 2), np.exp(1j * phi) * np.sin(theta / 2)])\nfor name, (th, ph) in {\"|0>\": (0, 0), \"|1>\": (np.pi, 0), \"|+>\": (np.pi/2, 0), \"|+i>\": (np.pi/2, np.pi/2),\n                       \"theta=pi/3, phi=pi/4\": (np.pi/3, np.pi/4)}.items():\n    r = bloch(state(th, ph))\n    print(f\"{name:22s} r = ({r[0]:+.3f}, {r[1]:+.3f}, {r[2]:+.3f}), |r| = {np.linalg.norm(r):.3f}\")\n# The QRC input state sqrt(1-s)|0> + sqrt(s)|1>: Bloch vector (2 sqrt(s(1-s)), 0, 1-2s)\nfor s in (0.0, 0.25, 0.5, 1.0):\n    r = bloch(np.array([np.sqrt(1 - s), np.sqrt(s)]))\n    print(f\"s = {s:4.2f}: r = ({r[0]:.3f}, {r[1]:.3f}, {r[2]:+.3f})\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the poles and the equatorial states land on the axes as expected; $\\theta = \\pi/3$, $\\phi = \\pi/4$ gives $(0.612, 0.612, 0.5)$; every pure state has length 1.000. For the input encoding, $s = 0, 0.25, 0.5, 1$ give $(0, 0, 1)$, $(0.866, 0, 0.5)$, $(1, 0, 0)$ and $(0, 0, -1)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A qubit channel is an affine map of the Bloch ball into itself, the picture used throughout Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "Contraction of the Bloch ball is how a reservoir forgets: Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points).",
+        "The many-qubit generalisation, the Pauli expansion with $4^n - 1$ coordinates, is the reservoir's full internal state."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Locate a state",
+      "text": "Find the Bloch vector of $(\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$.",
+      "solution": [
+        "Here $\\theta = \\pi/2$ (equal weights) and $\\phi = \\pi/2$ (relative phase $i$).",
+        "$\\vec r = (\\cos\\tfrac\\pi2, \\sin\\tfrac\\pi2, 0) = (0, 1, 0)$: the $+y$ axis."
+      ],
+      "answer": "(0, 1, 0)"
+    },
+    {
+      "type": "problem",
+      "title": "Angle of an input",
+      "text": "What polar angle $\\theta$ does the reset encoding give for $s = 0.25$? Check the Bloch vector.",
+      "solution": [
+        "$\\cos(\\theta/2) = \\sqrt{0.75}$, so $\\theta/2 = 30°$ and $\\theta = 60°$.",
+        "$\\vec r = (\\sin60°, 0, \\cos60°) = (0.866, 0, 0.5)$, matching $2\\sqrt{s(1-s)} = 0.866$ and $1 - 2s = 0.5$."
+      ],
+      "answer": "θ = 60° (π/3); r = (0.866, 0, 0.5)"
+    },
+    {
+      "type": "problem",
+      "title": "Overlap from geometry",
+      "text": "Use the Bloch vectors to find $\\vert\\langle0\\vert+\\rangle\\vert^2$ and $\\vert\\langle0\\vert1\\rangle\\vert^2$.",
+      "solution": [
+        "$\\vert0\\rangle$ is $(0,0,1)$ and $\\vert+\\rangle$ is $(1,0,0)$: dot product 0, so the overlap is $(1+0)/2 = 1/2$.",
+        "$\\vert1\\rangle$ is $(0,0,-1)$: dot product $-1$, overlap $(1-1)/2 = 0$. Antipodal points are orthogonal states."
+      ],
+      "answer": "1/2 and 0"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 1.2",
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 2",
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 1"
+      ]
+    }
+  ]
+}

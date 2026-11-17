@@ -1,0 +1,119 @@
+{
+  "title": "Symmetries and Conservation",
+  "intro": "An observable that commutes with the Hamiltonian is conserved: its expectation value, and its whole probability distribution, never change. This page introduces the Heisenberg picture, where that statement is natural, and the Z-parity symmetry of the QRC spin reservoir.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Heisenberg picture"
+    },
+    {
+      "type": "prose",
+      "text": "Expectation values can be computed by moving the state or by moving the observable:"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle A\\rangle(t) = \\langle\\psi(t)\\vert A\\vert\\psi(t)\\rangle = \\langle\\psi(0)\\vert\\,A(t)\\,\\vert\\psi(0)\\rangle, \\qquad A(t) = U^\\dagger(t)\\,A\\,U(t)",
+      "caption": "Schrödinger picture on the left, Heisenberg picture on the right. They always agree."
+    },
+    {
+      "type": "prose",
+      "text": "In the Heisenberg picture the state stays put and the operators evolve, obeying $\\tfrac{d}{dt}A(t) = i[H, A(t)]$. This is the natural picture for a reservoir: the readout measures fixed observables $Z_i$ at different times, which is the same as measuring the initial state with the moving observables $Z_i(t)$. Virtual nodes are exactly a set of such Heisenberg-evolved observables (Readout and Multiplexing (#/qrc/models/readout-and-multiplexing))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Conserved quantities"
+    },
+    {
+      "type": "prose",
+      "text": "If $[H, Q] = 0$, the equation of motion gives $\\tfrac{d}{dt}Q(t) = 0$: $Q$ is conserved. More than its average is fixed: $H$ and $Q$ share an eigenbasis, $U(t)$ maps each eigenspace of $Q$ to itself, and the probability of every outcome of $Q$ is constant. The space splits into blocks (symmetry sectors) that never talk to each other."
+    },
+    {
+      "type": "prose",
+      "text": "Energy itself is always conserved under a time-independent $H$. Other examples: total $Z$ (the number of excitations) for flip-flop couplings $X_iX_j + Y_iY_j$, which move an excitation without creating or destroying any; and for a Hamiltonian built only from $X_iX_j$ and $Z_i$, the parity $\\Pi = Z_1Z_2\\cdots Z_n$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The parity of the reservoir Hamiltonian"
+    },
+    {
+      "type": "prose",
+      "text": "Each $X_iX_j$ anticommutes with $Z_i$ and with $Z_j$ and commutes with every other $Z$, so it commutes with the product of all of them (two sign flips cancel). Each $Z_i$ commutes with $\\Pi$ trivially. So the Fujii–Nakajima Hamiltonian $\\sum J_{ij}X_iX_j + \\sum h_iZ_i$ conserves $\\Pi$: XX couplings create or destroy excitations only in pairs, so whether the count is even or odd never changes. The $2^n$-dimensional space splits into two blocks of $2^{n-1}$."
+    },
+    {
+      "type": "prose",
+      "text": "This has consequences you can see on the QRC shelf. Level statistics must be computed within one block (Dynamical Regimes (#/qrc/models/dynamical-regimes)); an input written into the parity-odd coherences is invisible to parity-even readouts such as $Z_i$ (Input Encoding (#/qrc/models/input-encoding)); and in the special case $h = 0$ extra conserved quantities appear that stop the reservoir forgetting its initial state (Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points))."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\nn = 3; rng = np.random.default_rng(2)\n# The reservoir Hamiltonian of the QRC shelf: random XX couplings plus a Z field\nH = sum(rng.uniform(-.5, .5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\nH = H + sum(op(Z, i, n) for i in range(n))\nparity = op(Z, 0, n) @ op(Z, 1, n) @ op(Z, 2, n)\ncomm = lambda A, B: A @ B - B @ A\nprint(\"[H, Z1 Z2 Z3] = 0:\", np.allclose(comm(H, parity), 0), \"   [H, Z1] = 0:\", np.allclose(comm(H, op(Z, 0, n)), 0))\n# Heisenberg picture: <Z1>(t) computed both ways\npsi = np.zeros(8, complex); psi[0b100] = 1          # |100>: qubit 1 excited\nU = expm(-1j * H * 1.3)\nschr = np.vdot(U @ psi, op(Z, 0, n) @ (U @ psi)).real\nheis = np.vdot(psi, (U.conj().T @ op(Z, 0, n) @ U) @ psi).real\nprint(f\"<Z1>(t=1.3): Schrodinger {schr:+.4f}, Heisenberg {heis:+.4f}\")\nprint(f\"parity <Z1Z2Z3> at t=0 and t=1.3: {np.vdot(psi, parity @ psi).real:+.0f}, {np.vdot(U @ psi, parity @ (U @ psi)).real:+.0f}\")\n# XX + YY conserves total Z (excitation number); XX alone does not\nHflip = op(X, 0, 2) @ op(X, 1, 2) + op(Y, 0, 2) @ op(Y, 1, 2); Ztot = op(Z, 0, 2) + op(Z, 1, 2)\nprint(\"[XX+YY, Z1+Z2] = 0:\", np.allclose(comm(Hflip, Ztot), 0), \"   [XX, Z1+Z2] = 0:\", np.allclose(comm(op(X, 0, 2) @ op(X, 1, 2), Ztot), 0))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: for a random 3-qubit reservoir Hamiltonian, $[H, Z_1Z_2Z_3] = 0$ but $[H, Z_1] \\ne 0$. Starting from $\\vert100\\rangle$, $\\langle Z_1\\rangle$ at $t = 1.3$ is $-0.6494$ in both pictures, while the parity stays at $-1$. Flip-flop coupling $XX + YY$ conserves $Z_1 + Z_2$; $XX$ alone does not."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The parity symmetry and its two blocks: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "Conserved quantities as 'fixed points in disguise' that break the echo state property: Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points).",
+        "Integrable and localised Hamiltonians have many conserved quantities, which is what makes them poor reservoirs: Dynamical Regimes (#/qrc/models/dynamical-regimes)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Does parity commute with a coupling?",
+      "text": "Show that $Z_1Z_2$ commutes with $X_1X_2$.",
+      "solution": [
+        "$Z_1Z_2X_1X_2 = (Z_1X_1)(Z_2X_2)$, since operators on different qubits commute.",
+        "$X_1X_2Z_1Z_2 = (X_1Z_1)(X_2Z_2) = (-Z_1X_1)(-Z_2X_2) = (Z_1X_1)(Z_2X_2)$. Equal, so they commute."
+      ],
+      "answer": "Yes: the two minus signs cancel"
+    },
+    {
+      "type": "problem",
+      "title": "Where can an excitation go?",
+      "text": "Two qubits evolve under $J(X_1X_2 + Y_1Y_2)$ and start in $\\vert01\\rangle$. Which basis states can ever have non-zero amplitude?",
+      "solution": [
+        "The coupling conserves $Z_1 + Z_2$, which is 0 for $\\vert01\\rangle$ and $\\vert10\\rangle$, $+2$ for $\\vert00\\rangle$ and $-2$ for $\\vert11\\rangle$.",
+        "So the state stays in the span of $\\vert01\\rangle$ and $\\vert10\\rangle$: the excitation hops between the qubits but is never created or lost."
+      ],
+      "answer": "Only |01⟩ and |10⟩"
+    },
+    {
+      "type": "problem",
+      "title": "A conserved quantity and a readout",
+      "text": "A reservoir Hamiltonian conserves $Z_1Z_2Z_3$, and the initial state is $\\vert000\\rangle$ with no input. Express $\\langle Z_1Z_2\\rangle$ in terms of a single-qubit feature.",
+      "solution": [
+        "The state stays in the parity $+1$ block, where $Z_1Z_2Z_3 = 1$ on every basis state.",
+        "Multiplying by $Z_3$ (with $Z_3^2 = I$): $Z_1Z_2 = Z_3$ on that block, so $\\langle Z_1Z_2\\rangle = \\langle Z_3\\rangle$ at all times."
+      ],
+      "answer": "⟨Z1Z2⟩ = ⟨Z3⟩"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapters 2 and 4",
+        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapter 6"
+      ]
+    }
+  ]
+}

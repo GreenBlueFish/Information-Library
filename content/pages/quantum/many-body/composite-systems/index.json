@@ -1,0 +1,110 @@
+{
+  "title": "Composite Systems and Tensor Products",
+  "intro": "Two quantum systems together are described by the tensor product of their state spaces, so $n$ qubits need $2^n$ amplitudes. This page fixes the conventions (basis order, which factor is which qubit) that every reservoir simulation relies on.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The tensor product of states"
+    },
+    {
+      "type": "prose",
+      "text": "If qubit 1 is in $\\vert a\\rangle$ and qubit 2 in $\\vert b\\rangle$, the pair is in $\\vert a\\rangle\\otimes\\vert b\\rangle$, written $\\vert ab\\rangle$. Numerically this is the Kronecker product of the two vectors. The basis of two qubits is $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$, in that order: the index of $\\vert b_1b_2\\cdots b_n\\rangle$ is the binary number $b_1b_2\\cdots b_n$, with qubit 1 as the most significant bit. That is the convention of `np.kron` with qubit 1 as the leftmost factor, and of every sample on the QRC shelf."
+    },
+    {
+      "type": "prose",
+      "text": "A general two-qubit state is any unit vector in this four-dimensional space, $\\sum_{ij} c_{ij}\\vert ij\\rangle$. Only some of them are products $\\vert a\\rangle\\otimes\\vert b\\rangle$; the rest are entangled (Entanglement and Reduced States (#/quantum/many-body/entanglement)). A quick test: arrange the amplitudes into the $2\\times2$ matrix $c_{ij}$. The state is a product exactly when that matrix has rank 1."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Operators on part of a system"
+    },
+    {
+      "type": "prose",
+      "text": "An operator $A$ acting on qubit $i$ alone is $I\\otimes\\cdots\\otimes A\\otimes\\cdots\\otimes I$, with $A$ in slot $i$. The QRC samples build this with a small `op(o, i, n)` helper. Operators on different qubits commute. A two-qubit coupling such as $X_iX_j$ is the product of two such single-qubit operators. A Pauli string is a tensor product of one Pauli (or $I$) per qubit; there are $4^n$ of them and they form an orthogonal basis for all operators on $n$ qubits, which is why a density matrix of $n$ qubits has $4^n - 1$ real coordinates."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Exponential growth, and what it does and does not mean"
+    },
+    {
+      "type": "math",
+      "tex": "\\dim\\left((\\mathbb{C}^2)^{\\otimes n}\\right) = 2^n",
+      "caption": "n qubits: 2ⁿ complex amplitudes, 4ⁿ density-matrix entries."
+    },
+    {
+      "type": "prose",
+      "text": "Thirty qubits need about a billion amplitudes; fifty are beyond any classical memory. This is the headline argument for quantum computing and quantum reservoirs. But a quantum device does not hand you those amplitudes: you learn about the state only through measurement, a few numbers at a time, each from many shots. The QRC shelf's Concentration and Scalability (#/qrc/theory/concentration-and-scalability) is about exactly this gap between the size of the state and the size of what can be read from it."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# Two qubits: basis order |00>, |01>, |10>, |11> with the LEFT factor as qubit 1\nzero, one = np.array([1., 0]), np.array([0., 1])\nprint(\"|0>(x)|1> =\", np.kron(zero, one), \" (index 1 = binary 01)\")\n# Operators on one qubit act as A (x) I; ordering matters\nX = np.array([[0, 1], [1, 0]]); I = np.eye(2)\nv = np.kron(zero, zero)\nprint(\"X on qubit 1:\", np.kron(X, I) @ v, \"  X on qubit 2:\", np.kron(I, X) @ v)\n# A state is a product exactly when its 2x2 amplitude matrix has rank 1\ndef schmidt_rank(psi): return np.linalg.matrix_rank(psi.reshape(2, 2), tol=1e-12)\nprod = np.kron([0.6, 0.8], [1 / np.sqrt(2), 1j / np.sqrt(2)])\nbell = np.array([1, 0, 0, 1]) / np.sqrt(2)\nprint(\"rank of a product state:\", schmidt_rank(prod), \"   rank of the Bell state:\", schmidt_rank(bell))\n# Dimension count\nfor n in (1, 2, 5, 10, 20):\n    print(f\"n = {n:2d} qubits: state vector {2**n:>8d} amplitudes, density matrix {4**n:>14d} entries\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: $\\vert0\\rangle\\otimes\\vert1\\rangle$ is the basis vector at index 1 (binary 01). $X$ on qubit 1 sends $\\vert00\\rangle$ to index 2 ($\\vert10\\rangle$); $X$ on qubit 2 sends it to index 1 ($\\vert01\\rangle$). The amplitude matrix of a product state has rank 1 and that of the Bell state rank 2. The table shows 32 amplitudes and 1024 density-matrix entries at 5 qubits, and about $10^{12}$ entries at 20."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Every reservoir sample builds its operators with Kronecker products, qubit 1 leftmost: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "The Pauli-string basis is the reservoir's coordinate system: Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "The cost of exact classical simulation grows as $4^n$ memory and $8^n$ time per step: Resource Accounting (#/qrc/hardware/resource-accounting)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Index of a basis state",
+      "text": "At which index (counting from 0) is $\\vert1\\rangle\\otimes\\vert0\\rangle\\otimes\\vert1\\rangle$ in the 8-dimensional vector of three qubits?",
+      "solution": [
+        "Read the bits as a binary number with qubit 1 first: $101_2 = 5$."
+      ],
+      "answer": "5"
+    },
+    {
+      "type": "problem",
+      "title": "Product or entangled",
+      "text": "Is $\\tfrac12(\\vert00\\rangle + \\vert01\\rangle + \\vert10\\rangle + \\vert11\\rangle)$ a product state? If so, of what?",
+      "solution": [
+        "All four amplitudes are $\\tfrac12$, so the amplitude matrix has two equal rows: rank 1, a product.",
+        "It is $\\vert+\\rangle\\otimes\\vert+\\rangle$: expand $\\tfrac12(\\vert0\\rangle + \\vert1\\rangle)(\\vert0\\rangle + \\vert1\\rangle)$."
+      ],
+      "answer": "Yes: |+⟩⊗|+⟩"
+    },
+    {
+      "type": "problem",
+      "title": "Counting operators",
+      "text": "How many Pauli strings act on 3 qubits, and how many of them are diagonal in the computational basis?",
+      "solution": [
+        "Each qubit carries one of $I, X, Y, Z$: $4^3 = 64$ strings.",
+        "Diagonal ones use only $I$ and $Z$: $2^3 = 8$, including the identity."
+      ],
+      "answer": "64; 8 diagonal"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 2.1.7",
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 2"
+      ]
+    }
+  ]
+}

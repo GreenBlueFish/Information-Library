@@ -1,0 +1,134 @@
+{
+  "title": "Pauli Operators and Rotations",
+  "intro": "The Pauli matrices are the observables, the generators of rotations, and (in tensor products) the basis for every operator on many qubits. A rotation of the Bloch sphere is the exponential of a Pauli, which is how inputs are written into qubits.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Pauli matrices"
+    },
+    {
+      "type": "prose",
+      "text": "In the computational basis, $X$ swaps the two basis states ($X\\vert0\\rangle = \\vert1\\rangle$, $X\\vert1\\rangle = \\vert0\\rangle$), $Z$ flips the sign of $\\vert1\\rangle$ ($Z = \\mathrm{diag}(1, -1)$), and $Y = iXZ$ does both with a phase ($Y\\vert0\\rangle = i\\vert1\\rangle$, $Y\\vert1\\rangle = -i\\vert0\\rangle$). As matrices, $X$ has rows $(0, 1)$ and $(1, 0)$, $Y$ has rows $(0, -i)$ and $(i, 0)$, and $Z$ has rows $(1, 0)$ and $(0, -1)$."
+    },
+    {
+      "type": "prose",
+      "text": "They are Hermitian (so they are observables, each with eigenvalues $\\pm1$) and unitary (so they are also gates: $X$ is the quantum NOT). Their algebra is short enough to memorise:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Each squares to the identity: $X^2 = Y^2 = Z^2 = I$.",
+        "Distinct Paulis anticommute: $XY = -YX$, and so on.",
+        "Products cycle: $XY = iZ$, $YZ = iX$, $ZX = iY$. Hence $[X, Y] = 2iZ$ and its cyclic versions.",
+        "Together with $I$ they form a basis of all $2\\times2$ matrices, orthogonal in the sense $\\operatorname{Tr}(PQ) = 2\\delta_{PQ}$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Rotations of the Bloch sphere"
+    },
+    {
+      "type": "prose",
+      "text": "The exponential of a Pauli is a rotation. Because $P^2 = I$, the power series splits into even and odd terms and closes into"
+    },
+    {
+      "type": "math",
+      "tex": "R_P(\\theta) = e^{-i\\theta P/2} = \\cos\\frac{\\theta}{2}\\,I - i\\sin\\frac{\\theta}{2}\\,P",
+      "caption": "Rotation by angle θ about the axis of the Pauli P (P = X, Y or Z)."
+    },
+    {
+      "type": "prose",
+      "text": "Acting on a state, $R_P(\\theta)$ turns its Bloch vector by $\\theta$ about the $P$ axis. The factor $1/2$ in the exponent is what makes a full turn $\\theta = 2\\pi$ give $-I$: the same physical state (a global phase), but a reminder that the state space double-covers the sphere. More generally, $e^{-i\\theta\\,\\hat n\\cdot\\vec\\sigma/2}$ rotates about any unit axis $\\hat n$, and every single-qubit unitary is such a rotation up to a phase."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Rotations do not commute"
+    },
+    {
+      "type": "prose",
+      "text": "Rotating about $x$ then $z$ is not the same as $z$ then $x$, for qubits as for books on a table. This is the commutator at work, and it is why the order of gates in a circuit matters and why a Hamiltonian $A + B$ with non-commuting parts cannot simply be split (Gates and Circuits (#/quantum/qubits/gates-and-circuits))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Writing an input into a qubit"
+    },
+    {
+      "type": "prose",
+      "text": "A rotation about $y$ from $\\vert0\\rangle$ stays on the real meridian: $R_Y(\\theta)\\vert0\\rangle = \\cos\\frac\\theta2\\vert0\\rangle + \\sin\\frac\\theta2\\vert1\\rangle$. Choosing $\\theta = 2\\arcsin\\sqrt s$ makes the $\\vert1\\rangle$ amplitude $\\sqrt s$, which is the Fujii–Nakajima input state. Choosing $\\theta = \\pi s$ instead gives angle encoding, with $P(1) = \\sin^2(\\pi s/2)$. Same gate, different map from $s$ to angle, different function class for the reservoir (Input Encoding (#/qrc/models/input-encoding))."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\nI = np.eye(2)\ndef R(P, theta): return expm(-1j * theta * P / 2)\n# Closed form: R_P(theta) = cos(theta/2) I - i sin(theta/2) P for any Pauli P\nprint(\"closed form holds:\", all(np.allclose(R(P, 0.8), np.cos(0.4) * I - 1j * np.sin(0.4) * P) for P in (X, Y, Z)))\n# The QRC amplitude encoding: R_Y(2 arcsin sqrt(s))|0> = sqrt(1-s)|0> + sqrt(s)|1>\nfor s in (0.1, 0.25, 0.7):\n    v = R(Y, 2 * np.arcsin(np.sqrt(s))) @ np.array([1, 0])\n    print(f\"s = {s}: R_Y|0> = {np.round(v.real, 4)}, target {np.round([np.sqrt(1-s), np.sqrt(s)], 4)}\")\n# A 2 pi rotation gives -I: the global phase that spin-1/2 is famous for\nprint(\"R_Z(2 pi) = -I:\", np.allclose(R(Z, 2 * np.pi), -I))\n# Rotations about different axes do not commute\nprint(\"R_X(pi/2) R_Z(pi/2) == R_Z(pi/2) R_X(pi/2):\", np.allclose(R(X, np.pi/2) @ R(Z, np.pi/2), R(Z, np.pi/2) @ R(X, np.pi/2)))\n# Pauli algebra\nprint(\"XY = iZ:\", np.allclose(X @ Y, 1j * Z), \"  X^2 = I:\", np.allclose(X @ X, I), \"  {X, Z} = 0:\", np.allclose(X @ Z + Z @ X, 0))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the closed form matches `expm` for all three axes; $R_Y(2\\arcsin\\sqrt s)\\vert0\\rangle$ reproduces $(\\sqrt{1-s}, \\sqrt s)$ for $s = 0.1, 0.25, 0.7$; $R_Z(2\\pi) = -I$; $R_X(\\pi/2)$ and $R_Z(\\pi/2)$ do not commute; and $XY = iZ$, $X^2 = I$, $XZ + ZX = 0$ all hold."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The reservoir Hamiltonian $\\sum J_{ij}X_iX_j + h\\sum Z_i$ is written in Paulis: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "Injection by $R_Y(\\theta_k)$ on gate-based hardware: Gate-Based Devices (#/qrc/hardware/gate-based-devices).",
+        "The parity argument on Input Encoding (#/qrc/models/input-encoding) uses the anticommutation of $X$ and $Z$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A half turn",
+      "text": "What is $R_Y(\\pi)\\vert0\\rangle$? And $R_X(\\pi)\\vert0\\rangle$?",
+      "solution": [
+        "$R_Y(\\pi) = \\cos\\frac\\pi2 I - i\\sin\\frac\\pi2 Y = -iY$, and $-iY\\vert0\\rangle = -i\\cdot i\\vert1\\rangle = \\vert1\\rangle$.",
+        "$R_X(\\pi) = -iX$, so $R_X(\\pi)\\vert0\\rangle = -i\\vert1\\rangle$: the same state $\\vert1\\rangle$ up to a global phase."
+      ],
+      "answer": "|1⟩, and −i|1⟩ (the same state)"
+    },
+    {
+      "type": "problem",
+      "title": "Hadamard conjugation",
+      "text": "The Hadamard $H_d = (X + Z)/\\sqrt2$. Show that $H_dZH_d = X$.",
+      "solution": [
+        "$H_dZ = (XZ + Z^2)/\\sqrt2 = (XZ + I)/\\sqrt2$.",
+        "$H_dZH_d = (XZ + I)(X + Z)/2 = (XZX + XZZ + X + Z)/2 = (-Z + X + X + Z)/2 = X$, using $XZX = -Z$."
+      ],
+      "answer": "H Z H = X (so measuring Z after H measures X)"
+    },
+    {
+      "type": "problem",
+      "title": "Precessing an equatorial state",
+      "text": "Apply $R_Z(\\varphi)$ to $\\vert+\\rangle$. What is the Bloch vector, and which expectation values change?",
+      "solution": [
+        "$R_Z(\\varphi)$ turns the Bloch vector by $\\varphi$ about $z$, so $(1, 0, 0) \\to (\\cos\\varphi, \\sin\\varphi, 0)$.",
+        "$\\langle X\\rangle$ and $\\langle Y\\rangle$ change; $\\langle Z\\rangle = 0$ does not. A $Z$-only readout cannot see a $Z$ rotation."
+      ],
+      "answer": "(cos φ, sin φ, 0); only ⟨X⟩ and ⟨Y⟩"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), sections 2.1.3 and 4.2",
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 3",
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 2"
+      ]
+    }
+  ]
+}
