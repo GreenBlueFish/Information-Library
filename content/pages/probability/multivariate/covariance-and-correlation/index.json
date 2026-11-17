@@ -1,0 +1,103 @@
+{
+  "title": "Covariance and Correlation",
+  "intro": "Covariance measures how two random variables move together; correlation rescales it to lie between −1 and 1. Both detect only linear association, and zero correlation does not mean independence.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Covariance"
+    },
+    {
+      "type": "math",
+      "tex": "\\operatorname{Cov}(X, Y) = E\\left[(X - E X)(Y - E Y)\\right] = E[XY] - E[X]\\,E[Y]"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\operatorname{Cov}(X, X) = \\operatorname{Var}(X)$, and covariance is symmetric and bilinear: $\\operatorname{Cov}(aX + bY, Z) = a\\operatorname{Cov}(X, Z) + b\\operatorname{Cov}(Y, Z)$.",
+        "Independent variables have zero covariance. The converse is false.",
+        "The variance of a sum: $\\operatorname{Var}(X + Y) = \\operatorname{Var}X + \\operatorname{Var}Y + 2\\operatorname{Cov}(X, Y)$, and in general $\\operatorname{Var}\\left(\\sum X_i\\right) = \\sum_{i,j}\\operatorname{Cov}(X_i, X_j)$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Correlation"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho(X, Y) = \\frac{\\operatorname{Cov}(X, Y)}{\\sigma_X\\sigma_Y}\\in[-1, 1]",
+      "caption": "Bounded by the Cauchy–Schwarz inequality."
+    },
+    {
+      "type": "prose",
+      "text": "$\\rho = \\pm1$ exactly when $Y$ is a linear function of $X$. Correlation is unchanged by shifting or positively rescaling either variable. It measures linear association only: $X\\sim N(0, 1)$ and $Y = X^2$ are completely dependent ($Y$ is a function of $X$) yet uncorrelated, because the positive and negative halves cancel."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Covariance matrices"
+    },
+    {
+      "type": "prose",
+      "text": "For a random vector $\\mathbf X = (X_1, \\dots, X_n)$, the covariance matrix $\\Sigma_{ij} = \\operatorname{Cov}(X_i, X_j)$ is symmetric and positive semidefinite, because $\\operatorname{Var}(\\mathbf a^\\top\\mathbf X) = \\mathbf a^\\top\\Sigma\\mathbf a\\ge0$ for every $\\mathbf a$. A zero eigenvalue means some linear combination of the variables is constant. Linear maps transform it as $\\operatorname{Cov}(A\\mathbf X) = A\\Sigma A^\\top$; diagonalising $\\Sigma$ is principal component analysis."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(16)\nx = rng.normal(size=10 ** 6)\n# Zero correlation does not mean independence: Y = X^2 is a function of X\ny = x ** 2\nprint(f\"corr(X, X^2) = {np.corrcoef(x, y)[0, 1]:+.4f}, but P(Y > 1 | |X| > 1) = {np.mean(y[abs(x) > 1] > 1):.1f}\")\n# Correlation measures linear association and is unchanged by positive affine maps\nz = 0.6 * x + 0.8 * rng.normal(size=10 ** 6)\nprint(f\"corr(X, Z) = {np.corrcoef(x, z)[0, 1]:.4f} (0.6); corr(3X + 1, 5Z - 2) = {np.corrcoef(3*x + 1, 5*z - 2)[0, 1]:.4f}\")\n# Var(X + Z) = Var X + Var Z + 2 Cov(X, Z)\nprint(f\"Var(X + Z) = {np.var(x + z):.4f}; 1 + 1 + 2(0.6) = 3.2\")\n# A covariance matrix is positive semidefinite\nC = np.cov(np.vstack([x[:1000], z[:1000], (x + z)[:1000]]))\nprint(\"eigenvalues of a 3x3 sample covariance (one is ~0 because X + Z is a combination):\", np.round(np.abs(np.linalg.eigvalsh(C)), 4))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: $\\operatorname{corr}(X, X^2) = 0.0004$, although $\\vert X\\vert > 1$ forces $X^2 > 1$ with certainty. $Z = 0.6X + 0.8W$ has correlation 0.601 with $X$, unchanged after affine maps; $\\operatorname{Var}(X + Z) = 3.204$ against $1 + 1 + 2(0.6) = 3.2$. The covariance matrix of $(X, Z, X + Z)$ has a zero eigenvalue because the third variable is the sum of the first two."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Variance of a difference",
+      "text": "$X$ and $Y$ have variance 1 and correlation 0.5. Find $\\operatorname{Var}(X - Y)$ and $\\operatorname{Var}(X + Y)$.",
+      "solution": [
+        "$\\operatorname{Var}(X - Y) = 1 + 1 - 2(0.5) = 1$.",
+        "$\\operatorname{Var}(X + Y) = 1 + 1 + 2(0.5) = 3$."
+      ],
+      "answer": "1 and 3"
+    },
+    {
+      "type": "problem",
+      "title": "A die and the total",
+      "text": "Find the correlation between the first die $D_1$ and the total $D_1 + D_2$ of two dice.",
+      "solution": [
+        "$\\operatorname{Cov}(D_1, D_1 + D_2) = \\operatorname{Var}D_1 = \\sigma^2$ (the two dice are independent).",
+        "$\\rho = \\sigma^2/(\\sigma\\cdot\\sqrt2\\sigma) = 1/\\sqrt2\\approx0.707$."
+      ],
+      "answer": "1/√2"
+    },
+    {
+      "type": "problem",
+      "title": "Uncorrelated but dependent",
+      "text": "Let $X$ be uniform on $\\{-1, 0, 1\\}$ and $Y = \\mathbf{1}\\{X = 0\\}$. Show $X$ and $Y$ are uncorrelated but not independent.",
+      "solution": [
+        "$E[X] = 0$ and $XY = 0$ always, so $\\operatorname{Cov} = E[XY] - E[X]E[Y] = 0$.",
+        "$P(X = 0, Y = 0) = 0$ but $P(X = 0)P(Y = 0) = \\tfrac13\\cdot\\tfrac23 \\ne 0$: dependent."
+      ],
+      "answer": "Cov = 0 but dependent"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 7",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 7",
+        "I. T. Jolliffe, Principal Component Analysis, 2nd edition, Springer (2002)"
+      ]
+    }
+  ]
+}

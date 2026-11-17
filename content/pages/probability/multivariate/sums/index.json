@@ -1,0 +1,105 @@
+{
+  "title": "Sums of Random Variables",
+  "intro": "The distribution of a sum of independent variables is the convolution of their distributions. Some families are closed under it; for the rest, generating functions and the central limit theorem take over.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Convolution"
+    },
+    {
+      "type": "math",
+      "tex": "P(X + Y = s) = \\sum_x p_X(x)\\,p_Y(s - x), \\qquad f_{X+Y}(s) = \\int f_X(x)\\,f_Y(s - x)\\,dx",
+      "caption": "For independent X and Y."
+    },
+    {
+      "type": "prose",
+      "text": "To make a total of $s$, the first variable takes some value $x$ and the second must supply the rest; sum over the ways. Convolving two uniform densities on $[0, 1]$ gives a triangle on $[0, 2]$; three give a piecewise quadratic; twelve already look very normal (the Irwin–Hall distributions). Repeated convolution is how the central limit theorem shows up in practice."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Families closed under addition"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Binomial($n, p$) + Binomial($m, p$) = Binomial($n + m, p$).",
+        "Poisson($\\lambda$) + Poisson($\\mu$) = Poisson($\\lambda + \\mu$).",
+        "Gamma($a, \\lambda$) + Gamma($b, \\lambda$) = Gamma($a + b, \\lambda$); in particular sums of exponentials and of chi-squares.",
+        "$N(\\mu_1, \\sigma_1^2) + N(\\mu_2, \\sigma_2^2) = N(\\mu_1 + \\mu_2, \\sigma_1^2 + \\sigma_2^2)$.",
+        "Cauchy: the mean of $n$ standard Cauchys is again standard Cauchy, so averaging does not help at all."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Each of these is easiest to prove with generating functions, which turn convolution into multiplication (Generating Functions (#/probability/toolkit/generating-functions)). Families closed under addition with a rescaling are the stable distributions; the normal is the only one with finite variance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Means and variances need no convolution"
+    },
+    {
+      "type": "prose",
+      "text": "Even when the distribution of a sum is hard, its mean is the sum of the means, and its variance is the sum of the variances for independent terms. Often that is enough."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom math import factorial, comb, floor\n# The density of a sum is the convolution of the densities. Irwin-Hall: sum of n uniforms\ndef irwin_hall_cdf(x, n):\n    return sum((-1) ** k * comb(n, k) * (x - k) ** n for k in range(floor(x) + 1)) / factorial(n)\nrng = np.random.default_rng(18)\nfor n in (2, 3, 12):\n    s = rng.random((10 ** 6, n)).sum(1)\n    print(f\"sum of {n:2d} uniforms: P(S <= {n/2 - 0.5}) simulated {np.mean(s <= n/2 - 0.5):.4f}, exact {irwin_hall_cdf(n/2 - 0.5, n):.4f}\")\n# Discrete convolution: the distribution of three dice by convolving PMFs\ndie = np.ones(6) / 6\nthree = np.convolve(np.convolve(die, die), die)       # supports 3..18\nprint(\"P(three dice sum to 10) =\", round(three[10 - 3], 5), \"= 27/216 =\", round(27 / 216, 5))\n# Sums of independent Poissons are Poisson\na, b = rng.poisson(2, 10 ** 6), rng.poisson(5, 10 ** 6)\nprint(f\"Poisson(2) + Poisson(5): mean {np.mean(a + b):.3f}, variance {np.var(a + b):.3f} (both 7)\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: sums of 2, 3 and 12 uniforms match the exact Irwin–Hall CDF (0.125, 0.167 and 0.311 at the points tested). Convolving three dice PMFs gives $P(\\text{sum} = 10) = 27/216 = 0.125$. Poisson(2) + Poisson(5) has mean 7.002 and variance 6.996."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Two exponentials",
+      "text": "Convolve two independent Exp($\\lambda$) densities.",
+      "solution": [
+        "$f(s) = \\int_0^s\\lambda e^{-\\lambda x}\\lambda e^{-\\lambda(s - x)}\\,dx = \\lambda^2 s\\,e^{-\\lambda s}$ for $s\\ge0$.",
+        "That is Gamma(2, $\\lambda$)."
+      ],
+      "answer": "λ² s e^{−λs}"
+    },
+    {
+      "type": "problem",
+      "title": "The triangle",
+      "text": "$U_1, U_2$ are independent uniforms on $[0, 1]$. Find $P(U_1 + U_2\\le1.5)$.",
+      "solution": [
+        "The sum has the triangular density on $[0, 2]$. The region above 1.5 is a small triangle with legs 0.5, area $0.5^2/2 = 0.125$.",
+        "$P = 1 - 0.125 = 0.875$."
+      ],
+      "answer": "0.875"
+    },
+    {
+      "type": "problem",
+      "title": "Combining arrivals",
+      "text": "Two independent streams of requests are Poisson with means 3 and 5 per second. What is the probability of more than 10 requests in a second?",
+      "solution": [
+        "The total is Poisson(8).",
+        "$P(N > 10) = 1 - \\sum_{k=0}^{10}e^{-8}8^k/k! \\approx 1 - 0.816 = 0.184$."
+      ],
+      "answer": "≈ 0.184"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 8",
+        "W. Feller, An Introduction to Probability Theory and Its Applications, Volume 1, 3rd edition, Wiley (1968), chapter 11",
+        "J. P. Nolan, Univariate Stable Distributions, Springer (2020)"
+      ]
+    }
+  ]
+}

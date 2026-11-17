@@ -1,0 +1,96 @@
+{
+  "title": "Transformations",
+  "intro": "If X has a known distribution, so does g(X). For monotone maps there is a formula; for any distribution there is a way to generate it from a uniform random number.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The CDF method"
+    },
+    {
+      "type": "prose",
+      "text": "The general approach is to compute the CDF of $Y = g(X)$ directly: $F_Y(y) = P(g(X)\\le y)$, rewrite the event in terms of $X$, and differentiate if a density is wanted. For $Y = X^2$ with $X$ uniform on $(0, 1)$: $P(Y\\le y) = P(X\\le\\sqrt y) = \\sqrt y$, so $f_Y(y) = 1/(2\\sqrt y)$, a density that is infinite at 0 yet integrates to 1."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The change-of-variables formula"
+    },
+    {
+      "type": "math",
+      "tex": "f_Y(y) = f_X\\left(g^{-1}(y)\\right)\\left\\vert\\frac{d}{dy}g^{-1}(y)\\right\\vert",
+      "caption": "For a strictly monotone, differentiable g."
+    },
+    {
+      "type": "prose",
+      "text": "The derivative factor accounts for stretching: where $g$ spreads an interval out, the density thins. For several variables the same formula holds with the absolute value of the Jacobian determinant of the inverse map; that is how the Box–Muller transform below is derived. Linear maps are the simplest case: if $Y = aX + b$ then $f_Y(y) = f_X((y - b)/a)/\\vert a\\vert$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Inverse-transform sampling"
+    },
+    {
+      "type": "prose",
+      "text": "If $U$ is uniform on $(0, 1)$ and $F$ is any CDF, then $X = F^{-1}(U)$ has CDF $F$, because $P(F^{-1}(U)\\le x) = P(U\\le F(x)) = F(x)$. Conversely, $F(X)$ is uniform when $F$ is continuous (the probability integral transform). Every random number generator for a named distribution is ultimately built on uniform random numbers, by this or by a cleverer route such as Box–Muller or rejection sampling (Monte Carlo Methods (#/probability/limit-theorems/monte-carlo))."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(9)\nu = rng.random(10 ** 6)\n# Inverse-transform sampling: F^{-1}(U) has CDF F. For Exp(2), F^{-1}(u) = -ln(1-u)/2\nx = -np.log(1 - u) / 2\nprint(f\"-ln(1-U)/2: mean {x.mean():.4f} (1/2), P(X > 1) = {np.mean(x > 1):.4f} (e^-2 = {np.exp(-2):.4f})\")\n# Change of variables: if X ~ Uniform(0,1), Y = X^2 has density 1/(2 sqrt y) on (0,1)\ny = u ** 2\nfor a, b in ((0, 0.01), (0.25, 0.36), (0.81, 1.0)):\n    print(f\"P({a} < X^2 < {b}): simulated {np.mean((y > a) & (y < b)):.4f}, from the density {np.sqrt(b) - np.sqrt(a):.4f}\")\n# Box-Muller: two uniforms -> two independent standard normals\nu1, u2 = rng.random(500000), rng.random(500000)\nr = np.sqrt(-2 * np.log(u1)); z1, z2 = r * np.cos(2 * np.pi * u2), r * np.sin(2 * np.pi * u2)\nprint(f\"Box-Muller: means {z1.mean():+.4f} {z2.mean():+.4f}, variances {z1.var():.4f} {z2.var():.4f}, correlation {np.corrcoef(z1, z2)[0, 1]:+.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: $-\\ln(1 - U)/2$ has mean 0.4999 and $P(X > 1) = 0.1354$, matching Exp(2) ($1/2$ and $e^{-2} = 0.1353$). For $Y = U^2$, the three intervals each have probability 0.100 by simulation and from the density. Box–Muller produces two normal samples with means near 0, variances near 1 and correlation $+0.003$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Square root of an exponential",
+      "text": "$X\\sim$ Exp(1) and $Y = \\sqrt X$. Find the density of $Y$.",
+      "solution": [
+        "$P(Y\\le y) = P(X\\le y^2) = 1 - e^{-y^2}$ for $y\\ge0$.",
+        "Differentiate: $f_Y(y) = 2y\\,e^{-y^2}$, a Rayleigh density."
+      ],
+      "answer": "2y e^{−y²}, y ≥ 0"
+    },
+    {
+      "type": "problem",
+      "title": "Sampling a Pareto",
+      "text": "Give a formula that turns a uniform $U$ into a sample with CDF $F(x) = 1 - x^{-\\alpha}$ for $x\\ge1$.",
+      "solution": [
+        "Solve $u = 1 - x^{-\\alpha}$: $x = (1 - u)^{-1/\\alpha}$.",
+        "Since $1 - U$ is also uniform, $U^{-1/\\alpha}$ works too."
+      ],
+      "answer": "(1 − U)^{−1/α}"
+    },
+    {
+      "type": "problem",
+      "title": "A log-normal",
+      "text": "If $X\\sim N(0, 1)$, what is the median of $Y = e^X$, and is it the mean?",
+      "solution": [
+        "$e^x$ is increasing, so the median of $Y$ is $e^{\\text{median}(X)} = e^0 = 1$.",
+        "The mean is $E[e^X] = e^{1/2}\\approx1.65$ (from the normal MGF). Medians pass through monotone maps; means do not."
+      ],
+      "answer": "median 1, mean e^{1/2}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 8",
+        "G. Casella and R. L. Berger, Statistical Inference, 2nd edition, Duxbury (2002), chapter 2",
+        "L. Devroye, Non-Uniform Random Variate Generation, Springer (1986)",
+        "G. E. P. Box and M. E. Muller, A note on the generation of random normal deviates, Annals of Mathematical Statistics 29, 610 (1958)"
+      ]
+    }
+  ]
+}

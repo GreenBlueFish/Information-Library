@@ -20,6 +20,7 @@ import * as investing from "./investing.js";
 import * as pll from "./pll.js";
 import * as music from "./music.js";
 import * as qrc from "./qrc.js";
+import * as probability from "./probability.js";
 
 export const SIMS = {
   "esn-memory": qrc.esnMemory,
@@ -29,6 +30,11 @@ export const SIMS = {
   "lindblad-decay": qrc.lindbladDecay,
   concentration: qrc.concentration,
   "qrc-task": qrc.qrcTask,
+  lln: probability.lln,
+  clt: probability.clt,
+  markov: probability.markov,
+  "random-walk": probability.randomWalk,
+  "bayes-update": probability.bayesUpdate,
   "harmonic-series": music.harmonicSeries,
   beating: music.beating,
   "chord-wave": music.chordWave,

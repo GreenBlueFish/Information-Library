@@ -1,0 +1,150 @@
+{
+  "title": "Markov Chains",
+  "intro": "A Markov chain moves between states at random, with the next step depending only on where it is now. A transition matrix describes it completely, and most chains forget where they started and settle into a stationary distribution.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Markov property and the transition matrix"
+    },
+    {
+      "type": "math",
+      "tex": "P(X_{n+1} = j\\mid X_n = i, X_{n-1}, \\dots, X_0) = P(X_{n+1} = j\\mid X_n = i) = P_{ij}",
+      "caption": "Given the present, the future does not depend on the past."
+    },
+    {
+      "type": "prose",
+      "text": "The transition matrix $P$ has non-negative entries and rows summing to 1. If the distribution of $X_0$ is the row vector $\\pi_0$, the distribution after $n$ steps is $\\pi_0P^n$, and $(P^n)_{ij}$ is the probability of going from $i$ to $j$ in $n$ steps (the Chapman–Kolmogorov equations are just matrix multiplication). Weather, queues, board games, text generators, PageRank and the reservoir channels on the QRC shelf are all Markov chains."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Classification of states"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Communicating classes: $i$ and $j$ communicate if each can reach the other. A chain with one class is irreducible.",
+        "Recurrent and transient: a state is recurrent if the chain returns to it with probability 1, transient otherwise. In a finite irreducible chain every state is recurrent.",
+        "Period: the gcd of the possible return times. A chain is aperiodic if it is 1, which rules out deterministic cycling."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stationary distributions and convergence"
+    },
+    {
+      "type": "math",
+      "tex": "\\pi P = \\pi, \\qquad \\sum_i\\pi_i = 1",
+      "caption": "A stationary distribution: a left eigenvector of P with eigenvalue 1."
+    },
+    {
+      "type": "prose",
+      "text": "For a finite, irreducible, aperiodic chain there is exactly one stationary distribution, and $\\pi_0P^n\\to\\pi$ from every starting distribution. The rate is set by the second-largest eigenvalue modulus $\\vert\\lambda_2\\vert$: the distance to $\\pi$ shrinks roughly like $\\vert\\lambda_2\\vert^n$. Moreover $\\pi_i = 1/E[\\text{return time to } i]$, and the ergodic theorem says time averages along one path converge to averages under $\\pi$, which is what makes Markov chain Monte Carlo work. A chain with $\\pi_iP_{ij} = \\pi_jP_{ji}$ (detailed balance) is reversible, and detailed balance is the easy way to check that $\\pi$ is stationary."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "A three-state chain forgetting its start",
+        "params": [
+          {
+            "key": "start",
+            "label": "Start in",
+            "control": "select",
+            "options": [
+              "sunny",
+              "cloudy",
+              "rainy"
+            ],
+            "default": "rainy"
+          },
+          {
+            "key": "stay",
+            "label": "Probability of staying in the same state",
+            "control": "range",
+            "min": 0.0,
+            "max": 0.95,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "steps",
+            "label": "Days shown",
+            "control": "range",
+            "min": 5,
+            "max": 40,
+            "step": 1,
+            "default": 20
+          }
+        ],
+        "config": {
+          "sim": "markov",
+          "xLabel": "day n",
+          "yLabel": "probability of each state"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try it: the curves are the probabilities of each state $n$ days after the start; they flatten onto the stationary distribution (marked by the dashed lines) from any starting state. Push 'stay' towards 0.95 and the chain becomes sticky: convergence slows dramatically, because the second eigenvalue approaches 1."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# A three-state weather chain: sunny, cloudy, rainy. Row i gives P(next state | current = i).\nP = np.array([[0.7, 0.2, 0.1],\n              [0.3, 0.4, 0.3],\n              [0.2, 0.3, 0.5]])\nstart = np.array([0.0, 0.0, 1.0])                 # it is raining today\nfor n in (1, 2, 5, 20):\n    print(f\"distribution after {n:2d} days:\", np.round(start @ np.linalg.matrix_power(P, n), 4))\nw, v = np.linalg.eig(P.T)\npi = np.real(v[:, np.argmin(abs(w - 1))]); pi /= pi.sum()\nprint(\"stationary distribution (left eigenvector for eigenvalue 1):\", np.round(pi, 4))\nprint(\"second-largest |eigenvalue| (sets the mixing speed):\", round(sorted(abs(w))[-2], 4))\n# Ergodic theorem: time averages along one long path match pi\nrng = np.random.default_rng(26)\nx, visits = 2, np.zeros(3)\nfor _ in range(200000):\n    x = rng.choice(3, p=P[x]); visits[x] += 1\nprint(\"fraction of days in each state along one path:\", np.round(visits / visits.sum(), 4))\nprint(\"mean return time to sunny, 1/pi_sunny =\", round(1 / pi[0], 3))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: starting from rain, the distribution is (0.2, 0.3, 0.5) after one day, (0.443, 0.286, 0.271) after five and (0.4565, 0.2826, 0.2609) after twenty, equal to the stationary distribution from the eigenvector. The second eigenvalue has modulus 0.473. One path of 200 000 days spends fractions (0.459, 0.281, 0.260) of its time in each state, and the mean return time to sunny is $1/\\pi_{\\text{sunny}} = 2.19$ days."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A two-state chain",
+      "text": "A chain moves from state 0 to 1 with probability $a$ and from 1 to 0 with probability $b$. Find its stationary distribution.",
+      "solution": [
+        "Balance between the states: $\\pi_0a = \\pi_1b$, with $\\pi_0 + \\pi_1 = 1$.",
+        "$\\pi = \\left(\\frac{b}{a + b}, \\frac{a}{a + b}\\right)$."
+      ],
+      "answer": "(b/(a+b), a/(a+b))"
+    },
+    {
+      "type": "problem",
+      "title": "Two days of weather",
+      "text": "With the transition matrix in the sample (rows sunny, cloudy, rainy: (0.7, 0.2, 0.1), (0.3, 0.4, 0.3), (0.2, 0.3, 0.5)), what is the probability of rain two days after a rainy day?",
+      "solution": [
+        "Row 'rainy' of $P^2$, last entry: $0.2\\times0.1 + 0.3\\times0.3 + 0.5\\times0.5 = 0.02 + 0.09 + 0.25 = 0.36$."
+      ],
+      "answer": "0.36"
+    },
+    {
+      "type": "problem",
+      "title": "A periodic chain",
+      "text": "A chain alternates deterministically between states A and B. Does $\\pi_0P^n$ converge? Is there a stationary distribution?",
+      "solution": [
+        "Starting in A, the distribution alternates between (1, 0) and (0, 1): no convergence. The period is 2.",
+        "$\\pi = (1/2, 1/2)$ is stationary, and time averages still converge to it; only the distribution at fixed times does not."
+      ],
+      "answer": "No convergence; π = (1/2, 1/2)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. R. Norris, Markov Chains, Cambridge University Press (1997)",
+        "D. A. Levin and Y. Peres, Markov Chains and Mixing Times, 2nd edition, AMS (2017)",
+        "G. R. Grimmett and D. R. Stirzaker, Probability and Random Processes, 4th edition, Oxford University Press (2020), chapter 6"
+      ]
+    }
+  ]
+}

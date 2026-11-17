@@ -1,0 +1,98 @@
+{
+  "title": "Exponential and Gamma",
+  "intro": "The exponential distribution is the waiting time for the first event of a Poisson process; the gamma is the waiting time for the k-th. The exponential's defining property is that it has no memory.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The exponential distribution"
+    },
+    {
+      "type": "math",
+      "tex": "f(x) = \\lambda e^{-\\lambda x}, \\quad x\\ge0, \\qquad P(X > x) = e^{-\\lambda x}, \\qquad E[X] = \\frac1\\lambda, \\quad \\operatorname{Var}(X) = \\frac{1}{\\lambda^2}",
+      "caption": "Exponential with rate λ (mean 1/λ)."
+    },
+    {
+      "type": "prose",
+      "text": "It is the continuous analogue of the geometric and, like it, memoryless: $P(X > s + t\\mid X > s) = e^{-\\lambda t} = P(X > t)$. A component with an exponential lifetime does not age; a used one is as good as new. That makes it the right model for events driven by a constant hazard (radioactive decay, arrivals of independent customers) and the wrong one for anything that wears out."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Competing exponentials"
+    },
+    {
+      "type": "prose",
+      "text": "If $X_1, \\dots, X_n$ are independent exponentials with rates $\\lambda_i$, their minimum is exponential with rate $\\sum\\lambda_i$, and the probability that $X_j$ is the smallest is $\\lambda_j/\\sum\\lambda_i$. This is the engine of continuous-time Markov chains: from each state, competing exponential clocks race, and the first to ring decides the next state."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The gamma distribution"
+    },
+    {
+      "type": "math",
+      "tex": "f(x) = \\frac{\\lambda^k x^{k-1}e^{-\\lambda x}}{\\Gamma(k)}, \\quad x > 0, \\qquad E[X] = \\frac k\\lambda, \\quad \\operatorname{Var}(X) = \\frac{k}{\\lambda^2}",
+      "caption": "Gamma with shape k and rate λ."
+    },
+    {
+      "type": "prose",
+      "text": "For integer $k$, the sum of $k$ independent Exp($\\lambda$) variables is Gamma($k, \\lambda$): the time of the $k$-th event of a Poisson process. The shape need not be an integer; $\\Gamma(k) = \\int_0^\\infty x^{k-1}e^{-x}\\,dx$ generalises the factorial ($\\Gamma(k) = (k-1)!$). Chi-square with $k$ degrees of freedom is Gamma($k/2$, $1/2$)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy import stats\nrng = np.random.default_rng(12)\nlam = 2.0\nx = rng.exponential(1 / lam, 10 ** 6)\nprint(f\"memoryless: P(X > 1.5 | X > 1) = {np.mean(x[x > 1] > 1.5):.4f}, P(X > 0.5) = {np.mean(x > 0.5):.4f}\")\n# The sum of k independent Exp(lambda) is Gamma(k, lambda)\nk = 4\ns = rng.exponential(1 / lam, (10 ** 6, k)).sum(1)\nfor q in (1, 2, 3):\n    print(f\"P(S <= {q}): simulated {np.mean(s <= q):.4f}, Gamma(4, rate 2) CDF {stats.gamma.cdf(q, a=k, scale=1/lam):.4f}\")\nprint(f\"mean {s.mean():.3f} (k/lambda = 2), variance {s.var():.3f} (k/lambda^2 = 1)\")\n# The minimum of independent exponentials is exponential with the summed rate\nm = np.minimum(rng.exponential(1, 10 ** 6), rng.exponential(1 / 3, 10 ** 6))\nprint(f\"min(Exp(1), Exp(3)): mean {m.mean():.4f} (1/4)\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: with rate 2, $P(X > 1.5\\mid X > 1) = 0.368$ and $P(X > 0.5) = 0.368$ ($e^{-1}$). Sums of four Exp(2) variables match the Gamma(4, 2) CDF at 1, 2 and 3 (0.143, 0.566, 0.849) with mean 2.00 and variance 1.00. The minimum of Exp(1) and Exp(3) has mean 0.2500, the mean of Exp(4)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A memoryless lifetime",
+      "text": "A bulb's lifetime is exponential with mean 1000 hours. It has lasted 2000 hours. What is the probability it lasts 500 more?",
+      "solution": [
+        "Memorylessness: the same as a new bulb lasting 500 hours, $e^{-500/1000} = e^{-0.5}\\approx0.607$."
+      ],
+      "answer": "≈ 0.607"
+    },
+    {
+      "type": "problem",
+      "title": "Three competing clocks",
+      "text": "Independent exponential clocks have rates 1, 2 and 3. Find the mean time until the first rings and the probability that it is the rate-1 clock.",
+      "solution": [
+        "The minimum is Exp(6), mean 1/6.",
+        "The rate-1 clock wins with probability $1/(1 + 2 + 3) = 1/6$."
+      ],
+      "answer": "1/6 and 1/6"
+    },
+    {
+      "type": "problem",
+      "title": "Time of the third arrival",
+      "text": "Arrivals form a Poisson process of rate 2 per minute. Find the mean and standard deviation of the time of the third arrival.",
+      "solution": [
+        "Gamma(3, 2): mean $3/2 = 1.5$ minutes, variance $3/4$, standard deviation $0.866$ minutes."
+      ],
+      "answer": "1.5 min, sd 0.87 min"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapters 5 and 8",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 5",
+        "G. R. Grimmett and D. R. Stirzaker, Probability and Random Processes, 4th edition, Oxford University Press (2020), chapter 4"
+      ]
+    }
+  ]
+}

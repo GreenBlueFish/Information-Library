@@ -1,0 +1,157 @@
+{
+  "title": "Bayesian Inference",
+  "intro": "Bayesian inference treats an unknown parameter as a random variable. A prior distribution expresses what is believed before the data; Bayes' theorem combines it with the likelihood into a posterior, from which every conclusion follows.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Prior, likelihood, posterior"
+    },
+    {
+      "type": "math",
+      "tex": "\\pi(\\theta\\mid x) = \\frac{f(x\\mid\\theta)\\,\\pi(\\theta)}{\\int f(x\\mid\\theta')\\,\\pi(\\theta')\\,d\\theta'} \\propto f(x\\mid\\theta)\\,\\pi(\\theta)",
+      "caption": "Posterior ∝ likelihood × prior."
+    },
+    {
+      "type": "prose",
+      "text": "This is Bayes' Theorem (#/probability/foundations/bayes-theorem) with a continuum of hypotheses. The denominator, the marginal likelihood, is often intractable; the proportionality is enough to find the shape of the posterior, and Markov chain Monte Carlo can sample from it without the constant (Monte Carlo Methods (#/probability/limit-theorems/monte-carlo))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Conjugate families"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Beta prior with binomial data: a Beta($a, b$) prior and $k$ successes in $n$ trials give a Beta($a + k$, $b + n - k$) posterior. The prior acts like $a$ earlier successes and $b$ earlier failures.",
+        "Gamma prior with Poisson data: Gamma($a, b$) and counts summing to $S$ over $n$ periods give Gamma($a + S$, $b + n$).",
+        "Normal prior with normal data of known variance: the posterior mean is a precision-weighted average of the prior mean and the data, and precisions (inverse variances) add."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Conjugacy makes the update a matter of adding counts, and shows the key behaviours plainly: with little data the prior matters; with much data the likelihood dominates and different reasonable priors lead to the same posterior; the posterior spread shrinks like $1/\\sqrt n$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Summaries and predictions"
+    },
+    {
+      "type": "prose",
+      "text": "A 95% credible interval contains the parameter with posterior probability 0.95, a direct statement about the parameter that a confidence interval does not make. The posterior predictive distribution averages the model over the posterior; for a beta–binomial model the probability that the next trial succeeds is the posterior mean $(a + k)/(a + b + n)$, which with a uniform prior is Laplace's rule of succession $(k + 1)/(n + 2)$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Updating a belief about a coin",
+        "params": [
+          {
+            "key": "a",
+            "label": "Prior a (pseudo-heads)",
+            "control": "range",
+            "min": 1,
+            "max": 20,
+            "step": 1,
+            "default": 2
+          },
+          {
+            "key": "b",
+            "label": "Prior b (pseudo-tails)",
+            "control": "range",
+            "min": 1,
+            "max": 20,
+            "step": 1,
+            "default": 2
+          },
+          {
+            "key": "n",
+            "label": "Flips observed",
+            "control": "range",
+            "min": 0,
+            "max": 200,
+            "step": 1,
+            "default": 10
+          },
+          {
+            "key": "k",
+            "label": "Heads observed (capped at the flips)",
+            "control": "range",
+            "min": 0,
+            "max": 200,
+            "step": 1,
+            "default": 7
+          }
+        ],
+        "config": {
+          "sim": "bayes-update",
+          "xLabel": "heads probability p",
+          "yLabel": "density"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try it: with the defaults, a Beta(2, 2) prior and 7 heads in 10 flips give a Beta(9, 5) posterior centred near 0.64. Make the prior strong (a = b = 20) and the same data barely move it. Then scale the data to 140 heads in 200 and the posterior is narrow and centred on 0.7 whatever the prior: data overwhelm the prior."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy import stats\n# Beta-binomial: prior Beta(2, 2) on a coin's heads probability, then 7 heads in 10 flips\na, b, k, n = 2, 2, 7, 10\npost = stats.beta(a + k, b + n - k)\nprint(f\"posterior Beta({a + k}, {b + n - k}): mean {post.mean():.4f}, mode {(a + k - 1) / (a + b + n - 2):.4f}, MLE {k/n}\")\nlo, hi = post.ppf([0.025, 0.975])\nprint(f\"95% credible interval ({lo:.3f}, {hi:.3f}); P(p > 0.5 | data) = {post.sf(0.5):.4f}\")\n# Posterior predictive probability that the next flip is heads = posterior mean\nprint(f\"P(next flip heads | data) = {(a + k) / (a + b + n):.4f}\")\n# Sequential updating gives the same answer as one batch update\nrng = np.random.default_rng(31)\nflips = rng.random(200) < 0.7\naa, bb = a, b\nfor f in flips: aa, bb = aa + f, bb + (1 - f)\nprint(f\"after 200 flips one at a time: Beta({aa}, {bb}); in one batch: Beta({a + flips.sum()}, {b + 200 - flips.sum()})\")\nprint(f\"posterior sd shrinks like 1/sqrt(n): {stats.beta(aa, bb).std():.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: with prior Beta(2, 2) and 7 heads in 10, the posterior is Beta(9, 5), with mean 0.643, mode 0.667 (the MLE is 0.7), a 95% credible interval (0.386, 0.861) and $P(p > 0.5\\mid\\text{data}) = 0.867$. Updating one flip at a time over 200 flips gives the same Beta(142, 62) as one batch update, with posterior standard deviation 0.032."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Three for three",
+      "text": "With a uniform prior on a coin's heads probability, you see 3 heads in 3 flips. Find the posterior and the probability that the next flip is heads.",
+      "solution": [
+        "Beta(1, 1) prior → Beta(4, 1) posterior.",
+        "Predictive probability = posterior mean $4/5 = 0.8$ (Laplace's rule $(3 + 1)/(3 + 2)$). The MLE would say 1, which is overconfident."
+      ],
+      "answer": "Beta(4, 1); 0.8"
+    },
+    {
+      "type": "problem",
+      "title": "Normal–normal updating",
+      "text": "Prior $\\theta\\sim N(0, 1)$; one observation $x\\sim N(\\theta, 1)$. Find the posterior.",
+      "solution": [
+        "Precisions add: $1 + 1 = 2$, so the posterior variance is $1/2$.",
+        "The posterior mean is the precision-weighted average: $(1\\cdot0 + 1\\cdot x)/2 = x/2$. Posterior $N(x/2, 1/2)$."
+      ],
+      "answer": "N(x/2, 1/2)"
+    },
+    {
+      "type": "problem",
+      "title": "Credible versus confidence",
+      "text": "A 95% confidence interval for $p$ is (0.41, 0.59). Can you say $P(0.41 < p < 0.59) = 0.95$?",
+      "solution": [
+        "Not in the frequentist framework: $p$ is fixed, and 95% describes how often the procedure's intervals cover it.",
+        "A Bayesian 95% credible interval does support that statement, given the prior. For large samples with weak priors the two intervals nearly coincide numerically."
+      ],
+      "answer": "Only for a credible interval"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A. Gelman, J. B. Carlin, H. S. Stern, D. B. Dunson, A. Vehtari and D. B. Rubin, Bayesian Data Analysis, 3rd edition, CRC Press (2013)",
+        "P.-S. Laplace, Mémoire sur la probabilité des causes par les événements (1774)",
+        "E. T. Jaynes, Probability Theory: The Logic of Science, Cambridge University Press (2003)"
+      ]
+    }
+  ]
+}

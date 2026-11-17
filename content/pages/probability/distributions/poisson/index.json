@@ -1,0 +1,95 @@
+{
+  "title": "The Poisson Distribution",
+  "intro": "The Poisson distribution counts events that are individually rare but have many chances to happen: typos, decays, arrivals, mutations. One parameter sets both its mean and its variance.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Definition"
+    },
+    {
+      "type": "math",
+      "tex": "P(N = k) = e^{-\\lambda}\\frac{\\lambda^k}{k!}, \\qquad k = 0, 1, 2, \\dots, \\qquad E[N] = \\operatorname{Var}(N) = \\lambda"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The law of small numbers"
+    },
+    {
+      "type": "prose",
+      "text": "If $n$ independent trials each succeed with probability $\\lambda/n$, the count of successes is Binomial($n, \\lambda/n$), and as $n\\to\\infty$ its PMF converges to Poisson($\\lambda$): $\\binom nk(\\lambda/n)^k(1-\\lambda/n)^{n-k}\\to e^{-\\lambda}\\lambda^k/k!$. That is why the Poisson fits counts of rare events with many opportunities, without needing to know $n$ or $p$ separately, only their product. Remarkably, the approximation survives weak dependence and unequal probabilities (Le Cam's inequality bounds the error by $\\sum p_i^2$)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Properties"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Mean equals variance. Count data whose variance is much larger than the mean (overdispersion) signal that a plain Poisson model is wrong, often because the rate itself varies.",
+        "Sums of independent Poissons are Poisson: Poisson($\\lambda$) + Poisson($\\mu$) = Poisson($\\lambda + \\mu$).",
+        "Thinning: if each of a Poisson($\\lambda$) number of events is kept independently with probability $p$, the kept ones are Poisson($\\lambda p$), and independent of the discarded ones.",
+        "Counts of a Poisson process in an interval of length $t$ are Poisson($\\lambda t$), with exponential gaps between events (Poisson Processes (#/probability/processes/poisson-processes))."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom math import comb, exp, factorial\n# Binomial(n, lambda/n) approaches Poisson(lambda)\nlam = 3\nfor n in (10, 100, 1000):\n    tv = 0.5 * sum(abs(comb(n, k) * (lam/n)**k * (1-lam/n)**(n-k) - exp(-lam) * lam**k / factorial(k)) for k in range(0, 60))\n    print(f\"n = {n:4d}: total variation distance Binomial(n, 3/n) to Poisson(3) = {tv:.5f}\")\n# Counting events whose gaps are exponential gives Poisson counts\nrng = np.random.default_rng(11)\ngaps = rng.exponential(1 / lam, (200000, 30))\ncounts = (np.cumsum(gaps, axis=1) <= 1.0).sum(1)       # events in a window of length 1\nprint(f\"counts in a unit window: mean {counts.mean():.3f}, variance {counts.var():.3f} (both lambda = 3)\")\nprint(\"P(N = k) simulated vs Poisson:\", \", \".join(f\"{k}: {np.mean(counts == k):.3f}/{exp(-lam) * lam**k / factorial(k):.3f}\" for k in range(6)))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the total variation distance between Binomial($n$, 3/$n$) and Poisson(3) is 0.086 at $n = 10$, 0.0076 at $n = 100$ and 0.00075 at $n = 1000$, shrinking like $1/n$. Counting events with exponential gaps in a unit window gives mean 3.000 and variance 2.995, and the frequencies of 0 to 5 events match the Poisson PMF to three decimals."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Calls per hour",
+      "text": "Calls arrive at a rate of 3 per hour. What is the probability of no calls in an hour? Of at least 2?",
+      "solution": [
+        "$P(0) = e^{-3}\\approx0.0498$.",
+        "$P(\\ge2) = 1 - e^{-3}(1 + 3) = 1 - 0.199 = 0.801$."
+      ],
+      "answer": "0.050 and 0.801"
+    },
+    {
+      "type": "problem",
+      "title": "Defective items",
+      "text": "A batch of 1000 items has each item defective with probability 0.002, independently. Approximate the probability of no defects, and compare with the exact value.",
+      "solution": [
+        "$\\lambda = np = 2$: $P(0)\\approx e^{-2} = 0.1353$.",
+        "Exactly, $0.998^{1000} = 0.1351$. The approximation is off in the fourth decimal."
+      ],
+      "answer": "≈ 0.135"
+    },
+    {
+      "type": "problem",
+      "title": "Splitting a Poisson",
+      "text": "Emails arrive as Poisson with mean 20 per day; independently, 10% are spam. What is the distribution of the number of spam emails, and the probability of none?",
+      "solution": [
+        "Thinning: spam count is Poisson($20\\times0.1$) = Poisson(2).",
+        "$P(0) = e^{-2}\\approx0.135$."
+      ],
+      "answer": "Poisson(2); 0.135"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 4",
+        "L. Le Cam, An approximation theorem for the Poisson binomial distribution, Pacific Journal of Mathematics 10, 1181 (1960)",
+        "W. Feller, An Introduction to Probability Theory and Its Applications, Volume 1, 3rd edition, Wiley (1968), chapter 6"
+      ]
+    }
+  ]
+}
