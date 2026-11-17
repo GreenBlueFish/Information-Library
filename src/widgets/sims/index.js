@@ -20,6 +20,7 @@ import * as investing from "./investing.js";
 import * as pll from "./pll.js";
 import * as music from "./music.js";
 import * as qrc from "./qrc.js";
+import * as quantum from "./quantum.js";
 
 export const SIMS = {
   "esn-memory": qrc.esnMemory,
@@ -29,6 +30,11 @@ export const SIMS = {
   "lindblad-decay": qrc.lindbladDecay,
   concentration: qrc.concentration,
   "qrc-task": qrc.qrcTask,
+  rabi: quantum.rabi,
+  "shot-estimate": quantum.shotEstimate,
+  "coherent-photons": quantum.coherentPhotons,
+  "trotter-fidelity": quantum.trotterFidelity,
+  "tfim-sweep": quantum.tfimSweep,
   "harmonic-series": music.harmonicSeries,
   beating: music.beating,
   "chord-wave": music.chordWave,
