@@ -1,0 +1,99 @@
+{
+  "title": "Discrete Random Variables",
+  "intro": "A discrete random variable takes countably many values. Its probability mass function lists their probabilities; its cumulative distribution function accumulates them.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The probability mass function"
+    },
+    {
+      "type": "math",
+      "tex": "p_X(x) = P(X = x), \\qquad p_X(x)\\ge0, \\qquad \\sum_x p_X(x) = 1",
+      "caption": "The PMF of a discrete random variable."
+    },
+    {
+      "type": "prose",
+      "text": "Any non-negative function that sums to 1 over a countable set is the PMF of some random variable, so a model can be specified directly by writing one down. Probabilities of events about $X$ are sums: $P(X\\in A) = \\sum_{x\\in A}p_X(x)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The cumulative distribution function"
+    },
+    {
+      "type": "math",
+      "tex": "F_X(x) = P(X\\le x)",
+      "caption": "The CDF. It exists for every random variable, discrete or not."
+    },
+    {
+      "type": "prose",
+      "text": "For a discrete variable the CDF is a staircase: flat between possible values and jumping by $p_X(x)$ at each. Every CDF is non-decreasing, right-continuous, tends to 0 at $-\\infty$ and to 1 at $+\\infty$, and $P(a < X\\le b) = F(b) - F(a)$. The size of a jump is a point probability: $P(X = x) = F(x) - F(x^-)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Indicator variables"
+    },
+    {
+      "type": "prose",
+      "text": "The indicator of an event, $\\mathbf{1}_A$, is 1 when $A$ happens and 0 otherwise. It is the simplest random variable and one of the most useful: its distribution is Bernoulli with $P(\\mathbf{1}_A = 1) = P(A)$, its expectation is $P(A)$, and counting random variables are sums of indicators, which is how many expectations are computed without knowing the full distribution (Expectation (#/probability/random-variables/expectation))."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom fractions import Fraction\n# The PMF and CDF of S = sum of two fair dice\npmf = {s: Fraction(6 - abs(s - 7), 36) for s in range(2, 13)}\ncdf, run = {}, Fraction(0)\nfor s in range(2, 13):\n    run += pmf[s]; cdf[s] = run\nprint(\"s     :\", \" \".join(f\"{s:>5}\" for s in pmf))\nprint(\"P(S=s):\", \" \".join(f\"{str(p):>5}\" for p in pmf.values()))\nprint(\"F(s)  :\", \" \".join(f\"{float(c):5.3f}\" for c in cdf.values()))\nprint(\"sum of PMF =\", sum(pmf.values()), \"  P(4 <= S <= 9) = F(9) - F(3) =\", cdf[9] - cdf[3])\n# An indicator variable: its expectation is the probability of its event\nrng = np.random.default_rng(5)\nS = rng.integers(1, 7, (200000, 2)).sum(1)\nprint(\"mean of the indicator 1{S >= 10} =\", round((S >= 10).mean(), 4), \" exact =\", float(sum(pmf[s] for s in (10, 11, 12))))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the PMF of the sum of two dice rises from 1/36 at 2 to 1/6 at 7 and falls back symmetrically; the CDF climbs from 0.028 to 1. The PMF sums to exactly 1 and $P(4\\le S\\le9) = F(9) - F(3) = 3/4$. The average of the indicator of $S\\ge10$ over 200 000 simulated rolls is 0.167, matching $6/36$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Normalising a PMF",
+      "text": "$P(X = k) = ck$ for $k = 1, 2, 3, 4$. Find $c$ and $P(X\\ge3)$.",
+      "solution": [
+        "$c(1 + 2 + 3 + 4) = 10c = 1$, so $c = 1/10$.",
+        "$P(X\\ge3) = (3 + 4)/10 = 0.7$."
+      ],
+      "answer": "c = 1/10; 0.7"
+    },
+    {
+      "type": "problem",
+      "title": "Reading a CDF",
+      "text": "A CDF has $F(2) = 0.3$, $F(3^-) = 0.3$ and $F(3) = 0.55$. What is $P(X = 3)$, and what is $P(2 < X < 3)$?",
+      "solution": [
+        "The jump at 3 is $0.55 - 0.3 = 0.25 = P(X = 3)$.",
+        "$P(2 < X < 3) = F(3^-) - F(2) = 0$."
+      ],
+      "answer": "0.25 and 0"
+    },
+    {
+      "type": "problem",
+      "title": "The maximum of two dice",
+      "text": "Find the PMF of $M = \\max(D_1, D_2)$ for two fair dice.",
+      "solution": [
+        "$P(M\\le m) = (m/6)^2$, since both dice must be at most $m$.",
+        "$P(M = m) = (m^2 - (m-1)^2)/36 = (2m - 1)/36$: 1/36, 3/36, 5/36, 7/36, 9/36, 11/36 for $m = 1, \\dots, 6$."
+      ],
+      "answer": "(2m − 1)/36"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 3",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 4"
+      ]
+    }
+  ]
+}

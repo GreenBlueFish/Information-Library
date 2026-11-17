@@ -1,0 +1,155 @@
+{
+  "title": "The Law of Large Numbers",
+  "intro": "The average of many independent copies of a random variable converges to its mean. This is what makes probabilities measurable as frequencies and expectations estimable by averages.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The weak law"
+    },
+    {
+      "type": "prose",
+      "text": "Let $X_1, X_2, \\dots$ be i.i.d. with mean $\\mu$ and $\\bar X_n = (X_1 + \\cdots + X_n)/n$. If the variance $\\sigma^2$ is finite, Chebyshev gives"
+    },
+    {
+      "type": "math",
+      "tex": "P\\left(\\left\\vert\\bar X_n - \\mu\\right\\vert > \\varepsilon\\right)\\le\\frac{\\sigma^2}{n\\varepsilon^2}\\to0",
+      "caption": "The weak law of large numbers: convergence in probability."
+    },
+    {
+      "type": "prose",
+      "text": "The finite variance is only needed for this short proof; a finite mean suffices (by truncation, or by characteristic functions)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The strong law"
+    },
+    {
+      "type": "prose",
+      "text": "Kolmogorov's strong law: if $E\\vert X_1\\vert < \\infty$ then $\\bar X_n\\to\\mu$ almost surely. Not only are large deviations rare at each $n$; for almost every infinite sequence of outcomes, the running average actually converges. Applied to indicators, the long-run frequency of any event equals its probability, which is the bridge between the axioms and the frequency interpretation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When it fails"
+    },
+    {
+      "type": "prose",
+      "text": "Without a finite mean there is no law. Running averages of Cauchy samples never settle, because the mean of $n$ Cauchy variables is again standard Cauchy: averaging does not concentrate it at all. Heavy-tailed data with infinite variance but finite mean (tail exponent between 1 and 2) do obey the law, but converge very slowly and erratically. Dependence can also break it: averages of a sequence that copies one random value forever never learn more than that value."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "The law of large numbers, run by run",
+        "params": [
+          {
+            "key": "dist",
+            "label": "Each sample is",
+            "control": "select",
+            "options": [
+              "fair die",
+              "fair coin (0/1)",
+              "exponential (mean 1)",
+              "Cauchy (no mean)"
+            ],
+            "default": "fair die"
+          },
+          {
+            "key": "n",
+            "label": "Number of samples",
+            "control": "range",
+            "min": 100,
+            "max": 20000,
+            "step": 100,
+            "default": 2000
+          },
+          {
+            "key": "runs",
+            "label": "Independent runs shown",
+            "control": "range",
+            "min": 1,
+            "max": 5,
+            "step": 1,
+            "default": 3
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 9999,
+            "step": 1,
+            "default": 1
+          }
+        ],
+        "config": {
+          "sim": "lln",
+          "xLabel": "number of samples n",
+          "yLabel": "running average"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try it: with a fair die the running averages wander early and then crowd towards 3.5 from every run. Switch to Cauchy and they never settle: occasional enormous samples knock the average around however long you wait. Change the seed for fresh runs."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(23)\nN = 10 ** 6\ndie = rng.integers(1, 7, N)\nrun = np.cumsum(die) / np.arange(1, N + 1)\nfor n in (10, 100, 10 ** 4, 10 ** 6):\n    print(f\"mean of {n:>7} die rolls: {run[n - 1]:.4f} (3.5)\")\n# The weak law in numbers: P(|mean - 3.5| > 0.1) for samples of size n, estimated over many samples\nfor n in (100, 1000, 10000):\n    means = rng.integers(1, 7, (2000, n)).mean(1)\n    print(f\"n = {n:5d}: P(|mean - 3.5| > 0.1) = {np.mean(abs(means - 3.5) > 0.1):.3f}, Chebyshev bound {min(1, (35/12) / (n * 0.01)):.3f}\")\n# No finite mean, no law: running means of standard Cauchy samples keep jumping\nc = rng.standard_cauchy(N)\ncrun = np.cumsum(c) / np.arange(1, N + 1)\nprint(\"Cauchy running mean at 10^3, 10^4, 10^5, 10^6:\", [round(float(crun[n - 1]), 3) for n in (10**3, 10**4, 10**5, 10**6)])"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: running means of die rolls are 2.60, 3.18, 3.49 and 3.501 after $10$, $10^2$, $10^4$ and $10^6$ rolls. The probability that a sample mean is off by more than 0.1 is 0.57, 0.064 and 0.000 for $n = 100$, 1000 and 10 000, well inside Chebyshev's bounds (1, 0.29, 0.029). The Cauchy running mean reads 0.62, 0.19, −10.4 and 32.2 at $10^3$ to $10^6$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A Chebyshev sample size",
+      "text": "Each $X_i$ has variance 4. How large must $n$ be for Chebyshev to guarantee $P(\\vert\\bar X_n - \\mu\\vert > 0.5)\\le0.05$?",
+      "solution": [
+        "$4/(n\\times0.25)\\le0.05$ gives $n\\ge320$."
+      ],
+      "answer": "320"
+    },
+    {
+      "type": "problem",
+      "title": "Estimating a probability",
+      "text": "To estimate $p = P(A)$ by the frequency in $n$ trials, what $n$ guarantees by Chebyshev that the error exceeds 0.01 with probability at most 0.05, whatever $p$ is?",
+      "solution": [
+        "The frequency has variance $p(1-p)/n\\le1/(4n)$.",
+        "$\\frac{1}{4n\\times10^{-4}}\\le0.05$ gives $n\\ge50\\,000$. Hoeffding would need only about 18 445 (Inequalities (#/probability/toolkit/inequalities))."
+      ],
+      "answer": "50 000"
+    },
+    {
+      "type": "problem",
+      "title": "Why it fails for Cauchy",
+      "text": "If $X_1, \\dots, X_n$ are independent standard Cauchy, what is the distribution of $\\bar X_n$?",
+      "solution": [
+        "The characteristic function of a standard Cauchy is $e^{-\\vert t\\vert}$.",
+        "$\\varphi_{\\bar X_n}(t) = \\left(e^{-\\vert t\\vert/n}\\right)^n = e^{-\\vert t\\vert}$: again standard Cauchy, for every $n$."
+      ],
+      "answer": "standard Cauchy, for all n"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "R. Durrett, Probability: Theory and Examples, 5th edition, Cambridge University Press (2019), chapter 2",
+        "N. Etemadi, An elementary proof of the strong law of large numbers, Zeitschrift für Wahrscheinlichkeitstheorie 55, 119 (1981)",
+        "G. R. Grimmett and D. R. Stirzaker, Probability and Random Processes, 4th edition, Oxford University Press (2020), chapter 7"
+      ]
+    }
+  ]
+}

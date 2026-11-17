@@ -1,0 +1,123 @@
+{
+  "title": "Conditional Probability",
+  "intro": "Learning that an event has happened shrinks the sample space to that event. Conditional probability is the rule for recomputing probabilities after the shrink, and the law of total probability runs it backwards.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Definition"
+    },
+    {
+      "type": "math",
+      "tex": "P(A\\mid B) = \\frac{P(A\\cap B)}{P(B)}, \\qquad P(B) > 0",
+      "caption": "The probability of A given B: the share of B's probability that also lies in A."
+    },
+    {
+      "type": "prose",
+      "text": "Given $B$, only outcomes in $B$ remain possible, and their relative probabilities are unchanged; dividing by $P(B)$ renormalises them. For any fixed $B$, the map $A\\mapsto P(A\\mid B)$ is itself a probability measure, so every rule on the earlier pages holds for conditional probabilities too."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/probability/conditioning-venn.svg",
+      "alt": "Left: a rectangle labelled Omega containing overlapping circles A and B with the overlap AB. Right, after an arrow labelled given B: only circle B remains, with the part that overlaps A shaded and labelled AB.",
+      "caption": "Conditioning on B discards everything outside B and rescales what is left; P(A | B) is the share of B that lies in A."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The multiplication rule and the chain rule"
+    },
+    {
+      "type": "prose",
+      "text": "Rearranging the definition gives $P(A\\cap B) = P(B)\\,P(A\\mid B)$, and repeating it, $P(A_1\\cdots A_n) = P(A_1)P(A_2\\mid A_1)P(A_3\\mid A_1A_2)\\cdots$. This is how sequential experiments are computed: the probability of drawing two aces from a deck is $\\frac{4}{52}\\cdot\\frac{3}{51}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The law of total probability"
+    },
+    {
+      "type": "prose",
+      "text": "If $B_1, \\dots, B_n$ partition $\\Omega$ (exactly one happens), then"
+    },
+    {
+      "type": "math",
+      "tex": "P(A) = \\sum_i P(A\\mid B_i)\\,P(B_i)",
+      "caption": "Split by cases, compute within each, and weight by how likely each case is."
+    },
+    {
+      "type": "prose",
+      "text": "Most hard problems become easy once you find the right partition to condition on. Its continuous version, $P(A) = \\int P(A\\mid X = x)f_X(x)\\,dx$, and its expectation version, the law of total expectation, appear on Conditional Expectation (#/probability/multivariate/conditional-expectation)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Traps"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$P(A\\mid B)$ and $P(B\\mid A)$ are different numbers. Confusing them is the prosecutor's fallacy, and Bayes' Theorem (#/probability/foundations/bayes-theorem) is the correct way between them.",
+        "The information you condition on must be the information you actually have, including how you came to have it. Monty Hall and the two-child problem below are the standard examples.",
+        "Conditioning can reverse a trend: an association that holds within every group can flip when the groups are pooled (Simpson's paradox)."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(3)\n# Monty Hall: the car is behind one of three doors; you pick door 0; the host opens a goat door.\nN = 100000\ncar = rng.integers(0, 3, N)\npick = np.zeros(N, int)\n# host opens a door that is neither your pick nor the car (random if both others are goats)\nopened = np.where(car == 0, rng.choice([1, 2], N), 3 - car)\nswitch = 3 - pick - opened\nprint(f\"P(win | stay)   = {np.mean(pick == car):.4f}\")\nprint(f\"P(win | switch) = {np.mean(switch == car):.4f}\")\n# Conditioning shrinks the sample space: two children, at least one is a girl\nkids = rng.integers(0, 2, (N, 2))                 # 1 = girl\natleast = kids.sum(1) >= 1\nprint(f\"P(two girls | at least one girl) = {np.mean(kids[atleast].sum(1) == 2):.4f}  (exact 1/3)\")\nprint(f\"P(two girls | first is a girl)   = {np.mean(kids[kids[:, 0] == 1].sum(1) == 2):.4f}  (exact 1/2)\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: in Monty Hall, staying wins 0.334 of the time and switching 0.667. The host's choice is informative: he never opens the car's door, so the door he leaves shut has absorbed the two-thirds. For two children, 'at least one is a girl' gives $P(\\text{two girls}) = 0.333$, while 'the first is a girl' gives 0.501: different information, different answers."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Two aces",
+      "text": "Two cards are drawn without replacement. What is the probability that the second is an ace given that the first is? That both are?",
+      "solution": [
+        "Given the first is an ace, 51 cards remain with 3 aces: $3/51 = 1/17$.",
+        "Both: $\\frac{4}{52}\\cdot\\frac{3}{51} = \\frac{1}{221}\\approx0.0045$."
+      ],
+      "answer": "1/17 and 1/221"
+    },
+    {
+      "type": "problem",
+      "title": "Two factories",
+      "text": "Factory A makes 60% of the parts with a 2% defect rate; factory B makes 40% with a 5% rate. What fraction of all parts are defective?",
+      "solution": [
+        "Total probability: $0.6\\times0.02 + 0.4\\times0.05 = 0.012 + 0.020 = 0.032$."
+      ],
+      "answer": "3.2%"
+    },
+    {
+      "type": "problem",
+      "title": "Monty Hall with four doors",
+      "text": "Four doors, one car. You pick one; the host, who knows where the car is, opens one goat door among the other three; you switch to one of the two remaining closed doors at random. What is your chance of winning?",
+      "solution": [
+        "Your first pick is the car with probability 1/4; then switching always loses.",
+        "With probability 3/4 the car is among the other three; the host opens a goat door, and the car is behind one of the two doors you might switch to, chosen with probability 1/2.",
+        "$P(\\text{win}) = \\tfrac34\\cdot\\tfrac12 = \\tfrac38$, better than the $1/4$ of staying."
+      ],
+      "answer": "3/8"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 2",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 3",
+        "E. H. Simpson, The interpretation of interaction in contingency tables, Journal of the Royal Statistical Society B 13, 238 (1951)"
+      ]
+    }
+  ]
+}

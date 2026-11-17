@@ -1,0 +1,105 @@
+{
+  "title": "Modes of Convergence",
+  "intro": "A sequence of random variables can converge in several inequivalent senses. Knowing which one a theorem gives you, and which implies which, avoids most of the confusion around the limit theorems.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Four modes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Almost surely: $P\\left(X_n\\to X\\right) = 1$. For almost every outcome, the sequence of numbers $X_n(\\omega)$ converges.",
+        "In probability: for every $\\varepsilon > 0$, $P(\\vert X_n - X\\vert > \\varepsilon)\\to0$. Large deviations become rare, but need not stop.",
+        "In mean square ($L^2$): $E[(X_n - X)^2]\\to0$. More generally $L^p$: $E\\vert X_n - X\\vert^p\\to0$.",
+        "In distribution: $F_{X_n}(x)\\to F_X(x)$ at every point where $F_X$ is continuous. Only the distributions converge; the variables need not even live on the same space."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How they relate"
+    },
+    {
+      "type": "prose",
+      "text": "Almost-sure convergence implies convergence in probability, and so does $L^p$ convergence (by Markov's inequality); convergence in probability implies convergence in distribution. No other implications hold in general. Two counterexamples show it:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "In probability but not almost surely: the typewriter sequence of indicators of intervals of length $2^{-k}$ sweeping across $[0, 1]$. Each $X_n$ is rarely 1, so $X_n\\to0$ in probability, but every outcome is hit once per sweep, infinitely often.",
+        "In distribution but not in probability: $X\\sim N(0, 1)$ and $X_n = -X$. Every $X_n$ has the same distribution as $X$, but $\\vert X_n - X\\vert = 2\\vert X\\vert$ never shrinks."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Two partial converses help: convergence in probability to a constant follows from convergence in distribution to it, and convergence in probability implies almost-sure convergence along a subsequence."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Borel–Cantelli"
+    },
+    {
+      "type": "prose",
+      "text": "The tool for almost-sure statements. If $\\sum P(A_n) < \\infty$, then with probability 1 only finitely many $A_n$ occur. Conversely, if the $A_n$ are independent and $\\sum P(A_n) = \\infty$, infinitely many occur. Applied to $A_n = \\{\\vert X_n - X\\vert > \\varepsilon\\}$: summable tail probabilities upgrade convergence in probability to almost sure, which is the usual route to strong laws."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(22)\n# The \"typewriter\" sequence: indicators of shrinking intervals that sweep [0,1] over and over.\n# X_n -> 0 in probability (P(X_n = 1) = interval length -> 0) but X_n(w) = 1 infinitely often for every w.\ndef interval(n):\n    k = int(np.floor(np.log2(n))); j = n - 2 ** k\n    return j / 2 ** k, (j + 1) / 2 ** k\nw = rng.random()\nhits = [n for n in range(1, 2 ** 12) if interval(n)[0] <= w < interval(n)[1]]\nprint(f\"for the outcome w = {w:.4f}, X_n(w) = 1 at n =\", hits[:8], \"... (once in every block of 2^k)\")\nprint(\"P(X_n = 1) at n = 10, 100, 1000:\", [round(interval(n)[1] - interval(n)[0], 4) for n in (10, 100, 1000)])\n# Convergence in distribution without convergence in probability: X ~ N(0,1), X_n = -X for all n\nx = rng.normal(size=10 ** 6)\nprint(f\"X_n = -X has the same distribution as X, yet P(|X_n - X| > 1) = {np.mean(abs(2 * x) > 1):.3f} for every n\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: for the outcome $\\omega = 0.3663$, the typewriter sequence equals 1 at $n = 1, 2, 5, 10, 21, 43, 87, 174, \\dots$, once in every block, while $P(X_n = 1)$ is 0.125, 0.016 and 0.002 at $n = 10$, 100 and 1000. For $X_n = -X$, $P(\\vert X_n - X\\vert > 1) = 0.617$ for every $n$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A summable sequence",
+      "text": "$X_n$ is 1 with probability $1/n^2$ and 0 otherwise. Does $X_n\\to0$ almost surely?",
+      "solution": [
+        "$\\sum1/n^2 = \\pi^2/6 < \\infty$, so by Borel–Cantelli only finitely many $X_n$ equal 1, almost surely. Yes."
+      ],
+      "answer": "Yes"
+    },
+    {
+      "type": "problem",
+      "title": "A non-summable independent sequence",
+      "text": "$X_n$ are independent, each 1 with probability $1/n$. Does $X_n\\to0$ in probability? Almost surely?",
+      "solution": [
+        "In probability: $P(X_n = 1) = 1/n\\to0$, yes.",
+        "Almost surely: $\\sum1/n = \\infty$ and the events are independent, so by the second Borel–Cantelli lemma $X_n = 1$ infinitely often. No."
+      ],
+      "answer": "In probability yes; almost surely no"
+    },
+    {
+      "type": "problem",
+      "title": "In mean square",
+      "text": "$X_n = n\\cdot\\mathbf{1}\\{U < 1/n^3\\}$ with $U$ uniform. Does $X_n\\to0$ in $L^2$? In $L^1$?",
+      "solution": [
+        "$E[X_n^2] = n^2/n^3 = 1/n\\to0$, so yes in $L^2$.",
+        "$E\\vert X_n\\vert = n/n^3 = 1/n^2\\to0$, so also in $L^1$ (as $L^2$ convergence implies)."
+      ],
+      "answer": "Yes and yes"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "R. Durrett, Probability: Theory and Examples, 5th edition, Cambridge University Press (2019), chapter 2",
+        "G. R. Grimmett and D. R. Stirzaker, Probability and Random Processes, 4th edition, Oxford University Press (2020), chapter 7",
+        "D. Williams, Probability with Martingales, Cambridge University Press (1991), chapter 4"
+      ]
+    }
+  ]
+}

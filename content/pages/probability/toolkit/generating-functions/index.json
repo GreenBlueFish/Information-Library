@@ -1,0 +1,106 @@
+{
+  "title": "Generating Functions",
+  "intro": "A generating function packs a whole distribution into one function. Sums of independent variables become products, moments become derivatives, and limits of distributions become limits of functions.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Probability generating functions"
+    },
+    {
+      "type": "math",
+      "tex": "G_X(s) = E\\left[s^X\\right] = \\sum_{k\\ge0}P(X = k)\\,s^k",
+      "caption": "For X taking values 0, 1, 2, …"
+    },
+    {
+      "type": "prose",
+      "text": "The coefficients are the PMF, so $G$ determines the distribution. $G(1) = 1$, $G'(1) = E[X]$, $G''(1) = E[X(X-1)]$, and for independent $X$ and $Y$, $G_{X+Y} = G_XG_Y$. The Poisson has $G(s) = e^{\\lambda(s-1)}$, so multiplying two of them at once shows that sums of independent Poissons are Poisson. PGFs also solve branching processes: the generation sizes of a Galton–Watson process have PGFs that are iterates $G\\circ G\\circ\\cdots$, and the extinction probability is the smallest fixed point of $G$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Moment generating functions"
+    },
+    {
+      "type": "math",
+      "tex": "M_X(t) = E\\left[e^{tX}\\right] = \\sum_{k\\ge0}\\frac{E[X^k]}{k!}t^k",
+      "caption": "When it is finite on an interval around 0."
+    },
+    {
+      "type": "prose",
+      "text": "The derivatives at 0 are the moments: $M^{(k)}(0) = E[X^k]$. Again $M_{X+Y} = M_XM_Y$ for independent variables, and an MGF finite near 0 determines the distribution. For $N(\\mu, \\sigma^2)$, $M(t) = e^{\\mu t + \\sigma^2t^2/2}$. Heavy-tailed variables (log-normal, Pareto, Cauchy) have no MGF, and the MGF is also the starting point of the Chernoff bound (Inequalities (#/probability/toolkit/inequalities))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Characteristic functions"
+    },
+    {
+      "type": "math",
+      "tex": "\\varphi_X(t) = E\\left[e^{itX}\\right]",
+      "caption": "Always exists, since |e^{itX}| = 1."
+    },
+    {
+      "type": "prose",
+      "text": "The characteristic function is the Fourier transform of the distribution. It always exists, determines the distribution, multiplies for independent sums, and has the continuity property that makes it the standard proof tool: if $\\varphi_{X_n}(t)\\to\\varphi(t)$ for every $t$ and $\\varphi$ is continuous at 0, then $X_n$ converges in distribution (Lévy's continuity theorem). The central limit theorem is proved by showing the characteristic function of a standardised sum tends to $e^{-t^2/2}$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom numpy.polynomial import polynomial as Pn\n# PGF of one die: G(s) = (s + s^2 + ... + s^6)/6. The PGF of a sum of independent dice is the product.\ndie = np.array([0, 1, 1, 1, 1, 1, 1]) / 6            # coefficient of s^k is P(X = k)\ntwo = Pn.polymul(die, die)\nprint(\"P(two dice = 7) from the product of PGFs:\", round(two[7], 5), \"(6/36)\")\n# Moments from derivatives at s = 1: G'(1) = E[X], G''(1) = E[X(X-1)]\nd1, d2 = Pn.polyder(die), Pn.polyder(die, 2)\nm1, m2 = Pn.polyval(1, d1), Pn.polyval(1, d2)\nprint(f\"die: E[X] = G'(1) = {m1:.4f}, Var X = G''(1) + G'(1) - G'(1)^2 = {m2 + m1 - m1**2:.4f} (35/12 = {35/12:.4f})\")\n# MGF of Exp(1) is 1/(1-t): its Taylor coefficients times k! are the moments k!\nrng = np.random.default_rng(20)\nx = rng.exponential(1, 10 ** 6)\nfor k in (1, 2, 3, 4):\n    print(f\"E[X^{k}] simulated {np.mean(x**k):.3f}, from the MGF k! = {np.prod(range(1, k + 1))}\")\n# Characteristic function of a standard normal at t = 1.5: exp(-t^2/2)\nz = rng.normal(size=10 ** 6)\nprint(f\"E[exp(i 1.5 Z)] = {np.mean(np.exp(1.5j * z)):.4f}, exp(-1.125) = {np.exp(-1.125):.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the product of two die PGFs gives $P(\\text{sum} = 7) = 0.16667$; derivatives of the die PGF give mean 3.5 and variance 2.9167 (35/12). Moments of Exp(1) come out as 1.000, 1.998, 5.97 and 23.75, against $k! = 1, 2, 6, 24$ from the Taylor series of $1/(1-t)$. The empirical characteristic function of a normal at $t = 1.5$ is $0.325$, matching $e^{-1.125} = 0.325$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Mean of a geometric by PGF",
+      "text": "For Geometric($p$) on $\\{1, 2, \\dots\\}$, find the PGF and differentiate to get the mean.",
+      "solution": [
+        "$G(s) = \\sum_{k\\ge1}(1-p)^{k-1}p\\,s^k = \\frac{ps}{1 - (1-p)s}$.",
+        "$G'(s) = \\frac{p}{(1 - (1-p)s)^2}$, so $G'(1) = p/p^2 = 1/p$."
+      ],
+      "answer": "1/p"
+    },
+    {
+      "type": "problem",
+      "title": "Sum of normals by MGF",
+      "text": "Use MGFs to show that the sum of independent $N(\\mu_1, \\sigma_1^2)$ and $N(\\mu_2, \\sigma_2^2)$ is normal.",
+      "solution": [
+        "$M_{X+Y}(t) = e^{\\mu_1t + \\sigma_1^2t^2/2}e^{\\mu_2t + \\sigma_2^2t^2/2} = e^{(\\mu_1 + \\mu_2)t + (\\sigma_1^2 + \\sigma_2^2)t^2/2}$.",
+        "That is the MGF of $N(\\mu_1 + \\mu_2, \\sigma_1^2 + \\sigma_2^2)$, and MGFs determine distributions."
+      ],
+      "answer": "N(μ₁ + μ₂, σ₁² + σ₂²)"
+    },
+    {
+      "type": "problem",
+      "title": "Extinction of a family name",
+      "text": "Each individual independently has 0, 1 or 2 children with probabilities 1/4, 1/4 and 1/2. Starting from one individual, what is the probability the line dies out?",
+      "solution": [
+        "$G(s) = \\tfrac14 + \\tfrac14s + \\tfrac12s^2$. The extinction probability is the smallest root of $G(s) = s$ in $[0, 1]$.",
+        "$\\tfrac12s^2 - \\tfrac34s + \\tfrac14 = 0$, i.e. $2s^2 - 3s + 1 = 0$, roots $1/2$ and 1.",
+        "So the line dies out with probability 1/2. (The mean offspring is 1.25 > 1, so survival is possible.)"
+      ],
+      "answer": "1/2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "G. R. Grimmett and D. R. Stirzaker, Probability and Random Processes, 4th edition, Oxford University Press (2020), chapter 5",
+        "W. Feller, An Introduction to Probability Theory and Its Applications, Volume 1, 3rd edition, Wiley (1968), chapter 11",
+        "H. W. Watson and F. Galton, On the probability of the extinction of families, Journal of the Anthropological Institute 4, 138 (1875)"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,108 @@
+{
+  "title": "Independence",
+  "intro": "Two events are independent when learning one tells you nothing about the other. For more than two events the definition needs care: every pair can be independent while the whole collection is not.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two events"
+    },
+    {
+      "type": "math",
+      "tex": "P(A\\cap B) = P(A)\\,P(B)",
+      "caption": "The definition of independence of A and B; equivalently P(A | B) = P(A) when P(B) > 0."
+    },
+    {
+      "type": "prose",
+      "text": "The product form is preferred because it is symmetric and makes sense even when $P(B) = 0$. If $A$ and $B$ are independent, so are $A$ and $B^c$, $A^c$ and $B$, and $A^c$ and $B^c$. Independence is not disjointness: two disjoint events with positive probabilities are as dependent as possible, since one excludes the other."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Many events"
+    },
+    {
+      "type": "prose",
+      "text": "Events $A_1, \\dots, A_n$ are (mutually) independent if the product rule holds for every subcollection: $P(A_{i_1}\\cdots A_{i_k}) = P(A_{i_1})\\cdots P(A_{i_k})$ for all choices of distinct indices. Checking only pairs is not enough, as the sample below shows with two coins and the event that they differ."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why independence is useful"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Products of probabilities: the chance that $n$ independent trials all fail is $(1-p)^n$, so at least one success has probability $1 - (1-p)^n$.",
+        "Independent trials are the setting of the binomial, geometric and Poisson distributions (Distributions (#/probability/distributions)) and of every limit theorem.",
+        "Modelling: independence is usually an assumption, not a fact. Correlated failures (shared power supplies, common causes) break it and can make rare joint events far more likely than the product suggests."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Conditional independence"
+    },
+    {
+      "type": "prose",
+      "text": "$A$ and $B$ are conditionally independent given $C$ if $P(AB\\mid C) = P(A\\mid C)P(B\\mid C)$. Neither kind of independence implies the other. Two tosses of a coin of unknown bias are independent given the bias but dependent unconditionally, since the first toss tells you about the bias; this is the structure of Bayesian Inference (#/probability/inference/bayesian-inference)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom itertools import product\n# Two fair coins and their XOR: every pair is independent, the three together are not.\nomega = list(product([0, 1], repeat=2))\nevents = {\"A: coin 1 heads\": lambda w: w[0] == 1, \"B: coin 2 heads\": lambda w: w[1] == 1,\n          \"C: coins differ\": lambda w: w[0] != w[1]}\nP = lambda f: sum(1 for w in omega if f(w)) / 4\nnames = list(events)\nfor i in range(3):\n    for j in range(i + 1, 3):\n        a, b = events[names[i]], events[names[j]]\n        print(f\"P({names[i][0]}{names[j][0]}) = {P(lambda w: a(w) and b(w)):.2f}, P({names[i][0]})P({names[j][0]}) = {P(a) * P(b):.2f}\")\nabc = P(lambda w: all(f(w) for f in events.values()))\nprint(f\"P(ABC) = {abc:.2f} but P(A)P(B)P(C) = {P(events[names[0]]) * P(events[names[1]]) * P(events[names[2]]):.3f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: for the events A (coin 1 heads), B (coin 2 heads) and C (the coins differ), every pair satisfies $P(\\text{pair}) = 0.25 = $ the product. Yet $P(ABC) = 0$, because if both coins are heads they cannot differ, while the product $P(A)P(B)P(C) = 0.125$. Pairwise independent, not mutually independent."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "At least one success",
+      "text": "A rare event has probability 0.01 per independent trial. What is the probability it happens at least once in 100 trials? How many trials make it 95% likely?",
+      "solution": [
+        "$1 - 0.99^{100} = 1 - 0.366 = 0.634$.",
+        "Need $0.99^n\\le0.05$: $n\\ge\\ln0.05/\\ln0.99 = 298.1$, so 299 trials."
+      ],
+      "answer": "0.634; 299 trials"
+    },
+    {
+      "type": "problem",
+      "title": "Disjoint and independent?",
+      "text": "Can two disjoint events both of positive probability be independent?",
+      "solution": [
+        "Disjoint means $P(A\\cap B) = 0$, while independence needs $P(A\\cap B) = P(A)P(B) > 0$. So no: disjoint events with positive probability are always dependent."
+      ],
+      "answer": "No"
+    },
+    {
+      "type": "problem",
+      "title": "Independent given the bias",
+      "text": "A coin is chosen at random: fair, or with heads probability 0.9. It is tossed twice. Are the two tosses independent?",
+      "solution": [
+        "$P(H_1) = P(H_2) = \\tfrac12(0.5 + 0.9) = 0.7$.",
+        "$P(H_1H_2) = \\tfrac12(0.25 + 0.81) = 0.53 \\ne 0.7^2 = 0.49$: not independent.",
+        "Given the coin they are independent; unconditionally, a head on the first toss makes the biased coin more likely and so a second head more likely."
+      ],
+      "answer": "No: 0.53 ≠ 0.49"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 2",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 3",
+        "W. Feller, An Introduction to Probability Theory and Its Applications, Volume 1, 3rd edition, Wiley (1968), chapter 5"
+      ]
+    }
+  ]
+}

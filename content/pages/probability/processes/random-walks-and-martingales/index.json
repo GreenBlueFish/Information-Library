@@ -1,0 +1,156 @@
+{
+  "title": "Random Walks and Martingales",
+  "intro": "A random walk adds up independent steps. A martingale is a fair game: its expected next value, given the past, is its current value. Together they answer questions about ruin, hitting times and fair betting.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The simple random walk"
+    },
+    {
+      "type": "prose",
+      "text": "$S_n = X_1 + \\cdots + X_n$ with independent steps $X_i = \\pm1$ (probabilities $p$ and $1 - p$). For the symmetric walk, $E[S_n] = 0$ and $\\operatorname{Var}(S_n) = n$: the typical distance from the start grows like $\\sqrt n$, not $n$. In one and two dimensions the symmetric walk returns to its start with probability 1 (it is recurrent); in three or more it escapes with positive probability (Pólya 1921). Yet the expected time to return in one dimension is infinite."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gambler's ruin"
+    },
+    {
+      "type": "prose",
+      "text": "A gambler with $k$ units bets 1 at a time, winning with probability $p$, until reaching 0 or $N$. Conditioning on the first step gives a recurrence whose solution is"
+    },
+    {
+      "type": "math",
+      "tex": "P(\\text{ruin}) = \\frac{r^k - r^N}{1 - r^N}, \\quad r = \\frac{1-p}{p}\\ (p\\ne\\tfrac12), \\qquad P(\\text{ruin}) = 1 - \\frac kN\\ (p = \\tfrac12)"
+    },
+    {
+      "type": "prose",
+      "text": "A small edge against you is devastating over long play: at $p = 0.49$, starting from 10 with a target of 20, the chance of ruin is already 0.60, and at roulette's $p = 18/37$ it rises further. The expected duration of the fair game is $k(N - k)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Martingales"
+    },
+    {
+      "type": "math",
+      "tex": "E[M_{n+1}\\mid M_0, \\dots, M_n] = M_n",
+      "caption": "A martingale: on average, tomorrow equals today."
+    },
+    {
+      "type": "prose",
+      "text": "Examples: the fair random walk $S_n$; $S_n^2 - n$; the product of independent mean-one factors; and $E[Y\\mid\\mathcal F_n]$, the best guess of a fixed quantity as information arrives. The optional stopping theorem says that, under conditions (bounded stopping time, or bounded increments and a finite expected stopping time), $E[M_T] = M_0$: no stopping rule turns a fair game into a favourable one. It solves gambler's ruin in one line: $E[S_T] = k$ gives $N\\cdot P(\\text{win}) = k$. The martingale convergence theorem says a bounded martingale converges almost surely, which underlies much of modern probability and statistics."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Random walk paths",
+        "params": [
+          {
+            "key": "p",
+            "label": "Probability of a step up",
+            "control": "range",
+            "min": 0.3,
+            "max": 0.7,
+            "step": 0.01,
+            "default": 0.5
+          },
+          {
+            "key": "n",
+            "label": "Steps",
+            "control": "range",
+            "min": 50,
+            "max": 2000,
+            "step": 50,
+            "default": 500
+          },
+          {
+            "key": "paths",
+            "label": "Paths shown",
+            "control": "range",
+            "min": 1,
+            "max": 6,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "seed",
+            "label": "Random seed",
+            "control": "number",
+            "min": 1,
+            "max": 9999,
+            "step": 1,
+            "default": 3
+          }
+        ],
+        "config": {
+          "sim": "random-walk",
+          "xLabel": "step n",
+          "yLabel": "position"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try it: the dashed curves are $\\pm2\\sqrt n$ around the expected position; most fair paths stay inside, wandering with no tendency to return quickly. Tilt $p$ to 0.52 and the drift $(2p - 1)n$ takes over after a few hundred steps, even though each step is nearly fair."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(27)\n# Gambler's ruin: start at k, win 1 with probability p, stop at 0 or N\ndef ruin_exact(k, N, p):\n    if p == 0.5: return 1 - k / N\n    r = (1 - p) / p\n    return (r ** k - r ** N) / (1 - r ** N)\ndef ruin_sim(k, N, p, trials=20000):\n    lost = 0\n    for _ in range(trials):\n        x = k\n        while 0 < x < N:\n            x += 1 if rng.random() < p else -1\n        lost += (x == 0)\n    return lost / trials\nfor p in (0.5, 0.49, 0.45):\n    print(f\"p = {p}: P(ruin from 10 with target 20) exact {ruin_exact(10, 20, p):.4f}, simulated {ruin_sim(10, 20, p):.4f}\")\n# A martingale stays fair on average: E[X_T] = X_0 for the fair walk stopped at 0 or 20\n# so P(reach 20) * 20 = 10 -> P = 1/2. Expected duration is k(N - k) = 100.\nsteps = []\nfor _ in range(5000):\n    x, t = 10, 0\n    while 0 < x < 20:\n        x += 1 if rng.random() < 0.5 else -1; t += 1\n    steps.append(t)\nprint(f\"fair walk from 10 to 0 or 20: mean duration {np.mean(steps):.1f} (k(N-k) = 100)\")\n# Simple random walk spread: sd of the position after n steps is sqrt(n)\npos = rng.choice([-1, 1], (20000, 400)).cumsum(1)\nprint(\"sd of position after 100 and 400 steps:\", round(pos[:, 99].std(), 2), round(pos[:, 399].std(), 2))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: from 10 with target 20, the ruin probability is 0.500, 0.599 and 0.882 for $p = 0.5$, 0.49 and 0.45, and simulations agree to within 0.003. The fair walk's mean duration is 98.9 against $k(N - k) = 100$. The spread of the position is 9.96 after 100 steps and 20.08 after 400: $\\sqrt n$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Returning to the start",
+      "text": "What is the probability that a symmetric simple random walk is back at 0 after 4 steps?",
+      "solution": [
+        "It needs exactly 2 up-steps of 4: $\\binom42/2^4 = 6/16 = 0.375$."
+      ],
+      "answer": "0.375"
+    },
+    {
+      "type": "problem",
+      "title": "Ruin by optional stopping",
+      "text": "Use the martingale $S_n^2 - n$ to find the expected duration of the fair game from $k$ to 0 or $N$.",
+      "solution": [
+        "Optional stopping: $E[S_T^2] - E[T] = k^2$.",
+        "$E[S_T^2] = N^2\\cdot\\frac kN = kN$, so $E[T] = kN - k^2 = k(N - k)$."
+      ],
+      "answer": "k(N − k)"
+    },
+    {
+      "type": "problem",
+      "title": "Doubling strategy",
+      "text": "A gambler doubles the bet after each loss in a fair coin game, stopping at the first win. Why doesn't this beat optional stopping?",
+      "solution": [
+        "Each sequence ends with a net gain of 1, so the gambler 'always wins'.",
+        "But the stake needed is unbounded and the stopping time's increments are unbounded: the theorem's conditions fail. With any finite bankroll, the rare long losing streak loses everything, and the expected gain is exactly 0."
+      ],
+      "answer": "unbounded stakes break the conditions"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "D. Williams, Probability with Martingales, Cambridge University Press (1991)",
+        "G. Pólya, Über eine Aufgabe der Wahrscheinlichkeitsrechnung betreffend die Irrfahrt im Straßennetz, Mathematische Annalen 84, 149 (1921)",
+        "W. Feller, An Introduction to Probability Theory and Its Applications, Volume 1, 3rd edition, Wiley (1968), chapter 14"
+      ]
+    }
+  ]
+}

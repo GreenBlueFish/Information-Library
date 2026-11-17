@@ -1,0 +1,106 @@
+{
+  "title": "Inequalities",
+  "intro": "When an exact probability is out of reach, an inequality can still bound it. From Markov's one-line bound to Hoeffding's exponential one, these are the workhorses of proofs and of practical guarantees.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Markov and Chebyshev"
+    },
+    {
+      "type": "math",
+      "tex": "P(X\\ge a)\\le\\frac{E[X]}{a} \\quad (X\\ge0,\\ a > 0), \\qquad P(\\vert X - \\mu\\vert\\ge k)\\le\\frac{\\operatorname{Var}(X)}{k^2}"
+    },
+    {
+      "type": "prose",
+      "text": "Markov's inequality uses only the mean: a non-negative variable cannot often be much larger than its average. Chebyshev's applies Markov to $(X - \\mu)^2$ and uses the variance; it proves the weak law of large numbers in one line. Both are tight for some distributions, but usually very loose."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Exponential bounds"
+    },
+    {
+      "type": "prose",
+      "text": "Applying Markov to $e^{tX}$ and optimising over $t$ gives the Chernoff bound, $P(X\\ge a)\\le\\inf_{t>0}e^{-ta}M_X(t)$. For sums of independent bounded variables this yields Hoeffding's inequality:"
+    },
+    {
+      "type": "math",
+      "tex": "P\\left(\\bar X_n - \\mu\\ge\\varepsilon\\right)\\le\\exp\\left(-\\frac{2n\\varepsilon^2}{(b - a)^2}\\right) \\qquad (a\\le X_i\\le b)",
+      "caption": "Hoeffding (1963). The same bound holds for the lower tail."
+    },
+    {
+      "type": "prose",
+      "text": "The difference from Chebyshev is the shape: Chebyshev decays like $1/n$, Hoeffding like $e^{-cn}$. That is what makes sample-size guarantees practical, and it is the basis of concentration of measure, PAC learning bounds, and the Hoeffding-plus-union-bound shot count on the QRC shelf's Measurement (#/qrc/open-systems/measurement) page."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Jensen and Cauchy–Schwarz"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Jensen: for convex $g$, $g(E[X])\\le E[g(X)]$; for concave $g$ the inequality reverses. It gives $(E X)^2\\le E[X^2]$, $E[\\ln X]\\le\\ln E[X]$, the non-negativity of KL divergence, and the arithmetic–geometric mean inequality.",
+        "Cauchy–Schwarz: $\\left(E[XY]\\right)^2\\le E[X^2]\\,E[Y^2]$, which gives $\\vert\\rho\\vert\\le1$.",
+        "Union bound: $P\\left(\\bigcup A_i\\right)\\le\\sum P(A_i)$, which turns a bound for one event into a bound for many."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy import stats\n# Tail of X ~ Binomial(100, 0.5) above 70: exact vs Markov, Chebyshev, Chernoff/Hoeffding\nn, p, a = 100, 0.5, 70\nexact = stats.binom.sf(a - 1, n, p)\nmarkov = n * p / a\ncheb = n * p * (1 - p) / (a - n * p) ** 2            # bounds P(|X - 50| >= 20), so also the one tail\nhoeff = np.exp(-2 * (a - n * p) ** 2 / n)\nprint(f\"P(X >= 70) exact {exact:.2e} | Markov {markov:.3f} | Chebyshev {cheb:.4f} | Hoeffding {hoeff:.2e}\")\n# Jensen: for convex g, g(E X) <= E g(X)\nrng = np.random.default_rng(21)\nx = rng.exponential(1, 10 ** 6)\nprint(f\"Jensen, g(x) = x^2: (E X)^2 = {x.mean()**2:.3f} <= E[X^2] = {np.mean(x**2):.3f}\")\nprint(f\"Jensen, concave log: E[ln X] = {np.mean(np.log(x)):.4f} <= ln E[X] = {np.log(x.mean()):.4f}  (E[ln X] = -0.5772, minus Euler's constant)\")\n# Cauchy-Schwarz: |Cov(X,Y)| <= sd(X) sd(Y)\ny = x + rng.normal(size=10 ** 6)\nprint(f\"|Cov| = {abs(np.cov(x, y)[0, 1]):.4f} <= sd sd = {x.std() * y.std():.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: for $X\\sim$ Binomial(100, 1/2), the exact $P(X\\ge70) = 3.9\\times10^{-5}$. Markov gives 0.714, Chebyshev 0.0625 and Hoeffding $3.4\\times10^{-4}$: only the exponential bound is in the right neighbourhood. Jensen holds in both directions tested ($1.004\\le2.008$; $E[\\ln X] = -0.575\\le\\ln E[X] = 0.002$), and Cauchy–Schwarz gives $1.00\\le1.42$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Markov for a waiting time",
+      "text": "A queue has mean waiting time 2 minutes. Bound the probability of waiting at least 10 minutes. What if the standard deviation is also known to be 1 minute?",
+      "solution": [
+        "Markov: $P(W\\ge10)\\le2/10 = 0.2$.",
+        "Chebyshev: $P(W\\ge10)\\le P(\\vert W - 2\\vert\\ge8)\\le1/64\\approx0.016$."
+      ],
+      "answer": "0.2; 0.016"
+    },
+    {
+      "type": "problem",
+      "title": "How many samples for a polling guarantee",
+      "text": "How many independent yes/no responses guarantee, by Hoeffding, that the sample proportion is within 0.01 of the truth with probability at least 0.95?",
+      "solution": [
+        "Two-sided: $2e^{-2n\\varepsilon^2}\\le0.05$, so $n\\ge\\ln(40)/(2\\times10^{-4}) = 3.689/0.0002\\approx18\\,445$."
+      ],
+      "answer": "about 18 445"
+    },
+    {
+      "type": "problem",
+      "title": "Jensen and the AM–GM inequality",
+      "text": "Use Jensen with $g = -\\ln$ to show $(x_1x_2\\cdots x_n)^{1/n}\\le(x_1 + \\cdots + x_n)/n$ for positive $x_i$.",
+      "solution": [
+        "Let $X$ be uniform on $\\{x_1, \\dots, x_n\\}$. $\\ln$ is concave, so $E[\\ln X]\\le\\ln E[X]$.",
+        "$\\frac1n\\sum\\ln x_i\\le\\ln\\left(\\frac1n\\sum x_i\\right)$; exponentiate both sides."
+      ],
+      "answer": "geometric mean ≤ arithmetic mean"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "W. Hoeffding, Probability inequalities for sums of bounded random variables, Journal of the American Statistical Association 58, 13 (1963)",
+        "S. Boucheron, G. Lugosi and P. Massart, Concentration Inequalities, Oxford University Press (2013)",
+        "G. R. Grimmett and D. R. Stirzaker, Probability and Random Processes, 4th edition, Oxford University Press (2020), chapter 7"
+      ]
+    }
+  ]
+}

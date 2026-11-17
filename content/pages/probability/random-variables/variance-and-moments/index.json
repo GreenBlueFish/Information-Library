@@ -1,0 +1,103 @@
+{
+  "title": "Variance and Moments",
+  "intro": "The variance measures spread around the mean. Higher moments describe the shape of a distribution: its skewness and the weight of its tails.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Variance and standard deviation"
+    },
+    {
+      "type": "math",
+      "tex": "\\operatorname{Var}(X) = E\\left[(X - E[X])^2\\right] = E[X^2] - (E[X])^2",
+      "caption": "The second form is usually easier to compute."
+    },
+    {
+      "type": "prose",
+      "text": "The standard deviation $\\sigma = \\sqrt{\\operatorname{Var}(X)}$ is in the units of $X$. Variance is unchanged by shifts and scales quadratically: $\\operatorname{Var}(aX + b) = a^2\\operatorname{Var}(X)$. For independent (or merely uncorrelated) variables, variances add: $\\operatorname{Var}(X + Y) = \\operatorname{Var}(X) + \\operatorname{Var}(Y)$; in general a covariance term appears (Covariance and Correlation (#/probability/multivariate/covariance-and-correlation))."
+    },
+    {
+      "type": "prose",
+      "text": "A consequence that runs through all of statistics: the mean of $n$ i.i.d. variables with variance $\\sigma^2$ has variance $\\sigma^2/n$, so its standard deviation shrinks like $1/\\sqrt n$. Quadrupling the data halves the error."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Moments and the shape of a distribution"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The $k$-th moment is $E[X^k]$; the $k$-th central moment is $E[(X - \\mu)^k]$.",
+        "Skewness $E[(X-\\mu)^3]/\\sigma^3$ measures asymmetry: positive when the right tail is longer.",
+        "Kurtosis $E[(X-\\mu)^4]/\\sigma^4$ measures the weight of the tails; the normal has 3, so 'excess kurtosis' subtracts 3.",
+        "Moments need not exist: a distribution with tails like $x^{-\\alpha - 1}$ has moments only below order $\\alpha$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Estimating variance from data"
+    },
+    {
+      "type": "prose",
+      "text": "The sample variance divides by $n - 1$, not $n$: $s^2 = \\frac{1}{n-1}\\sum(x_i - \\bar x)^2$. The sample mean sits closer to the data than the true mean does, so squared deviations from it are too small on average, by exactly a factor $(n-1)/n$. Dividing by $n - 1$ (Bessel's correction) removes the bias."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(8)\nx = rng.exponential(1.0, 10 ** 6)                 # Exp(1): mean 1, variance 1, skewness 2, excess kurtosis 6\nm = x.mean(); c = x - m\nprint(f\"mean {m:.3f}, variance {np.mean(c**2):.3f}, skewness {np.mean(c**3) / np.mean(c**2)**1.5:.3f}, \"\n      f\"excess kurtosis {np.mean(c**4) / np.mean(c**2)**2 - 3:.3f}\")\n# Var(aX + b) = a^2 Var(X); variances add for independent variables\ny = rng.uniform(0, 1, 10 ** 6)                   # variance 1/12\nprint(f\"Var(3X + 7) = {np.var(3 * x + 7):.3f} (9 x 1)   Var(X + Y) = {np.var(x + y):.4f} (1 + 1/12 = {1 + 1/12:.4f})\")\n# Dividing by n - 1 makes the sample variance unbiased\nsmall = rng.normal(0, 2, (200000, 5))           # true variance 4, samples of size 5\nprint(f\"average of sample variances: /n gives {small.var(axis=1, ddof=0).mean():.3f}, /(n-1) gives {small.var(axis=1, ddof=1).mean():.3f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: for a million Exp(1) samples, mean 1.001, variance 0.999, skewness 1.99 and excess kurtosis 5.96 (exact: 1, 1, 2, 6). $\\operatorname{Var}(3X + 7) = 8.99$ and $\\operatorname{Var}(X + Y) = 1.082$ against $1 + 1/12 = 1.083$. For samples of size 5 from a variance-4 normal, dividing by $n$ averages 3.20 (that is, $4\\times4/5$) while dividing by $n - 1$ averages 4.005."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Variance of a die",
+      "text": "Find the variance of one roll of a fair die, and of $2D - 3$.",
+      "solution": [
+        "$E[D] = 3.5$ and $E[D^2] = (1 + 4 + 9 + 16 + 25 + 36)/6 = 91/6$.",
+        "$\\operatorname{Var}(D) = 91/6 - 49/4 = 35/12\\approx2.917$.",
+        "$\\operatorname{Var}(2D - 3) = 4\\times35/12 = 35/3\\approx11.67$."
+      ],
+      "answer": "35/12; 35/3"
+    },
+    {
+      "type": "problem",
+      "title": "The most uncertain coin",
+      "text": "For which $p$ is the variance of a Bernoulli($p$) variable largest?",
+      "solution": [
+        "$\\operatorname{Var} = p(1-p)$, a downward parabola maximised at $p = 1/2$ with value $1/4$."
+      ],
+      "answer": "p = 1/2, variance 1/4"
+    },
+    {
+      "type": "problem",
+      "title": "How many samples",
+      "text": "Measurements have standard deviation 2. How many are needed for the standard deviation of their mean to be 0.1?",
+      "solution": [
+        "$2/\\sqrt n = 0.1$ gives $\\sqrt n = 20$, $n = 400$."
+      ],
+      "answer": "400"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapters 4 and 6",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 4",
+        "G. Casella and R. L. Berger, Statistical Inference, 2nd edition, Duxbury (2002), chapter 2"
+      ]
+    }
+  ]
+}

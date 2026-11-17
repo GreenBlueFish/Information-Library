@@ -1,0 +1,94 @@
+{
+  "title": "Continuous Random Variables",
+  "intro": "A continuous random variable spreads its probability over an interval with no point carrying any. A density describes how thickly; probabilities are areas under it.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Densities"
+    },
+    {
+      "type": "math",
+      "tex": "P(a\\le X\\le b) = \\int_a^b f_X(x)\\,dx, \\qquad f_X\\ge0, \\qquad \\int_{-\\infty}^{\\infty}f_X(x)\\,dx = 1",
+      "caption": "A probability density function and what it computes."
+    },
+    {
+      "type": "prose",
+      "text": "Two consequences surprise at first. Every single point has probability zero, $P(X = x) = 0$, so it does not matter whether interval ends are included. And a density value is not a probability: it can exceed 1 (the uniform density on $[0, 0.25]$ is 4). What a density does give is probability per unit length: $P(x\\le X\\le x + dx)\\approx f_X(x)\\,dx$ for small $dx$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "CDF, density and quantiles"
+    },
+    {
+      "type": "prose",
+      "text": "The CDF is the integral of the density, $F(x) = \\int_{-\\infty}^xf(t)\\,dt$, and where it is differentiable $f = F'$. The quantile function inverts the CDF: the $q$-quantile is the smallest $x$ with $F(x)\\ge q$. The median is the 0.5-quantile, and quartiles and percentiles are the others. Quantiles are how you read off intervals and thresholds, and the quantile function is how computers sample (Transformations (#/probability/random-variables/transformations))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mixed and singular cases"
+    },
+    {
+      "type": "prose",
+      "text": "Not every random variable is discrete or has a density. A waiting time that is zero with probability 0.3 (no queue) and exponential otherwise has a CDF with a jump at 0 and a density elsewhere. Stranger still, the Cantor distribution has a continuous CDF but no density at all (Measure-Theoretic Probability (#/probability/measure-theory)). The CDF handles all of these uniformly, which is why it is the general description."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.integrate import quad\nlam = 0.5                                        # an exponential lifetime with rate 1/2 (mean 2)\nf = lambda x: lam * np.exp(-lam * x)\nprint(\"total probability  =\", round(quad(f, 0, np.inf)[0], 10))\nprint(\"P(1 < X < 3)       =\", round(quad(f, 1, 3)[0], 6), \" = e^(-0.5) - e^(-1.5) =\", round(np.exp(-0.5) - np.exp(-1.5), 6))\nprint(\"density at 0       =\", f(0), \"(a density value, not a probability)\")\nprint(\"P(X = 2) exactly   = 0; P(1.99 < X < 2.01) =\", round(quad(f, 1.99, 2.01)[0], 6), \"~ f(2) * 0.02 =\", round(f(2) * 0.02, 6))\nrng = np.random.default_rng(6)\nx = rng.exponential(1 / lam, 200000)\nhist, edges = np.histogram(x, bins=[0, 1, 2, 3, 4, 6, 10])\nfor (a, b), h in zip(zip(edges, edges[1:]), hist):\n    print(f\"[{a:>2}, {b:>2}): simulated {h / len(x):.4f}, exact {quad(f, a, b)[0]:.4f}\")\n# A density bigger than 1: uniform on [0, 0.25]\nprint(\"uniform on [0, 0.25] has density\", 1 / 0.25, \"everywhere on its support\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the exponential density with rate 1/2 integrates to 1; $P(1 < X < 3) = e^{-0.5} - e^{-1.5} = 0.3834$; the probability of a window of width 0.02 around 2 is 0.003679, equal to $f(2)\\times0.02$; and histogram frequencies of 200 000 samples match the integrals of the density over each bin to two or three decimals."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Normalise a density",
+      "text": "$f(x) = cx^2$ on $[0, 1]$. Find $c$ and $P(X > 1/2)$.",
+      "solution": [
+        "$\\int_0^1cx^2\\,dx = c/3 = 1$, so $c = 3$.",
+        "$P(X > 1/2) = \\int_{1/2}^13x^2\\,dx = 1 - 1/8 = 7/8$."
+      ],
+      "answer": "c = 3; 7/8"
+    },
+    {
+      "type": "problem",
+      "title": "Median of an exponential",
+      "text": "Find the median of an exponential distribution with rate $\\lambda$.",
+      "solution": [
+        "$F(x) = 1 - e^{-\\lambda x} = 1/2$ gives $x = \\ln2/\\lambda$.",
+        "This is less than the mean $1/\\lambda$: the long right tail pulls the mean up."
+      ],
+      "answer": "ln 2 / λ"
+    },
+    {
+      "type": "problem",
+      "title": "Probability from a CDF",
+      "text": "$F(x) = 1 - 1/x^2$ for $x\\ge1$ (and 0 below). Find the density and $P(2 < X\\le4)$.",
+      "solution": [
+        "$f(x) = F'(x) = 2/x^3$ for $x\\ge1$.",
+        "$P(2 < X\\le4) = F(4) - F(2) = (1 - 1/16) - (1 - 1/4) = 3/16$."
+      ],
+      "answer": "2/x³; 3/16"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 5",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapter 5"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,115 @@
+{
+  "title": "Conditional Expectation",
+  "intro": "E[Y | X] is the best guess of Y once X is known. It is itself a random variable, a function of X, and averaging it recovers E[Y]. With its companion for variances it is the main tool for computing with hierarchical models.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "E[Y | X] is a random variable"
+    },
+    {
+      "type": "prose",
+      "text": "For each value $x$, $E[Y\\mid X = x] = \\sum_y y\\,p_{Y\\mid X}(y\\mid x)$ (or the integral version) is a number, $g(x)$. Plugging in the random $X$ gives $E[Y\\mid X] = g(X)$: a random variable that varies with $X$ and has averaged away everything else. If $Y$ counts heads in $X$ fair tosses, where $X$ is itself random, then $E[Y\\mid X] = X/2$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The laws of total expectation and variance"
+    },
+    {
+      "type": "math",
+      "tex": "E[Y] = E\\left[E[Y\\mid X]\\right]",
+      "caption": "Tower property (Adam's law): average the conditional averages."
+    },
+    {
+      "type": "math",
+      "tex": "\\operatorname{Var}(Y) = E\\left[\\operatorname{Var}(Y\\mid X)\\right] + \\operatorname{Var}\\left(E[Y\\mid X]\\right)",
+      "caption": "Total variance (Eve's law): the spread within groups plus the spread between group means."
+    },
+    {
+      "type": "prose",
+      "text": "These are the conditional version of the law of total probability, and they turn hard problems into two easy steps: condition on whatever makes the problem simple, then average. The variance decomposition is also the backbone of analysis of variance and of the bias–variance trade-off."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Properties"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Taking out what is known: $E[h(X)Y\\mid X] = h(X)\\,E[Y\\mid X]$.",
+        "Independence: if $Y$ is independent of $X$, $E[Y\\mid X] = E[Y]$.",
+        "Linearity, just as for ordinary expectation.",
+        "Best prediction: among all functions $h$, $E[(Y - h(X))^2]$ is smallest for $h(X) = E[Y\\mid X]$. It is the orthogonal projection of $Y$ onto the functions of $X$, which is how it is defined in general (Measure-Theoretic Probability (#/probability/measure-theory))."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Martingales start here"
+    },
+    {
+      "type": "prose",
+      "text": "A sequence whose expected next value, given the past, equals its current value is a martingale: $E[M_{n+1}\\mid M_1, \\dots, M_n] = M_n$. It is the mathematical idea of a fair game, and conditional expectation is the language it is written in (Random Walks and Martingales (#/probability/processes/random-walks-and-martingales))."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(17)\n# A random sum: N ~ Poisson(4) customers, each spends X_i ~ Exp(mean 25), independent\nN = rng.poisson(4, 200000)\ntotal = np.array([rng.exponential(25, n).sum() for n in N])\nprint(f\"E[total] = {total.mean():.2f}; law of total expectation: E[N] E[X] = 4 x 25 = 100\")\n# Law of total variance: Var = E[N] Var X + Var(N) (E X)^2 = 4*625 + 4*625 = 5000\nprint(f\"Var[total] = {total.var():.0f}; E[Var(T|N)] + Var(E[T|N]) = 4*625 + 4*625 = 5000\")\n# E[Y | X] is the best predictor in mean square: compare with the best linear predictor\nx = rng.uniform(-1, 1, 10 ** 6); y = x ** 2 + 0.1 * rng.normal(size=10 ** 6)\nprint(f\"mean squared error of E[Y|X] = X^2: {np.mean((y - x**2)**2):.4f}; of the best line: {np.var(y - np.polyval(np.polyfit(x, y, 1), x)):.4f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: a Poisson(4) number of purchases, each exponential with mean 25, totals 99.8 on average (exactly $4\\times25 = 100$) with variance 4963 (exactly $4\\times625 + 4\\times625 = 5000$; the difference is sampling noise). For $Y = X^2$ plus noise, the conditional mean $X^2$ leaves mean squared error 0.0100, the noise variance, while the best straight line leaves 0.0989."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A random number of coins",
+      "text": "Roll a die, then toss that many fair coins. Find the mean and variance of the number of heads $H$.",
+      "solution": [
+        "$E[H\\mid D] = D/2$ and $\\operatorname{Var}(H\\mid D) = D/4$.",
+        "$E[H] = 3.5/2 = 1.75$.",
+        "$\\operatorname{Var}(H) = E[D/4] + \\operatorname{Var}(D/2) = 0.875 + (35/12)/4 = 0.875 + 0.729 = 1.604$."
+      ],
+      "answer": "1.75 and 1.604"
+    },
+    {
+      "type": "problem",
+      "title": "Breaking a stick twice",
+      "text": "Break a unit stick at a uniform point and keep the left piece; break that at a uniform point and keep the left piece again. Find the expected length.",
+      "solution": [
+        "After the first break, $E[L_1] = 1/2$. Given $L_1$, the second piece has mean $L_1/2$.",
+        "Tower property: $E[L_2] = E[L_1/2] = 1/4$."
+      ],
+      "answer": "1/4"
+    },
+    {
+      "type": "problem",
+      "title": "Prediction error",
+      "text": "$X\\sim N(0, 1)$ and $Y = 2X + \\varepsilon$ with independent noise $\\varepsilon\\sim N(0, 0.25)$. What is $E[Y\\mid X]$ and its mean squared prediction error?",
+      "solution": [
+        "$E[Y\\mid X] = 2X + E[\\varepsilon] = 2X$.",
+        "The error is $\\varepsilon$, so the mean squared error is $0.25$. No function of $X$ can do better."
+      ],
+      "answer": "2X; 0.25"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 9",
+        "D. Williams, Probability with Martingales, Cambridge University Press (1991), chapter 9",
+        "G. R. Grimmett and D. R. Stirzaker, Probability and Random Processes, 4th edition, Oxford University Press (2020), chapter 3"
+      ]
+    }
+  ]
+}

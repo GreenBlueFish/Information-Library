@@ -1,0 +1,121 @@
+{
+  "title": "Expectation",
+  "intro": "The expectation is the probability-weighted average of a random variable: the centre of mass of its distribution. Its most powerful property is linearity, which holds with no assumption about dependence.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Definition"
+    },
+    {
+      "type": "math",
+      "tex": "E[X] = \\sum_x x\\,p_X(x) \\qquad\\text{or}\\qquad E[X] = \\int_{-\\infty}^{\\infty}x\\,f_X(x)\\,dx",
+      "caption": "Defined when the sum or integral converges absolutely."
+    },
+    {
+      "type": "prose",
+      "text": "The expectation exists only when $E\\vert X\\vert < \\infty$. Some perfectly good random variables have no mean: the Cauchy distribution, or the payout of the St Petersburg game (double the stake until the first head), whose expectation is $\\sum2^k2^{-k} = \\infty$. Averages of samples from such variables never settle (The Law of Large Numbers (#/probability/limit-theorems/law-of-large-numbers))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The law of the unconscious statistician"
+    },
+    {
+      "type": "math",
+      "tex": "E[g(X)] = \\sum_x g(x)\\,p_X(x) \\qquad\\text{or}\\qquad \\int g(x)\\,f_X(x)\\,dx"
+    },
+    {
+      "type": "prose",
+      "text": "You do not need the distribution of $g(X)$ to find its mean; weight $g$ by the distribution of $X$. The name is a joke about how naturally people use it without noticing it needs proof."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Linearity"
+    },
+    {
+      "type": "math",
+      "tex": "E[aX + bY + c] = a\\,E[X] + b\\,E[Y] + c",
+      "caption": "True for any random variables with finite means, dependent or not."
+    },
+    {
+      "type": "prose",
+      "text": "Combined with indicators, linearity solves problems whose distributions are hopeless. To count something, write the count as a sum of indicators and add their probabilities. The number of fixed points of a random permutation of $n$ items is $\\sum_i\\mathbf{1}\\{\\text{item } i \\text{ stays put}\\}$, each with probability $1/n$, so its mean is exactly 1 for every $n$, although its distribution needs inclusion–exclusion."
+    },
+    {
+      "type": "prose",
+      "text": "Expectation is not multiplicative in general: $E[XY] = E[X]E[Y]$ holds for independent variables, not for all. Nor does it commute with nonlinear functions: $E[g(X)]\\ne g(E[X])$ in general, and Jensen's inequality says which way the gap goes for convex $g$ (Inequalities (#/probability/toolkit/inequalities))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The tail-sum formula"
+    },
+    {
+      "type": "math",
+      "tex": "E[X] = \\sum_{k\\ge1}P(X\\ge k) \\quad (X\\in\\{0,1,2,\\dots\\}), \\qquad E[X] = \\int_0^\\infty P(X > t)\\,dt \\quad (X\\ge0)"
+    },
+    {
+      "type": "prose",
+      "text": "Each unit of $X$ is counted once by the event that $X$ reaches it. This often avoids computing the PMF at all; for the geometric distribution it gives $\\sum(1-p)^{k-1} = 1/p$ at once."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(7)\n# Linearity: the expected number of fixed points of a random permutation is 1 for every n\nfor n in (5, 50, 500):\n    fp = [np.sum(rng.permutation(n) == np.arange(n)) for _ in range(20000)]\n    print(f\"n = {n:3d}: mean number of fixed points = {np.mean(fp):.3f}\")\n# Geometric: trials until the first success has mean 1/p\np = 0.2\nprint(f\"geometric, p = {p}: simulated mean {rng.geometric(p, 200000).mean():.3f}, 1/p = {1/p}\")\n# The tail-sum formula E[X] = sum P(X >= k) for X in {1, 2, ...}\nk = np.arange(1, 400)\nprint(\"sum of P(X >= k) =\", round(np.sum((1 - p) ** (k - 1)), 6))\n# St Petersburg: a finite simulation of a variable with infinite mean never settles\npay = 2.0 ** rng.geometric(0.5, 10 ** 6)\nfor N in (10 ** 2, 10 ** 4, 10 ** 6):\n    print(f\"St Petersburg mean of first {N:>7} plays: {pay[:N].mean():.2f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the mean number of fixed points is 1.002, 0.992 and 1.009 for $n = 5$, 50 and 500. The geometric mean with $p = 0.2$ is 4.993 against $1/p = 5$, and the tail sum gives exactly 5. The St Petersburg running mean reads 20.4, 13.7 and 33.1 after $10^2$, $10^4$ and $10^6$ plays: it never settles, because there is no mean to settle on."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Mean of a reciprocal",
+      "text": "$X$ is 1 or 2 with probability 1/2 each. Compare $E[1/X]$ with $1/E[X]$.",
+      "solution": [
+        "$E[1/X] = \\tfrac12(1 + \\tfrac12) = 0.75$, while $1/E[X] = 1/1.5 = 0.667$.",
+        "Not equal: $1/x$ is convex on $x > 0$, so Jensen gives $E[1/X]\\ge1/E[X]$."
+      ],
+      "answer": "0.75 vs 0.667"
+    },
+    {
+      "type": "problem",
+      "title": "Empty boxes",
+      "text": "Throw $n$ balls independently and uniformly into $n$ boxes. What is the expected number of empty boxes? Evaluate for $n = 10$.",
+      "solution": [
+        "Box $i$ is empty with probability $(1 - 1/n)^n$; by linearity the mean number empty is $n(1 - 1/n)^n$.",
+        "$n = 10$: $10\\times0.9^{10} = 3.49$. For large $n$ it approaches $n/e$."
+      ],
+      "answer": "n(1 − 1/n)ⁿ; 3.49"
+    },
+    {
+      "type": "problem",
+      "title": "Coupon collector",
+      "text": "How many rolls of a fair die are needed, on average, to see all six faces?",
+      "solution": [
+        "After $k$ distinct faces, each roll is new with probability $(6-k)/6$, so the wait is geometric with mean $6/(6-k)$.",
+        "Sum: $6(1 + \\tfrac12 + \\tfrac13 + \\tfrac14 + \\tfrac15 + \\tfrac16) = 6\\times2.45 = 14.7$."
+      ],
+      "answer": "14.7"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. K. Blitzstein and J. Hwang, Introduction to Probability, 2nd edition, CRC Press (2019), chapter 4",
+        "S. M. Ross, A First Course in Probability, 10th edition, Pearson (2019), chapters 4 and 7",
+        "W. Feller, An Introduction to Probability Theory and Its Applications, Volume 1, 3rd edition, Wiley (1968), chapter 9"
+      ]
+    }
+  ]
+}
