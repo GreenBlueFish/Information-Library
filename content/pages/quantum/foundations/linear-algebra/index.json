@@ -1,0 +1,165 @@
+{
+  "title": "Linear Algebra for Quantum Mechanics",
+  "intro": "Every calculation in quantum mechanics is a matrix calculation over the complex numbers. This page collects the pieces used on every later page: inner products, adjoints, Hermitian and unitary matrices, eigen-decomposition, matrix exponentials and Kronecker products.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Complex vectors and the inner product"
+    },
+    {
+      "type": "prose",
+      "text": "A state of a $d$-level system is a column vector $v \\in \\mathbb{C}^d$. The inner product conjugates the first argument, $\\langle u, v\\rangle = \\sum_i \\bar u_i v_i$, so that $\\langle v, v\\rangle = \\sum_i \\vert v_i\\vert^2$ is real and non-negative: it is the squared length. Two vectors are orthogonal when their inner product is zero, and an orthonormal basis is $d$ mutually orthogonal unit vectors."
+    },
+    {
+      "type": "prose",
+      "text": "Numpy's `np.vdot(u, v)` conjugates its first argument and computes exactly this; `u @ v` does not conjugate and is the wrong tool for complex states."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The adjoint, Hermitian and unitary matrices"
+    },
+    {
+      "type": "prose",
+      "text": "The adjoint (conjugate transpose) of a matrix is $A^\\dagger = \\bar A^{\\top}$. It is defined so that $\\langle u, Av\\rangle = \\langle A^\\dagger u, v\\rangle$. Two families of matrices matter most."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Hermitian: $A^\\dagger = A$. Their eigenvalues are real and eigenvectors for different eigenvalues are orthogonal. Observables and Hamiltonians are Hermitian.",
+        "Unitary: $U^\\dagger U = I$. They preserve inner products, hence lengths and angles, and their eigenvalues have modulus 1. Time evolution and quantum gates are unitary."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Eigen-decomposition (the spectral theorem)"
+    },
+    {
+      "type": "prose",
+      "text": "Every Hermitian matrix can be written in terms of its eigenvalues $\\lambda_k$ and an orthonormal basis of eigenvectors $v_k$:"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\sum_k \\lambda_k\\, v_k v_k^\\dagger = V\\,\\mathrm{diag}(\\lambda)\\,V^\\dagger",
+      "caption": "The spectral theorem: V is unitary, with the eigenvectors as its columns."
+    },
+    {
+      "type": "prose",
+      "text": "This is the most useful identity on the shelf. It says a Hermitian matrix just stretches space by real factors along a set of perpendicular directions. Each $v_kv_k^\\dagger$ is the projector onto one direction, which is how measurement outcomes will be defined."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Functions of matrices and the exponential"
+    },
+    {
+      "type": "prose",
+      "text": "Because of the decomposition, any function of a Hermitian matrix is defined by applying the function to the eigenvalues: $f(A) = V\\,\\mathrm{diag}(f(\\lambda))\\,V^\\dagger$. The one that matters is the exponential:"
+    },
+    {
+      "type": "math",
+      "tex": "e^{-iAt} = V\\,\\mathrm{diag}\\left(e^{-i\\lambda_1 t}, \\dots, e^{-i\\lambda_d t}\\right)V^\\dagger",
+      "caption": "For Hermitian A this is unitary: each eigenvalue becomes a phase."
+    },
+    {
+      "type": "prose",
+      "text": "This is how every QRC simulator on this site builds its time-evolution operator: diagonalise the Hamiltonian once with `np.linalg.eigh`, then reuse the eigenbasis for any time. The power series $e^{X} = \\sum_n X^n/n!$ gives the same result and is what `scipy.linalg.expm` computes for general matrices. Note that $e^{A+B} = e^Ae^B$ only when $AB = BA$; the gap between the two is what Trotterisation (#/quantum/qubits/gates-and-circuits) controls."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The commutator"
+    },
+    {
+      "type": "prose",
+      "text": "The commutator $[A, B] = AB - BA$ measures how far two matrices are from commuting. Commuting Hermitian matrices share an eigenbasis, so they can be measured together and their exponentials can be split. Non-commuting ones cannot, and that single fact is behind the uncertainty principle, the order-dependence of rotations, and Trotter error."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Kronecker (tensor) products"
+    },
+    {
+      "type": "prose",
+      "text": "For an $m\\times m$ matrix $A$ and an $n\\times n$ matrix $B$, the Kronecker product $A\\otimes B$ is the $mn\\times mn$ block matrix whose $(i,j)$ block is $A_{ij}B$. It is how state spaces and operators of separate systems combine (Composite Systems (#/quantum/many-body/composite-systems)). Two rules carry most of the weight: $(A\\otimes B)(C\\otimes D) = AC\\otimes BD$, and $(A\\otimes B)^\\dagger = A^\\dagger\\otimes B^\\dagger$. Dimensions multiply, which is why $n$ qubits need $2^n$ amplitudes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Checking it all numerically"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\n# A random Hermitian matrix, its eigen-decomposition, and the unitary it generates.\nrng = np.random.default_rng(0)\nA = rng.normal(size=(4, 4)) + 1j * rng.normal(size=(4, 4))\nH = (A + A.conj().T) / 2                       # Hermitian: H = H^dagger\nE, V = np.linalg.eigh(H)                       # real eigenvalues, orthonormal eigenvectors\nprint(\"eigenvalues (real):\", np.round(E, 3))\nprint(\"V unitary:\", np.allclose(V.conj().T @ V, np.eye(4)))\nprint(\"H = V diag(E) V^dagger:\", np.allclose(H, V @ np.diag(E) @ V.conj().T))\nU = expm(-1j * H * 0.7)                        # exponential of -i H t\nU2 = V @ np.diag(np.exp(-1j * E * 0.7)) @ V.conj().T\nprint(\"expm agrees with the eigenbasis formula:\", np.allclose(U, U2))\nprint(\"U unitary:\", np.allclose(U.conj().T @ U, np.eye(4)))\n# Kronecker products: dimensions multiply, and (A x B)(C x D) = AC x BD\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1, -1])\nprint(\"X (x) Z is\", np.kron(X, Z).shape, \"and (X(x)Z)(Z(x)X) = XZ (x) ZX:\",\n      np.allclose(np.kron(X, Z) @ np.kron(Z, X), np.kron(X @ Z, Z @ X)))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the eigenvalues come out real (−1.891, −0.808, 0.46, 1.371), the eigenvector matrix is unitary, the decomposition rebuilds $H$, `expm` and the eigenbasis formula give the same unitary, and the Kronecker mixed-product rule holds."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Every reservoir step $\\rho\\mapsto U\\rho U^\\dagger$ uses a unitary built by eigen-decomposition: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "The Liouvillian of Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics) is built entirely from Kronecker products.",
+        "Ridge regression on the readout is real linear algebra: the SVD form on Echo State Networks (#/qrc/foundations/echo-state-networks) is the real-valued cousin of the spectral theorem."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Hermitian or not",
+      "text": "Is the matrix with rows $(1, i)$ and $(-i, 2)$ Hermitian? Find its eigenvalues.",
+      "solution": [
+        "The adjoint swaps and conjugates the off-diagonal entries: the top-right entry of $A^\\dagger$ is $\\overline{-i} = i$, the bottom-left is $\\overline{i} = -i$. So $A^\\dagger = A$: it is Hermitian.",
+        "Trace 3 and determinant $1\\cdot 2 - (i)(-i) = 2 - 1 = 1$, so $\\lambda^2 - 3\\lambda + 1 = 0$.",
+        "$\\lambda = (3\\pm\\sqrt5)/2 \\approx 2.618$ and $0.382$: real, as they must be."
+      ],
+      "answer": "Hermitian; eigenvalues 2.618 and 0.382"
+    },
+    {
+      "type": "problem",
+      "title": "Exponential of a diagonal matrix",
+      "text": "Write $e^{-i\\theta Z}$ as a matrix, where $Z$ is diagonal with entries $1$ and $-1$. Is it unitary?",
+      "solution": [
+        "$Z$ is already diagonal, so exponentiate the diagonal: $e^{-i\\theta Z} = \\mathrm{diag}(e^{-i\\theta}, e^{i\\theta})$.",
+        "Each entry has modulus 1 and the matrix is diagonal, so $U^\\dagger U = \\mathrm{diag}(1, 1) = I$: unitary."
+      ],
+      "answer": "diag(e^{-iθ}, e^{iθ}); yes"
+    },
+    {
+      "type": "problem",
+      "title": "Sizes of tensor products",
+      "text": "A system of one qubit and one 4-level system is described by vectors of what dimension? What is the size of $X\\otimes B$ for $X$ a $2\\times2$ and $B$ a $4\\times4$ matrix?",
+      "solution": [
+        "Dimensions multiply: $2\\times4 = 8$.",
+        "$X\\otimes B$ is $8\\times8$, made of four $4\\times4$ blocks $X_{ij}B$."
+      ],
+      "answer": "8; an 8×8 matrix"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "S. Axler, Linear Algebra Done Right, 4th edition, Springer (2024)",
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), chapter 2",
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 1"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "title": "Observables and Uncertainty",
+  "intro": "Observables are Hermitian operators; their expectation values are what experiments estimate and what quantum reservoirs use as features. Two observables that do not commute cannot both be sharp, and the commutator says by how much.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Observables and their spectra"
+    },
+    {
+      "type": "prose",
+      "text": "A measurable quantity is represented by a Hermitian operator $A = \\sum_a a\\,\\Pi_a$, where the $a$ are its (real) eigenvalues and $\\Pi_a$ the projectors onto its eigenspaces. Measuring $A$ is measuring in its eigenbasis and reporting the eigenvalue. For $Z$ the eigenbasis is $\\{\\vert0\\rangle, \\vert1\\rangle\\}$ with eigenvalues $\\pm1$; for $X$ it is $\\{\\vert+\\rangle, \\vert-\\rangle\\}$, again $\\pm1$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Expectation values"
+    },
+    {
+      "type": "prose",
+      "text": "The average of many measurements of $A$ on copies of $\\vert\\psi\\rangle$ is"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle A\\rangle = \\sum_a a\\,P(a) = \\langle\\psi\\vert A\\vert\\psi\\rangle",
+      "caption": "The expectation value: a single bracket replaces the sum over outcomes."
+    },
+    {
+      "type": "prose",
+      "text": "This identity is why the features of a quantum reservoir are linear in the state: $\\langle\\psi\\vert A\\vert\\psi\\rangle$ is linear in the density matrix $\\vert\\psi\\rangle\\langle\\psi\\vert$, even though it is quadratic in the amplitudes. The variance is $\\mathrm{Var}(A) = \\langle A^2\\rangle - \\langle A\\rangle^2$; for an observable with eigenvalues $\\pm1$, $A^2 = I$ and $\\mathrm{Var}(A) = 1 - \\langle A\\rangle^2$, the per-shot variance used on Measurement and the Born Rule (#/quantum/foundations/measurement)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Commuting and non-commuting observables"
+    },
+    {
+      "type": "prose",
+      "text": "If $[A, B] = 0$, the two share an eigenbasis: one measurement in that basis gives both values, and measuring one does not disturb the other. That is why one computational-basis shot yields every $Z_i$ and every product $Z_iZ_j$ at once. If they do not commute, measuring one randomises the other, as the $Z$, $X$, $Z$ experiment on the previous page showed."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The uncertainty relation"
+    },
+    {
+      "type": "prose",
+      "text": "For any state and any two observables (Robertson 1929),"
+    },
+    {
+      "type": "math",
+      "tex": "\\sigma_A\\,\\sigma_B \\ge \\tfrac12\\left\\vert\\langle[A, B]\\rangle\\right\\vert",
+      "caption": "The Robertson uncertainty relation. σ is the standard deviation of each observable in the state."
+    },
+    {
+      "type": "prose",
+      "text": "For the Pauli operators $[X, Y] = 2iZ$, so $\\sigma_X\\sigma_Y \\ge \\vert\\langle Z\\rangle\\vert$: a qubit pointing along $z$ has maximally uncertain $X$ and $Y$. The relation is about preparations, not about clumsy measurements: no state at all has both $X$ and $Y$ sharp. Position and momentum, with $[x, p] = i$, give the familiar $\\sigma_x\\sigma_p \\ge 1/2$, which reappears for the quadratures of an oscillator (The Harmonic Oscillator (#/quantum/dynamics/harmonic-oscillator))."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\ndef ev(O, v): return np.vdot(v, O @ v).real\ndef var(O, v): return ev(O @ O, v) - ev(O, v) ** 2\ncomm = lambda A, B: A @ B - B @ A\nprint(\"[X, Y] = 2iZ:\", np.allclose(comm(X, Y), 2j * Z))\n# Robertson: sd(A) sd(B) >= |<[A,B]>| / 2, tested on random qubit states\nrng = np.random.default_rng(3)\nworst = 1e9\nfor _ in range(10000):\n    v = rng.normal(size=2) + 1j * rng.normal(size=2); v /= np.linalg.norm(v)\n    lhs = np.sqrt(var(X, v) * var(Y, v)); rhs = abs(np.vdot(v, comm(X, Y) @ v)) / 2\n    worst = min(worst, lhs - rhs)\nprint(f\"min over 10000 random states of sd(X)sd(Y) - |<[X,Y]>|/2 = {worst:.2e} (never negative)\")\n# An eigenstate of Z has zero Z variance but maximal X variance\nv0 = np.array([1, 0], complex)\nprint(\"|0>: <Z> = %.0f, Var Z = %.0f, <X> = %.0f, Var X = %.0f\" % (ev(Z, v0), var(Z, v0), ev(X, v0), var(X, v0)))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: $[X, Y] = 2iZ$ holds; over 10 000 random states the uncertainty product never falls below the bound (smallest margin $4.7\\times10^{-11}$, rounding error at states where the bound is tight); and $\\vert0\\rangle$ has $\\langle Z\\rangle = 1$ with zero variance but $\\langle X\\rangle = 0$ with variance 1."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The features $x_i = \\operatorname{Tr}(O_i\\rho)$ of every model on Quantum Reservoir Models (#/qrc/models) are expectation values.",
+        "Which observables can share shots is a commutation question: Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
+        "The quadrature noise of continuous-variable reservoirs is the $\\sigma_x\\sigma_p \\ge 1/2$ bound: Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Expectation and variance of the QRC input",
+      "text": "For $\\vert\\psi_s\\rangle = \\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt s\\,\\vert1\\rangle$, find $\\langle Z\\rangle$, $\\langle X\\rangle$ and $\\mathrm{Var}(Z)$.",
+      "solution": [
+        "$\\langle Z\\rangle = (1 - s) - s = 1 - 2s$.",
+        "$\\langle X\\rangle = 2\\,\\mathrm{Re}(\\bar\\alpha\\beta) = 2\\sqrt{s(1-s)}$.",
+        "$\\mathrm{Var}(Z) = 1 - (1-2s)^2 = 4s(1-s)$, largest at $s = 1/2$."
+      ],
+      "answer": "1 − 2s, 2√(s(1−s)), 4s(1−s)"
+    },
+    {
+      "type": "problem",
+      "title": "A tight case",
+      "text": "Check the uncertainty relation for $X$ and $Z$ in the state $\\vert0\\rangle$.",
+      "solution": [
+        "$[X, Z] = -2iY$, and $\\langle0\\vert Y\\vert0\\rangle = 0$, so the bound is $0$.",
+        "$\\sigma_Z = 0$ (an eigenstate) and $\\sigma_X = 1$, so the product is $0 \\ge 0$: satisfied with equality."
+      ],
+      "answer": "0 ≥ 0, equality"
+    },
+    {
+      "type": "problem",
+      "title": "Energy of a state",
+      "text": "A qubit has Hamiltonian $H = 0.3X + 0.8Z$. What is $\\langle H\\rangle$ in $\\vert0\\rangle$, and what are the possible results of measuring $H$?",
+      "solution": [
+        "$\\langle0\\vert X\\vert0\\rangle = 0$ and $\\langle0\\vert Z\\vert0\\rangle = 1$, so $\\langle H\\rangle = 0.8$.",
+        "$H^2 = (0.09 + 0.64)I$ because $XZ + ZX = 0$, so the eigenvalues are $\\pm\\sqrt{0.73} = \\pm0.854$. Those are the only possible results; 0.8 is an average, never a single outcome."
+      ],
+      "answer": "0.8 on average; outcomes ±0.854"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. P. Robertson, The uncertainty principle, Physical Review 34, 163 (1929)",
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 2.2.5",
+        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapter 3"
+      ]
+    }
+  ]
+}

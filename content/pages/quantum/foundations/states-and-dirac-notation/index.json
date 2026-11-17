@@ -1,0 +1,129 @@
+{
+  "title": "States and Dirac Notation",
+  "intro": "A quantum state is a unit vector, written as a ket. This page introduces Dirac notation, superposition, bases, and the difference between a global phase, which is physically meaningless, and a relative phase, which can be measured.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Kets, bras and brackets"
+    },
+    {
+      "type": "prose",
+      "text": "Dirac notation writes a column vector as a ket $\\vert\\psi\\rangle$ and its adjoint, a row vector, as a bra $\\langle\\psi\\vert = \\vert\\psi\\rangle^\\dagger$. Putting them together gives the inner product $\\langle\\phi\\vert\\psi\\rangle$ (a number) or the outer product $\\vert\\psi\\rangle\\langle\\phi\\vert$ (a matrix). The notation earns its keep because it keeps track of conjugation automatically: $\\langle\\phi\\vert\\psi\\rangle = \\overline{\\langle\\psi\\vert\\phi\\rangle}$."
+    },
+    {
+      "type": "prose",
+      "text": "For a qubit the standard (computational) basis is $\\vert0\\rangle = (1, 0)^\\top$ and $\\vert1\\rangle = (0, 1)^\\top$. Any qubit state is a combination"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi\\rangle = \\alpha\\vert0\\rangle + \\beta\\vert1\\rangle, \\qquad \\vert\\alpha\\vert^2 + \\vert\\beta\\vert^2 = 1",
+      "caption": "A superposition. The complex numbers α and β are amplitudes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Superposition is not ignorance"
+    },
+    {
+      "type": "prose",
+      "text": "It is tempting to read $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$ as 'the qubit is secretly 0 or 1 and we do not know which'. That reading is wrong, and the difference is measurable: the state $\\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$ gives the outcome $+$ with certainty when measured in the $X$ basis, while a coin-flip mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$ gives $+$ only half the time. Mixtures get their own description, the density matrix, on Mixed States (#/quantum/many-body/mixed-states)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Other bases"
+    },
+    {
+      "type": "prose",
+      "text": "Any orthonormal basis can describe the same state. The two used most after the computational basis are the $X$ basis and the $Y$ basis:"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\pm\\rangle = \\frac{\\vert0\\rangle \\pm \\vert1\\rangle}{\\sqrt2}, \\qquad \\vert\\pm i\\rangle = \\frac{\\vert0\\rangle \\pm i\\vert1\\rangle}{\\sqrt2}"
+    },
+    {
+      "type": "prose",
+      "text": "Changing basis means computing new amplitudes as inner products: in the basis $\\{\\vert e_k\\rangle\\}$, $\\vert\\psi\\rangle = \\sum_k \\langle e_k\\vert\\psi\\rangle\\,\\vert e_k\\rangle$. The resolution of the identity $\\sum_k \\vert e_k\\rangle\\langle e_k\\vert = I$ is the same statement in operator form, and it is the most-used trick in calculations: insert it anywhere."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Global and relative phase"
+    },
+    {
+      "type": "prose",
+      "text": "Multiplying the whole state by $e^{i\\gamma}$ changes no probability anywhere, because every prediction involves $\\vert\\langle\\phi\\vert\\psi\\rangle\\vert^2$ and the phase cancels. So $\\vert\\psi\\rangle$ and $e^{i\\gamma}\\vert\\psi\\rangle$ are the same physical state. A relative phase is different: $\\vert0\\rangle + e^{i\\varphi}\\vert1\\rangle$ changes as $\\varphi$ varies, and while its $Z$ statistics stay fixed, its $X$ and $Y$ statistics move. That is how phase encoding writes an input, and why the QRC shelf's Input Encoding (#/qrc/models/input-encoding) finds phase-encoded inputs invisible to $Z$ readouts until they are converted into populations."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# A qubit state as a complex 2-vector: normalise it, take inner products, and check that a\n# global phase changes nothing measurable while a relative phase does.\npsi = np.array([1, 1j]); psi = psi / np.linalg.norm(psi)        # (|0> + i|1>)/sqrt(2)\nplus = np.array([1, 1]) / np.sqrt(2)                             # |+>\nprint(\"<psi|psi> =\", round(np.vdot(psi, psi).real, 12))\nprint(\"<+|psi> =\", np.round(np.vdot(plus, psi), 3), \" |<+|psi>|^2 =\", round(abs(np.vdot(plus, psi))**2, 3))\ng = np.exp(1j * 0.9) * plus                                      # |+> with a global phase\nr = np.array([plus[0], -plus[1]])                                # relative phase pi: this is |->\nfor name, v in [(\"|+>\", plus), (\"global phase on |+>\", g), (\"relative phase pi on |+>\", r)]:\n    print(f\"{name:26s} P(0) = {abs(v[0])**2:.3f}   P(+) in the X basis = {abs(np.vdot(plus, v))**2:.3f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the normalised state has $\\langle\\psi\\vert\\psi\\rangle = 1$ and overlap $0.5 + 0.5i$ with $\\vert+\\rangle$. A global phase on $\\vert+\\rangle$ leaves both $P(0) = 0.5$ and $P(+) = 1$ unchanged. A relative phase of $\\pi$ (which turns $\\vert+\\rangle$ into $\\vert-\\rangle$) keeps $P(0) = 0.5$ but drops $P(+)$ to 0."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The input of the Fujii–Nakajima reservoir is the state $\\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt s\\,\\vert1\\rangle$: real, non-negative amplitudes chosen so that $P(1) = s$ (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)).",
+        "Amplitude, angle and phase encodings on Input Encoding (#/qrc/models/input-encoding) differ only in which amplitudes and phases carry $s$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Normalise a state",
+      "text": "Normalise $3\\vert0\\rangle + 4i\\vert1\\rangle$ and give the probability of measuring 1.",
+      "solution": [
+        "Length squared: $\\vert3\\vert^2 + \\vert4i\\vert^2 = 9 + 16 = 25$, so divide by 5.",
+        "$\\vert\\psi\\rangle = \\tfrac35\\vert0\\rangle + \\tfrac{4i}{5}\\vert1\\rangle$ and $P(1) = \\vert 4i/5\\vert^2 = 16/25 = 0.64$."
+      ],
+      "answer": "(3|0⟩ + 4i|1⟩)/5; P(1) = 0.64"
+    },
+    {
+      "type": "problem",
+      "title": "Overlap with plus",
+      "text": "For the QRC input state $\\vert\\psi_s\\rangle = \\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt s\\,\\vert1\\rangle$, find $\\vert\\langle+\\vert\\psi_s\\rangle\\vert^2$ in general and at $s = 0.25$.",
+      "solution": [
+        "$\\langle+\\vert\\psi_s\\rangle = (\\sqrt{1-s} + \\sqrt s)/\\sqrt2$.",
+        "Square it: $(1 - s + s + 2\\sqrt{s(1-s)})/2 = \\tfrac12 + \\sqrt{s(1-s)}$.",
+        "At $s = 0.25$: $0.5 + \\sqrt{0.1875} = 0.5 + 0.433 = 0.933$."
+      ],
+      "answer": "1/2 + √(s(1−s)); 0.933 at s = 0.25"
+    },
+    {
+      "type": "problem",
+      "title": "Same state or not",
+      "text": "Are $\\vert0\\rangle - \\vert1\\rangle$ and $\\vert1\\rangle - \\vert0\\rangle$ (both divided by $\\sqrt2$) the same physical state? What about $\\vert0\\rangle + \\vert1\\rangle$ and $\\vert0\\rangle - \\vert1\\rangle$?",
+      "solution": [
+        "The first pair differ by an overall factor $-1 = e^{i\\pi}$, a global phase: the same state.",
+        "The second pair differ in the relative phase of $\\vert1\\rangle$: they are $\\vert+\\rangle$ and $\\vert-\\rangle$, which are orthogonal and perfectly distinguishable by an $X$ measurement."
+      ],
+      "answer": "Yes (global phase); no (relative phase)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 2.2",
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 1",
+        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapter 3"
+      ]
+    }
+  ]
+}

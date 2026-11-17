@@ -1,0 +1,132 @@
+{
+  "title": "Spin Models",
+  "intro": "Interacting qubits are described by spin Hamiltonians: sums of single-qubit fields and two-qubit couplings written in Pauli operators. The Ising, transverse-field Ising, XX and Heisenberg models are the standard ones, and the QRC reservoir is a disordered, all-to-all relative of them.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building a spin Hamiltonian"
+    },
+    {
+      "type": "prose",
+      "text": "A spin model is a sum of local terms. Fields act on one qubit ($h_iZ_i$, $g_iX_i$), couplings on two ($J_{ij}\\,P_iQ_j$ for Paulis $P$, $Q$). Which terms appear, on which pairs, and with what signs and randomness decides everything about the dynamics: what is conserved, how fast information spreads, whether the model can be solved exactly, and whether it makes a good reservoir."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The classical and the transverse-field Ising model"
+    },
+    {
+      "type": "prose",
+      "text": "The Ising model couples neighbouring spins through $Z_iZ_{i+1}$ only. Every term is diagonal, so the eigenstates are just bit strings and nothing ever happens dynamically: it is a classical model written in quantum notation. Add a transverse field and it becomes the most-studied quantum spin model:"
+    },
+    {
+      "type": "math",
+      "tex": "H_{\\mathrm{TFIM}} = -J\\sum_i Z_iZ_{i+1} - h\\sum_i X_i",
+      "caption": "The transverse-field Ising model on a chain."
+    },
+    {
+      "type": "prose",
+      "text": "The two terms compete. For $h \\ll J$ the ground state is (nearly) all spins aligned in $z$, with a pair of almost degenerate ground states related by flipping every spin; for $h \\gg J$ it is all spins along $+x$, with no $z$ order. In an infinitely long chain the change happens sharply at $h = J$, a quantum phase transition (Pfeuty 1970). The model conserves the global spin-flip parity $\\prod_iX_i$, the analogue of the $Z$-parity of the QRC reservoir."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "XX, XY and Heisenberg couplings"
+    },
+    {
+      "type": "list",
+      "items": [
+        "XX (flip-flop) coupling $X_iX_j + Y_iY_j$: moves an excitation from one spin to the other and conserves the total $Z$. A chain of these is a hopping model for one particle at a time.",
+        "Single $X_iX_j$ coupling: contains both flip-flop terms and pair creation ($\\sigma^+\\sigma^+ + \\sigma^-\\sigma^-$), so it changes the number of excitations by 0 or 2 and conserves only the parity. This is the coupling of the Fujii–Nakajima reservoir.",
+        "Heisenberg coupling $X_iX_j + Y_iY_j + Z_iZ_j$: rotationally symmetric, conserving the total spin in every direction."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Exactly solvable and generic models"
+    },
+    {
+      "type": "prose",
+      "text": "Nearest-neighbour chains with only $XX$ and $YY$ couplings and $Z$ fields, the transverse-field Ising chain among them, map by the Jordan–Wigner transformation onto free fermions (Lieb, Schultz and Mattis 1961). Their dynamics can be computed classically with $2n\\times2n$ matrices instead of $2^n\\times2^n$ ones. They have many conserved quantities and are integrable. Adding longer-range couplings, randomness in the couplings, or a second field direction generally destroys this: the model becomes chaotic (ergodic), with level repulsion and fast scrambling."
+    },
+    {
+      "type": "prose",
+      "text": "The QRC reservoir is deliberately of the second kind. Its Hamiltonian $\\sum_{i<j}J_{ij}X_iX_j + \\sum_ih_iZ_i$ has random couplings on every pair, which breaks the free-fermion mapping and leaves parity as the only exact symmetry (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)). Strong random fields push it back towards integrability by localising excitations, which is the trade-off explored on Dynamical Regimes (#/qrc/models/dynamical-regimes)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1., -1.]).astype(complex)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\ndef tfim(n, J, h):\n    \"\"\"Transverse-field Ising chain, open ends: H = -J sum Z_i Z_{i+1} - h sum X_i.\"\"\"\n    return -J * sum(op(Z, i, n) @ op(Z, i + 1, n) for i in range(n - 1)) - h * sum(op(X, i, n) for i in range(n))\nn = 8\nprint(\" h/J | ground-state <Z1 Z_n> | gap E1-E0\")\nfor h in (0.2, 0.5, 1.0, 2.0, 5.0):\n    E, V = np.linalg.eigh(tfim(n, 1.0, h)); g = V[:, 0]\n    corr = np.vdot(g, op(Z, 0, n) @ op(Z, n - 1, n) @ g).real\n    print(f\" {h:3.1f} | {corr:21.3f} | {E[1] - E[0]:.4f}\")\n# Spin-flip symmetry: the product of all X commutes with H\nP = np.eye(2**n)\nfor i in range(n): P = P @ op(X, i, n)\nH = tfim(n, 1.0, 0.7)\nprint(\"[H, X1...Xn] = 0:\", np.allclose(H @ P, P @ H))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run, for an 8-spin open chain with $J = 1$: the end-to-end correlation $\\langle Z_1Z_8\\rangle$ in the ground state falls from 0.960 at $h = 0.2$ through 0.743 at $h = 0.5$ and 0.119 at $h = 1$ to essentially 0 at $h = 2$ and 5. The gap between the two lowest levels is tiny for small $h$ (0.0000 to four places at $h = 0.2$, the near-degenerate ordered pair) and opens up for large $h$ (2.19 at $h = 2$, 8.14 at $h = 5$). The product of all $X_i$ commutes with $H$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The Fujii–Nakajima Hamiltonian, its parity symmetry and what each term does: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "Integrable, ergodic and localised regimes and their level statistics: Dynamical Regimes (#/qrc/models/dynamical-regimes).",
+        "Why a free-fermion reservoir offers no complexity advantage: Quantum Advantage (#/qrc/theory/quantum-advantage).",
+        "Rydberg arrays realise an Ising model with a transverse drive: Analog Platforms (#/qrc/hardware/analog-platforms)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Ground states without a field",
+      "text": "For $H = -J\\sum_i Z_iZ_{i+1}$ with $J > 0$ on 4 spins (open chain), what are the ground states and the ground energy?",
+      "solution": [
+        "Each bond contributes $-J$ when its two spins agree and $+J$ when they differ.",
+        "All spins equal satisfies all 3 bonds: $\\vert0000\\rangle$ and $\\vert1111\\rangle$, energy $-3J$, a twofold degenerate ground state related by the global flip."
+      ],
+      "answer": "|0000⟩ and |1111⟩, energy −3J"
+    },
+    {
+      "type": "problem",
+      "title": "Counting couplings",
+      "text": "How many random $J_{ij}$ does an all-to-all reservoir of 6 qubits have, and how many coupling terms does a 6-spin nearest-neighbour chain have?",
+      "solution": [
+        "All-to-all: $\\binom62 = 15$.",
+        "Open chain: 5 bonds. The all-to-all model's extra couplings are what break the free-fermion structure."
+      ],
+      "answer": "15 and 5"
+    },
+    {
+      "type": "problem",
+      "title": "Which symmetry",
+      "text": "Which of these is conserved by $\\sum J_{ij}X_iX_j + \\sum h_iZ_i$: total $Z$, the parity $\\prod Z_i$, or the global flip $\\prod X_i$?",
+      "solution": [
+        "Total $Z$: no, $X_iX_j$ changes the excitation number by 2.",
+        "Parity $\\prod Z_i$: yes, the change is always by an even number.",
+        "Global flip $\\prod X_i$: it commutes with $X_iX_j$ but anticommutes with each $Z_i$, so not when $h \\ne 0$."
+      ],
+      "answer": "Only the parity ∏Z_i"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "P. Pfeuty, The one-dimensional Ising model with a transverse field, Annals of Physics 57, 79 (1970)",
+        "E. Lieb, T. Schultz and D. Mattis, Two soluble models of an antiferromagnetic chain, Annals of Physics 16, 407 (1961)",
+        "S. Sachdev, Quantum Phase Transitions, 2nd edition, Cambridge University Press (2011)",
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Physical Review Applied 8, 024030 (2017)"
+      ]
+    }
+  ]
+}

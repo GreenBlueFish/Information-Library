@@ -1,0 +1,148 @@
+{
+  "title": "Entanglement and Reduced States",
+  "intro": "A two-qubit state that is not a product is entangled: its parts have no state of their own. The partial trace gives each part the best description it can have, a density matrix, and the Schmidt decomposition measures how entangled the whole is.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bell states"
+    },
+    {
+      "type": "prose",
+      "text": "The four Bell states are the standard maximally entangled pairs:"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\Phi^\\pm\\rangle = \\frac{\\vert00\\rangle \\pm \\vert11\\rangle}{\\sqrt2}, \\qquad \\vert\\Psi^\\pm\\rangle = \\frac{\\vert01\\rangle \\pm \\vert10\\rangle}{\\sqrt2}"
+    },
+    {
+      "type": "prose",
+      "text": "Measure both qubits of $\\vert\\Phi^+\\rangle$ in the computational basis and the outcomes are random but always equal; measure both in the $X$ basis and they are again random and equal. Each qubit alone looks like a fair coin in every basis. All the information is in the correlations: $\\langle Z\\otimes Z\\rangle = \\langle X\\otimes X\\rangle = 1$ while $\\langle Z\\otimes I\\rangle = \\langle X\\otimes I\\rangle = 0$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Schmidt decomposition"
+    },
+    {
+      "type": "prose",
+      "text": "Any pure state of two systems $A$ and $B$ can be written with a single sum, using orthonormal bases chosen for each side:"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi\\rangle_{AB} = \\sum_k \\lambda_k\\,\\vert a_k\\rangle\\otimes\\vert b_k\\rangle, \\qquad \\lambda_k \\ge 0,\\ \\sum_k\\lambda_k^2 = 1",
+      "caption": "Schmidt decomposition. The λ_k are the singular values of the amplitude matrix c_ij."
+    },
+    {
+      "type": "prose",
+      "text": "The number of non-zero $\\lambda_k$ is the Schmidt rank. Rank 1 means a product state; anything more is entangled. Computing it is just a singular value decomposition of the amplitude matrix, the same tool as the product-state test on the previous page."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The partial trace and reduced states"
+    },
+    {
+      "type": "prose",
+      "text": "What should we say about qubit $A$ alone when the pair is entangled? No state vector works. The right object is the reduced density matrix, obtained by the partial trace over $B$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho_A = \\operatorname{Tr}_B\\,\\vert\\psi\\rangle\\langle\\psi\\vert = \\sum_k \\lambda_k^2\\,\\vert a_k\\rangle\\langle a_k\\vert",
+      "caption": "The reduced state of A. It reproduces every measurement made on A alone."
+    },
+    {
+      "type": "prose",
+      "text": "For a Bell state $\\rho_A = I/2$: maximally mixed, a perfect coin in every basis. Entanglement with something you do not look at makes a part look noisy, even though the whole is a pure state. That is the mechanism behind decoherence, and behind the reset step of a quantum reservoir, which traces out the input qubit (Mixed States (#/quantum/many-body/mixed-states))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Entanglement entropy"
+    },
+    {
+      "type": "prose",
+      "text": "For a pure state of the pair, a single number measures how entangled it is: the von Neumann entropy of either half,"
+    },
+    {
+      "type": "math",
+      "tex": "S(\\rho_A) = -\\operatorname{Tr}\\rho_A\\log_2\\rho_A = -\\sum_k \\lambda_k^2\\log_2\\lambda_k^2",
+      "caption": "Zero for a product state, one bit for a Bell pair of qubits."
+    },
+    {
+      "type": "prose",
+      "text": "In a many-qubit reservoir, the entanglement between a few qubits and the rest grows as information spreads. Strong scrambling makes local reduced states close to maximally mixed, which is the root of the concentration problem on the QRC shelf: local observables stop depending on the input."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\ndef reduced_first(psi):                       # rho_A = Tr_B |psi><psi| for two qubits\n    M = psi.reshape(2, 2); return M @ M.conj().T\ndef entropy(rho):\n    p = np.linalg.eigvalsh(rho); p = p[p > 1e-12]; return float(-(p * np.log2(p)).sum()) + 0.0\nbell = np.array([1, 0, 0, 1]) / np.sqrt(2)\nrA = reduced_first(bell)\nprint(\"Bell state: rho_A =\", np.round(rA.real, 3).tolist(), \" purity\", round(np.trace(rA @ rA).real, 3), \" entropy\", round(entropy(rA), 3), \"bit\")\nfor th in (0, np.pi / 8, np.pi / 4):\n    psi = np.array([np.cos(th), 0, 0, np.sin(th)])\n    s = np.linalg.svd(psi.reshape(2, 2), compute_uv=False)        # Schmidt coefficients\n    print(f\"cos({th:.3f})|00> + sin({th:.3f})|11>: Schmidt coefficients {np.round(s, 3)}, entropy {entropy(reduced_first(psi)):.3f} bit\")\n# Local measurements on half a Bell pair see a fair coin, whatever basis\nZ = np.diag([1., -1]); X = np.array([[0, 1], [1, 0]])\nfor name, P in ((\"Z\", Z), (\"X\", X)):\n    print(f\"<{name} (x) I> = {round(bell @ np.kron(P, np.eye(2)) @ bell, 12) + 0.0:+.3f},  <{name} (x) {name}> = {bell @ np.kron(P, P) @ bell:+.3f}\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the Bell state's reduced state is $\\mathrm{diag}(0.5, 0.5)$ with purity 0.5 and entropy 1 bit. For $\\cos\\theta\\vert00\\rangle + \\sin\\theta\\vert11\\rangle$ the Schmidt coefficients are $(1, 0)$, $(0.924, 0.383)$ and $(0.707, 0.707)$ at $\\theta = 0$, $\\pi/8$, $\\pi/4$, with entropies 0, 0.601 and 1 bit. Local expectations of half a Bell pair vanish while the correlators $\\langle Z\\otimes Z\\rangle$ and $\\langle X\\otimes X\\rangle$ are 1."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The reset of the input qubit is a partial trace: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) and Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "Correlator features $\\langle Z_iZ_j\\rangle$ read information that local features miss: Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
+        "Estimating entanglement of input states with a reservoir: Quantum Data Tasks (#/qrc/models/quantum-data-tasks).",
+        "Scrambling and the concentration of local observables: Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Reduced state of a partly entangled pair",
+      "text": "For $\\cos\\theta\\vert00\\rangle + \\sin\\theta\\vert11\\rangle$ with $\\theta = \\pi/8$, find $\\rho_A$ and its entropy.",
+      "solution": [
+        "The state is already in Schmidt form, so $\\rho_A = \\mathrm{diag}(\\cos^2\\theta, \\sin^2\\theta) = \\mathrm{diag}(0.854, 0.146)$.",
+        "$S = -0.854\\log_2 0.854 - 0.146\\log_2 0.146 = 0.194 + 0.405 = 0.60$ bit, matching the sample's 0.601."
+      ],
+      "answer": "diag(0.854, 0.146); 0.60 bit"
+    },
+    {
+      "type": "problem",
+      "title": "Entangled or not",
+      "text": "Is $(\\vert00\\rangle + \\vert01\\rangle + \\vert11\\rangle)/\\sqrt3$ entangled?",
+      "solution": [
+        "Amplitude matrix (rows qubit 1, columns qubit 2): $(1, 1)$ and $(0, 1)$, divided by $\\sqrt3$.",
+        "Its determinant is $1/3 \\ne 0$, so the rank is 2: entangled (though not maximally)."
+      ],
+      "answer": "Yes, Schmidt rank 2"
+    },
+    {
+      "type": "problem",
+      "title": "No signal from one half",
+      "text": "Alice holds qubit A of $\\vert\\Phi^+\\rangle$ and measures it in the $X$ basis. Does that change any statistics Bob can see on qubit B alone?",
+      "solution": [
+        "Bob's statistics are fixed by $\\rho_B = \\operatorname{Tr}_A\\vert\\Phi^+\\rangle\\langle\\Phi^+\\vert = I/2$.",
+        "Averaged over Alice's unknown outcome, Bob's state is still $I/2$, whatever she measured. Entanglement creates correlations, not a communication channel."
+      ],
+      "answer": "No: ρ_B stays I/2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), sections 2.4 to 2.5",
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 3",
+        "R. Horodecki, P. Horodecki, M. Horodecki and K. Horodecki, Quantum entanglement, Reviews of Modern Physics 81, 865 (2009)"
+      ]
+    }
+  ]
+}

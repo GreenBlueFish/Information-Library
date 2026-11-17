@@ -1,0 +1,127 @@
+{
+  "title": "Mixed States",
+  "intro": "A density matrix describes a system whose state is uncertain, either because it was prepared at random or because it is entangled with something you are not looking at. Quantum reservoirs are always in mixed states, so this is the bridge to the QRC shelf's open-systems pages.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From ensembles to the density matrix"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose a device prepares $\\vert\\psi_j\\rangle$ with probability $p_j$. Every prediction is an average over $j$, and because expectation values are $\\langle\\psi\\vert A\\vert\\psi\\rangle = \\operatorname{Tr}(A\\vert\\psi\\rangle\\langle\\psi\\vert)$, the average depends only on"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho = \\sum_j p_j\\,\\vert\\psi_j\\rangle\\langle\\psi_j\\vert, \\qquad \\langle A\\rangle = \\operatorname{Tr}(A\\rho)",
+      "caption": "The density matrix: Hermitian, positive semidefinite, trace 1."
+    },
+    {
+      "type": "prose",
+      "text": "Two consequences are worth stating plainly. First, different recipes can give the same $\\rho$, and then no experiment whatever can tell them apart: a 50/50 mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$ is the same physical state as a 50/50 mixture of $\\vert+\\rangle$ and $\\vert-\\rangle$, namely $I/2$. Second, a mixture is not a superposition: $\\vert+\\rangle\\langle+\\vert$ and $I/2$ have the same $Z$ statistics but different $X$ statistics, because only the superposition has off-diagonal elements (coherences)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The second route: ignoring part of a system"
+    },
+    {
+      "type": "prose",
+      "text": "The other way to get a mixed state needs no randomness in the preparation at all. As Entanglement and Reduced States (#/quantum/many-body/entanglement) showed, half of an entangled pure state is described by its reduced density matrix, which is mixed. Physically this is the more important route: a qubit coupled to an environment becomes entangled with it, and the qubit alone becomes mixed. Every source of noise on hardware works like this, and so does the input reset in a quantum reservoir, which discards a qubit that has become entangled with the rest."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Purity and the Bloch ball"
+    },
+    {
+      "type": "prose",
+      "text": "The purity $\\operatorname{Tr}\\rho^2$ is 1 for pure states and smaller for mixed ones, down to $1/d$ for the maximally mixed state $I/d$. For a qubit, $\\rho = \\tfrac12(I + \\vec r\\cdot\\vec\\sigma)$ with $\\vert\\vec r\\vert\\le1$: pure states on the surface of the Bloch sphere, mixed states inside, $I/2$ at the centre, and purity $(1 + \\vert\\vec r\\vert^2)/2$. Mixing shortens the Bloch vector; that geometric picture of forgetting is used throughout the QRC shelf."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What evolution and measurement look like now"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Unitary evolution: $\\rho \\to U\\rho U^\\dagger$. Purity is unchanged.",
+        "Measurement with the outcome kept: $\\rho \\to \\Pi_k\\rho\\Pi_k/p_k$ with $p_k = \\operatorname{Tr}(\\Pi_k\\rho)$.",
+        "Measurement with the outcome thrown away: $\\rho \\to \\sum_k \\Pi_k\\rho\\Pi_k$, which erases the coherences between outcomes.",
+        "Any physically allowed change, including contact with an environment, is a quantum channel. That general framework, with Kraus operators and the Lindblad equation, is where the QRC shelf takes over: Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels)."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nZ = np.diag([1., -1.]); X = np.array([[0., 1], [1, 0]])\nket = lambda v: np.outer(v, np.conj(v))\nzero, one = np.array([1., 0]), np.array([0., 1])\nplus, minus = np.array([1., 1]) / np.sqrt(2), np.array([1., -1]) / np.sqrt(2)\n# Two different recipes, one density matrix: no measurement can tell them apart\nrho_a = 0.5 * ket(zero) + 0.5 * ket(one)\nrho_b = 0.5 * ket(plus) + 0.5 * ket(minus)\nprint(\"50/50 of |0>,|1> equals 50/50 of |+>,|->:\", np.allclose(rho_a, rho_b))\n# A superposition is not a mixture: same Z statistics, different X statistics\nfor name, r in ((\"|+><+|\", ket(plus)), (\"mixture I/2\", rho_a)):\n    print(f\"{name:12s} <Z> = {np.trace(Z @ r):+.2f}  <X> = {np.trace(X @ r):+.2f}  purity {np.trace(r @ r):.2f}\")\n# Ignoring half of an entangled pair leaves the other half mixed\nbell = np.array([1, 0, 0, 1]) / np.sqrt(2)\nrho = ket(bell); rhoA = rho.reshape(2, 2, 2, 2).trace(axis1=1, axis2=3)\nprint(\"half of a Bell pair:\", np.round(rhoA, 3).tolist())\n# A noisy preparation: |0> with prob 0.9, |1> with 0.1\nr = 0.9 * ket(zero) + 0.1 * ket(one)\nprint(\"90/10 mixture: <Z> =\", round(np.trace(Z @ r), 2), \" purity =\", round(np.trace(r @ r), 2), \" Bloch length =\", round(abs(np.trace(Z @ r)), 2))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the two 50/50 recipes give the identical matrix. $\\vert+\\rangle\\langle+\\vert$ has $\\langle Z\\rangle = 0$, $\\langle X\\rangle = 1$, purity 1, while $I/2$ has $\\langle Z\\rangle = \\langle X\\rangle = 0$ and purity 0.5. Half of a Bell pair is $\\mathrm{diag}(0.5, 0.5)$. A 90/10 mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$ has $\\langle Z\\rangle = 0.8$, purity 0.82 and a Bloch vector of length 0.8."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The reservoir state is a density matrix from the first step, starting at $I/D$: every sample on the QRC shelf.",
+        "Channels, the Pauli transfer matrix and the standard noise channels: Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "Why a unitary reservoir started at $I/D$ never responds to its input: Dissipation as a Resource (#/qrc/models/dissipation-as-resource)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A biased preparation",
+      "text": "A source emits $\\vert0\\rangle$ with probability 0.75 and $\\vert1\\rangle$ with 0.25. Give $\\rho$, $\\langle Z\\rangle$, the purity and the Bloch vector.",
+      "solution": [
+        "$\\rho = \\mathrm{diag}(0.75, 0.25)$.",
+        "$\\langle Z\\rangle = 0.75 - 0.25 = 0.5$; purity $0.75^2 + 0.25^2 = 0.625$.",
+        "Bloch vector $(0, 0, 0.5)$; check: $(1 + 0.25)/2 = 0.625$."
+      ],
+      "answer": "diag(0.75, 0.25); ⟨Z⟩ = 0.5; purity 0.625; r = (0, 0, 0.5)"
+    },
+    {
+      "type": "problem",
+      "title": "Pure or mixed",
+      "text": "A qubit has Bloch vector $(0.6, 0, 0.8)$. Is it pure? What about $(0.3, 0, 0.4)$?",
+      "solution": [
+        "$\\vert(0.6, 0, 0.8)\\vert = 1$: pure, on the sphere.",
+        "$\\vert(0.3, 0, 0.4)\\vert = 0.5$: mixed, with purity $(1 + 0.25)/2 = 0.625$."
+      ],
+      "answer": "Pure; mixed (purity 0.625)"
+    },
+    {
+      "type": "problem",
+      "title": "Minimum purity",
+      "text": "What is the smallest possible purity of a 3-qubit state, and which state has it?",
+      "solution": [
+        "$d = 2^3 = 8$, and the minimum purity is $1/d$.",
+        "$1/8 = 0.125$, reached only by $I/8$: the maximally mixed state, where every QRC simulation on the site starts."
+      ],
+      "answer": "1/8, for I/8"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 2.4",
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 3",
+        "H.-P. Breuer and F. Petruccione, The Theory of Open Quantum Systems, Oxford University Press (2002)"
+      ]
+    }
+  ]
+}

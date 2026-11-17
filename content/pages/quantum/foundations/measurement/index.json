@@ -1,0 +1,134 @@
+{
+  "title": "Measurement and the Born Rule",
+  "intro": "Measurement is where amplitudes become probabilities. It gives one random outcome per run, changes the state it measures, and so any expectation value must be estimated from many repetitions. That is the root of the shot-noise and back-action problems on the QRC shelf.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Born rule"
+    },
+    {
+      "type": "prose",
+      "text": "Measure a state $\\vert\\psi\\rangle$ in an orthonormal basis $\\{\\vert e_k\\rangle\\}$. The outcome $k$ occurs with probability"
+    },
+    {
+      "type": "math",
+      "tex": "P(k) = \\vert\\langle e_k\\vert\\psi\\rangle\\vert^2",
+      "caption": "The Born rule (Born 1926). The probabilities sum to 1 because the state is a unit vector."
+    },
+    {
+      "type": "prose",
+      "text": "For a qubit measured in the computational basis this is just $P(0) = \\vert\\alpha\\vert^2$, $P(1) = \\vert\\beta\\vert^2$. Each run returns one outcome. Nothing in a single run reveals $\\alpha$ or $\\beta$; they show up only as frequencies over many runs on identically prepared copies."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Collapse and back-action"
+    },
+    {
+      "type": "prose",
+      "text": "Right after outcome $k$, the state is $\\vert e_k\\rangle$. Measure again in the same basis and you get $k$ again with certainty; that repeatability is what makes it a measurement. But the original superposition is gone. Measure in a different basis in between and the memory of the first outcome is wiped: the sample below measures $Z$, then $X$, then $Z$ again, and the two $Z$ results disagree half the time."
+    },
+    {
+      "type": "prose",
+      "text": "More generally, if an eigenvalue $a$ of an observable is degenerate, the outcome projects with the projector $\\Pi_a$ onto its whole eigenspace: $\\vert\\psi\\rangle \\to \\Pi_a\\vert\\psi\\rangle/\\Vert\\Pi_a\\vert\\psi\\rangle\\Vert$. Measuring one qubit of a register is of this kind, and it leaves the other qubits in a state that depends on the outcome."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Measuring in another basis"
+    },
+    {
+      "type": "prose",
+      "text": "Hardware usually measures only in the computational basis. To measure in another basis, rotate first: to measure $X$, apply a Hadamard and then measure $Z$; to measure $Y$, apply $S^\\dagger$ then a Hadamard. The rotation maps the desired basis onto the computational one, so the Born rule in the rotated frame is the Born rule in the original basis."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Shots and statistical error"
+    },
+    {
+      "type": "prose",
+      "text": "To learn $\\langle Z\\rangle = P(0) - P(1)$, run the experiment $S$ times and average the $\\pm1$ outcomes. The average is unbiased, and since each outcome has variance $1 - \\langle Z\\rangle^2$,"
+    },
+    {
+      "type": "math",
+      "tex": "\\sigma\\left(\\hat{z}\\right) = \\sqrt{\\frac{1 - \\langle Z\\rangle^2}{S}} \\le \\frac{1}{\\sqrt S}",
+      "caption": "Standard error of a ±1 average from S shots."
+    },
+    {
+      "type": "prose",
+      "text": "One more digit of precision costs a hundred times more shots. A QRC readout uses many such estimates at every time step, which is why shot noise, not the size of the Hilbert space, so often decides how well a quantum reservoir performs."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(1)\n# Born rule: measure s = 0.3 written as sqrt(1-s)|0> + sqrt(s)|1>, with S shots.\ns = 0.3\npsi = np.array([np.sqrt(1 - s), np.sqrt(s)])\np = np.abs(psi) ** 2\nfor S in (10, 100, 1000, 10000):\n    z = 1 - 2 * rng.choice([0, 1], size=S, p=p)    # Z eigenvalue: +1 for |0>, -1 for |1>\n    print(f\"S={S:6d}: <Z> estimate = {z.mean():+.4f}, standard error {np.sqrt((1 - (1 - 2*s)**2) / S):.4f}\")\nprint(\"exact <Z> =\", round(1 - 2 * s, 4))\n# Collapse: measure Z, then X, then Z again on one copy, many times over.\nplus, minus = np.array([1, 1]) / np.sqrt(2), np.array([1, -1]) / np.sqrt(2)\nbasisZ, basisX = [np.array([1., 0]), np.array([0., 1])], [plus, minus]\ndef measure(state, basis):\n    probs = [abs(b @ state) ** 2 for b in basis]\n    k = rng.choice(2, p=probs)\n    return k, basis[k]                             # outcome and post-measurement state\nsame, flipped = 0, 0\nfor _ in range(10000):\n    k1, st = measure(psi, basisZ); k1b, st = measure(st, basisZ)   # repeat Z: always agrees\n    same += (k1 == k1b)\n    _, st = measure(st, basisX); k3, _ = measure(st, basisZ)      # X in between: Z is re-randomised\n    flipped += (k3 != k1)\nprint(f\"Z then Z again: agreed in {same} of 10000 runs\")\nprint(f\"Z, then X, then Z: second Z differed from the first in {flipped/100:.1f}% of runs\")"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run, for $s = 0.3$ (exact $\\langle Z\\rangle = 0.4$): the estimate is $+0.40$ at 10 shots (standard error 0.29, so the agreement is luck), $+0.34$ at 100 (0.092), $+0.378$ at 1000 (0.029) and $+0.3974$ at 10 000 (0.0092). Repeating a $Z$ measurement agreed in all 10 000 runs; with an $X$ measurement in between, the second $Z$ differed from the first in 49.1% of runs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where QRC uses this"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Every feature $\\operatorname{Tr}(Z_i\\rho)$ on the QRC shelf is an expectation value, estimated from shots on hardware: Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action).",
+        "Collapse is why a reservoir cannot simply be measured at every step and continue: the restart, weak-measurement and partial-measurement protocols of Online Measurement Protocols (#/qrc/hardware/online-protocols) all work around it.",
+        "The general (POVM) form of measurement, including weak measurement, is on the QRC shelf's Measurement (#/qrc/open-systems/measurement) page."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Probabilities in two bases",
+      "text": "For $\\vert\\psi\\rangle = \\sqrt{0.7}\\,\\vert0\\rangle + \\sqrt{0.3}\\,\\vert1\\rangle$, give $P(1)$ in the computational basis and $P(+)$ in the $X$ basis.",
+      "solution": [
+        "Computational basis: $P(1) = 0.3$.",
+        "$\\langle+\\vert\\psi\\rangle = (\\sqrt{0.7} + \\sqrt{0.3})/\\sqrt2$, so $P(+) = (1 + 2\\sqrt{0.21})/2 = (1 + 0.9165)/2 = 0.958$ (the sample prints 0.9583)."
+      ],
+      "answer": "0.3 and 0.958"
+    },
+    {
+      "type": "problem",
+      "title": "Shots for a target precision",
+      "text": "A feature has $\\langle Z\\rangle = 0.4$. How many shots give a standard error of 0.01?",
+      "solution": [
+        "Per-shot variance $1 - 0.4^2 = 0.84$.",
+        "Need $0.84/S = 10^{-4}$, so $S = 8400$."
+      ],
+      "answer": "8400 shots"
+    },
+    {
+      "type": "problem",
+      "title": "Measuring one qubit of two",
+      "text": "Two qubits are in $(\\vert00\\rangle + \\vert01\\rangle + \\vert11\\rangle)/\\sqrt3$. Qubit 1 is measured and gives 0. What is the state afterwards, and what is $P(0)$ for that first measurement?",
+      "solution": [
+        "Keep the terms with qubit 1 equal to 0: $\\vert00\\rangle + \\vert01\\rangle$, with total weight $2/3$. So $P(0) = 2/3$.",
+        "Renormalise: $(\\vert00\\rangle + \\vert01\\rangle)/\\sqrt2 = \\vert0\\rangle\\otimes\\vert+\\rangle$. Qubit 2 is now in $\\vert+\\rangle$, which it was not before the measurement."
+      ],
+      "answer": "|0⟩⊗|+⟩, with P(0) = 2/3"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. Born, Zur Quantenmechanik der Stoßvorgänge, Zeitschrift für Physik 37, 863 (1926)",
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), sections 2.2.3 to 2.2.5",
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 2"
+      ]
+    }
+  ]
+}
