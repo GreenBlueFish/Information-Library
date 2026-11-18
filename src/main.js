@@ -86,6 +86,19 @@ import { buildIndex, mergeIndexes } from "./lookup/search-index.js";
 import { findMatches } from "./lookup/matches.js";
 import { installLookup } from "./lookup/lookup-ui.js";
 import { setMountSink } from "./widgets/registry.js";
+import {
+  renderBookmarksPage,
+  decoratePage,
+  renderContinueCard,
+  readVisit,
+  setCurrentPage,
+  installVisitTracker,
+  installHeaderLink,
+  markHeaderLink,
+  takeJump,
+  applyJump,
+  trailFor,
+} from "./bookmarks.js";
 // Side-effect import: the parameter-plot type self-registers with the Widget
 // Registry at import time, so the renderer's `widget` block can mount it
 // (design.md — Example Usage / Component 5). Keep this import even though no
@@ -430,6 +443,9 @@ async function mergedIndexForEntries(tree, entries, cache, key) {
 export async function boot() {
   const app = document.getElementById("app");
   const nav = document.getElementById("nav");
+  const bookmarksLink = document.getElementById("bookmarks-link");
+  installHeaderLink(bookmarksLink);
+  installVisitTracker();
 
   // The topic tree and the glossary Manifest are the two manifests the whole
   // site reads; load them once up front (Flow 1 / R4.1). NO Glossary_File is
@@ -512,6 +528,16 @@ export async function boot() {
     // below read the same slug segments (Flow 2 step 1).
     let segments = parseHash(location.hash);
 
+    // `#/bookmarks` is the Bookmarks page, not a topic (unless a topic ever
+    // takes that slug). The rest of the render treats it like home: no page
+    // file, and the home glossary scope for the lookup.
+    const isBookmarks =
+      segments.length === 1 &&
+      segments[0] === "bookmarks" &&
+      !(Array.isArray(tree?.children) && tree.children.some((n) => n && n.slug === "bookmarks"));
+    if (isBookmarks) segments = [];
+    markHeaderLink(bookmarksLink, isBookmarks);
+
     // An old address (a topic that has since moved, e.g. `#/snn/...` before the
     // shelves) renders the page where it lives now. Only a route that no longer
     // resolves is redirected; the address bar is corrected with replaceState,
@@ -554,13 +580,14 @@ export async function boot() {
     // tree/node alone. A content failure is non-fatal: render an inline error
     // into the app region, leaving the shell + nav intact (Requirement 15.1).
     let page = null;
-    const pageFile = resolution ? resolution.pageFile : null;
+    const pageFile = !isBookmarks && resolution ? resolution.pageFile : null;
     if (pageFile) {
       try {
         page = await loadPage(pageFile);
       } catch (err) {
         if (err instanceof ContentLoadError) {
           renderError(err, app);
+          setCurrentPage(null);
           lastRouteKey = null; // the next successful page opens at its top
           // The nav is already rendered above; stop this render here. The
           // lookup is installed ONCE in boot() on the persistent `#app`, so
@@ -581,7 +608,8 @@ export async function boot() {
     const mounted = [];
     setMountSink((instance) => mounted.push(instance));
     try {
-      renderPage(renderResolution, page, app);
+      if (isBookmarks) renderBookmarksPage(app);
+      else renderPage(renderResolution, page, app);
     } finally {
       setMountSink(null);
     }
@@ -591,11 +619,33 @@ export async function boot() {
     // the top of the new page. Without this the browser keeps the old scroll
     // offset, so the arrows at the foot of one page land the reader at the
     // foot of the next.
-    const routeKey = (resolution?.path ?? []).join("/");
+    const routeKey = isBookmarks ? "#bookmarks" : (resolution?.path ?? []).join("/");
     if (lastRouteKey !== null && routeKey !== lastRouteKey && typeof window !== "undefined" && typeof window.scrollTo === "function") {
       window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     }
     lastRouteKey = routeKey;
+
+    // Bookmarks: ribbons on a topic page's headings, a jump to the section a
+    // bookmark (or "continue") link asked for, and the reading place saved for
+    // "Continue where you left off". Home shows the continue card on top.
+    const jump = takeJump(routeKey);
+    if (!isBookmarks && resolution?.node && page) {
+      const ctx = { route: routeKey, pageTitle: page.title || resolution.node.title || routeKey, trail: trailFor(resolution) };
+      try {
+        decoratePage(app, ctx);
+        applyJump(app, jump);
+      } catch {
+        // Bookmarks are extras: a failure here must not break the page.
+      }
+      setCurrentPage({ ...ctx, root: app });
+    } else {
+      setCurrentPage(null);
+      if (!isBookmarks && !resolution?.node) {
+        const card = renderContinueCard(readVisit(), { compact: true });
+        const home = app.firstElementChild;
+        if (card && home) home.prepend(card);
+      }
+    }
 
     // -----------------------------------------------------------------------
     // Scope-chain wiring (Flow 2 — R5.4, R6, R11.6). Independent of the page
