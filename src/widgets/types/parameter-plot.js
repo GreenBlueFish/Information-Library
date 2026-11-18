@@ -45,6 +45,7 @@
 import { registerWidget } from "../registry.js";
 import { makePlot } from "../plot.js";
 import { SIMS } from "../sims/index.js";
+import { attachValueReadout, refreshValueReadout } from "../slider-value.js";
 
 /**
  * @typedef {import("../registry.js").WidgetContext} WidgetContext
@@ -181,6 +182,7 @@ function mountParameterPlot(ctx) {
    */
   function rejectChange(param, built, message) {
     built.input.value = String(state[param.key]);
+    refreshValueReadout(built.input);
     built.field.classList.add("widget__control--invalid");
     built.error.textContent = message;
     built.error.hidden = false;
@@ -210,6 +212,7 @@ function mountParameterPlot(ctx) {
         if (result.ok) {
           state[key] = result.value;
           built.input.value = String(result.value);
+          refreshValueReadout(built.input);
           clearError(built);
           changed = true;
         } else {
@@ -271,6 +274,9 @@ function buildControl(doc, param) {
   error.setAttribute("role", "alert");
   error.hidden = true;
   field.appendChild(error);
+
+  // The slider's current value, shown beside its label.
+  attachValueReadout(doc, field, input, param);
 
   return { field, input, error };
 }
