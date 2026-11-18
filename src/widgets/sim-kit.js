@@ -26,6 +26,8 @@
 // and registers nothing.
 
 /** The SVG namespace — SVG elements are not in the HTML namespace. */
+import { attachValueReadout, refreshValueReadout } from "./slider-value.js";
+
 export const SVG_NS = "http://www.w3.org/2000/svg";
 
 /**
@@ -401,6 +403,9 @@ function buildControl(doc, param) {
   error.hidden = true;
   field.appendChild(error);
 
+  // The slider's current value, shown beside its label.
+  attachValueReadout(doc, field, input, param);
+
   return { param, field, input, error };
 }
 
@@ -422,6 +427,7 @@ function setInputValue(input, value) {
     return;
   }
   input.value = v;
+  refreshValueReadout(input);
 }
 
 function clearError(built) {
