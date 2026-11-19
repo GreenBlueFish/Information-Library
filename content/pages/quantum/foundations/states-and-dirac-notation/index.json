@@ -1,24 +1,267 @@
 {
   "title": "States and Dirac Notation",
-  "intro": "A quantum state is a unit vector, written as a ket. This page introduces Dirac notation, superposition, bases, and the difference between a global phase, which is physically meaningless, and a relative phase, which can be measured.",
+  "intro": "A quantum state is a unit vector of complex amplitudes, written as a ket. This page teaches Dirac notation (kets, bras, brackets and ket-bras), superposition, changing basis, and the difference between a global phase, which is physically meaningless, and a relative phase, which can be measured.",
   "blocks": [
+    {
+      "type": "prose",
+      "text": "What you need first: Complex Numbers (#/quantum/foundations/complex-numbers) (modulus, conjugate, $e^{i\\varphi}$) and Linear Algebra for Quantum Mechanics (#/quantum/foundations/linear-algebra) (column vectors, the conjugate transpose, matrix times vector). Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors) helps but is not required."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Read and write states in Dirac notation: kets, bras, brackets and ket-bras.",
+        "Normalise a state and compute the inner product of two states with complex amplitudes, without dropping a conjugate.",
+        "Rewrite a qubit state in the $X$ basis or the $Y$ basis, and explain the resolution of the identity that makes this work.",
+        "Tell apart a global phase (no physical effect) from a relative phase (measurable), and show which measurements see it.",
+        "Find the two Bloch-sphere angles of any qubit state."
+      ]
+    },
     {
       "type": "heading",
       "level": 2,
-      "text": "Kets, bras and brackets"
+      "text": "What a quantum state is"
     },
     {
       "type": "prose",
-      "text": "Dirac notation writes a column vector as a ket $\\vert\\psi\\rangle$ and its adjoint, a row vector, as a bra $\\langle\\psi\\vert = \\vert\\psi\\rangle^\\dagger$. Putting them together gives the inner product $\\langle\\phi\\vert\\psi\\rangle$ (a number) or the outer product $\\vert\\psi\\rangle\\langle\\phi\\vert$ (a matrix). The notation earns its keep because it keeps track of conjugation automatically: $\\langle\\phi\\vert\\psi\\rangle = \\overline{\\langle\\psi\\vert\\phi\\rangle}$."
+      "text": "In everyday physics the state of a thing is a list of facts: a coin is heads or tails, a light switch is on or off. Quantum mechanics replaces the list of facts with a list of complex numbers called amplitudes, one for each possible outcome of a measurement. For the simplest quantum system, a qubit, there are two outcomes (call them 0 and 1), so a state is two complex numbers $\\alpha$ and $\\beta$."
     },
     {
       "type": "prose",
-      "text": "For a qubit the standard (computational) basis is $\\vert0\\rangle = (1, 0)^\\top$ and $\\vert1\\rangle = (0, 1)^\\top$. Any qubit state is a combination"
+      "text": "The amplitudes are not probabilities, but they determine them: the probability of outcome 0 is $\\vert\\alpha\\vert^2$ and of outcome 1 is $\\vert\\beta\\vert^2$ (this is the Born rule, the subject of Measurement and the Born Rule (#/quantum/foundations/measurement)). Because the probabilities must add to 1, the amplitudes must satisfy $\\vert\\alpha\\vert^2 + \\vert\\beta\\vert^2 = 1$. Why bother with complex amplitudes instead of just two probabilities? Because amplitudes can cancel. Two ways of reaching the same outcome can have amplitudes $+\\frac12$ and $-\\frac12$ that add to zero, so the outcome never happens, even though each way on its own would give it. Probabilities, being positive, can never cancel. That cancellation, interference, is what makes quantum mechanics quantum, and it is why the phases of amplitudes matter."
+    },
+    {
+      "type": "prose",
+      "text": "A list of two complex numbers is a column vector, so a qubit state is a vector in $\\mathbb{C}^2$ (pairs of complex numbers) of length 1. Physicists write these vectors in a notation invented by Paul Dirac, which this page teaches. It looks strange for a day and then becomes the most convenient way to calculate."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Kets: states as column vectors"
+    },
+    {
+      "type": "prose",
+      "text": "A ket is a column vector, written with a label inside a bar and an angle bracket: $\\vert\\psi\\rangle$ (read: ket psi). The label is just a name. The two most important kets for a qubit are the basis states"
     },
     {
       "type": "math",
-      "tex": "\\vert\\psi\\rangle = \\alpha\\vert0\\rangle + \\beta\\vert1\\rangle, \\qquad \\vert\\alpha\\vert^2 + \\vert\\beta\\vert^2 = 1",
-      "caption": "A superposition. The complex numbers α and β are amplitudes."
+      "tex": "\\vert0\\rangle = (1, 0)^\\top, \\qquad \\vert1\\rangle = (0, 1)^\\top",
+      "caption": "The computational basis. The ⊤ (transpose) turns the row written here into a column."
+    },
+    {
+      "type": "prose",
+      "text": "Any qubit state is a combination of them, a superposition:"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi\\rangle = \\alpha\\vert0\\rangle + \\beta\\vert1\\rangle = (\\alpha, \\beta)^\\top, \\qquad \\vert\\alpha\\vert^2 + \\vert\\beta\\vert^2 = 1",
+      "caption": "A general qubit state. α and β are its amplitudes."
+    },
+    {
+      "type": "prose",
+      "text": "The labels $0$ and $1$ inside the kets are names, not numbers you can add: $\\vert0\\rangle + \\vert1\\rangle$ is the vector $(1, 1)^\\top$, not $\\vert1\\rangle$. And $\\vert0\\rangle$ is not the zero vector; it is a perfectly good unit vector. The zero vector, which is not a state at all, is written plain $0$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Normalising a state"
+    },
+    {
+      "type": "prose",
+      "text": "Often you are handed a vector that is not yet of length 1, and you have to normalise it: divide by its length $\\sqrt{\\vert\\alpha\\vert^2 + \\vert\\beta\\vert^2}$. Recall that for a complex number $z = a + ib$, $\\vert z\\vert^2 = \\bar z z = a^2 + b^2$, where $\\bar z = a - ib$ is the complex conjugate (written $z^*$ on Complex Numbers; this shelf uses both)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Start with $3\\vert0\\rangle + 4i\\vert1\\rangle$.",
+        "Step 2. Squared moduli: $\\vert3\\vert^2 = 9$ and $\\vert4i\\vert^2 = (-4i)(4i) = 16$. (Not $(4i)^2 = -16$: the modulus squared uses the conjugate.)",
+        "Step 3. Length $\\sqrt{9 + 16} = 5$. So $\\vert\\psi\\rangle = \\frac35\\vert0\\rangle + \\frac{4i}{5}\\vert1\\rangle$.",
+        "Step 4. Probabilities: $P(0) = 9/25 = 0.36$ and $P(1) = 16/25 = 0.64$. They add to 1."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "This state, $\\vert\\psi\\rangle = (3\\vert0\\rangle + 4i\\vert1\\rangle)/5$, is the running example of the page."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: normalise",
+      "text": "Normalise $\\vert0\\rangle + (1 + i)\\vert1\\rangle$ and give $P(1)$.",
+      "hint": "$\\vert a + ib\\vert^2 = a^2 + b^2$.",
+      "solution": [
+        "$\\vert1 + i\\vert^2 = 1^2 + 1^2 = 2$, so the length squared is $1 + 2 = 3$.",
+        "$\\vert\\psi\\rangle = (\\vert0\\rangle + (1 + i)\\vert1\\rangle)/\\sqrt3$ and $P(1) = 2/3$."
+      ],
+      "answer": "(|0⟩ + (1 + i)|1⟩)/√3; P(1) = 2/3"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bras and brackets: the inner product"
+    },
+    {
+      "type": "prose",
+      "text": "To compare two states you need an inner product: a way of multiplying two vectors to get a number that says how much they overlap. For complex vectors the right definition conjugates the entries of the first vector:"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle\\phi\\vert\\psi\\rangle = \\bar\\phi_1\\psi_1 + \\bar\\phi_2\\psi_2",
+      "caption": "The inner product of two qubit states, as a bracket."
+    },
+    {
+      "type": "prose",
+      "text": "Why conjugate? So that the inner product of a vector with itself is its length squared, a real non-negative number: $\\langle\\psi\\vert\\psi\\rangle = \\bar\\psi_1\\psi_1 + \\bar\\psi_2\\psi_2 = \\vert\\psi_1\\vert^2 + \\vert\\psi_2\\vert^2$. Without the conjugate, $(1, i)$ would have squared length $1 + i^2 = 0$, which is absurd for a non-zero vector."
+    },
+    {
+      "type": "prose",
+      "text": "Dirac's trick is to split the bracket in half. The left half, $\\langle\\phi\\vert$ (read: bra phi), is a row vector: the conjugate transpose of the ket $\\vert\\phi\\rangle$. If $\\vert\\phi\\rangle = (\\phi_1, \\phi_2)^\\top$ then $\\langle\\phi\\vert = (\\bar\\phi_1, \\bar\\phi_2)$. A row times a column is a single number, so bra times ket is exactly the inner product above. The words bra and ket come from splitting the word bracket."
+    },
+    {
+      "type": "math",
+      "tex": "\\langle\\phi\\vert = \\vert\\phi\\rangle^\\dagger, \\qquad \\langle\\phi\\vert\\cdot\\vert\\psi\\rangle = \\langle\\phi\\vert\\psi\\rangle",
+      "caption": "The dagger † means conjugate transpose."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked inner products"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\langle0\\vert1\\rangle = (1, 0)\\cdot(0, 1)^\\top = 0$ and $\\langle0\\vert0\\rangle = 1$: the basis states are orthogonal and of unit length (orthonormal).",
+        "Step 2. With $\\vert\\psi\\rangle = (3, 4i)/5$ and $\\vert{+i}\\rangle = (1, i)/\\sqrt2$: the bra is $\\langle{+i}\\vert = (1, -i)/\\sqrt2$ (the $i$ became $-i$).",
+        "Step 3. $\\langle{+i}\\vert\\psi\\rangle = \\frac{1}{5\\sqrt2}(1\\cdot3 + (-i)(4i)) = \\frac{1}{5\\sqrt2}(3 - 4i^2) = \\frac{3 + 4}{5\\sqrt2} = \\frac{7}{5\\sqrt2} \\approx 0.990$.",
+        "Step 4. The other order: $\\langle\\psi\\vert{+i}\\rangle = \\frac{1}{5\\sqrt2}(3\\cdot1 + (-4i)(i)) = \\frac{3 + 4}{5\\sqrt2}$, the same here because the answer is real. In general swapping the order conjugates the answer: $\\langle\\psi\\vert\\phi\\rangle = \\overline{\\langle\\phi\\vert\\psi\\rangle}$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The inner product is linear in the ket: $\\langle\\phi\\vert(a\\vert u\\rangle + b\\vert v\\rangle) = a\\langle\\phi\\vert u\\rangle + b\\langle\\phi\\vert v\\rangle$. In the bra it is linear with conjugated coefficients: the bra of $a\\vert u\\rangle$ is $\\bar a\\langle u\\vert$. Most calculations in Dirac notation are just these two rules plus $\\langle0\\vert0\\rangle = \\langle1\\vert1\\rangle = 1$, $\\langle0\\vert1\\rangle = 0$. For instance, $\\langle{+i}\\vert\\psi\\rangle$ again, without writing any vectors: $\\frac{1}{\\sqrt2}(\\langle0\\vert - i\\langle1\\vert)\\cdot\\frac15(3\\vert0\\rangle + 4i\\vert1\\rangle) = \\frac{1}{5\\sqrt2}(3\\langle0\\vert0\\rangle + 4i\\langle0\\vert1\\rangle - 3i\\langle1\\vert0\\rangle - 4i^2\\langle1\\vert1\\rangle) = \\frac{3 + 4}{5\\sqrt2}$."
+    },
+    {
+      "type": "prose",
+      "text": "What the number means: $\\vert\\langle\\phi\\vert\\psi\\rangle\\vert^2$ is the probability that a system in state $\\psi$ is found in state $\\phi$ when you test for $\\phi$. Here $\\vert0.990\\vert^2 = 0.98$: the state $\\psi$ is very nearly $\\vert{+i}\\rangle$. When the inner product is 0 the states are orthogonal and perfectly distinguishable; when its modulus is 1 they are the same physical state."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: an inner product with conjugates",
+      "text": "Compute $\\langle\\phi\\vert\\psi\\rangle$ for $\\vert\\phi\\rangle = (\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$ and $\\vert\\psi\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$, and the probability $\\vert\\langle\\phi\\vert\\psi\\rangle\\vert^2$.",
+      "hint": "Conjugate the coefficients of the bra.",
+      "solution": [
+        "Bra: $\\langle\\phi\\vert = (\\langle0\\vert - i\\langle1\\vert)/\\sqrt2$.",
+        "$\\langle\\phi\\vert\\psi\\rangle = \\frac12(1 - i) $.",
+        "$\\vert(1 - i)/2\\vert^2 = (1 + 1)/4 = 1/2$."
+      ],
+      "answer": "(1 − i)/2; probability 1/2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ket-bras: building matrices from states"
+    },
+    {
+      "type": "prose",
+      "text": "Put a ket on the left and a bra on the right and you get a column times a row, which is a matrix: the outer product $\\vert\\psi\\rangle\\langle\\phi\\vert$. Its entry in row $j$, column $k$ is $\\psi_j\\bar\\phi_k$. Acting on a third state it reads naturally: $(\\vert\\psi\\rangle\\langle\\phi\\vert)\\vert\\chi\\rangle = \\vert\\psi\\rangle\\,\\langle\\phi\\vert\\chi\\rangle$, the ket $\\psi$ times the number $\\langle\\phi\\vert\\chi\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\vert0\\rangle\\langle0\\vert = (1, 0)^\\top(1, 0)$ = rows $(1, 0)$ and $(0, 0)$. It keeps the $\\vert0\\rangle$ part of a state and throws the rest away: it is the projector onto $\\vert0\\rangle$.",
+        "$\\vert0\\rangle\\langle1\\vert$ = rows $(0, 1)$ and $(0, 0)$. It sends $\\vert1\\rangle$ to $\\vert0\\rangle$ and $\\vert0\\rangle$ to zero.",
+        "$X = \\vert0\\rangle\\langle1\\vert + \\vert1\\rangle\\langle0\\vert$ = rows $(0, 1)$ and $(1, 0)$, the bit flip. Check: $X\\vert0\\rangle = \\vert0\\rangle\\langle1\\vert0\\rangle + \\vert1\\rangle\\langle0\\vert0\\rangle = 0 + \\vert1\\rangle$.",
+        "$Z = \\vert0\\rangle\\langle0\\vert - \\vert1\\rangle\\langle1\\vert$ = rows $(1, 0)$ and $(0, -1)$.",
+        "For the running example, $\\vert\\psi\\rangle\\langle\\psi\\vert = \\frac{1}{25}\\times$ rows $(3\\cdot3,\\ 3\\cdot\\overline{4i})$ and $(4i\\cdot3,\\ 4i\\cdot\\overline{4i})$ $= \\frac{1}{25}\\times$ rows $(9, -12i)$ and $(12i, 16)$. Its diagonal holds the probabilities 0.36 and 0.64; this matrix is the state's density matrix, which Mixed States (#/quantum/many-body/mixed-states) builds on."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Writing operators as sums of ket-bras is how this shelf writes matrices in prose, since the rows-and-columns form is awkward to typeset. It is also how you read off what an operator does: in $\\sum_{jk} A_{jk}\\vert j\\rangle\\langle k\\vert$, the coefficient $A_{jk} = \\langle j\\vert A\\vert k\\rangle$ is the amplitude for $A$ to take $\\vert k\\rangle$ to $\\vert j\\rangle$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Other bases, and changing basis"
+    },
+    {
+      "type": "prose",
+      "text": "The computational basis is not special physically; it is just the basis a particular measurement uses. Any two orthonormal states form a basis, and two others come up constantly because they are the eigenvectors of the Pauli matrices $X$ and $Y$ (Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors) finds them):"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\pm\\rangle = \\frac{\\vert0\\rangle \\pm \\vert1\\rangle}{\\sqrt2}, \\qquad \\vert{\\pm i}\\rangle = \\frac{\\vert0\\rangle \\pm i\\vert1\\rangle}{\\sqrt2}",
+      "caption": "The X basis and the Y basis."
+    },
+    {
+      "type": "prose",
+      "text": "Check that the $X$ basis is orthonormal: $\\langle+\\vert-\\rangle = \\frac12(\\langle0\\vert + \\langle1\\vert)(\\vert0\\rangle - \\vert1\\rangle) = \\frac12(1 - 0 + 0 - 1) = 0$, and $\\langle+\\vert+\\rangle = \\frac12(1 + 1) = 1$. For the $Y$ basis, $\\langle{+i}\\vert{-i}\\rangle = \\frac12(\\langle0\\vert - i\\langle1\\vert)(\\vert0\\rangle - i\\vert1\\rangle) = \\frac12(1 + i^2) = 0$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Amplitudes in a new basis are inner products"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose $\\{\\vert e_1\\rangle, \\vert e_2\\rangle\\}$ is an orthonormal basis and you want to write $\\vert\\psi\\rangle = c_1\\vert e_1\\rangle + c_2\\vert e_2\\rangle$. Take the bracket of both sides with $\\langle e_1\\vert$: $\\langle e_1\\vert\\psi\\rangle = c_1\\langle e_1\\vert e_1\\rangle + c_2\\langle e_1\\vert e_2\\rangle = c_1\\cdot1 + c_2\\cdot0 = c_1$. Orthonormality kills every term but one. So each new amplitude is an inner product, $c_k = \\langle e_k\\vert\\psi\\rangle$, and"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi\\rangle = \\sum_k \\vert e_k\\rangle\\langle e_k\\vert\\psi\\rangle",
+      "caption": "Expanding a state in any orthonormal basis."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the running state in three bases"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Computational basis: $\\vert\\psi\\rangle = 0.6\\vert0\\rangle + 0.8i\\vert1\\rangle$, probabilities 0.36 and 0.64.",
+        "Step 2. $X$ basis: $\\langle+\\vert\\psi\\rangle = (3 + 4i)/(5\\sqrt2)$ and $\\langle-\\vert\\psi\\rangle = (3 - 4i)/(5\\sqrt2)$. Each has modulus squared $(9 + 16)/50 = 0.5$.",
+        "Step 3. So $\\vert\\psi\\rangle = \\frac{3 + 4i}{5\\sqrt2}\\vert+\\rangle + \\frac{3 - 4i}{5\\sqrt2}\\vert-\\rangle$, and an $X$ measurement is a fair coin. Check by expanding back: the $\\vert0\\rangle$ coefficient is $\\frac{1}{\\sqrt2}\\cdot\\frac{(3 + 4i) + (3 - 4i)}{5\\sqrt2} = \\frac{6}{10} = 0.6$. Good.",
+        "Step 4. $Y$ basis: $\\langle{+i}\\vert\\psi\\rangle = 7/(5\\sqrt2)$ (from above) and $\\langle{-i}\\vert\\psi\\rangle = \\frac{1}{5\\sqrt2}(3 + i\\cdot4i) = -1/(5\\sqrt2)$. Probabilities $49/50 = 0.98$ and $1/50 = 0.02$.",
+        "Step 5. The same state is unpredictable in one basis (64:36), a coin in another (50:50), and nearly certain in a third (98:2). The state did not change; the question did."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The resolution of the identity"
+    },
+    {
+      "type": "prose",
+      "text": "Look again at $\\vert\\psi\\rangle = \\sum_k\\vert e_k\\rangle\\langle e_k\\vert\\psi\\rangle$. The ket $\\vert\\psi\\rangle$ appears on both sides, so the matrix in front of it must be the identity:"
+    },
+    {
+      "type": "math",
+      "tex": "\\sum_k \\vert e_k\\rangle\\langle e_k\\vert = I",
+      "caption": "The resolution of the identity (or completeness relation), true for every orthonormal basis."
+    },
+    {
+      "type": "prose",
+      "text": "For the computational basis, $\\vert0\\rangle\\langle0\\vert + \\vert1\\rangle\\langle1\\vert$ = rows $(1, 0)$, $(0, 0)$ plus rows $(0, 0)$, $(0, 1)$ = $I$. For the $X$ basis, $\\vert+\\rangle\\langle+\\vert = \\frac12\\times$ rows $(1, 1), (1, 1)$ and $\\vert-\\rangle\\langle-\\vert = \\frac12\\times$ rows $(1, -1), (-1, 1)$, which again add to $I$."
+    },
+    {
+      "type": "prose",
+      "text": "It is the most used trick in quantum calculations: wherever you see a product, you may slip $I$ in as a sum over any basis you like. Example: the amplitude of $\\psi$ along $\\vert0\\rangle$, computed through the $X$ basis, is $\\langle0\\vert\\psi\\rangle = \\langle0\\vert I\\vert\\psi\\rangle = \\langle0\\vert+\\rangle\\langle+\\vert\\psi\\rangle + \\langle0\\vert-\\rangle\\langle-\\vert\\psi\\rangle$. Here this is $\\frac{1}{\\sqrt2}\\cdot\\frac{3 + 4i}{5\\sqrt2} + \\frac{1}{\\sqrt2}\\cdot\\frac{3 - 4i}{5\\sqrt2} = 0.6$, whose square is $P(0) = 0.36$ as before: the two paths through the $X$ basis interfere, their imaginary parts cancelling. That sentence is the heart of interference, which Interference (#/quantum/qubits/interference) develops."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: change basis",
+      "text": "Write $\\vert0\\rangle$ in the $X$ basis, and $\\vert+i\\rangle$ in the $X$ basis.",
+      "hint": "The new amplitudes are $\\langle\\pm\\vert\\cdot\\rangle$.",
+      "solution": [
+        "$\\langle\\pm\\vert0\\rangle = 1/\\sqrt2$, so $\\vert0\\rangle = (\\vert+\\rangle + \\vert-\\rangle)/\\sqrt2$.",
+        "$\\langle+\\vert{+i}\\rangle = \\frac12(1 + i)$ and $\\langle-\\vert{+i}\\rangle = \\frac12(1 - i)$.",
+        "So $\\vert{+i}\\rangle = \\frac{1 + i}{2}\\vert+\\rangle + \\frac{1 - i}{2}\\vert-\\rangle$; each probability is $\\vert(1 \\pm i)/2\\vert^2 = 1/2$."
+      ],
+      "answer": "|0⟩ = (|+⟩ + |−⟩)/√2; |+i⟩ = ((1 + i)|+⟩ + (1 − i)|−⟩)/2"
     },
     {
       "type": "heading",
@@ -27,33 +270,69 @@
     },
     {
       "type": "prose",
-      "text": "It is tempting to read $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$ as 'the qubit is secretly 0 or 1 and we do not know which'. That reading is wrong, and the difference is measurable: the state $\\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$ gives the outcome $+$ with certainty when measured in the $X$ basis, while a coin-flip mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$ gives $+$ only half the time. Mixtures get their own description, the density matrix, on Mixed States (#/quantum/many-body/mixed-states)."
+      "text": "It is tempting to read $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$ as: the qubit is secretly 0 or secretly 1, and $\\vert\\alpha\\vert^2$ is our uncertainty about which. That reading is wrong, and an experiment tells the two apart."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Prepare $\\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$. Measured in the computational basis it gives 0 or 1 with probability 1/2 each.",
+        "Step 2. Separately, prepare a coin-flip mixture: flip a fair coin, and prepare $\\vert0\\rangle$ on heads, $\\vert1\\rangle$ on tails. Measured in the computational basis, this also gives 0 or 1 with probability 1/2 each. So far identical.",
+        "Step 3. Now measure both in the $X$ basis. For $\\vert+\\rangle$: $P(+) = \\vert\\langle+\\vert+\\rangle\\vert^2 = 1$, every time.",
+        "Step 4. For the mixture: half the time the qubit is $\\vert0\\rangle$, with $P(+) = \\vert\\langle+\\vert0\\rangle\\vert^2 = 1/2$; half the time it is $\\vert1\\rangle$, also with $P(+) = 1/2$. Overall $P(+) = 1/2$.",
+        "Step 5. Certain versus a coin flip: the superposition is a definite state (definitely $+$ along $x$), not a lack of knowledge about $z$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A superposition is a new state in its own right, as definite as $\\vert0\\rangle$; it just has no definite value of $Z$. Genuine ignorance, a mixture, needs a different description, the density matrix of Mixed States (#/quantum/many-body/mixed-states)."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Other bases"
+      "text": "Global phase and relative phase"
     },
     {
       "type": "prose",
-      "text": "Any orthonormal basis can describe the same state. The two used most after the computational basis are the $X$ basis and the $Y$ basis:"
-    },
-    {
-      "type": "math",
-      "tex": "\\vert\\pm\\rangle = \\frac{\\vert0\\rangle \\pm \\vert1\\rangle}{\\sqrt2}, \\qquad \\vert\\pm i\\rangle = \\frac{\\vert0\\rangle \\pm i\\vert1\\rangle}{\\sqrt2}"
-    },
-    {
-      "type": "prose",
-      "text": "Changing basis means computing new amplitudes as inner products: in the basis $\\{\\vert e_k\\rangle\\}$, $\\vert\\psi\\rangle = \\sum_k \\langle e_k\\vert\\psi\\rangle\\,\\vert e_k\\rangle$. The resolution of the identity $\\sum_k \\vert e_k\\rangle\\langle e_k\\vert = I$ is the same statement in operator form, and it is the most-used trick in calculations: insert it anywhere."
+      "text": "A phase is a complex number of modulus 1, $e^{i\\gamma} = \\cos\\gamma + i\\sin\\gamma$. Phases are where amplitudes differ from probabilities, so it matters which phases you can detect. There are two kinds."
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "Global and relative phase"
+      "level": 3,
+      "text": "A global phase changes nothing"
     },
     {
       "type": "prose",
-      "text": "Multiplying the whole state by $e^{i\\gamma}$ changes no probability anywhere, because every prediction involves $\\vert\\langle\\phi\\vert\\psi\\rangle\\vert^2$ and the phase cancels. So $\\vert\\psi\\rangle$ and $e^{i\\gamma}\\vert\\psi\\rangle$ are the same physical state. A relative phase is different: $\\vert0\\rangle + e^{i\\varphi}\\vert1\\rangle$ changes as $\\varphi$ varies, and while its $Z$ statistics stay fixed, its $X$ and $Y$ statistics move. That is how phase encoding writes an input, and why the QRC shelf's Input Encoding (#/qrc/models/input-encoding) finds phase-encoded inputs invisible to $Z$ readouts until they are converted into populations."
+      "text": "Multiply the whole state by one phase: $\\vert\\psi'\\rangle = e^{i\\gamma}\\vert\\psi\\rangle$. For any test state $\\phi$, $\\langle\\phi\\vert\\psi'\\rangle = e^{i\\gamma}\\langle\\phi\\vert\\psi\\rangle$, so $\\vert\\langle\\phi\\vert\\psi'\\rangle\\vert^2 = \\vert e^{i\\gamma}\\vert^2\\vert\\langle\\phi\\vert\\psi\\rangle\\vert^2 = \\vert\\langle\\phi\\vert\\psi\\rangle\\vert^2$. Every probability, in every basis, is unchanged. Since predictions are all a theory gives you, $\\vert\\psi\\rangle$ and $e^{i\\gamma}\\vert\\psi\\rangle$ are the same physical state. For example $-\\vert1\\rangle$ is the same state as $\\vert1\\rangle$, and $i\\vert+\\rangle$ is the same as $\\vert+\\rangle$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A relative phase is physical"
+    },
+    {
+      "type": "prose",
+      "text": "Now change the phase of one amplitude only: $\\vert\\psi_\\varphi\\rangle = (\\vert0\\rangle + e^{i\\varphi}\\vert1\\rangle)/\\sqrt2$. In the computational basis nothing moves: $P(0) = P(1) = 1/2$ for every $\\varphi$. In the $X$ basis:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\langle+\\vert\\psi_\\varphi\\rangle = \\frac12(1 + e^{i\\varphi})$.",
+        "Step 2. $\\vert1 + e^{i\\varphi}\\vert^2 = (1 + e^{i\\varphi})(1 + e^{-i\\varphi}) = 1 + e^{i\\varphi} + e^{-i\\varphi} + 1 = 2 + 2\\cos\\varphi$.",
+        "Step 3. So $P(+) = \\frac14(2 + 2\\cos\\varphi) = \\frac{1 + \\cos\\varphi}{2}$.",
+        "Step 4. $\\varphi = 0$: $P(+) = 1$ (the state is $\\vert+\\rangle$). $\\varphi = 60°$: $P(+) = 0.75$. $\\varphi = 90°$: $P(+) = 0.5$ (the state is $\\vert{+i}\\rangle$). $\\varphi = 180°$: $P(+) = 0$ (the state is $\\vert-\\rangle$)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So a relative phase is invisible to a $Z$ measurement but fully visible to $X$ and $Y$ measurements. Why the difference from a global phase? Because in $\\langle+\\vert\\psi\\rangle$ the two amplitudes are added before squaring, and adding two complex numbers depends on the angle between them. A global phase turns both by the same angle and leaves that angle alone."
+    },
+    {
+      "type": "prose",
+      "text": "A common mistake: writing $(\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$ and $(\\vert1\\rangle - \\vert0\\rangle)/\\sqrt2$ as different states. They differ by a factor $-1$, a global phase: same state. But $(\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$ and $(\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$ differ by a relative phase of $\\pi$: different states, in fact orthogonal ones."
+    },
+    {
+      "type": "prose",
+      "text": "The sample below checks these claims numerically. It uses np.vdot(a, b), which conjugates its first argument and so computes $\\langle a\\vert b\\rangle$; plain a @ b does not conjugate and gives wrong answers for complex states."
     },
     {
       "type": "code",
@@ -62,7 +341,43 @@
     },
     {
       "type": "prose",
-      "text": "Output of the run: the normalised state has $\\langle\\psi\\vert\\psi\\rangle = 1$ and overlap $0.5 + 0.5i$ with $\\vert+\\rangle$. A global phase on $\\vert+\\rangle$ leaves both $P(0) = 0.5$ and $P(+) = 1$ unchanged. A relative phase of $\\pi$ (which turns $\\vert+\\rangle$ into $\\vert-\\rangle$) keeps $P(0) = 0.5$ but drops $P(+)$ to 0."
+      "text": "Output of the run: the normalised state $(\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$ has $\\langle\\psi\\vert\\psi\\rangle = 1$ and overlap $0.5 + 0.5i$ with $\\vert+\\rangle$, so $\\vert\\langle+\\vert\\psi\\rangle\\vert^2 = 0.5$. A global phase on $\\vert+\\rangle$ leaves both $P(0) = 0.5$ and $P(+) = 1$ unchanged. A relative phase of $\\pi$ (which turns $\\vert+\\rangle$ into $\\vert-\\rangle$) keeps $P(0) = 0.5$ but drops $P(+)$ to 0."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How many numbers describe a qubit?"
+    },
+    {
+      "type": "prose",
+      "text": "Two complex amplitudes are four real numbers. The normalisation $\\vert\\alpha\\vert^2 + \\vert\\beta\\vert^2 = 1$ removes one, and the freedom to choose the global phase removes another. Two real numbers are left. A standard choice is to make $\\alpha$ real and non-negative (spending the global phase) and write"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi\\rangle = \\cos\\tfrac\\theta2\\,\\vert0\\rangle + e^{i\\varphi}\\sin\\tfrac\\theta2\\,\\vert1\\rangle, \\qquad 0 \\le \\theta \\le \\pi,\\ 0 \\le \\varphi < 2\\pi",
+      "caption": "Every qubit state, up to a global phase. θ sets the balance between |0⟩ and |1⟩; φ is the relative phase."
+    },
+    {
+      "type": "prose",
+      "text": "These are the polar angle $\\theta$ and the azimuth $\\varphi$ of a point on a sphere, the Bloch sphere: $\\vert0\\rangle$ at the north pole ($\\theta = 0$), $\\vert1\\rangle$ at the south pole ($\\theta = 180°$), and the equal superpositions around the equator, $\\vert+\\rangle$ at $\\varphi = 0$, $\\vert{+i}\\rangle$ at $90°$, $\\vert-\\rangle$ at $180°$ and $\\vert{-i}\\rangle$ at $270°$. The Qubit and the Bloch Sphere (#/quantum/qubits/bloch-sphere) explains why a sphere is the right picture. (The halves, $\\theta/2$, are why opposite points on the sphere are orthogonal states.)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the angles of the running state"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\vert\\psi\\rangle = 0.6\\vert0\\rangle + 0.8i\\vert1\\rangle$. The first amplitude is already real and positive, so no global phase is needed.",
+        "Step 2. $\\cos(\\theta/2) = 0.6$, so $\\theta/2 = \\arccos 0.6 = 53.13°$ and $\\theta = 106.26°$: a little below the equator, towards $\\vert1\\rangle$, matching $P(1) = 0.64 > 0.5$.",
+        "Step 3. $e^{i\\varphi}\\sin(\\theta/2) = 0.8i$. Since $\\sin(53.13°) = 0.8$, $e^{i\\varphi} = i$ and $\\varphi = 90°$: the state sits on the $+y$ side.",
+        "Step 4. That fits the $Y$-basis result: the state is close to $\\vert{+i}\\rangle$ (the point $\\theta = 90°$, $\\varphi = 90°$), and $P(+i) = 0.98$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "If the first amplitude is not real and positive, factor out its phase first. For $-0.6\\vert0\\rangle + 0.8\\vert1\\rangle$: multiply by $-1$ to get $0.6\\vert0\\rangle - 0.8\\vert1\\rangle$, so $\\theta = 106.26°$ again and $e^{i\\varphi} = -1$, $\\varphi = 180°$."
     },
     {
       "type": "widget",
@@ -114,18 +429,68 @@
     },
     {
       "type": "prose",
-      "text": "Try it: with θ = 90° the state is an equal superposition, so $P(0) = P(1) = 0.5$ whatever φ is. Now move φ: the probabilities in the bar chart never change, but the vector swings round the equator through $\\vert+i\\rangle$ (90°), $\\vert-\\rangle$ (180°) and $\\vert-i\\rangle$ (270°). That is the relative phase: invisible to a $Z$ measurement, but a different state. A global phase has no slider because it would not move the point at all."
+      "text": "Try this: with θ = 90° the state is an equal superposition, so $P(0) = P(1) = 0.5$ whatever φ is. Now move φ: the probabilities in the readout never change, but the vector swings round the equator through $\\vert{+i}\\rangle$ (90°), $\\vert-\\rangle$ (180°) and $\\vert{-i}\\rangle$ (270°). That is the relative phase: invisible to a $Z$ measurement, but a different state. A global phase has no slider because it would not move the point at all. Then set θ = 106 and φ = 90 to see the running example of this page, just below the equator on the $+y$ side: the bars show $P(0) = 0.36$ and $P(1) = 0.64$, and the readout gives Bloch coordinates close to $(0, 0.96, -0.28)$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: Bloch angles",
+      "text": "Find $\\theta$ and $\\varphi$ for $(\\vert0\\rangle - i\\vert1\\rangle)/\\sqrt2$ and for $\\frac12\\vert0\\rangle + \\frac{\\sqrt3}{2}\\vert1\\rangle$.",
+      "hint": "$\\cos(\\theta/2)$ is the first amplitude once it is made real and positive.",
+      "solution": [
+        "First: $\\cos(\\theta/2) = 1/\\sqrt2$, so $\\theta = 90°$; $e^{i\\varphi} = -i$, so $\\varphi = 270°$. It is $\\vert{-i}\\rangle$.",
+        "Second: $\\cos(\\theta/2) = 1/2$, so $\\theta/2 = 60°$ and $\\theta = 120°$; the second amplitude is real and positive, so $\\varphi = 0$."
+      ],
+      "answer": "θ = 90°, φ = 270°; θ = 120°, φ = 0°"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Where QRC uses this"
+      "text": "Beyond one qubit"
+    },
+    {
+      "type": "prose",
+      "text": "Nothing above is special to two dimensions. A system with $d$ possible outcomes (a $d$-level system, also called a qudit; $d = 3$ is a qutrit) has states that are unit vectors in $\\mathbb{C}^d$, $\\vert\\psi\\rangle = \\sum_{k=0}^{d-1}\\psi_k\\vert k\\rangle$ with $\\sum_k\\vert\\psi_k\\vert^2 = 1$, and every rule on this page carries over: the bracket $\\langle\\phi\\vert\\psi\\rangle = \\sum_k\\bar\\phi_k\\psi_k$, expansion in any orthonormal basis, the resolution of the identity, global versus relative phases. A qutrit state needs $2\\cdot3 - 2 = 4$ real numbers."
+    },
+    {
+      "type": "prose",
+      "text": "For several qubits, the basis states are labelled by strings of bits: two qubits have $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$ (qubit 1 written first), so a two-qubit state is four amplitudes, and $n$ qubits need $2^n$. How these spaces are built from single qubits is the subject of Composite Systems and Tensor Products (#/quantum/many-body/composite-systems)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together: comparing two states"
+    },
+    {
+      "type": "prose",
+      "text": "Alice prepares $\\vert a\\rangle = \\frac{1}{\\sqrt2}\\vert0\\rangle + \\frac{e^{i\\pi/4}}{\\sqrt2}\\vert1\\rangle$ and Bob prepares $\\vert b\\rangle = \\frac{1}{\\sqrt2}\\vert0\\rangle + \\frac{e^{-i\\pi/4}}{\\sqrt2}\\vert1\\rangle$. Are they the same state? How likely is a test for $\\vert a\\rangle$ to pass on Bob's qubit? Which measurement best tells them apart?"
     },
     {
       "type": "list",
       "items": [
-        "The input of the Fujii–Nakajima reservoir is the state $\\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt s\\,\\vert1\\rangle$: real, non-negative amplitudes chosen so that $P(1) = s$ (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)).",
-        "Amplitude, angle and phase encodings on Input Encoding (#/qrc/models/input-encoding) differ only in which amplitudes and phases carry $s$."
+        "Step 1. Both have $\\theta = 90°$; their azimuths are $\\varphi = 45°$ and $\\varphi = -45° = 315°$. They differ by a relative phase of $90°$, so they are different states, though a $Z$ measurement cannot tell (both give 50:50).",
+        "Step 2. Overlap: $\\langle a\\vert b\\rangle = \\frac12(1 + e^{-i\\pi/4}e^{-i\\pi/4}) = \\frac12(1 + e^{-i\\pi/2}) = \\frac12(1 - i)$.",
+        "Step 3. $\\vert\\langle a\\vert b\\rangle\\vert^2 = \\frac14(1 + 1) = 0.5$: a test for Alice's state passes on Bob's qubit half the time.",
+        "Step 4. In the $X$ basis: $P(+) = (1 + \\cos\\varphi)/2 = (1 + \\cos45°)/2 = 0.854$ for both. Useless: $X$ cannot tell them apart either.",
+        "Step 5. In the $Y$ basis: $\\langle{+i}\\vert a\\rangle = \\frac12(1 - ie^{i\\pi/4}) = \\frac12(1 + e^{-i\\pi/4})$, so $P(+i) = (1 + \\cos45°)/2 = 0.854$ for Alice; for Bob $\\langle{+i}\\vert b\\rangle = \\frac12(1 + e^{-i3\\pi/4})$, so $P(+i) = (1 + \\cos135°)/2 = 0.146$.",
+        "Step 6. So measure $Y$: Alice's qubit gives $+i$ 85% of the time, Bob's only 15%. On the Bloch sphere the two states are mirror images across the $x$ axis, so the axis that separates them is $y$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A qubit state is a unit vector $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$ with $\\vert\\alpha\\vert^2 + \\vert\\beta\\vert^2 = 1$; amplitudes are complex so they can interfere.",
+        "Ket $\\vert\\psi\\rangle$ = column; bra $\\langle\\psi\\vert$ = conjugate-transposed row; bracket $\\langle\\phi\\vert\\psi\\rangle = \\sum\\bar\\phi_k\\psi_k$ = inner product; ket-bra $\\vert\\psi\\rangle\\langle\\phi\\vert$ = matrix.",
+        "$\\vert\\langle\\phi\\vert\\psi\\rangle\\vert^2$ is the probability that $\\psi$ passes a test for $\\phi$. Swapping a bracket conjugates it.",
+        "In any orthonormal basis, amplitudes are inner products, $c_k = \\langle e_k\\vert\\psi\\rangle$, and $\\sum_k\\vert e_k\\rangle\\langle e_k\\vert = I$.",
+        "$\\vert\\pm\\rangle$ and $\\vert{\\pm i}\\rangle$ are the $X$ and $Y$ bases.",
+        "A superposition is a definite state, not ignorance; a mixture is something else.",
+        "A global phase changes nothing; a relative phase changes $X$ and $Y$ statistics but not $Z$ statistics.",
+        "Up to a global phase every qubit state is $\\cos\\frac\\theta2\\vert0\\rangle + e^{i\\varphi}\\sin\\frac\\theta2\\vert1\\rangle$: a point on the Bloch sphere."
       ]
     },
     {
@@ -135,13 +500,16 @@
     },
     {
       "type": "problem",
-      "title": "Normalise a state",
-      "text": "Normalise $3\\vert0\\rangle + 4i\\vert1\\rangle$ and give the probability of measuring 1.",
+      "title": "Normalise a state and test it",
+      "text": "Normalise $2\\vert0\\rangle - (1 - 2i)\\vert1\\rangle$. Give $P(0)$, $P(1)$ and the probability $P(+)$ of passing a test for $\\vert+\\rangle$.",
+      "hint": "$\\vert a + ib\\vert^2 = a^2 + b^2$; the $\\vert+\\rangle$ amplitude is the sum of the two amplitudes over $\\sqrt2$.",
       "solution": [
-        "Length squared: $\\vert3\\vert^2 + \\vert4i\\vert^2 = 9 + 16 = 25$, so divide by 5.",
-        "$\\vert\\psi\\rangle = \\tfrac35\\vert0\\rangle + \\tfrac{4i}{5}\\vert1\\rangle$ and $P(1) = \\vert 4i/5\\vert^2 = 16/25 = 0.64$."
+        "$\\vert2\\vert^2 = 4$ and $\\vert-(1 - 2i)\\vert^2 = 1^2 + 2^2 = 5$, so the length squared is 9 and the length is 3.",
+        "$\\vert\\psi\\rangle = \\frac23\\vert0\\rangle - \\frac{1 - 2i}{3}\\vert1\\rangle$, with $P(0) = 4/9 \\approx 0.444$ and $P(1) = 5/9 \\approx 0.556$.",
+        "$\\langle+\\vert\\psi\\rangle = \\frac{1}{\\sqrt2}\\cdot\\frac{2 - (1 - 2i)}{3} = \\frac{1 + 2i}{3\\sqrt2}$.",
+        "$P(+) = \\vert1 + 2i\\vert^2/18 = 5/18 \\approx 0.278$."
       ],
-      "answer": "(3|0⟩ + 4i|1⟩)/5; P(1) = 0.64"
+      "answer": "(2|0⟩ − (1 − 2i)|1⟩)/3; P(0) = 4/9, P(1) = 5/9, P(+) = 5/18"
     },
     {
       "type": "problem",
@@ -157,12 +525,51 @@
     {
       "type": "problem",
       "title": "Same state or not",
-      "text": "Are $\\vert0\\rangle - \\vert1\\rangle$ and $\\vert1\\rangle - \\vert0\\rangle$ (both divided by $\\sqrt2$) the same physical state? What about $\\vert0\\rangle + \\vert1\\rangle$ and $\\vert0\\rangle - \\vert1\\rangle$?",
+      "text": "Is $(i\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$ the same physical state as $\\vert{+i}\\rangle = (\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$? Is $(i\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$?",
+      "hint": "Factor out the first amplitude so that it becomes 1, then compare.",
       "solution": [
-        "The first pair differ by an overall factor $-1 = e^{i\\pi}$, a global phase: the same state.",
-        "The second pair differ in the relative phase of $\\vert1\\rangle$: they are $\\vert+\\rangle$ and $\\vert-\\rangle$, which are orthogonal and perfectly distinguishable by an $X$ measurement."
+        "Factor $i$ out of the first: $i\\vert0\\rangle - \\vert1\\rangle = i(\\vert0\\rangle + i\\vert1\\rangle)$, because $i\\cdot i = -1$. It is $i\\vert{+i}\\rangle$, a global phase times $\\vert{+i}\\rangle$: the same state.",
+        "Factor $i$ out of the second: $i\\vert0\\rangle + \\vert1\\rangle = i(\\vert0\\rangle - i\\vert1\\rangle)$, because $i\\cdot(-i) = 1$. It is $i\\vert{-i}\\rangle$: the same state as $\\vert{-i}\\rangle$, which differs from $\\vert{+i}\\rangle$ by a relative phase of $\\pi$.",
+        "Check with the overlap: $\\vert\\langle{+i}\\vert{-i}\\rangle\\vert^2 = 0$, so the second state is not just different from $\\vert{+i}\\rangle$ but orthogonal to it."
       ],
-      "answer": "Yes (global phase); no (relative phase)"
+      "answer": "the first is the same state (global phase i); the second is |−i⟩, orthogonal to |+i⟩"
+    },
+    {
+      "type": "problem",
+      "title": "A three-level system",
+      "text": "A qutrit is in $\\vert\\psi\\rangle = (\\vert0\\rangle + \\vert1\\rangle + \\vert2\\rangle)/\\sqrt3$. Show that $\\vert\\phi\\rangle = (\\vert0\\rangle + \\omega\\vert1\\rangle + \\omega^2\\vert2\\rangle)/\\sqrt3$ with $\\omega = e^{2\\pi i/3}$ is orthogonal to it.",
+      "hint": "Picture $1, \\omega, \\omega^2$ in the complex plane.",
+      "solution": [
+        "$\\langle\\psi\\vert\\phi\\rangle = \\frac13(1 + \\omega + \\omega^2)$ (the bra of $\\psi$ has real coefficients, so no conjugates appear).",
+        "$\\omega$, $\\omega^2$ and $1$ are three points equally spaced on the unit circle; they add to zero. Numerically: $\\omega = -0.5 + 0.866i$, $\\omega^2 = -0.5 - 0.866i$, so $1 + \\omega + \\omega^2 = 0$.",
+        "So $\\langle\\psi\\vert\\phi\\rangle = 0$: the states are orthogonal, and a measurement can tell them apart perfectly, although every amplitude of both has the same size."
+      ],
+      "answer": "⟨ψ|φ⟩ = (1 + ω + ω²)/3 = 0"
+    },
+    {
+      "type": "problem",
+      "title": "Which measurement sees the phase?",
+      "text": "For $\\vert\\psi\\rangle = 0.6\\vert0\\rangle + 0.8e^{i\\pi/4}\\vert1\\rangle$, compute $P(+)$ and $P(+i)$. Why are they equal?",
+      "hint": "$\\vert a + b\\vert^2 = \\vert a\\vert^2 + \\vert b\\vert^2 + 2\\,\\mathrm{Re}(\\bar a b)$.",
+      "solution": [
+        "$\\langle+\\vert\\psi\\rangle = (0.6 + 0.8e^{i\\pi/4})/\\sqrt2$. $\\vert0.6 + 0.8e^{i\\pi/4}\\vert^2 = 0.36 + 0.64 + 2(0.6)(0.8)\\cos45° = 1 + 0.6788 = 1.6788$. So $P(+) = 0.839$.",
+        "$\\langle{+i}\\vert\\psi\\rangle = (0.6 - i\\cdot0.8e^{i\\pi/4})/\\sqrt2 = (0.6 + 0.8e^{-i\\pi/4})/\\sqrt2$, since $-i = e^{-i\\pi/2}$. The modulus squared is $1 + 0.96\\cos(-45°) = 1.6788$ again: $P(+i) = 0.839$.",
+        "Equal because $\\varphi = 45°$ is exactly halfway between the $+x$ direction ($\\varphi = 0$) and the $+y$ direction ($\\varphi = 90°$)."
+      ],
+      "answer": "both 0.839"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The input of the Fujii–Nakajima reservoir is the state $\\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt s\\,\\vert1\\rangle$: real, non-negative amplitudes chosen so that $P(1) = s$ (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)).",
+        "Amplitude, angle and phase encodings on Input Encoding (#/qrc/models/input-encoding) differ only in which amplitudes and phases carry $s$; a phase-encoded input is invisible to $Z$ readouts until a later rotation turns it into populations, exactly as on this page.",
+        "Probabilities from amplitudes, and measuring in other bases: Measurement and the Born Rule (#/quantum/foundations/measurement)."
+      ]
     },
     {
       "type": "heading",

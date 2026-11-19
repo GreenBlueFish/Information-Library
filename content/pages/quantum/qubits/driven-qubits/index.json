@@ -1,0 +1,645 @@
+{
+  "title": "Driven Qubits and Rabi Oscillations",
+  "intro": "How a gate is physically made: a qubit in a static field precesses, and a weak oscillating drive at the qubit's own frequency rotates it, giving Rabi oscillations. This page derives the rotating frame, the rotating-wave approximation and Rabi's formula, and turns them into $\\pi$ pulses, $\\pi/2$ pulses and the Ramsey experiment.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "The Bloch sphere and rotations (The Qubit and the Bloch Sphere (#/quantum/qubits/bloch-sphere), Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)), and the idea that a Hamiltonian moves a state by $\\vert\\psi(t)\\rangle = e^{-iHt}\\vert\\psi(0)\\rangle$ (The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation)). As on the rest of the shelf, $\\hbar = 1$, so energies and angular frequencies are the same thing."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Explain why a qubit in a static field precesses, and compute its precession frequency from the Hamiltonian.",
+        "Move to the rotating frame and use the rotating-wave approximation to turn a time-dependent drive into a constant Hamiltonian.",
+        "Derive Rabi's formula for the population of $\\vert1\\rangle$ under a drive with any detuning, and read off its frequency and ceiling.",
+        "Design $\\pi$ and $\\pi/2$ pulses, and say what goes wrong when the drive is slightly off resonance.",
+        "Describe how a Ramsey experiment measures a qubit's frequency, and how real superconducting, ion and NMR qubits are controlled."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The question this page answers. Gates and Circuits (#/quantum/qubits/gates-and-circuits) treats a gate as a matrix that simply happens. Physically, nothing simply happens: a qubit has a Hamiltonian, and the only thing an experimenter can do is change it, usually by shining a microwave or laser field on it for a carefully chosen time. This page shows how that turns into the rotations $R_X$, $R_Y$ and $R_Z$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A qubit in a static field precesses"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. Before pushing on a qubit, we need to know what it does when left alone. For almost every physical qubit the answer is: it precesses, like a spinning top whose axis sweeps round in a circle."
+    },
+    {
+      "type": "prose",
+      "text": "Where the Hamiltonian comes from. A spin-1/2 particle (an electron, a proton) is a tiny magnet. In a magnetic field of strength $B$ along $z$, its energy depends on whether it points along or against the field, and the Hamiltonian is"
+    },
+    {
+      "type": "math",
+      "tex": "H_0 = \\frac{\\omega_0}{2}\\,Z, \\qquad \\omega_0 = \\gamma B",
+      "caption": "A qubit in a static field. The energies are ±ω₀/2, so the gap between them is ω₀."
+    },
+    {
+      "type": "prose",
+      "text": "Here $\\gamma$ is the gyromagnetic ratio, a property of the particle. For a proton, $\\gamma/2\\pi \\approx 42.58$ MHz per tesla; for an electron about 28 GHz per tesla. Superconducting qubits and atoms have no literal spin, but their two lowest levels behave the same way, with $\\omega_0$ the transition frequency between them, typically a few gigahertz times $2\\pi$ for superconducting qubits. Whatever the platform, $\\omega_0$ is the energy gap: $\\vert0\\rangle$ has energy $+\\omega_0/2$ and $\\vert1\\rangle$ has energy $-\\omega_0/2$. (Other pages on this shelf write the same Hamiltonian as $hZ$; then $\\omega_0 = 2h$.)"
+    },
+    {
+      "type": "prose",
+      "text": "Solving it, step by step. Take a general pure state written with its Bloch angles, $\\vert\\psi(0)\\rangle = \\cos(\\theta/2)\\vert0\\rangle + e^{i\\varphi}\\sin(\\theta/2)\\vert1\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $H_0$ is diagonal, so $e^{-iH_0t}$ just multiplies each basis state by $e^{-i(\\text{energy})t}$: $\\vert0\\rangle \\to e^{-i\\omega_0t/2}\\vert0\\rangle$ and $\\vert1\\rangle \\to e^{+i\\omega_0t/2}\\vert1\\rangle$.",
+        "Step 2. So $\\vert\\psi(t)\\rangle = e^{-i\\omega_0t/2}\\cos(\\theta/2)\\vert0\\rangle + e^{i\\varphi}e^{+i\\omega_0t/2}\\sin(\\theta/2)\\vert1\\rangle$.",
+        "Step 3. Pull out the overall factor $e^{-i\\omega_0t/2}$, a global phase that changes nothing: $\\vert\\psi(t)\\rangle \\simeq \\cos(\\theta/2)\\vert0\\rangle + e^{i(\\varphi + \\omega_0t)}\\sin(\\theta/2)\\vert1\\rangle$.",
+        "Step 4. Compare with the starting form: $\\theta$ is unchanged and $\\varphi$ has become $\\varphi + \\omega_0t$. On the Bloch sphere the vector keeps its latitude and turns about the $z$ axis at angular frequency $\\omega_0$. That is Larmor precession.",
+        "Step 5. In expectation values: $\\langle Z\\rangle = \\cos\\theta$ stays fixed, while $\\langle X\\rangle = \\sin\\theta\\cos(\\varphi + \\omega_0t)$ and $\\langle Y\\rangle = \\sin\\theta\\sin(\\varphi + \\omega_0t)$ go round. In gate language, $e^{-iH_0t} = R_Z(\\omega_0t)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. Take $\\omega_0 = 2$ and start at $\\vert+\\rangle$ ($\\theta = 90°$, $\\varphi = 0$). Then $\\langle X\\rangle(t) = \\cos 2t$: at $t = 0.5$ it is $\\cos 1 = 0.540$; at $t = \\pi/4 = 0.785$ it is 0 (the state is $\\vert{+i}\\rangle$); at $t = \\pi/2$ it is $-1$ (the state is $\\vert-\\rangle$). The sample checks these numerically. In physical units: a proton in a 3 tesla MRI magnet precesses at $42.58\\times3 = 127.7$ MHz; a superconducting qubit at $\\omega_0/2\\pi = 5$ GHz completes a turn every 0.2 nanoseconds."
+    },
+    {
+      "type": "prose",
+      "text": "What precession does not do. It never changes the probabilities of measuring 0 or 1, because $\\theta$ is fixed. A static field along $z$ can only move the phase. To flip a qubit from $\\vert0\\rangle$ to $\\vert1\\rangle$ we need something that pushes the Bloch vector off its circle."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a precession period",
+      "text": "A qubit has $H_0 = 3Z$. What is $\\omega_0$, and how long does an equatorial state take to come back to where it started?",
+      "hint": "Match $3Z$ to $(\\omega_0/2)Z$.",
+      "solution": [
+        "$H_0 = (\\omega_0/2)Z$ with $\\omega_0/2 = 3$, so $\\omega_0 = 6$.",
+        "A full turn takes $2\\pi/\\omega_0 = 2\\pi/6 = 1.047$ time units."
+      ],
+      "answer": "ω₀ = 6; period 2π/6 ≈ 1.047"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Adding an oscillating drive"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. The obvious way to tip the Bloch vector from the north pole towards the south is a field along $x$. But a static $x$ field just tilts the axis of precession a little, because the big $z$ field still dominates. The trick, used in every NMR machine and every quantum computer, is resonance: push with a field that oscillates at the qubit's own frequency $\\omega_0$."
+    },
+    {
+      "type": "prose",
+      "text": "An everyday picture. A child on a swing has a natural frequency. Tiny pushes at random times do nothing much; tiny pushes timed to the swing's own rhythm add up and build a large motion. A weak drive at $\\omega_0$ does the same to a qubit. The analogy breaks in one place: the swing's amplitude grows without limit, while the qubit's Bloch vector, having nowhere further to go than the south pole, comes back again, and that coming back is the Rabi oscillation."
+    },
+    {
+      "type": "prose",
+      "text": "The driven Hamiltonian. Add a field along $x$ that oscillates at the drive frequency $\\omega_d$ with amplitude $\\Omega$ and phase $\\phi$:"
+    },
+    {
+      "type": "math",
+      "tex": "H(t) = \\frac{\\omega_0}{2}\\,Z + \\Omega\\cos(\\omega_d t + \\phi)\\,X",
+      "caption": "A qubit with a static field along z and an oscillating drive along x."
+    },
+    {
+      "type": "prose",
+      "text": "Usually $\\Omega \\ll \\omega_0$: a superconducting qubit at $\\omega_0/2\\pi \\approx 5$ GHz is driven with $\\Omega/2\\pi$ of order 10 to 100 MHz. This Hamiltonian depends on time, so $e^{-iHt}$ is no longer the answer, and the Schrödinger equation has no simple closed-form solution. We need a way to remove the fast time dependence."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The rotating frame and the rotating-wave approximation"
+    },
+    {
+      "type": "prose",
+      "text": "The idea. The qubit precesses at $\\omega_0$ and the drive oscillates at $\\omega_d \\approx \\omega_0$. Watch the qubit from a frame that itself spins about $z$ at $\\omega_d$, like watching a merry-go-round while standing on it. In that frame the fast precession disappears, the drive looks nearly static, and what is left is slow and easy to solve."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1: define the rotating-frame state. Let $R(t) = e^{i\\omega_d t Z/2}$, which undoes a $z$ rotation at rate $\\omega_d$, and define $\\vert\\tilde\\psi(t)\\rangle = R(t)\\vert\\psi(t)\\rangle$. Because $R(t)$ is diagonal in the $\\vert0\\rangle, \\vert1\\rangle$ basis and only changes phases, the populations, and so the measurement probabilities in the $Z$ basis, are the same in both frames."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2: find the equation the new state obeys. Differentiate with the product rule, using $i\\,\\tfrac{d}{dt}\\vert\\psi\\rangle = H\\vert\\psi\\rangle$ and $\\tfrac{d}{dt}R = (i\\omega_d Z/2)R$:"
+    },
+    {
+      "type": "math",
+      "tex": "i\\frac{d}{dt}\\vert\\tilde\\psi\\rangle = i\\dot R\\,\\vert\\psi\\rangle + R\\,i\\frac{d}{dt}\\vert\\psi\\rangle = -\\frac{\\omega_d}{2}Z\\,R\\vert\\psi\\rangle + R H\\vert\\psi\\rangle = \\left(R H R^\\dagger - \\frac{\\omega_d}{2}Z\\right)\\vert\\tilde\\psi\\rangle",
+      "caption": "The rotating-frame Hamiltonian is H̃ = R H R† − (ω_d/2) Z."
+    },
+    {
+      "type": "prose",
+      "text": "In the last step we wrote $\\vert\\psi\\rangle = R^\\dagger\\vert\\tilde\\psi\\rangle$. So the new state obeys a Schrödinger equation of its own with Hamiltonian $\\tilde H = RHR^\\dagger - (\\omega_d/2)Z$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3: transform each term. $Z$ commutes with $R$, so $R\\,\\tfrac{\\omega_0}{2}Z\\,R^\\dagger = \\tfrac{\\omega_0}{2}Z$, and together with the extra term it gives $\\tfrac{\\omega_0 - \\omega_d}{2}Z$. For the drive we need $RXR^\\dagger$; write $a = \\omega_dt$. Because $XZ = -ZX$, moving $X$ through $e^{-iaZ/2}$ flips the sign in the exponent: $Xe^{-iaZ/2} = e^{iaZ/2}X$. So $RXR^\\dagger = e^{iaZ/2}e^{iaZ/2}X = e^{iaZ}X = (\\cos a\\,I + i\\sin a\\,Z)X = X\\cos a + i\\sin a\\,ZX$. Finally $ZX = iY$ (multiply the rows out), so $i\\,ZX = -Y$ and $RXR^\\dagger = X\\cos\\omega_dt - Y\\sin\\omega_dt$: the $X$ axis, seen from the turning frame, turns the other way. The sample checks this numerically."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4: multiply out the drive. With $a = \\omega_dt$, the drive term in the new frame is $\\Omega\\cos(a + \\phi)\\,(X\\cos a - Y\\sin a)$. Two product-to-sum identities, $\\cos(a+\\phi)\\cos a = \\tfrac12[\\cos\\phi + \\cos(2a + \\phi)]$ and $\\cos(a+\\phi)\\sin a = \\tfrac12[\\sin(2a+\\phi) - \\sin\\phi]$, split it into two parts:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\Omega}{2}\\left(X\\cos\\phi + Y\\sin\\phi\\right) \\;+\\; \\frac{\\Omega}{2}\\left(X\\cos(2\\omega_dt + \\phi) - Y\\sin(2\\omega_dt + \\phi)\\right)",
+      "caption": "In the rotating frame the drive is a static part plus a part that spins at twice the drive frequency."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5: the rotating-wave approximation (RWA). The second part spins at $2\\omega_d$, about $6\\times10^{10}$ radians a second for a superconducting qubit at 5 GHz ($2\\times2\\pi\\times5\\times10^9$), while the first part only turns the state at rate $\\Omega$, a hundred to a thousand times slower. Over one slow turn the fast part pushes one way and then the other hundreds of times and averages to almost nothing, so we drop it. What remains is time-independent:"
+    },
+    {
+      "type": "math",
+      "tex": "\\tilde H = \\frac{\\delta}{2}\\,Z + \\frac{\\Omega}{2}\\left(X\\cos\\phi + Y\\sin\\phi\\right), \\qquad \\delta = \\omega_0 - \\omega_d",
+      "caption": "The rotating-frame Hamiltonian in the rotating-wave approximation. δ is the detuning, Ω the Rabi frequency, φ the drive phase."
+    },
+    {
+      "type": "prose",
+      "text": "Read it slowly, because almost everything on the rest of the page comes from it. The detuning $\\delta$ is how far the drive is from resonance and acts like a leftover field along $z$. The Rabi frequency $\\Omega$ is how hard we push and acts like a field in the $xy$ plane. The drive's phase $\\phi$ chooses the direction of that push: $\\phi = 0$ pushes along $x$, $\\phi = 90°$ along $y$. With $\\phi = 0$ this is exactly the Hamiltonian $H = \\tfrac\\delta2 Z + \\tfrac\\Omega2 X$ used elsewhere on this shelf."
+    },
+    {
+      "type": "prose",
+      "text": "How good is the RWA? The sample integrates the full time-dependent Hamiltonian in small steps, with no approximation, for a resonant drive of strength $\\Omega = 1$ held on for $t = \\pi$ (what the RWA predicts is a perfect flip). With $\\omega_0 = 20$ the true $P(1)$ is 0.9998; with $\\omega_0 = 5$, 0.9974; with $\\omega_0 = 2$, 0.9818. The error grows as $\\Omega/\\omega_0$ grows. The leading correction shifts the resonance slightly (the Bloch–Siegert shift, of order $\\Omega^2/\\omega_0$); for real qubits, with $\\Omega/\\omega_0$ around $10^{-2}$, the RWA is excellent."
+    },
+    {
+      "type": "prose",
+      "text": "Common mistake. Forgetting that the rotating frame is a choice of description. Measured populations are the same in both frames, but phases are not: a state that is fixed in the rotating frame is precessing at $\\omega_d$ in the lab. When a gate is calibrated 'in the rotating frame', the control electronics keep track of that phase for you."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which frame quantity is which",
+      "text": "A qubit has $\\omega_0/2\\pi = 5.000$ GHz and is driven at $\\omega_d/2\\pi = 4.998$ GHz with phase $\\phi = 90°$. Write the rotating-frame Hamiltonian, giving $\\delta$ as $2\\pi$ times a frequency.",
+      "hint": "Detuning is qubit frequency minus drive frequency; the phase picks the axis in the $xy$ plane.",
+      "solution": [
+        "$\\delta = \\omega_0 - \\omega_d = 2\\pi\\times 2$ MHz.",
+        "$\\phi = 90°$ gives $\\cos\\phi = 0$, $\\sin\\phi = 1$: the push is along $y$.",
+        "So $\\tilde H = \\tfrac{\\delta}{2}Z + \\tfrac{\\Omega}{2}Y$ with $\\delta = 2\\pi\\times2$ MHz and $\\Omega$ set by the drive amplitude."
+      ],
+      "answer": "H̃ = (δ/2) Z + (Ω/2) Y with δ = 2π × 2 MHz"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "On resonance: Rabi oscillations"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. The simplest and most useful case is a drive exactly at the qubit's frequency. It is how a qubit is flipped, and the oscillation it produces is the first thing measured on any new qubit."
+    },
+    {
+      "type": "prose",
+      "text": "The maths. With $\\delta = 0$ and $\\phi = 0$, the rotating-frame Hamiltonian is $\\tilde H = \\tfrac{\\Omega}{2}X$, constant in time. So the evolution is $e^{-i\\Omega tX/2} = R_X(\\Omega t)$: a steady rotation of the Bloch vector about the $x$ axis at angular frequency $\\Omega$. Starting from $\\vert0\\rangle$, the rotation formula $R_X(\\theta) = \\cos(\\theta/2)I - i\\sin(\\theta/2)X$ gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\tilde\\psi(t)\\rangle = \\cos\\frac{\\Omega t}{2}\\,\\vert0\\rangle - i\\sin\\frac{\\Omega t}{2}\\,\\vert1\\rangle, \\qquad P_1(t) = \\sin^2\\frac{\\Omega t}{2} = \\frac{1 - \\cos\\Omega t}{2}",
+      "caption": "Resonant Rabi oscillation from |0⟩: the population swings fully between |0⟩ and |1⟩ at angular frequency Ω."
+    },
+    {
+      "type": "prose",
+      "text": "On the Bloch sphere the vector starts at the north pole and swings down through the $y$-$z$ plane (it passes $-y$ on the equator, the state $(\\vert0\\rangle - i\\vert1\\rangle)/\\sqrt2$), reaches the south pole at $\\Omega t = \\pi$, and comes back up the other side. The probability of finding the qubit in $\\vert1\\rangle$ oscillates fully between 0 and 1. This is the Rabi oscillation, named after I. I. Rabi, whose 1937 analysis of spins in rotating fields founded magnetic resonance."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. A superconducting qubit is driven on resonance with $\\Omega/2\\pi = 10$ MHz, so $\\Omega = 2\\pi\\times10^7$ per second."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. A full flip needs $\\Omega t = \\pi$, so $t = \\pi/\\Omega = \\pi/(2\\pi\\times10^7) = 5\\times10^{-8}$ s: 50 nanoseconds.",
+        "Step 2. Half-way, at 25 ns, $\\Omega t = \\pi/2$ and $P_1 = \\sin^2(\\pi/4) = 0.5$.",
+        "Step 3. At 100 ns, $\\Omega t = 2\\pi$, the qubit is back in $\\vert0\\rangle$ (up to a global phase of $-1$, which is invisible on its own).",
+        "Step 4. Double the drive amplitude and every time halves: a 25 ns flip. That is why a 'Rabi experiment', scanning the pulse length or amplitude and watching $P_1$ oscillate, is the standard way to calibrate a qubit."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a pulse length",
+      "text": "On resonance with $\\Omega/2\\pi = 4$ MHz, how long must the drive be on to bring $\\vert0\\rangle$ to $P_1 = 0.25$ for the first time?",
+      "hint": "Solve $\\sin^2(\\Omega t/2) = 1/4$ for the smallest $t$.",
+      "solution": [
+        "Need $\\sin^2(\\Omega t/2) = 0.25$, so $\\sin(\\Omega t/2) = 0.5$, $\\Omega t/2 = \\pi/6$ and $\\Omega t = \\pi/3$.",
+        "$t = \\pi/(3\\Omega) = \\pi/(3\\times2\\pi\\times4\\times10^6\\ \\text{s}^{-1}) = 1/(2.4\\times10^7)$ s $= 41.7$ ns.",
+        "Check: a full flip at this drive takes $\\pi/\\Omega = 125$ ns, and $41.7/125 = 1/3$ of it, matching $\\Omega t = \\pi/3$."
+      ],
+      "answer": "about 41.7 ns"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Off resonance: Rabi's formula"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. No drive is ever exactly on resonance: qubit frequencies drift, and neighbouring qubits are deliberately detuned so they are not driven by accident. We need to know what a detuned drive does."
+    },
+    {
+      "type": "prose",
+      "text": "The idea. With $\\delta \\ne 0$ the rotating-frame Hamiltonian $\\tilde H = \\tfrac\\delta2 Z + \\tfrac\\Omega2 X$ is still constant, so the motion is still a rotation, but now about a tilted axis: partly $x$ (the drive) and partly $z$ (the detuning). A rotation about a tilted axis never carries the north pole all the way to the south pole; the Bloch vector sweeps a cone instead."
+    },
+    {
+      "type": "prose",
+      "text": "The derivation, step by step."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Write $\\tilde H$ as a length times a unit axis. Let $W = \\sqrt{\\Omega^2 + \\delta^2}$, the generalised Rabi frequency, and $\\mathbf n = (\\Omega/W,\\ 0,\\ \\delta/W)$, a unit vector. Then $\\tilde H = \\tfrac W2\\,(\\mathbf n\\cdot\\boldsymbol\\sigma)$, with $\\mathbf n\\cdot\\boldsymbol\\sigma = n_xX + n_yY + n_zZ$.",
+        "Step 2. Square the axis operator. Using $X^2 = Z^2 = I$ and $XZ + ZX = 0$: $(n_xX + n_zZ)^2 = n_x^2 I + n_z^2 I + n_xn_z(XZ + ZX) = (n_x^2 + n_z^2)I = I$.",
+        "Step 3. Exponentiate. In the power series of $e^{-i\\alpha\\,\\mathbf n\\cdot\\boldsymbol\\sigma}$, the even powers of $\\mathbf n\\cdot\\boldsymbol\\sigma$ are $I$ and the odd powers are $\\mathbf n\\cdot\\boldsymbol\\sigma$, so the series splits into the series for cosine and sine: $e^{-i\\alpha\\,\\mathbf n\\cdot\\boldsymbol\\sigma} = \\cos\\alpha\\,I - i\\sin\\alpha\\,\\mathbf n\\cdot\\boldsymbol\\sigma$. Here $\\alpha = Wt/2$.",
+        "Step 4. Apply it to $\\vert0\\rangle$. Since $X\\vert0\\rangle = \\vert1\\rangle$ and $Z\\vert0\\rangle = \\vert0\\rangle$, $\\mathbf n\\cdot\\boldsymbol\\sigma\\,\\vert0\\rangle = (\\delta/W)\\vert0\\rangle + (\\Omega/W)\\vert1\\rangle$. So $\\vert\\tilde\\psi(t)\\rangle = \\left[\\cos\\tfrac{Wt}{2} - i\\tfrac{\\delta}{W}\\sin\\tfrac{Wt}{2}\\right]\\vert0\\rangle - i\\,\\tfrac{\\Omega}{W}\\sin\\tfrac{Wt}{2}\\,\\vert1\\rangle$.",
+        "Step 5. Square the $\\vert1\\rangle$ amplitude to get the probability:"
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "P_1(t) = \\frac{\\Omega^2}{\\Omega^2 + \\delta^2}\\,\\sin^2\\!\\left(\\frac{\\sqrt{\\Omega^2+\\delta^2}\\;t}{2}\\right)",
+      "caption": "Rabi's formula. On resonance (δ = 0) the population swings fully between |0⟩ and |1⟩; detuning speeds the oscillation up and caps it."
+    },
+    {
+      "type": "prose",
+      "text": "Two things change with detuning, and both are visible in the formula. The oscillation is faster, at $W = \\sqrt{\\Omega^2 + \\delta^2}$ instead of $\\Omega$. And it no longer reaches 1: its ceiling is $\\Omega^2/(\\Omega^2 + \\delta^2)$. When $\\delta = \\Omega$ the ceiling is exactly one half; when $\\delta = 10\\,\\Omega$ it is under 1%. A drive only affects qubits whose frequency is within about $\\Omega$ of it, which is how one qubit on a chip can be addressed without disturbing its neighbours."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. Take $\\Omega = 1$ and $\\delta = 0.5$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $W = \\sqrt{1 + 0.25} = 1.1180$ and the ceiling is $1/1.25 = 0.8$.",
+        "Step 2. At $t = 1$: $P_1 = 0.8\\sin^2(0.5590) = 0.8\\times0.2813 = 0.2250$.",
+        "Step 3. At $t = 2$: $P_1 = 0.8\\sin^2(1.1180) = 0.6469$.",
+        "Step 4. At $t = 4$: $P_1 = 0.8\\sin^2(2.2361) = 0.4952$. Past the peak and on the way down: the peak is at $Wt = \\pi$, $t = 2.81$.",
+        "Step 5. The sample computes the same three numbers by brute force, exponentiating $\\tilde H$ numerically, and they agree to four digits."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Rabi oscillation of a driven qubit",
+        "params": [
+          {
+            "key": "Omega",
+            "label": "Rabi frequency Ω",
+            "control": "range",
+            "min": 0,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "delta",
+            "label": "Detuning δ",
+            "control": "range",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "tmax",
+            "label": "Time shown",
+            "control": "range",
+            "min": 5,
+            "max": 50,
+            "step": 5,
+            "default": 20
+          }
+        ],
+        "config": {
+          "sim": "rabi",
+          "xLabel": "time t",
+          "yLabel": "probability of |1⟩"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try it:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "At the defaults (Ω = 1, δ = 0) the population swings all the way to $\\vert1\\rangle$ and back with period $2\\pi/\\Omega = 6.28$.",
+        "Set δ = 1. The curve now peaks at 0.5, the ceiling the legend reports, and the period shortens to $2\\pi/\\sqrt2 = 4.44$.",
+        "Set Ω = 0.5 and δ = 5. Almost nothing moves (the legend's ceiling reads 0.010; exactly $0.25/25.25 = 0.0099$): a qubit this far off resonance simply ignores the drive. That is the effect that stops a strongly detuned qubit in a disordered reservoir from passing on its excitation.",
+        "Keep δ = 1 and raise Ω to 3. The ceiling climbs back to 0.9: a strong enough drive overpowers the detuning."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A π pulse that misses the resonance. Suppose you calibrated a $\\pi$ pulse, $t = \\pi/\\Omega$, for a qubit, and then the qubit's frequency drifts by $\\delta$. Rabi's formula at $t = \\pi/\\Omega$ gives the fidelity of the flip as a function of $\\delta/\\Omega$. The sample prints $P_1 = 0.9606$ at $\\delta = 0.2\\,\\Omega$, $0.7728$ at $0.5\\,\\Omega$, $0.4988$ at $0.8\\,\\Omega$ and exactly 0 at $\\delta = \\sqrt3\\,\\Omega$ (there $W = 2\\Omega$, so the vector goes round its cone once and returns to the north pole). Scanning the drive frequency at a fixed $\\pi$ pulse and recording $P_1$ is how a qubit's frequency is found: the peak is where $\\delta = 0$, and the half-height points are at about $\\delta = \\pm0.8\\,\\Omega$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: the ceiling",
+      "text": "A drive with $\\Omega/2\\pi = 5$ MHz hits a neighbouring qubit that is 50 MHz away. What is the largest population the neighbour can reach?",
+      "hint": "Only the ratio $\\delta/\\Omega$ matters for the ceiling.",
+      "solution": [
+        "$\\delta/\\Omega = 50/5 = 10$.",
+        "Ceiling $= \\Omega^2/(\\Omega^2 + \\delta^2) = 1/(1 + 100) = 0.0099$."
+      ],
+      "answer": "about 0.0099, under 1%"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pulses as gates"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. This is the payoff: the abstract gates of Gates and Circuits (#/quantum/qubits/gates-and-circuits) are, on most hardware, resonant pulses of the right length and phase."
+    },
+    {
+      "type": "prose",
+      "text": "Rotation angle and pulse area. On resonance the rotating-frame evolution is $R_{\\mathbf a}(\\Omega t)$, a rotation by angle $\\Omega t$ about an axis $\\mathbf a = (\\cos\\phi, \\sin\\phi, 0)$ in the $xy$ plane chosen by the drive phase. If the drive amplitude changes during the pulse, as it does for the smooth pulse shapes used in practice to avoid sudden switching, the rotation angle is the pulse area, $\\theta = \\int\\Omega(t)\\,dt$; on resonance the axis stays fixed while the amplitude varies, so the small rotations simply add."
+    },
+    {
+      "type": "list",
+      "items": [
+        "A $\\pi$ pulse ($\\theta = \\pi$) along $x$ is $R_X(\\pi) = -iX$: the NOT gate, up to a global phase. It takes $\\vert0\\rangle \\to -i\\vert1\\rangle$.",
+        "A $\\pi/2$ pulse along $x$ is $R_X(\\pi/2)$, which takes $\\vert0\\rangle \\to (\\vert0\\rangle - i\\vert1\\rangle)/\\sqrt2$, the $-y$ point of the equator. It is the standard way to make an equal superposition.",
+        "Shifting the drive phase by $90°$ gives $R_Y$ instead: a $\\pi/2$ pulse along $y$ takes $\\vert0\\rangle$ to $\\vert+\\rangle$.",
+        "Rotations about $z$ need no pulse at all. A $z$ rotation is a change of the phase reference: shift the phase of every later drive by an angle and you have rotated the frame, which is the same as applying $R_Z$ to the qubit. Hardware calls this a virtual $Z$ gate; it is exact and takes no time.",
+        "Everything else is built from these. For example the Hadamard is exactly $H_d = X\\,R_Y(\\pi/2)$ (the sample checks it), so a $\\pi/2$ pulse along $y$ followed by a $\\pi$ pulse along $x$ makes it. Because the $\\pi$ pulse is $R_X(\\pi) = -iX$ rather than $X$, the pulses give $-iH_d$: the Hadamard up to a global phase, which is all that matters."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "bloch-sphere",
+        "title": "Pulses as rotations",
+        "params": [
+          {
+            "key": "theta",
+            "label": "Polar angle θ (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 180,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "phi",
+            "label": "Azimuthal angle φ (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "axis",
+            "label": "Rotate about",
+            "control": "select",
+            "options": [
+              "none",
+              "X",
+              "Y",
+              "Z"
+            ],
+            "default": "X"
+          },
+          {
+            "key": "angle",
+            "label": "Rotation angle (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 5,
+            "default": 180
+          }
+        ]
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try it: the defaults start at the north pole ($\\theta = 0$) and rotate by $180°$ about X: a $\\pi$ pulse, landing at the south pole with $P(1) = 1$. Set the angle to $90°$ for a $\\pi/2$ pulse and the vector stops on the equator at $-y$. Switch the axis to Y and it stops at $+x$ instead: the drive phase chose the axis. Then start on the equator ($\\theta = 90°$) and rotate about Z: the probabilities never change, which is why a $z$ rotation can be done in software."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: building a gate from pulses",
+      "text": "Starting from $\\vert0\\rangle$, apply a $\\pi/2$ pulse along $y$ and then a $\\pi$ pulse along $x$. Which state do you get, and which gate did you apply?",
+      "hint": "$R_Y(\\theta)\\vert0\\rangle = \\cos(\\theta/2)\\vert0\\rangle + \\sin(\\theta/2)\\vert1\\rangle$.",
+      "solution": [
+        "$R_Y(\\pi/2)\\vert0\\rangle = \\cos(\\pi/4)\\vert0\\rangle + \\sin(\\pi/4)\\vert1\\rangle = \\vert+\\rangle$.",
+        "$R_X(\\pi) = -iX$, and $X\\vert+\\rangle = \\vert+\\rangle$, so the state is $-i\\vert+\\rangle$, the same physical state as $\\vert+\\rangle$.",
+        "As operators, $R_X(\\pi)R_Y(\\pi/2) = -i\\,X R_Y(\\pi/2) = -iH_d$: the Hadamard up to a global phase. On this input the $\\pi$ pulse happens to change only the global phase, because $\\vert+\\rangle$ is an eigenstate of $X$; on $\\vert1\\rangle$ the same two pulses give $-i\\vert-\\rangle$."
+      ],
+      "answer": "|+⟩; the Hadamard"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Measuring the frequency: the Ramsey experiment"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. Calibrating gates needs the qubit frequency to high precision, much better than the width of the Rabi resonance, which is about $\\Omega$. The Ramsey experiment gets it by letting the qubit's phase run freely and then reading it out."
+    },
+    {
+      "type": "prose",
+      "text": "The sequence, step by step, in the rotating frame of a drive at $\\omega_d$ with detuning $\\delta = \\omega_0 - \\omega_d$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. A $\\pi/2$ pulse along $x$ puts $\\vert0\\rangle$ on the equator, at $-y$.",
+        "Step 2. Wait a time $\\tau$ with the drive off. In the rotating frame only $\\tfrac\\delta2 Z$ is left, so the vector precesses round the equator by an angle $\\delta\\tau$. If the drive were exactly on resonance it would not move at all.",
+        "Step 3. A second $\\pi/2$ pulse along $x$. If the vector has not moved, the two pulses add to a $\\pi$ pulse and the qubit ends in $\\vert1\\rangle$. If it has moved half way round, the second pulse brings it back to $\\vert0\\rangle$.",
+        "Step 4. Measure. To get the number, track the amplitudes. After step 1 the state is $(\\vert0\\rangle - i\\vert1\\rangle)/\\sqrt2$. The wait multiplies $\\vert0\\rangle$ by $e^{-i\\delta\\tau/2}$ and $\\vert1\\rangle$ by $e^{+i\\delta\\tau/2}$; dropping the global factor $e^{-i\\delta\\tau/2}$ leaves $(\\vert0\\rangle - ie^{i\\delta\\tau}\\vert1\\rangle)/\\sqrt2$.",
+        "Step 5. The second pulse is $R_X(\\pi/2) = (I - iX)/\\sqrt2$, which sends $a\\vert0\\rangle + b\\vert1\\rangle$ to a state whose $\\vert1\\rangle$ amplitude is $(b - ia)/\\sqrt2$. With $a = 1/\\sqrt2$ and $b = -ie^{i\\delta\\tau}/\\sqrt2$ this is $-i(1 + e^{i\\delta\\tau})/2$.",
+        "Step 6. Square its size: $\\vert1 + e^{i\\delta\\tau}\\vert^2/4 = (2 + 2\\cos\\delta\\tau)/4 = \\cos^2(\\delta\\tau/2)$, using $1 + \\cos x = 2\\cos^2(x/2)$. That is the Ramsey fringe (the sample checks it numerically):"
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "P_1(\\tau) = \\cos^2\\frac{\\delta\\,\\tau}{2}",
+      "caption": "Ramsey fringes (pulses short compared with 1/δ). The fringe period in τ is 2π/δ."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. A Ramsey scan of $\\tau$ shows $P_1$ falling from 1 at $\\tau = 0$ to 0 at $\\tau = 250$ ns and returning to 1 at 500 ns. A full fringe period is $2\\pi/\\delta = 500$ ns, so $\\delta = 2\\pi/(5\\times10^{-7}\\ \\text{s})$, that is $\\delta/2\\pi = 2$ MHz: the qubit is 2 MHz away from the drive. The longer you can wait, the finer the frequency you can resolve; in practice the fringes fade as the qubit dephases, and the fading time is the dephasing time $T_2^*$, one of the coherence times met in Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics) on the QRC shelf. The sample checks the formula at $\\delta = 0.5$: $P_1 = 1$, 0.7702, 0.5 and 0 at $\\tau = 0$, 2, $\\pi$ and $2\\pi$. The method is Ramsey's 1950 separated-oscillating-fields technique, the basis of atomic clocks."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: reading a Ramsey fringe",
+      "text": "A Ramsey experiment shows $P_1 = 0.5$ for the first time at $\\tau = 1\\ \\mu$s. What is the detuning $\\delta/2\\pi$?",
+      "hint": "Solve $\\cos^2(\\delta\\tau/2) = 1/2$.",
+      "solution": [
+        "$\\cos^2(\\delta\\tau/2) = 0.5$ first when $\\delta\\tau/2 = \\pi/4$, so $\\delta\\tau = \\pi/2$.",
+        "$\\delta = (\\pi/2)/(10^{-6}\\ \\text{s})$, so $\\delta/2\\pi = 1/(4\\times10^{-6}\\ \\text{s}) = 250$ kHz.",
+        "Check: the fringe period is $2\\pi/\\delta = 4\\ \\mu$s, and $P_1$ first falls to one half a quarter of the way through a period, at $1\\ \\mu$s."
+      ],
+      "answer": "250 kHz"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How real qubits are controlled"
+    },
+    {
+      "type": "prose",
+      "text": "The same physics, with different hardware. In each case the qubit has a transition frequency $\\omega_0$, and gates are resonant pulses whose length, amplitude and phase set the rotation."
+    },
+    {
+      "type": "list",
+      "items": [
+        "NMR: the qubits are nuclear spins in molecules in a strong magnet, with $\\omega_0/2\\pi$ in the hundreds of MHz. Radio-frequency pulses tip the spins; NMR is where pulse sequences such as the spin echo and the Ramsey method were developed and used long before quantum computing.",
+        "Superconducting qubits (transmons): $\\omega_0/2\\pi$ around 4 to 8 GHz, driven by microwave pulses down a control line, with single-qubit gates typically lasting tens of nanoseconds. A transmon is really a ladder of levels, not just two; its third level sits only a few hundred MHz away from the qubit transition, so a pulse that is too short (spectrally too broad) leaks population out of the qubit. Shaped pulses with a correction on the other quadrature, called DRAG (Motzoi et al. 2009), suppress that leakage.",
+        "Trapped ions: the qubit is two levels of an ion, driven either by microwaves or by lasers. With two laser beams whose frequency difference matches $\\omega_0$ (a Raman transition) the same rotating-frame Hamiltonian appears, and the lasers' phase difference sets $\\phi$.",
+        "Neutral atoms: similar laser control, plus a strong interaction when atoms are excited to Rydberg states, which provides two-qubit gates and the analog Hamiltonians of the QRC shelf's Analog Platforms (#/qrc/hardware/analog-platforms) page."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Worked example: an error budget for one pulse. A transmon at 5.000 GHz is driven with $\\Omega/2\\pi = 10$ MHz, so the calibrated $\\pi$ pulse is 50 ns. If the qubit frequency drifts by 2 MHz, $\\delta/\\Omega = 0.2$ and the flip probability falls to 0.9606; at 5 MHz ($\\delta/\\Omega = 0.5$) it is 0.7728. A 4% error from a 0.04% frequency drift is why qubit frequencies are re-measured, with Ramsey experiments, many times a day."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem: you have a new qubit whose frequency you know only roughly, and you want a calibrated NOT gate. Plan the experiments and say what each one measures."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Spectroscopy: apply a fixed, weak pulse and scan the drive frequency. $P_1$ peaks where $\\delta = 0$, with half-height points near $\\delta = \\pm0.8\\,\\Omega$ for a $\\pi$-length pulse. This finds $\\omega_0$ to within about $\\Omega$.",
+        "Step 2. Rabi experiment: drive at the peak frequency and scan the pulse length. $P_1 = \\sin^2(\\Omega t/2)$ oscillates; its period is $2\\pi/\\Omega$, which gives $\\Omega$, and the first maximum gives the $\\pi$-pulse length $t_\\pi = \\pi/\\Omega$.",
+        "Step 3. Ramsey experiment: two $\\pi/2$ pulses (each $t_\\pi/2$ long) separated by a wait $\\tau$. The fringe period $2\\pi/\\delta$ gives the remaining detuning far more precisely than step 1; shift the drive frequency by $\\delta$.",
+        "Step 4. Repeat the Rabi experiment at the corrected frequency. Now the oscillation reaches 1, and the $\\pi$ pulse is a NOT gate up to a global phase.",
+        "Step 5. Numbers: if step 2 shows a period of 100 ns, then $\\Omega/2\\pi = 10$ MHz and $t_\\pi = 50$ ns; if step 3 shows a fringe period of 500 ns, the drive was 2 MHz off, enough to cost 4% of the flip, as the previous section computed."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1, -1]).astype(complex)\nRX = lambda a: expm(-1j * a * X / 2)\n# 1. Larmor precession: H = (w0/2) Z, start on the equator, <X>(t) = cos(w0 t)\nw0 = 2.0\nplus = np.array([1, 1]) / np.sqrt(2)\nfor t in (0.0, 0.5, np.pi / 4, np.pi / 2):\n    v = expm(-1j * w0 / 2 * Z * t) @ plus\n    print(f\"t = {t:.3f}: <X> = {np.real(np.vdot(v, X @ v)):+.4f}  cos(w0 t) = {np.cos(w0 * t):+.4f}\")\n# 1b. The drive seen from the rotating frame: R X R^dagger = X cos(a) - Y sin(a), with R = exp(i a Z / 2)\nfor a in (0.4, 1.3, 2.9):\n    R = expm(1j * a * Z / 2)\n    print(f\"a = {a}: R X R^dagger = X cos a - Y sin a: {np.allclose(R @ X @ R.conj().T, X*np.cos(a) - Y*np.sin(a))}\")\n# 2. Lab frame with a real drive  H(t) = (w0/2) Z + Omega cos(wd t) X,  against the RWA prediction\ndef lab(w0, wd, Om, tmax, steps=20000):\n    dt = tmax / steps; v = np.array([1, 0], complex)\n    for k in range(steps):\n        t = (k + 0.5) * dt\n        v = expm(-1j * dt * (w0 / 2 * Z + Om * np.cos(wd * t) * X)) @ v\n    return abs(v[1]) ** 2\nOm = 1.0\nfor w0 in (20.0, 5.0, 2.0):\n    t = np.pi / Om                  # the RWA's pi pulse\n    print(f\"w0 = {w0:4.1f}, Omega = 1, on resonance, t = pi: lab-frame P(1) = {lab(w0, w0, Om, t):.4f}  (RWA says 1)\")\n# 3. Rabi's formula from the rotating-frame Hamiltonian (delta/2) Z + (Omega/2) X\nOm, de = 1.0, 0.5\nW = np.hypot(Om, de)\nfor t in (1.0, 2.0, 4.0):\n    v = expm(-1j * (de / 2 * Z + Om / 2 * X) * t) @ np.array([1, 0])\n    print(f\"t = {t}: P(1) numerical {abs(v[1])**2:.4f}, formula {(Om/W)**2 * np.sin(W*t/2)**2:.4f}\")\n# 4. Pi and pi/2 pulses as gates\nprint(\"R_X(pi)  =\", np.round(RX(np.pi), 4).tolist(), \" = -iX:\", np.allclose(RX(np.pi), -1j * X))\nprint(\"R_X(pi/2)|0> =\", np.round(RX(np.pi / 2) @ [1, 0], 4))\nRY = lambda a: expm(-1j * a * Y / 2); Hd = np.array([[1, 1], [1, -1]]) / np.sqrt(2)\nprint(\"X R_Y(pi/2) = Hadamard:\", np.allclose(X @ RY(np.pi / 2), Hd))\n# 5. A pi pulse that is off resonance: P(1) against detuning (both in units of Omega)\nfor d in (0.0, 0.2, 0.5, 0.8, 1.0, np.sqrt(3)):\n    W = np.hypot(1, d)\n    print(f\"delta = {d:.3f} Omega: P(1) after the pi pulse = {np.sin(np.pi * W / 2)**2 / W**2:.4f}\")\n# 6. Ramsey: pi/2, wait tau with detuning delta, pi/2.  P(1) = cos^2(delta tau / 2)\nde = 0.5\nfor tau in (0.0, 2.0, np.pi, 2 * np.pi):\n    v = RX(np.pi / 2) @ expm(-1j * de / 2 * Z * tau) @ RX(np.pi / 2) @ np.array([1, 0])\n    print(f\"tau = {tau:.3f}: P(1) = {abs(v[1])**2:.4f}  cos^2(delta tau/2) = {np.cos(de*tau/2)**2:.4f}\")\n# 7. Design example: Omega = 2 pi x 10 MHz, drive 2 MHz (or 5 MHz) off the qubit frequency, pulse length pi/Omega = 50 ns\nfor dMHz in (0, 2, 5):\n    Om, de = 2 * np.pi * 10e6, 2 * np.pi * dMHz * 1e6\n    W = np.hypot(Om, de); t = np.pi / Om\n    print(f\"detuning {dMHz} MHz: pulse {t*1e9:.0f} ns, P(1) = {(Om/W)**2 * np.sin(W*t/2)**2:.4f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: under $H_0 = (\\omega_0/2)Z$ with $\\omega_0 = 2$, $\\langle X\\rangle$ follows $\\cos\\omega_0t$ exactly (1, 0.5403, 0, −1). $RXR^\\dagger = X\\cos a - Y\\sin a$ checks True for three angles. The full lab-frame drive held for the RWA's $\\pi$-pulse time gives $P(1) = 0.9998$, 0.9974 and 0.9818 for $\\omega_0 = 20$, 5 and 2 (with $\\Omega = 1$). Rabi's formula matches brute force: 0.2250, 0.6469, 0.4952. $R_X(\\pi) = -iX$; $R_X(\\pi/2)\\vert0\\rangle = (0.7071, -0.7071i)$; $X R_Y(\\pi/2)$ is exactly the Hadamard. A $\\pi$ pulse off resonance by $\\delta/\\Omega = 0, 0.2, 0.5, 0.8, 1, \\sqrt3$ gives 1, 0.9606, 0.7728, 0.4988, 0.3166, 0. The Ramsey fringe matches $\\cos^2(\\delta\\tau/2)$, and the 10 MHz design example gives 1, 0.9606 and 0.7728 at detunings of 0, 2 and 5 MHz."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A qubit in a static field, $H_0 = (\\omega_0/2)Z$, precesses about $z$ at its transition frequency $\\omega_0$; populations never change, only the phase.",
+        "An oscillating drive at frequency $\\omega_d$ near $\\omega_0$ is analysed in a frame rotating at $\\omega_d$. Dropping the terms that spin at $2\\omega_d$ (the rotating-wave approximation) leaves the constant Hamiltonian $\\tilde H = \\tfrac\\delta2 Z + \\tfrac\\Omega2(X\\cos\\phi + Y\\sin\\phi)$.",
+        "On resonance the Bloch vector rotates about an axis in the $xy$ plane at the Rabi frequency $\\Omega$, so $P_1 = \\sin^2(\\Omega t/2)$.",
+        "Off resonance, Rabi's formula: $P_1 = \\frac{\\Omega^2}{\\Omega^2+\\delta^2}\\sin^2(\\sqrt{\\Omega^2+\\delta^2}\\,t/2)$: faster and capped.",
+        "A $\\pi$ pulse is a NOT gate, a $\\pi/2$ pulse makes a superposition, the drive phase picks the rotation axis, and $z$ rotations are done in software.",
+        "Ramsey fringes, $P_1 = \\cos^2(\\delta\\tau/2)$, measure the detuning precisely; their fading measures dephasing."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A π pulse",
+      "text": "On resonance with Rabi frequency $\\Omega$, how long must the drive be on to move $\\vert0\\rangle$ completely to $\\vert1\\rangle$? And for $\\Omega/2\\pi = 25$ MHz?",
+      "hint": "Set $\\Omega t/2 = \\pi/2$.",
+      "solution": [
+        "With $\\delta = 0$, $P_1 = \\sin^2(\\Omega t/2)$, which first reaches 1 at $\\Omega t/2 = \\pi/2$, so $t = \\pi/\\Omega$.",
+        "$\\Omega = 2\\pi\\times2.5\\times10^7\\ \\text{s}^{-1}$, so $t = \\pi/\\Omega = 1/(5\\times10^7)$ s $= 20$ ns."
+      ],
+      "answer": "t = π/Ω; 20 ns"
+    },
+    {
+      "type": "problem",
+      "title": "Larmor frequency in a scanner",
+      "text": "Protons have $\\gamma/2\\pi = 42.58$ MHz per tesla. At what frequency must an MRI machine with a 3 T magnet drive them?",
+      "hint": "$\\omega_0 = \\gamma B$.",
+      "solution": [
+        "$\\omega_0/2\\pi = (\\gamma/2\\pi)\\,B = 42.58\\times3 = 127.7$ MHz.",
+        "Resonance needs $\\omega_d = \\omega_0$, so the radio-frequency drive is at about 127.7 MHz."
+      ],
+      "answer": "about 127.7 MHz"
+    },
+    {
+      "type": "problem",
+      "title": "Half a flip from detuning",
+      "text": "For which detuning does an otherwise perfect $\\pi$ pulse leave $P_1$ at about 0.5? And for which detuning is the Rabi ceiling exactly 0.5?",
+      "hint": "Use Rabi's formula at $t = \\pi/\\Omega$.",
+      "solution": [
+        "The $\\pi$ pulse fidelity is $\\sin^2(\\pi W/2\\Omega)\\,\\Omega^2/W^2$ with $W = \\sqrt{\\Omega^2+\\delta^2}$; numerically it is 0.4988 at $\\delta = 0.8\\,\\Omega$ (the sample's table), so about $\\delta \\approx 0.8\\,\\Omega$.",
+        "The ceiling $\\Omega^2/(\\Omega^2+\\delta^2) = 0.5$ when $\\delta = \\Omega$. The two differ because a $\\pi$-length pulse does not land exactly on the peak of the faster detuned oscillation."
+      ],
+      "answer": "δ ≈ 0.8 Ω for the π pulse; δ = Ω for the ceiling"
+    },
+    {
+      "type": "problem",
+      "title": "Rotating-frame bookkeeping",
+      "text": "In the rotating frame a qubit sits still at $\\vert+\\rangle$ with no drive and $\\delta = 0$. Describe its motion in the lab frame, and what $\\langle X\\rangle_{\\text{lab}}$ is at time $t$.",
+      "hint": "Undo the frame: $\\vert\\psi\\rangle = R^\\dagger\\vert\\tilde\\psi\\rangle$.",
+      "solution": [
+        "With no drive and $\\delta = 0$, $\\tilde H = 0$, so $\\vert\\tilde\\psi\\rangle = \\vert+\\rangle$ for all $t$.",
+        "Lab frame: $\\vert\\psi\\rangle = R^\\dagger\\vert\\tilde\\psi\\rangle = e^{-i\\omega_d tZ/2}\\vert+\\rangle$, precession about $z$ at $\\omega_d = \\omega_0$.",
+        "So $\\langle X\\rangle_{\\text{lab}} = \\cos\\omega_0t$: the lab sees ordinary Larmor precession; the rotating frame simply hides it."
+      ],
+      "answer": "It precesses at ω₀; ⟨X⟩ = cos ω₀t"
+    },
+    {
+      "type": "problem",
+      "title": "Pulse area",
+      "text": "A resonant pulse has a triangular envelope: $\\Omega(t)$ rises linearly from 0 to $\\Omega_{\\max}$ in 20 ns and falls back to 0 in another 20 ns. What $\\Omega_{\\max}/2\\pi$ makes it a $\\pi$ pulse?",
+      "hint": "The rotation angle is the area under $\\Omega(t)$.",
+      "solution": [
+        "Area of a triangle: $\\tfrac12\\times40\\ \\text{ns}\\times\\Omega_{\\max} = (2\\times10^{-8}\\ \\text{s})\\,\\Omega_{\\max}$.",
+        "Set it to $\\pi$: $\\Omega_{\\max} = \\pi/(2\\times10^{-8}) = 1.571\\times10^8\\ \\text{s}^{-1}$.",
+        "$\\Omega_{\\max}/2\\pi = 1.571\\times10^8/6.283 = 25$ MHz. (A square pulse of the same 40 ns would need only 12.5 MHz.)"
+      ],
+      "answer": "25 MHz"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Input encoding in a quantum reservoir is a rotation by an angle set by the input, which on hardware is a pulse of the right area: Input Encoding (#/qrc/models/input-encoding).",
+        "Detuned spins that cannot exchange an excitation, the mechanism behind localisation in disordered reservoirs: Dynamical Regimes (#/qrc/models/dynamical-regimes).",
+        "Driven Rydberg arrays and their Hamiltonian $\\tfrac\\Omega2X - \\delta n$ per atom: Analog Platforms (#/qrc/hardware/analog-platforms).",
+        "Why Ramsey fringes fade, and the coherence times $T_1$ and $T_2$: Mixed States (#/quantum/many-body/mixed-states) and Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics) (a later page of the Many Qubits chapter treats decoherence itself).",
+        "The gates these pulses implement, combined into circuits: Gates and Circuits (#/quantum/qubits/gates-and-circuits)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "I. I. Rabi, Space quantization in a gyrating magnetic field, Physical Review 51, 652 (1937)",
+        "N. F. Ramsey, A molecular beam resonance method with separated oscillating fields, Physical Review 78, 695 (1950)",
+        "F. Bloch and A. Siegert, Magnetic resonance for nonrotating fields, Physical Review 57, 522 (1940)",
+        "F. Motzoi, J. M. Gambetta, P. Rebentrost and F. K. Wilhelm, Simple pulses for elimination of leakage in weakly nonlinear qubits, Physical Review Letters 103, 110501 (2009)",
+        "P. Krantz, M. Kjaergaard, F. Yan, T. P. Orlando, S. Gustavsson and W. D. Oliver, A quantum engineer's guide to superconducting qubits, Applied Physics Reviews 6, 021318 (2019)",
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), section 5.5 on time-dependent two-state problems",
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), chapter 7"
+      ]
+    }
+  ]
+}

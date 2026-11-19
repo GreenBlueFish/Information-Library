@@ -1,0 +1,728 @@
+{
+  "title": "Interference of Amplitudes",
+  "intro": "Quantum probabilities come from adding amplitudes, which can cancel, and this one rule explains the Mach–Zehnder interferometer, why recording which path a particle took destroys the pattern, and how quantum algorithms find answers. This page follows amplitudes route by route, from a single beam splitter to Deutsch's one-query algorithm.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "Amplitudes and the Born rule (Measurement and the Born Rule (#/quantum/foundations/measurement)), the Hadamard gate $H_d$ and the Paulis (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)), and the Bloch sphere (The Qubit and the Bloch Sphere (#/quantum/qubits/bloch-sphere)). The last sections use two qubits and the CNOT gate; the little that is needed is explained here, and the full treatment is on the next page, Gates and Circuits (#/quantum/qubits/gates-and-circuits)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Follow amplitudes through a circuit path by path, and see where they add and where they cancel.",
+        "Derive the output probabilities of a Mach–Zehnder interferometer, $\\cos^2(\\varphi/2)$ and $\\sin^2(\\varphi/2)$.",
+        "Compute how much a which-path marker reduces the interference (the visibility), and how a quantum eraser brings it back.",
+        "Explain phase kickback and solve Deutsch's problem with one query.",
+        "Say in one sentence why interference, not parallelism, is what quantum algorithms run on."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A puzzle: the coin that un-flips itself"
+    },
+    {
+      "type": "prose",
+      "text": "Take an ordinary coin showing heads and apply a “random flip”: toss it, so it shows heads or tails with probability 1/2 each. Apply a second random flip. The result is still 50/50: randomness never undoes randomness. Now do the quantum version. Start a qubit in $\\vert0\\rangle$ and apply the Hadamard gate $H_d$, which sends $\\vert0\\rangle \\to (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$ and $\\vert1\\rangle \\to (\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$. Measured now, the qubit gives 0 or 1 with probability 1/2: as random as the coin. Apply $H_d$ a second time and measure. The result is 0, every time."
+    },
+    {
+      "type": "prose",
+      "text": "Follow the amplitudes to see why. After the first $H_d$ the state is $\\frac{1}{\\sqrt2}\\vert0\\rangle + \\frac{1}{\\sqrt2}\\vert1\\rangle$. The second $H_d$ acts on each term:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The $\\vert0\\rangle$ term becomes $\\frac{1}{\\sqrt2}\\cdot\\frac{\\vert0\\rangle + \\vert1\\rangle}{\\sqrt2} = \\frac12\\vert0\\rangle + \\frac12\\vert1\\rangle$.",
+        "Step 2. The $\\vert1\\rangle$ term becomes $\\frac{1}{\\sqrt2}\\cdot\\frac{\\vert0\\rangle - \\vert1\\rangle}{\\sqrt2} = \\frac12\\vert0\\rangle - \\frac12\\vert1\\rangle$.",
+        "Step 3. Add: $\\vert0\\rangle$ gets $\\frac12 + \\frac12 = 1$; $\\vert1\\rangle$ gets $\\frac12 - \\frac12 = 0$.",
+        "Step 4. So $H_dH_d\\vert0\\rangle = \\vert0\\rangle$. There were two routes to the outcome 1 (via 0 and via 1 in the middle), with amplitudes $+\\frac12$ and $-\\frac12$, and they cancelled. The two routes to 0 both had $+\\frac12$ and reinforced."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "This is interference. The rule behind it is the single most important difference between quantum and classical probability:"
+    },
+    {
+      "type": "callout",
+      "text": "When an outcome can be reached by several routes that leave no trace of which was taken, add the amplitudes of the routes first, then square. Classically, you add probabilities. Quantum mechanically, you add amplitudes, which can be negative or complex, and so can cancel."
+    },
+    {
+      "type": "prose",
+      "text": "The difference is a single cross term. Two routes with amplitudes $a$ and $b$ give $\\vert a + b\\vert^2 = \\vert a\\vert^2 + \\vert b\\vert^2 + 2\\,\\mathrm{Re}(a^*b)$. The first two terms are what classical probability would give; the last, the interference term, can be positive (constructive) or negative (destructive). In the puzzle, for outcome 1, $\\vert a\\vert^2 + \\vert b\\vert^2 = \\frac14 + \\frac14 = \\frac12$, and the interference term is $2\\cdot\\frac12\\cdot(-\\frac12) = -\\frac12$: total 0."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: start from 1",
+      "text": "Apply $H_d$ twice to $\\vert1\\rangle$. List the amplitude of each route to each outcome.",
+      "hint": "Two intermediate states, two final outcomes: four routes.",
+      "solution": [
+        "First $H_d$: $\\vert1\\rangle \\to \\frac{1}{\\sqrt2}\\vert0\\rangle - \\frac{1}{\\sqrt2}\\vert1\\rangle$.",
+        "Via 0: $\\frac{1}{\\sqrt2}\\cdot\\frac{1}{\\sqrt2}(\\vert0\\rangle + \\vert1\\rangle)$ gives $+\\frac12$ to 0 and $+\\frac12$ to 1.",
+        "Via 1: $-\\frac{1}{\\sqrt2}\\cdot\\frac{1}{\\sqrt2}(\\vert0\\rangle - \\vert1\\rangle)$ gives $-\\frac12$ to 0 and $+\\frac12$ to 1.",
+        "Totals: outcome 0 gets $\\frac12 - \\frac12 = 0$, outcome 1 gets $\\frac12 + \\frac12 = 1$. So $H_dH_d\\vert1\\rangle = \\vert1\\rangle$, as $H_d^2 = I$ requires."
+      ],
+      "answer": "Routes to 0: +1/2 and −1/2 (cancel); routes to 1: +1/2 and +1/2 (add); result |1⟩ with certainty"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Mach–Zehnder interferometer"
+    },
+    {
+      "type": "prose",
+      "text": "The cleanest real-world version of this puzzle uses a single photon and two half-silvered mirrors. A Mach–Zehnder interferometer, shown below, splits a beam at a first beam splitter (BS1) into an upper and a lower arm, sends the two arms around mirrors, and recombines them at a second beam splitter (BS2) in front of two detectors, D0 and D1. A phase shifter (a slab of glass whose thickness can be adjusted) delays the lower arm by a phase $\\varphi$."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/quantum/mach-zehnder.svg",
+      "alt": "A Mach-Zehnder interferometer: a source sends light into beam splitter BS1, which splits it into an upper arm (path state |0>) and a lower arm (path state |1>) with a phase shifter phi. Mirrors bring the arms to a second beam splitter BS2, after which detector D0 and detector D1 sit on the two outputs.",
+      "caption": "A Mach–Zehnder interferometer. Treating the photon's path as a qubit, each beam splitter acts as a Hadamard and the phase shifter as diag(1, e^{iφ})."
+    },
+    {
+      "type": "prose",
+      "text": "Sent one photon at a time, the photon is never split: each detector click is a whole photon. Yet the click statistics depend on $\\varphi$, a setting in an arm the photon may or may not have “gone through”. Experiments with genuine single photons (Grangier, Roger and Aspect 1986) showed exactly this. To compute it, treat the photon's path as a qubit:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\vert0\\rangle$ = travelling in the upper arm, $\\vert1\\rangle$ = travelling in the lower arm.",
+        "Each 50/50 beam splitter acts as $H_d$ on the path qubit.",
+        "The phase shifter multiplies the lower-arm amplitude by $e^{i\\varphi}$: the phase gate $\\mathrm{Ph}(\\varphi) = \\mathrm{diag}(1, e^{i\\varphi})$ (written $\\mathrm{Ph}$ so as not to confuse it with a probability $P$).",
+        "D0 clicks for path state $\\vert0\\rangle$ after BS2, D1 for $\\vert1\\rangle$."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "A real symmetric beam splitter has rows $(1, i)/\\sqrt2$ and $(i, 1)/\\sqrt2$, not the Hadamard's $(1, 1)/\\sqrt2$ and $(1, -1)/\\sqrt2$. The two differ only by fixed phases on the inputs and outputs, which shift $\\varphi$ by a constant and may swap the detector labels. The physics, a $\\cos^2$ fringe in $\\varphi$, is the same; the Hadamard model is used because it is the one circuits use."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Following the photon amplitude by amplitude"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The photon arrives at BS1 through the input port we label $\\vert0\\rangle$ (the same label as the upper arm after it).",
+        "Step 2. BS1: $H_d\\vert0\\rangle = \\frac{1}{\\sqrt2}(\\vert0\\rangle + \\vert1\\rangle)$. Equal amplitudes for both arms.",
+        "Step 3. Phase shifter on the lower arm: $\\frac{1}{\\sqrt2}(\\vert0\\rangle + e^{i\\varphi}\\vert1\\rangle)$.",
+        "Step 4. BS2 acts on each term: $\\frac{1}{\\sqrt2}\\left(\\frac{\\vert0\\rangle + \\vert1\\rangle}{\\sqrt2} + e^{i\\varphi}\\frac{\\vert0\\rangle - \\vert1\\rangle}{\\sqrt2}\\right) = \\frac{1 + e^{i\\varphi}}{2}\\vert0\\rangle + \\frac{1 - e^{i\\varphi}}{2}\\vert1\\rangle$.",
+        "Step 5. Born rule for D0: $P(\\mathrm{D0}) = \\frac{\\vert1 + e^{i\\varphi}\\vert^2}{4}$. Expand: $\\vert1 + e^{i\\varphi}\\vert^2 = (1 + \\cos\\varphi)^2 + \\sin^2\\varphi = 2 + 2\\cos\\varphi$.",
+        "Step 6. So $P(\\mathrm{D0}) = \\frac{1 + \\cos\\varphi}{2} = \\cos^2\\frac\\varphi2$, and similarly $P(\\mathrm{D1}) = \\frac{1 - \\cos\\varphi}{2} = \\sin^2\\frac\\varphi2$."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "P(\\mathrm{D0}) = \\cos^2\\frac{\\varphi}{2}, \\qquad P(\\mathrm{D1}) = \\sin^2\\frac{\\varphi}{2}",
+      "caption": "The Mach–Zehnder fringe. Each output probability swings between 0 and 1 as the phase difference between the arms changes."
+    },
+    {
+      "type": "prose",
+      "text": "Some values: $\\varphi = 0$ gives D0 always (this is the $H_dH_d$ puzzle again); $\\varphi = 60°$ gives $P(\\mathrm{D0}) = 0.75$; $\\varphi = 90°$ gives 0.5; $\\varphi = 120°$ gives 0.25; $\\varphi = 180°$ gives D1 always. If the photon really went one way or the other at random, each detector would fire half the time whatever $\\varphi$ is. It does not."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The same thing on the Bloch sphere"
+    },
+    {
+      "type": "prose",
+      "text": "$\\mathrm{Ph}(\\varphi) = e^{i\\varphi/2}R_Z(\\varphi)$ is a turn about $z$, and sandwiching a $z$ turn between Hadamards turns it into an $x$ turn (the Hadamard swaps the $x$ and $z$ axes). So the whole interferometer is $H_d\\,\\mathrm{Ph}(\\varphi)\\,H_d = e^{i\\varphi/2}R_X(\\varphi)$: a rotation of the path qubit by $\\varphi$ about $x$. Starting at the north pole, a turn by $\\varphi$ about $x$ lands at height $z = \\cos\\varphi$, and $P(0) = (1 + z)/2 = \\cos^2(\\varphi/2)$, the same answer by geometry."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: dark port",
+      "text": "For which phase does D1 fire with probability 0.75, and what are the output amplitudes there?",
+      "hint": "Solve $\\sin^2(\\varphi/2) = 0.75$.",
+      "solution": [
+        "$\\sin^2(\\varphi/2) = 0.75$ means $\\sin(\\varphi/2) = 0.866$, $\\varphi/2 = 60°$, $\\varphi = 120°$.",
+        "$e^{i120°} = -0.5 + 0.866i$. Then $(1 + e^{i120°})/2 = 0.25 + 0.433i$ (size squared 0.25) and $(1 - e^{i120°})/2 = 0.75 - 0.433i$ (size squared 0.75)."
+      ],
+      "answer": "φ = 120°; amplitudes (1+e^{i120°})/2 = 0.25+0.433i and (1−e^{i120°})/2 = 0.75−0.433i"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Fringes and visibility"
+    },
+    {
+      "type": "prose",
+      "text": "In a laboratory, $\\varphi$ is changed by moving a mirror a fraction of a wavelength. Plotting the count rate at D0 against the mirror position gives a wave, the interference fringe. How strongly it swings is measured by the visibility"
+    },
+    {
+      "type": "math",
+      "tex": "V = \\frac{P_{\\max} - P_{\\min}}{P_{\\max} + P_{\\min}}",
+      "caption": "Visibility of a fringe: 1 for perfect interference, 0 for none."
+    },
+    {
+      "type": "prose",
+      "text": "An ideal interferometer swings between 0 and 1, so $V = 1$. Anything that partly reveals which path the photon took, or randomises the phase from run to run, lowers $V$. Visibility is therefore a direct measure of how much quantum coherence survives between the two paths, and it is one of the main things experimentalists check when they want to know whether a system is behaving quantum mechanically."
+    },
+    {
+      "type": "prose",
+      "text": "Why this formula? Most imperfect fringes have the form $P(\\mathrm{D0}) = \\frac{1 + V\\cos\\varphi}{2}$ with some number $V$ between 0 and 1 (the next section derives this form for a partial which-path record). Its largest value, at $\\cos\\varphi = 1$, is $P_{\\max} = (1 + V)/2$; its smallest, at $\\cos\\varphi = -1$, is $P_{\\min} = (1 - V)/2$. Then $P_{\\max} - P_{\\min} = V$ and $P_{\\max} + P_{\\min} = 1$, so the ratio is exactly $V$: the visibility is the factor that multiplies the interference term. Dividing by $P_{\\max} + P_{\\min}$ makes the definition work with raw count rates too, since the unknown overall rate cancels."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: visibility from counts"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. A detector at D0 records 900 counts per second at the brightest mirror position and 100 per second at the darkest.",
+        "Step 2. $V = (900 - 100)/(900 + 100) = 800/1000 = 0.8$. The detector efficiency and the source brightness do not matter: they scale both numbers and cancel.",
+        "Step 3. In probabilities, the fringe is $P(\\mathrm{D0}) = (1 + 0.8\\cos\\varphi)/2$, running from $0.9$ to $0.1$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a jittering phase"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose the arm length wobbles, so that on half the runs the phase is $\\varphi + \\delta$ and on the other half $\\varphi - \\delta$. Each run on its own is a perfect interferometer; we just do not know which phase it had."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Average the two perfect fringes: $P(\\mathrm{D0}) = \\frac12\\cdot\\frac{1 + \\cos(\\varphi + \\delta)}{2} + \\frac12\\cdot\\frac{1 + \\cos(\\varphi - \\delta)}{2}$.",
+        "Step 2. Use $\\cos(\\varphi + \\delta) + \\cos(\\varphi - \\delta) = 2\\cos\\varphi\\cos\\delta$ (expand both with the angle-sum formula; the $\\sin\\varphi\\sin\\delta$ terms cancel).",
+        "Step 3. So $P(\\mathrm{D0}) = \\frac{1 + \\cos\\delta\\,\\cos\\varphi}{2}$: the visibility is $V = \\cos\\delta$.",
+        "Step 4. With $\\delta = 30°$, $V = 0.866$; with $\\delta = 90°$ the two fringes are exactly out of step and $V = 0$, even though every single run interfered perfectly."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Low visibility does not by itself tell you why the interference was lost. Phase noise (this example) and a which-path record (next section) give the same reduced fringe. The difference is that phase noise could in principle be undone by tracking the phase run by run, while the information in a record held by another system can only be recovered by measuring that system, as the quantum eraser below shows."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: read a visibility",
+      "text": "A fringe swings between $P_{\\min} = 0.05$ and $P_{\\max} = 0.95$. What is $V$, and what jitter $\\delta$ (half the runs at $\\varphi + \\delta$, half at $\\varphi - \\delta$) would produce it?",
+      "hint": "Use the definition, then $V = \\cos\\delta$.",
+      "solution": [
+        "$V = (0.95 - 0.05)/(0.95 + 0.05) = 0.9$.",
+        "Jitter gives $V = \\cos\\delta$, so $\\delta = \\arccos 0.9 = 25.84°$."
+      ],
+      "answer": "V = 0.9; δ = 25.84°"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Which-path information destroys interference"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose we try to find out which arm the photon used, without stopping it. Put a second qubit, a marker, next to the lower arm, starting in $\\vert0\\rangle$, and arrange that a photon passing through the lower arm flips it to $\\vert1\\rangle$. In circuit language, this is a CNOT from the path qubit (control) to the marker (target), placed after BS1."
+    },
+    {
+      "type": "prose",
+      "text": "Two pieces of notation are needed. The state of two qubits together is written by putting their kets side by side: $\\vert0\\rangle\\vert1\\rangle_m$ (also written $\\vert0\\rangle\\otimes\\vert1\\rangle_m$) means the path qubit is in $\\vert0\\rangle$ and the marker, labelled $m$, is in $\\vert1\\rangle$. Sums of such terms are allowed, with amplitudes in front, and the rule is the same as for one qubit: the squared size of each amplitude is the probability of that joint outcome. The CNOT (controlled NOT) gate looks at its control qubit: if the control is $\\vert0\\rangle$ it does nothing, if the control is $\\vert1\\rangle$ it applies $X$ to the target. On a sum it acts term by term, like every gate. A state such as $\\frac{1}{\\sqrt2}(\\vert0\\rangle\\vert0\\rangle_m + \\vert1\\rangle\\vert1\\rangle_m)$, which cannot be written as one path state times one marker state, is called entangled."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Working it through"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. After BS1 and the phase shifter: $\\frac{1}{\\sqrt2}(\\vert0\\rangle + e^{i\\varphi}\\vert1\\rangle)\\otimes\\vert0\\rangle_m$.",
+        "Step 2. The marker flips only on the lower arm: $\\frac{1}{\\sqrt2}(\\vert0\\rangle\\vert0\\rangle_m + e^{i\\varphi}\\vert1\\rangle\\vert1\\rangle_m)$. Path and marker are now entangled.",
+        "Step 3. BS2 on the path: $\\frac12\\left[(\\vert0\\rangle + \\vert1\\rangle)\\vert0\\rangle_m + e^{i\\varphi}(\\vert0\\rangle - \\vert1\\rangle)\\vert1\\rangle_m\\right]$.",
+        "Step 4. Group by the path state: $\\vert0\\rangle\\otimes\\frac{\\vert0\\rangle_m + e^{i\\varphi}\\vert1\\rangle_m}{2} + \\vert1\\rangle\\otimes\\frac{\\vert0\\rangle_m - e^{i\\varphi}\\vert1\\rangle_m}{2}$.",
+        "Step 5. $P(\\mathrm{D0})$ is the squared length of the vector multiplying $\\vert0\\rangle$: $\\frac14(\\vert1\\vert^2 + \\vert e^{i\\varphi}\\vert^2) = \\frac12$. For every $\\varphi$. The fringe is gone."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Why: the two routes to D0 now end in different marker states, $\\vert0\\rangle_m$ and $\\vert1\\rangle_m$. Orthogonal end states mean the routes are distinguishable, at least in principle, and distinguishable routes do not interfere: their amplitudes land on different basis states and are never added. Nobody needs to look at the marker. The mere existence of the record is enough."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Partial which-path information"
+    },
+    {
+      "type": "prose",
+      "text": "Now let the lower arm only nudge the marker, from $\\vert m_0\\rangle = \\vert0\\rangle$ to $\\vert m_1\\rangle = \\cos\\epsilon\\vert0\\rangle + \\sin\\epsilon\\vert1\\rangle$. Repeating steps 1 to 4 with $\\vert m_1\\rangle$ in place of $\\vert1\\rangle_m$, the vector multiplying the path state $\\vert0\\rangle$ is $(\\vert m_0\\rangle + e^{i\\varphi}\\vert m_1\\rangle)/2$. Its squared length is"
+    },
+    {
+      "type": "math",
+      "tex": "P(\\mathrm{D0}) = \\frac{1 + \\mathrm{Re}\\left(e^{i\\varphi}\\langle m_0\\vert m_1\\rangle\\right)}{2}",
+      "caption": "With a real overlap ⟨m₀|m₁⟩ = cos ε this is (1 + cos ε cos φ)/2, so the visibility equals the overlap of the two marker states."
+    },
+    {
+      "type": "prose",
+      "text": "The derivation: $\\frac14\\left(\\langle m_0\\vert m_0\\rangle + \\langle m_1\\vert m_1\\rangle + e^{i\\varphi}\\langle m_0\\vert m_1\\rangle + e^{-i\\varphi}\\langle m_1\\vert m_0\\rangle\\right) = \\frac14\\left(2 + 2\\,\\mathrm{Re}(e^{i\\varphi}\\langle m_0\\vert m_1\\rangle)\\right)$. The fringe now swings between $(1 - \\vert\\langle m_0\\vert m_1\\rangle\\vert)/2$ and $(1 + \\vert\\langle m_0\\vert m_1\\rangle\\vert)/2$, so $V = \\vert\\langle m_0\\vert m_1\\rangle\\vert$. Identical marker states ($V = 1$): no information, full interference. Orthogonal ($V = 0$): full information, no interference. In between, a trade-off."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a weak marker"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Take $\\epsilon = 60°$: $\\langle m_0\\vert m_1\\rangle = \\cos60° = 0.5$.",
+        "Step 2. $P(\\mathrm{D0}) = (1 + 0.5\\cos\\varphi)/2$. At $\\varphi = 0$: 0.75. At $\\varphi = 180°$: 0.25.",
+        "Step 3. $V = (0.75 - 0.25)/(0.75 + 0.25) = 0.5$, equal to the overlap.",
+        "Step 4. With overlap 0.8 instead ($\\epsilon = 36.87°$), the fringe runs from 0.1 to 0.9 and $V = 0.8$. The sample prints these."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "This is decoherence in miniature. A real environment (stray photons, vibrating atoms, nearby spins) keeps nudging marker-like degrees of freedom, and each nudge reduces the overlap. Interference fades, and a superposition starts to behave like a random mixture. The full story comes on a later page on decoherence (mixtures themselves are on Mixed States (#/quantum/many-body/mixed-states)), and the marker trick of step 2 is the simplest example of entanglement (#/quantum/many-body/entanglement)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The quantum eraser"
+    },
+    {
+      "type": "prose",
+      "text": "If the record destroys interference, can destroying the record restore it? Yes, in a precise sense. With the full marker (step 4 above), measure the marker not in $\\{\\vert0\\rangle_m, \\vert1\\rangle_m\\}$ but in the $X$ basis $\\{\\vert{+}\\rangle_m, \\vert{-}\\rangle_m\\}$, which says nothing about the path. Rewrite $\\vert0\\rangle_m = (\\vert{+}\\rangle_m + \\vert{-}\\rangle_m)/\\sqrt2$ and $\\vert1\\rangle_m = (\\vert{+}\\rangle_m - \\vert{-}\\rangle_m)/\\sqrt2$ in step 4 and collect terms:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The part with marker $\\vert{+}\\rangle_m$ is $\\frac{1}{2\\sqrt2}\\left[(1 + e^{i\\varphi})\\vert0\\rangle + (1 - e^{i\\varphi})\\vert1\\rangle\\right]$: the original interferometer output, scaled.",
+        "Step 2. The part with marker $\\vert{-}\\rangle_m$ is $\\frac{1}{2\\sqrt2}\\left[(1 - e^{i\\varphi})\\vert0\\rangle + (1 + e^{i\\varphi})\\vert1\\rangle\\right]$: the same with D0 and D1 swapped.",
+        "Step 3. Each marker outcome has probability 1/2. Among runs where the marker gave $+$, $P(\\mathrm{D0}) = \\cos^2(\\varphi/2)$: the fringe is back. Among runs where it gave $-$, $P(\\mathrm{D0}) = \\sin^2(\\varphi/2)$: the anti-fringe.",
+        "Step 4. Average over both groups: $\\frac12\\cos^2 + \\frac12\\sin^2 = \\frac12$, as before. The fringe was never destroyed, only hidden in the correlations between the photon and the marker. Sorting the data by the marker outcome reveals it."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "This was proposed by Scully and Drühl (1982). Nothing travels backwards in time: the photon's own statistics never change, only how the runs are grouped."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a marker overlap",
+      "text": "A marker gives $\\langle m_0\\vert m_1\\rangle = 0.8$. Find $P(\\mathrm{D0})$ at $\\varphi = 60°$ and the visibility.",
+      "hint": "Use (1 + overlap · cos φ)/2.",
+      "solution": [
+        "$P(\\mathrm{D0}) = (1 + 0.8\\cos60°)/2 = (1 + 0.4)/2 = 0.7$.",
+        "$V$ equals the overlap: 0.8 (fringe from 0.1 to 0.9)."
+      ],
+      "answer": "0.7; V = 0.8"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Interference is the engine of quantum algorithms"
+    },
+    {
+      "type": "prose",
+      "text": "A common description of quantum computing is that a register in superposition “tries every answer at once”. That is half the story and the wrong half. A superposition of all answers, measured, gives one random answer: no better than guessing. What a quantum algorithm actually does is choreograph interference: it arranges the routes through the circuit so that routes to wrong answers have amplitudes that cancel and routes to the right answer reinforce. The Hadamard puzzle is the smallest example. The next one, Deutsch's problem, is the smallest example that solves a task faster than any classical method."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Phase kickback"
+    },
+    {
+      "type": "prose",
+      "text": "Algorithms usually access a function $f$ through an oracle, a gate that computes it reversibly: $U_f\\vert x\\rangle\\vert y\\rangle = \\vert x\\rangle\\vert y\\oplus f(x)\\rangle$, where $\\oplus$ is addition mod 2 (so $y\\oplus1$ flips $y$). Feed the second qubit in the state $\\vert{-}\\rangle = (\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$ and see what happens:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. If $f(x) = 0$: $\\vert y\\oplus0\\rangle = \\vert y\\rangle$, so $\\vert{-}\\rangle$ is unchanged.",
+        "Step 2. If $f(x) = 1$: the two terms swap, $(\\vert1\\rangle - \\vert0\\rangle)/\\sqrt2 = -\\vert{-}\\rangle$.",
+        "Step 3. Both cases at once: $U_f\\vert x\\rangle\\vert{-}\\rangle = (-1)^{f(x)}\\vert x\\rangle\\vert{-}\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The second qubit is untouched, and the value of $f$ has turned into a sign on the first qubit's state. This is phase kickback: the oracle is now a phase shifter, with phase $0$ or $180°$ depending on $f(x)$. Put the first qubit in superposition and the oracle becomes the phase shifter in one arm of a Mach–Zehnder interferometer."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Deutsch's problem"
+    },
+    {
+      "type": "prose",
+      "text": "You are given a black box computing $f:\\{0,1\\}\\to\\{0,1\\}$. There are four such functions: $f(x) = 0$ and $f(x) = 1$ are constant; $f(x) = x$ and $f(x) = 1 - x$ are balanced (one 0, one 1). Is $f$ constant or balanced? Classically you must evaluate $f(0)$ and $f(1)$: two queries, since one value tells you nothing about the other. Deutsch (1985) found a quantum procedure that answers with a single query, though it succeeded only half the time; the version below, which always succeeds, is due to Cleve, Ekert, Macchiavello and Mosca (1998):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Start in $\\vert0\\rangle\\vert1\\rangle$. Apply $H_d$ to both: $\\vert{+}\\rangle\\vert{-}\\rangle = \\frac{1}{\\sqrt2}(\\vert0\\rangle + \\vert1\\rangle)\\vert{-}\\rangle$.",
+        "Step 2. One query, with phase kickback: $\\frac{1}{\\sqrt2}\\left((-1)^{f(0)}\\vert0\\rangle + (-1)^{f(1)}\\vert1\\rangle\\right)\\vert{-}\\rangle$.",
+        "Step 3. If $f$ is constant, both signs are equal and the first qubit is $\\pm\\vert{+}\\rangle$. If balanced, the signs differ and it is $\\pm\\vert{-}\\rangle$.",
+        "Step 4. Apply $H_d$ to the first qubit: $\\pm\\vert{+}\\rangle \\to \\pm\\vert0\\rangle$ and $\\pm\\vert{-}\\rangle \\to \\pm\\vert1\\rangle$.",
+        "Step 5. Measure the first qubit: 0 means constant, 1 means balanced, with certainty. One query."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Compare with the interferometer: the first qubit is the photon's path, the two Hadamards are the beam splitters, and the oracle is a phase shifter set to $\\varphi = 0$ (constant) or $180°$ (balanced). The question “are $f(0)$ and $f(1)$ equal?” is a question about a relative phase, and interference reads a relative phase in one shot. The speed-up is tiny, two queries to one, but the mechanism is the one that powers the big algorithms. The sample checks all four functions."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the balanced function f(x) = x"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. For $f(x) = x$, $U_f\\vert x\\rangle\\vert y\\rangle = \\vert x\\rangle\\vert y\\oplus x\\rangle$: that is exactly a CNOT with the first qubit as control.",
+        "Step 2. After the Hadamards: $\\frac12(\\vert0\\rangle + \\vert1\\rangle)(\\vert0\\rangle - \\vert1\\rangle) = \\frac12(\\vert00\\rangle - \\vert01\\rangle + \\vert10\\rangle - \\vert11\\rangle)$.",
+        "Step 3. The CNOT flips the second qubit where the first is 1: $\\frac12(\\vert00\\rangle - \\vert01\\rangle + \\vert11\\rangle - \\vert10\\rangle) = \\frac12(\\vert0\\rangle - \\vert1\\rangle)(\\vert0\\rangle - \\vert1\\rangle) = \\vert{-}\\rangle\\vert{-}\\rangle$.",
+        "Step 4. The first qubit went from $\\vert{+}\\rangle$ to $\\vert{-}\\rangle$ even though the CNOT “only acts on the second qubit”. $H_d$ turns it into $\\vert1\\rangle$: balanced."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Try it on a circuit"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "qubit-circuit",
+        "title": "Interference on a circuit: Deutsch's problem and more",
+        "params": [
+          {
+            "key": "q1s1",
+            "label": "Qubit 1, step 1",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "H"
+          },
+          {
+            "key": "q1s2",
+            "label": "Qubit 1, step 2",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "—"
+          },
+          {
+            "key": "q1s3",
+            "label": "Qubit 1, step 3",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "●"
+          },
+          {
+            "key": "q1s4",
+            "label": "Qubit 1, step 4",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "H"
+          },
+          {
+            "key": "q1s5",
+            "label": "Qubit 1, step 5",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "—"
+          },
+          {
+            "key": "q2s1",
+            "label": "Qubit 2, step 1",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "X"
+          },
+          {
+            "key": "q2s2",
+            "label": "Qubit 2, step 2",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "H"
+          },
+          {
+            "key": "q2s3",
+            "label": "Qubit 2, step 3",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "⊕"
+          },
+          {
+            "key": "q2s4",
+            "label": "Qubit 2, step 4",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "—"
+          },
+          {
+            "key": "q2s5",
+            "label": "Qubit 2, step 5",
+            "control": "select",
+            "options": [
+              "—",
+              "H",
+              "X",
+              "Y",
+              "Z",
+              "S",
+              "T",
+              "Rx(π/2)",
+              "Ry(π/2)",
+              "●",
+              "⊕"
+            ],
+            "default": "—"
+          }
+        ]
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try this. The circuit is set to Deutsch's algorithm for $f(x) = x$: step 1 puts $H$ on qubit 1 and $X$ on qubit 2 (making $\\vert0\\rangle\\vert1\\rangle$ into $\\vert{+}\\rangle\\vert1\\rangle$), step 2 puts $H$ on qubit 2 (making $\\vert{-}\\rangle$), step 3 is the oracle (a CNOT), step 4 is the final $H$ on qubit 1. The bars show $P = 0.5$ on $\\vert10\\rangle$ and $\\vert11\\rangle$ and 0 on $\\vert00\\rangle$ and $\\vert01\\rangle$, and the readout gives $\\langle Z_1\\rangle = -1$: qubit 1 is 1 with certainty (balanced), while qubit 2, left in $\\vert{-}\\rangle$, is a fair coin. (1) Set step 3 to — on both wires (the constant function $f = 0$): the bars move to $\\vert00\\rangle$ and $\\vert01\\rangle$ and $\\langle Z_1\\rangle = +1$, so qubit 1 reads 0. (2) Restore the CNOT and put $X$ on qubit 2 in step 4: the oracle is now a CNOT followed by $X$, which computes $f(x) = 1 - x$, and qubit 1 still reads 1 (balanced). (3) Set every step to — and build $H$, $Z$, $H$ on qubit 1: the interferometer at $\\varphi = 180°$, giving 1 with certainty; replace $Z$ by $S$ ($\\varphi = 90°$) for a 50/50 split, or by $T$ ($\\varphi = 45°$) for $P(0) = \\cos^2(22.5°) = 0.854$. (4) Clear the circuit again and build $H$ on qubit 1, then a CNOT (● on qubit 1, ⊕ on qubit 2), then $H$ on qubit 1: the marked interferometer. All four bars sit at 0.25, $\\langle Z_1\\rangle = 0$ for every choice, and the readout reports the two qubits maximally entangled: the marker has recorded the path."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A Mach–Zehnder interferometer has its phase set to $\\varphi = 60°$, and a stray atom near the lower arm acts as a marker with overlap $\\langle m_0\\vert m_1\\rangle = 0.8$. (a) What is $P(\\mathrm{D0})$? (b) What would it be with no marker? (c) Suppose instead the atom were a full marker (orthogonal states for the two arms), and it is afterwards measured in the $X$ basis, which erases the path information. What is $P(\\mathrm{D0})$ before sorting, and within each group of runs sorted by the marker result?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. With the marker: $P(\\mathrm{D0}) = (1 + 0.8\\cos60°)/2 = (1 + 0.4)/2 = 0.70$.",
+        "Step 2. Without: $\\cos^2(30°) = 0.75$. The marker pulled the probability towards $1/2$ by a factor of 0.8 in the interference term: $0.5 + 0.8\\times0.25 = 0.70$.",
+        "Step 3. With an orthogonal marker, $P(\\mathrm{D0}) = 0.5$. Erasing with an $X$-basis marker measurement splits the runs into two equal halves, with $P(\\mathrm{D0}\\mid +) = \\cos^2(30°) = 0.75$ and $P(\\mathrm{D0}\\mid -) = \\sin^2(30°) = 0.25$, averaging to 0.5.",
+        "Step 4. The sample prints 0.7 for (a), 0.75 for (b) and the eraser values 0.75 and 0.25 at $\\varphi = 60°$."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1., -1.]).astype(complex); I = np.eye(2)\nHd = (X + Z) / np.sqrt(2)\ndef P(phi): return np.diag([1, np.exp(1j * phi)])                      # phase shifter on the lower arm\nket0 = np.array([1, 0], complex)\n# Two Hadamards: the two paths to |1> cancel\nprint(\"H|0> =\", np.round(Hd @ ket0, 4), \"  H H|0> =\", np.round(Hd @ Hd @ ket0, 4))\n# Mach-Zehnder: H, phase, H. P(D0) = cos^2(phi/2)\nfor deg in (0, 60, 90, 120, 180):\n    out = Hd @ P(np.radians(deg)) @ Hd @ ket0\n    print(f\"phi = {deg:3d} deg: amplitudes {np.round(out, 4)}, P(D0) = {abs(out[0])**2:.4f}, cos^2(phi/2) = {np.cos(np.radians(deg)/2)**2:.4f}\")\n# Which-path marker: after BS1, the lower arm rotates a marker from |0> to cos(e)|0> + sin(e)|1>\ndef with_marker(phi, eps):\n    m0, m1 = np.array([1, 0]), np.array([np.cos(eps), np.sin(eps)])\n    psi = (np.kron([1, 0], m0) + np.exp(1j * phi) * np.kron([0, 1], m1)) / np.sqrt(2)\n    psi = np.kron(Hd, I) @ psi\n    return np.sum(abs(psi[:2])**2), psi\nfor eps_deg in (0, 36.87, 60, 90):\n    p = [with_marker(np.radians(f), np.radians(eps_deg))[0] for f in np.linspace(0, 360, 361)]\n    V = (max(p) - min(p)) / (max(p) + min(p))\n    print(f\"marker overlap {np.cos(np.radians(eps_deg)):.3f}: P(D0) ranges {min(p):.3f} to {max(p):.3f}, visibility {V:.3f}\")\nprint(\"phi = 60 deg, overlap 0.8: P(D0) =\", round(with_marker(np.radians(60), np.arccos(0.8))[0], 4))\n# Quantum eraser: full marking, then read the marker in the X basis\nfor deg in (0, 60, 90, 180):\n    _, psi = with_marker(np.radians(deg), np.pi / 2)\n    amp = psi.reshape(2, 2)                                              # amp[path, marker]\n    plus, minus = np.array([1, 1]) / np.sqrt(2), np.array([1, -1]) / np.sqrt(2)\n    res = []\n    for m in (plus, minus):\n        branch = amp @ m.conj(); pm = np.sum(abs(branch)**2)\n        res.append((pm, abs(branch[0])**2 / pm))\n    print(f\"eraser phi = {deg:3d}: P(marker +) = {res[0][0]:.3f}, P(D0 | +) = {res[0][1]:.3f};  P(marker -) = {res[1][0]:.3f}, P(D0 | -) = {res[1][1]:.3f}\")\n# Deutsch's problem: one query decides constant vs balanced\ndef oracle(f):\n    U = np.zeros((4, 4))\n    for x in (0, 1):\n        for y in (0, 1):\n            U[2 * x + (y ^ f(x)), 2 * x + y] = 1\n    return U\nfuncs = {\"f(x) = 0\": lambda x: 0, \"f(x) = 1\": lambda x: 1, \"f(x) = x\": lambda x: x, \"f(x) = 1 - x\": lambda x: 1 - x}\nfor name, f in funcs.items():\n    psi = np.kron(Hd, Hd) @ np.array([0, 1, 0, 0])                       # |0>|1> then H on both\n    psi = np.kron(Hd, I) @ oracle(f) @ psi\n    p1 = abs(psi[2])**2 + abs(psi[3])**2\n    print(f\"{name:12s}: P(first qubit reads 1) = {p1:.3f} -> {'balanced' if p1 > 0.5 else 'constant'}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: $H_d\\vert0\\rangle = (0.7071, 0.7071)$ and $H_dH_d\\vert0\\rangle = (1, 0)$. The interferometer gives $P(\\mathrm{D0}) = 1, 0.75, 0.5, 0.25, 0$ at $\\varphi = 0°, 60°, 90°, 120°, 180°$, matching $\\cos^2(\\varphi/2)$; at $60°$ the amplitudes are $0.75 + 0.433i$ and $0.25 - 0.433i$. Marker overlaps $1, 0.8, 0.5, 0$ give visibilities $1, 0.8, 0.5, 0$ (fringes from 0 to 1, 0.1 to 0.9, 0.25 to 0.75, and flat at 0.5); at $\\varphi = 60°$ with overlap 0.8, $P(\\mathrm{D0}) = 0.7$. The eraser gives each marker outcome probability 0.5, with $P(\\mathrm{D0}\\mid+) = 1, 0.75, 0.5, 0$ and $P(\\mathrm{D0}\\mid-) = 0, 0.25, 0.5, 1$ at $\\varphi = 0°, 60°, 90°, 180°$. Deutsch's circuit reads 0 for both constant functions and 1 for both balanced ones."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "For indistinguishable routes, add amplitudes then square; the cross term $2\\,\\mathrm{Re}(a^*b)$ is interference.",
+        "$H_dH_d = I$ because the two routes to $\\vert1\\rangle$ cancel: randomness that undoes itself.",
+        "A Mach–Zehnder interferometer is $H_d$, phase, $H_d$; it gives $P(\\mathrm{D0}) = \\cos^2(\\varphi/2)$ and acts on the path qubit as $R_X(\\varphi)$.",
+        "Any record of which path was taken, even unread, reduces the fringe visibility to the overlap of the record states.",
+        "A quantum eraser recovers the fringes inside subsets of the data sorted by a path-blind measurement of the record; the overall statistics never change.",
+        "Phase kickback turns an oracle into a phase shifter; Deutsch's algorithm reads a relative phase to answer constant-or-balanced with one query.",
+        "Quantum algorithms work by making wrong answers interfere destructively, not by trying all answers."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A 30-degree phase",
+      "text": "Find $P(\\mathrm{D0})$ and $P(\\mathrm{D1})$ for $\\varphi = 30°$, and the output amplitudes.",
+      "hint": "Use $\\cos^2(\\varphi/2)$.",
+      "solution": [
+        "$P(\\mathrm{D0}) = \\cos^2(15°) = 0.9330$, $P(\\mathrm{D1}) = \\sin^2(15°) = 0.0670$.",
+        "$e^{i30°} = 0.8660 + 0.5i$, so the amplitudes are $(1 + e^{i30°})/2 = 0.9330 + 0.25i$ and $(1 - e^{i30°})/2 = 0.0670 - 0.25i$.",
+        "Check: $0.9330^2 + 0.25^2 = 0.8705 + 0.0625 = 0.9330$."
+      ],
+      "answer": "0.933 and 0.067"
+    },
+    {
+      "type": "problem",
+      "title": "Unbalanced beam splitter",
+      "text": "Replace BS1 by $R_Y(\\theta)$ with $\\theta = 60°$ (so it sends 75% to the upper arm and 25% to the lower), keep BS2 as $H_d$ and set $\\varphi = 180°$. What is $P(\\mathrm{D0})$, and what is the best visibility you can get by scanning $\\varphi$?",
+      "hint": "Write the state after BS1, then the D0 amplitude as a sum of two routes.",
+      "solution": [
+        "$R_Y(60°)\\vert0\\rangle = \\cos30°\\vert0\\rangle + \\sin30°\\vert1\\rangle = 0.866\\vert0\\rangle + 0.5\\vert1\\rangle$.",
+        "After the phase: $0.866\\vert0\\rangle + 0.5e^{i\\varphi}\\vert1\\rangle$. After $H_d$: amplitude of $\\vert0\\rangle$ is $(0.866 + 0.5e^{i\\varphi})/\\sqrt2$.",
+        "$P(\\mathrm{D0}) = (0.75 + 0.25 + 2\\cdot0.433\\cos\\varphi)/2 = (1 + 0.866\\cos\\varphi)/2$. At $\\varphi = 180°$: $(1 - 0.866)/2 = 0.067$.",
+        "Scanning $\\varphi$, $P$ runs from 0.067 to 0.933, so $V = 0.866$: unequal arms reduce visibility to $2\\sqrt{p(1-p)} = 2\\sqrt{0.75\\cdot0.25} = 0.866$."
+      ],
+      "answer": "0.067; V = 0.866"
+    },
+    {
+      "type": "problem",
+      "title": "A marker you cannot read",
+      "text": "In the fully marked interferometer, the marker qubit is thrown away unmeasured. Show that the path qubit after BS2 behaves exactly like a 50/50 random mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$ for a $Z$ measurement, for every $\\varphi$, and say what the Bloch vector of the path qubit is just before BS2.",
+      "hint": "Compute ⟨X⟩, ⟨Y⟩, ⟨Z⟩ of the path qubit; the marker overlap kills the cross terms.",
+      "solution": [
+        "Before BS2 the joint state is $\\frac{1}{\\sqrt2}(\\vert0\\rangle\\vert0\\rangle_m + e^{i\\varphi}\\vert1\\rangle\\vert1\\rangle_m)$.",
+        "Every expectation value of the path qubit alone: $\\langle Z\\rangle = \\frac12 - \\frac12 = 0$; $\\langle X\\rangle$ needs the cross term $\\langle0\\vert X\\vert1\\rangle\\langle0_m\\vert1_m\\rangle = 0$, so $\\langle X\\rangle = 0$, and likewise $\\langle Y\\rangle = 0$.",
+        "Bloch vector $(0, 0, 0)$: the centre of the ball, the maximally mixed state. $H_d$ maps the centre to itself, so after BS2 each detector fires with probability 1/2 for every $\\varphi$."
+      ],
+      "answer": "Bloch vector (0, 0, 0): maximally mixed; P = 1/2 always"
+    },
+    {
+      "type": "problem",
+      "title": "Deutsch for f(x) = 1 − x",
+      "text": "Follow the algorithm for $f(x) = 1 - x$, whose oracle is a CNOT followed by $X$ on the second qubit. Give the state after the oracle and the measured result.",
+      "hint": "Use the kickback formula.",
+      "solution": [
+        "After the Hadamards: $\\vert{+}\\rangle\\vert{-}\\rangle$. The CNOT gives $\\vert{-}\\rangle\\vert{-}\\rangle$ (worked example).",
+        "$X$ on the second qubit: $X\\vert{-}\\rangle = -\\vert{-}\\rangle$, so the state is $-\\vert{-}\\rangle\\vert{-}\\rangle$.",
+        "Check with kickback: $(-1)^{f(0)} = -1$ and $(-1)^{f(1)} = +1$ give $\\frac{1}{\\sqrt2}(-\\vert0\\rangle + \\vert1\\rangle) = -\\vert{-}\\rangle$. Agreed.",
+        "$H_d$ on the first qubit gives $-\\vert1\\rangle$; the measurement reads 1: balanced."
+      ],
+      "answer": "−|−⟩|−⟩; reads 1 (balanced)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Every gate sequence on Gates and Circuits (#/quantum/qubits/gates-and-circuits) is a choreography of interference: Hadamards split and recombine amplitudes exactly as the beam splitters do.",
+        "Driving a qubit with a resonant field, Driven Qubits and Rabi Oscillations (#/quantum/qubits/driven-qubits), is a continuous version of the beam-splitter rotation.",
+        "Which-path records are how an environment destroys coherence: Mixed States (#/quantum/many-body/mixed-states), a later page on decoherence, and, on the QRC shelf, Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "A quantum reservoir's features are expectation values after many paths through its Hamiltonian have interfered; that is where its nonlinear mixing of past inputs comes from (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir))."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 1.4.3 (Deutsch's algorithm)",
+        "N. D. Mermin, Quantum Computer Science: An Introduction, Cambridge University Press (2007), chapters 1 and 2",
+        "D. Deutsch, Quantum theory, the Church–Turing principle and the universal quantum computer, Proceedings of the Royal Society of London A 400, 97 (1985)",
+        "R. Cleve, A. Ekert, C. Macchiavello and M. Mosca, Quantum algorithms revisited, Proceedings of the Royal Society of London A 454, 339 (1998)",
+        "P. Grangier, G. Roger and A. Aspect, Experimental evidence for a photon anticorrelation effect on a beam splitter: a new light on single-photon interferences, Europhysics Letters 1, 173 (1986)",
+        "M. O. Scully and K. Drühl, Quantum eraser: a proposed photon correlation experiment concerning observation and \"delayed choice\" in quantum mechanics, Physical Review A 25, 2208 (1982)",
+        "R. P. Feynman, R. B. Leighton and M. Sands, The Feynman Lectures on Physics, volume III, chapter 1 (Quantum Behavior), Addison-Wesley (1965)"
+      ]
+    }
+  ]
+}

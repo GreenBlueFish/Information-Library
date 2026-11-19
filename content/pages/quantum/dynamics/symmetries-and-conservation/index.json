@@ -1,71 +1,531 @@
 {
   "title": "Symmetries and Conservation",
-  "intro": "An observable that commutes with the Hamiltonian is conserved: its expectation value, and its whole probability distribution, never change. This page introduces the Heisenberg picture, where that statement is natural, and the Z-parity symmetry of the QRC spin reservoir.",
+  "intro": "An observable that commutes with the Hamiltonian is conserved: its average and its whole probability distribution never change, and the state space splits into sectors the dynamics never leaves. This lesson derives that, works through total-Z and parity symmetry in spin models, and shows what conserved quantities do to a quantum reservoir.",
   "blocks": [
+    {
+      "type": "prose",
+      "text": "What you need first: The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation), Commutators and Compatible Observables (#/quantum/foundations/commutators), Composite Systems and Tensor Products (#/quantum/many-body/composite-systems) and Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors)."
+    },
     {
       "type": "heading",
       "level": 2,
-      "text": "The Heisenberg picture"
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Decide whether an observable is conserved by computing one commutator, and say what that means for the probabilities of its outcomes, not just its average.",
+        "Recognise the two symmetries that matter most for spin reservoirs: conservation of total $Z$ (the number of excitations) and conservation of $Z$-parity.",
+        "Use a symmetry to split a Hamiltonian into smaller blocks, and find the energies of a two-qubit Hamiltonian by diagonalising two $2\\times2$ matrices instead of one $4\\times4$.",
+        "Explain why a symmetry produces degenerate energy levels.",
+        "Say what a conserved quantity does to a quantum reservoir: it is either memory that never fades or a door that input can never pass through."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why symmetries are worth learning"
     },
     {
       "type": "prose",
-      "text": "Expectation values can be computed by moving the state or by moving the observable:"
+      "text": "Time evolution under a Hamiltonian $H$ is a rotation of the state vector: $\\vert\\psi(t)\\rangle = U(t)\\vert\\psi(0)\\rangle$ with $U(t) = e^{-iHt}$ (The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation)). For one qubit you can picture that rotation on the Bloch sphere. For ten qubits the state has $2^{10} = 1024$ complex amplitudes and nobody can picture anything. You need questions that have answers without solving the whole problem. The most useful such question is: what never changes?"
+    },
+    {
+      "type": "prose",
+      "text": "In classical mechanics you already know the answer is powerful. A ball rolling on a frictionless track conserves energy, so you can find its speed at the bottom from its height at the top without knowing the shape of the track. A spinning skater conserves angular momentum, so pulling in their arms must make them spin faster. Each conserved quantity cuts the problem down: it is a fact about every future moment that you get for free."
+    },
+    {
+      "type": "prose",
+      "text": "Quantum mechanics has the same idea with a sharper form. A conserved quantity fixes not just one number but the whole probability distribution of a measurement, at all times, and it cuts the space of states into separate rooms that the dynamics can never move between. For a quantum reservoir, which is a system left to evolve under a fixed $H$ while inputs are written in, that is decisive: whatever is in a conserved quantity is remembered forever, and whatever room the readout cannot see stays invisible forever."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How an expectation value changes in time"
+    },
+    {
+      "type": "prose",
+      "text": "Start with the question: if the state evolves, how fast does the average of an observable $A$ change? The average is $\\langle A\\rangle(t) = \\langle\\psi(t)\\vert A\\vert\\psi(t)\\rangle$. We take its time derivative using the Schrödinger equation, which says how the ket moves, and its conjugate, which says how the bra moves:"
     },
     {
       "type": "math",
-      "tex": "\\langle A\\rangle(t) = \\langle\\psi(t)\\vert A\\vert\\psi(t)\\rangle = \\langle\\psi(0)\\vert\\,A(t)\\,\\vert\\psi(0)\\rangle, \\qquad A(t) = U^\\dagger(t)\\,A\\,U(t)",
-      "caption": "Schrödinger picture on the left, Heisenberg picture on the right. They always agree."
+      "tex": "\\frac{d}{dt}\\vert\\psi(t)\\rangle = -iH\\vert\\psi(t)\\rangle, \\qquad \\frac{d}{dt}\\langle\\psi(t)\\vert = +i\\langle\\psi(t)\\vert H",
+      "caption": "The Schrödinger equation (ħ = 1) and its Hermitian conjugate. The sign flips because conjugation turns −i into +i, and H† = H."
     },
     {
       "type": "prose",
-      "text": "In the Heisenberg picture the state stays put and the operators evolve, obeying $\\tfrac{d}{dt}A(t) = i[H, A(t)]$. This is the natural picture for a reservoir: the readout measures fixed observables $Z_i$ at different times, which is the same as measuring the initial state with the moving observables $Z_i(t)$. Virtual nodes are exactly a set of such Heisenberg-evolved observables (Readout and Multiplexing (#/qrc/models/readout-and-multiplexing))."
+      "text": "Step 1. The average is a product of three things: the bra, $A$, and the ket. If $A$ itself does not depend on time, the product rule gives two terms, one where the bra moves and one where the ket moves:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{d}{dt}\\langle A\\rangle = \\Big(\\frac{d}{dt}\\langle\\psi\\vert\\Big)A\\vert\\psi\\rangle + \\langle\\psi\\vert A\\Big(\\frac{d}{dt}\\vert\\psi\\rangle\\Big)"
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Substitute the two equations above:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{d}{dt}\\langle A\\rangle = i\\langle\\psi\\vert HA\\vert\\psi\\rangle - i\\langle\\psi\\vert AH\\vert\\psi\\rangle = i\\langle\\psi\\vert\\,(HA - AH)\\,\\vert\\psi\\rangle"
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Recognise the commutator $[H, A] = HA - AH$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{d}{dt}\\langle A\\rangle = i\\,\\langle[H, A]\\rangle",
+      "caption": "How fast an average changes is set by the commutator of the observable with the Hamiltonian (Ehrenfest's theorem in this form)."
+    },
+    {
+      "type": "prose",
+      "text": "This is the whole engine of the page. If $[H, A] = 0$, the right-hand side is zero for every state, so $\\langle A\\rangle$ is constant for every state: $A$ is conserved. If the commutator is not zero, it tells you exactly what drives the change. The same equation written for the operator rather than its average, $\\tfrac{d}{dt}A(t) = i[H, A(t)]$, is the Heisenberg equation of motion, explained on Schrödinger and Heisenberg Pictures (#/quantum/dynamics/pictures-of-time-evolution)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a qubit in a field along z"
+    },
+    {
+      "type": "prose",
+      "text": "Take one qubit with $H = \\tfrac{\\omega}{2}Z$, the Hamiltonian of a spin in a magnetic field along $z$ with precession frequency $\\omega$. Which of $X$, $Y$, $Z$ are conserved?"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. $[H, Z] = \\tfrac{\\omega}{2}[Z, Z] = 0$, since anything commutes with itself. So $\\langle Z\\rangle$ never changes: the probabilities of measuring $0$ or $1$ stay put. This matches the Bloch-sphere picture, where a field along $z$ rotates the arrow about the $z$ axis and so keeps its height fixed."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. For $X$ we need the Pauli products $ZX = iY$ and $XZ = -iY$ (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)). So $[Z, X] = ZX - XZ = 2iY$, and $[H, X] = \\tfrac{\\omega}{2}\\cdot 2iY = i\\omega Y$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Plug in: $\\tfrac{d}{dt}\\langle X\\rangle = i\\cdot i\\omega\\langle Y\\rangle = -\\omega\\langle Y\\rangle$. Not zero, so $X$ is not conserved. The same steps with $[Z, Y] = -2iX$ give $\\tfrac{d}{dt}\\langle Y\\rangle = +\\omega\\langle X\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Check with numbers. Start in $\\vert+\\rangle$, the state with $\\langle X\\rangle = 1$, $\\langle Y\\rangle = 0$. The pair of equations is solved by $\\langle X\\rangle = \\cos\\omega t$, $\\langle Y\\rangle = \\sin\\omega t$: differentiate the first and you get $-\\omega\\sin\\omega t = -\\omega\\langle Y\\rangle$, as required. With $\\omega = 2$ and $t = 0.5$ the arrow has turned by $\\omega t = 1$ radian (57°), so $\\langle X\\rangle = \\cos 1 = 0.540$, $\\langle Y\\rangle = \\sin 1 = 0.841$, and $\\langle Z\\rangle$ is still exactly 0."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: is the Hamiltonian itself conserved?",
+      "text": "Use the equation $\\tfrac{d}{dt}\\langle A\\rangle = i\\langle[H, A]\\rangle$ to decide whether the energy $\\langle H\\rangle$ can change when $H$ does not depend on time.",
+      "hint": "What is the commutator of anything with itself?",
+      "solution": [
+        "Set $A = H$: $[H, H] = HH - HH = 0$.",
+        "So $\\tfrac{d}{dt}\\langle H\\rangle = 0$ for every state. A time-independent Hamiltonian always conserves energy; it is the one conserved quantity every closed system has."
+      ],
+      "answer": "Yes, energy is conserved"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Conserved quantities"
+      "text": "Conserved means the whole distribution is frozen"
     },
     {
       "type": "prose",
-      "text": "If $[H, Q] = 0$, the equation of motion gives $\\tfrac{d}{dt}Q(t) = 0$: $Q$ is conserved. More than its average is fixed: $H$ and $Q$ share an eigenbasis, $U(t)$ maps each eigenspace of $Q$ to itself, and the probability of every outcome of $Q$ is constant. The space splits into blocks (symmetry sectors) that never talk to each other."
+      "text": "A constant average sounds weak. A coin that lands heads 50% of the time and one that lands heads 100% of the time on alternate days both average 50%. Is it possible that the distribution of outcomes of a conserved $A$ changes while its average stays fixed? No, and seeing why teaches you the most useful fact on this page."
     },
     {
       "type": "prose",
-      "text": "Energy itself is always conserved under a time-independent $H$. Other examples: total $Z$ (the number of excitations) for flip-flop couplings $X_iX_j + Y_iY_j$, which move an excitation without creating or destroying any; and for a Hamiltonian built only from $X_iX_j$ and $Z_i$, the parity $\\Pi = Z_1Z_2\\cdots Z_n$."
+      "text": "Step 1. Write $A$ through its eigenvalues and projectors (Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors)): $A = \\sum_a a\\,\\Pi_a$, where $\\Pi_a$ projects onto the eigenspace of eigenvalue $a$. By the Born rule the probability of outcome $a$ at time $t$ is $P(a, t) = \\langle\\psi(t)\\vert\\Pi_a\\vert\\psi(t)\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Each projector is a polynomial in $A$. For example, if $A$ has the two eigenvalues $+1$ and $-1$ then $\\Pi_{+1} = (I + A)/2$ and $\\Pi_{-1} = (I - A)/2$. Anything that commutes with $A$ commutes with any polynomial in $A$, so $[H, A] = 0$ implies $[H, \\Pi_a] = 0$ for every $a$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. So each projector is conserved too, and its average, which is exactly the probability $P(a, t)$, is constant. Every probability of every outcome of $A$ is frozen at its starting value."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. There is an even stronger picture. Since $H$ commutes with $\\Pi_a$, so does $U(t) = e^{-iHt}$ (it is a power series in $H$). Then $\\Pi_a U\\vert\\psi\\rangle = U\\Pi_a\\vert\\psi\\rangle$: if the state starts inside the eigenspace of $a$, it stays there forever. The state space is divided into rooms, one per eigenvalue of $A$, and the time evolution never moves any amplitude from one room to another. These rooms are called symmetry sectors."
+    },
+    {
+      "type": "callout",
+      "text": "Rule to remember: $[H, A] = 0$ means three equivalent things. The average of $A$ never changes. The probability of every outcome of $A$ never changes. Each eigenspace of $A$ is a closed room that the dynamics never leaves."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: frozen probabilities",
+      "text": "A qubit evolves under $H = 3Z$ from the state $\\sqrt{0.8}\\,\\vert0\\rangle + \\sqrt{0.2}\\,\\vert1\\rangle$. What is the probability of measuring $1$ at $t = 7$?",
+      "hint": "Which observable has outcomes 0 and 1, and does it commute with $H$?",
+      "solution": [
+        "$[H, Z] = 0$, so the probabilities of the $Z$ outcomes never change.",
+        "At $t = 0$, $P(1) = (\\sqrt{0.2})^2 = 0.2$, so it is still 0.2 at $t = 7$ (and at every other time). Only the relative phase between the two amplitudes turns."
+      ],
+      "answer": "0.2"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "The parity of the reservoir Hamiltonian"
+      "text": "Symmetries are unitaries that commute with H"
     },
     {
       "type": "prose",
-      "text": "Each $X_iX_j$ anticommutes with $Z_i$ and with $Z_j$ and commutes with every other $Z$, so it commutes with the product of all of them (two sign flips cancel). Each $Z_i$ commutes with $\\Pi$ trivially. So the Fujii–Nakajima Hamiltonian $\\sum J_{ij}X_iX_j + \\sum h_iZ_i$ conserves $\\Pi$: XX couplings create or destroy excitations only in pairs, so whether the count is even or odd never changes. The $2^n$-dimensional space splits into two blocks of $2^{n-1}$."
+      "text": "So far a conserved quantity was an observable. The word symmetry usually means something you can do to the system that leaves it looking the same: rotating a perfect sphere, swapping two identical particles, flipping every spin. In quantum mechanics a thing you do is a unitary $S$, and leaving the Hamiltonian looking the same means $SHS^\\dagger = H$. Multiplying on the right by $S$ (and using $S^\\dagger S = I$) turns this into $SH = HS$, that is $[S, H] = 0$."
     },
     {
       "type": "prose",
-      "text": "This has consequences you can see on the QRC shelf. Level statistics must be computed within one block (Dynamical Regimes (#/qrc/models/dynamical-regimes)); an input written into the parity-odd coherences is invisible to parity-even readouts such as $Z_i$ (Input Encoding (#/qrc/models/input-encoding)); and in the special case $h = 0$ extra conserved quantities appear that stop the reservoir forgetting its initial state (Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points))."
+      "text": "What does such a symmetry buy you? Since $S$ commutes with $H$ it commutes with $U(t)$, so $SU(t) = U(t)S$. In words: doing the symmetry and then evolving gives the same result as evolving and then doing the symmetry. If you start in a state that the symmetry leaves alone, you will still be in one later."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "From a continuous symmetry to a conserved quantity"
+    },
+    {
+      "type": "prose",
+      "text": "Many symmetries come in families labelled by an angle: rotate by any $\\theta$. Such a family can be written $S(\\theta) = e^{-i\\theta Q}$ for a Hermitian $Q$, called the generator of the symmetry; rotations about $z$ of a single qubit are $e^{-i\\theta Z/2}$, so their generator is $Z/2$. Here is why the generator is conserved."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The symmetry condition holds for every angle: $e^{-i\\theta Q}He^{i\\theta Q} = H$ for all $\\theta$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. For a small angle, expand the exponentials to first order: $e^{\\mp i\\theta Q} \\approx I \\mp i\\theta Q$. Then $(I - i\\theta Q)H(I + i\\theta Q) \\approx H - i\\theta(QH - HQ)$, dropping the $\\theta^2$ term."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. This must equal $H$, so $-i\\theta[Q, H] = 0$, that is $[Q, H] = 0$. The generator commutes with $H$ and is conserved. The argument runs backwards too: if $[Q, H] = 0$, every $e^{-i\\theta Q}$ commutes with $H$."
+    },
+    {
+      "type": "prose",
+      "text": "This is the quantum version of Noether's theorem: every continuous symmetry has a conserved quantity. Invariance under shifts in time gives energy, under rotations angular momentum, and, the one that matters most here, invariance under rotating every spin about the $z$ axis gives total $Z$. Discrete symmetries (a single flip, a swap) also give conserved quantities: $S$ itself, if it is Hermitian as well as unitary, is an observable with eigenvalues $\\pm1$ that commutes with $H$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a generator",
+      "text": "For two qubits, the rotation of both spins about $z$ by $\\theta$ is $e^{-i\\theta(Z_1 + Z_2)/2}$. What quantity is conserved by any Hamiltonian that has this symmetry?",
+      "solution": [
+        "The generator is $Q = (Z_1 + Z_2)/2$.",
+        "By the argument above, any $H$ invariant under all these rotations satisfies $[H, Q] = 0$, so $Z_1 + Z_2$ (twice $Q$) is conserved."
+      ],
+      "answer": "$Z_1 + Z_2$, the total Z magnetisation"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Total Z magnetisation: when excitations are counted"
+    },
+    {
+      "type": "prose",
+      "text": "Call $\\vert1\\rangle$ an excitation (an up-spin in an excited state, a photon in an atom's excited level). The number of excitations in a register of $n$ qubits is $N_{\\mathrm{exc}} = \\sum_i (I - Z_i)/2$, since $(I - Z)/2$ is 0 on $\\vert0\\rangle$ and 1 on $\\vert1\\rangle$. So conserving the number of excitations is the same as conserving the total $Z$ magnetisation $M_z = Z_1 + Z_2 + \\dots + Z_n$. Which spin couplings do this?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The flip-flop coupling conserves it"
+    },
+    {
+      "type": "prose",
+      "text": "Take two qubits coupled by $H = J(X_1X_2 + Y_1Y_2)$, the flip-flop or XY coupling found between superconducting qubits and in dipolar-coupled molecules. Let us see what it does to each basis state. We need $X\\vert0\\rangle = \\vert1\\rangle$, $X\\vert1\\rangle = \\vert0\\rangle$, $Y\\vert0\\rangle = i\\vert1\\rangle$, $Y\\vert1\\rangle = -i\\vert0\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. On $\\vert00\\rangle$: $X_1X_2\\vert00\\rangle = \\vert11\\rangle$ and $Y_1Y_2\\vert00\\rangle = (i)(i)\\vert11\\rangle = -\\vert11\\rangle$. They cancel: $H\\vert00\\rangle = 0$. The same cancellation gives $H\\vert11\\rangle = 0$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. On $\\vert01\\rangle$: $X_1X_2\\vert01\\rangle = \\vert10\\rangle$ and $Y_1Y_2\\vert01\\rangle = (i)(-i)\\vert10\\rangle = \\vert10\\rangle$. They add: $H\\vert01\\rangle = 2J\\vert10\\rangle$. Likewise $H\\vert10\\rangle = 2J\\vert01\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. So the coupling only ever moves an excitation from one qubit to the other; it never creates or destroys one. In operator form, $X_1X_2 + Y_1Y_2 = 2(\\vert01\\rangle\\langle10\\vert + \\vert10\\rangle\\langle01\\vert)$. Each term keeps $M_z$ the same ($M_z = 0$ on both $\\vert01\\rangle$ and $\\vert10\\rangle$), so $[H, M_z] = 0$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Watch it move. Inside the room spanned by $\\vert01\\rangle$ and $\\vert10\\rangle$, $H$ acts like $2J$ times a Pauli $X$, so $e^{-iHt}\\vert01\\rangle = \\cos(2Jt)\\vert01\\rangle - i\\sin(2Jt)\\vert10\\rangle$. With $J = 1$: at $t = 0.25$ the amplitudes are $0.878$ and $-0.479i$; at $t = \\pi/8 = 0.393$ the excitation is shared equally ($0.707$ and $-0.707i$, an entangled state); at $t = \\pi/4 = 0.785$ it has moved completely, to $-i\\vert10\\rangle$. At every moment $\\langle M_z\\rangle = 0$, and $\\vert00\\rangle$, $\\vert11\\rangle$ have exactly zero amplitude."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The XX coupling with a field does not"
+    },
+    {
+      "type": "prose",
+      "text": "Now take the Hamiltonian used by the spin-network reservoir on the QRC shelf, $H = JX_1X_2 + h(Z_1 + Z_2)$, an XX coupling plus a field along $z$ (a transverse field relative to the coupling axis $x$). On $\\vert00\\rangle$ the coupling gives $X_1X_2\\vert00\\rangle = \\vert11\\rangle$ with nothing to cancel it: two excitations are created at once. So $[H, M_z] \\ne 0$. Directly: $[X_1X_2, Z_1] = (X_1Z_1 - Z_1X_1)X_2 = -2iY_1X_2$, which is not zero."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Starting from $\\vert00\\rangle$ the state can only reach $\\vert11\\rangle$ (each application of $H$ either leaves $\\vert00\\rangle$ alone, via the field, or swaps it for $\\vert11\\rangle$). In the room $\\{\\vert00\\rangle, \\vert11\\rangle\\}$ the matrix of $H$ has diagonal entries $\\langle00\\vert H\\vert00\\rangle = 2h$, $\\langle11\\vert H\\vert11\\rangle = -2h$ and off-diagonal entries $J$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Treat $\\vert00\\rangle$ and $\\vert11\\rangle$ as the two levels of a fake qubit. In that room $H$ is $2h\\,Z + J\\,X$ of the fake qubit, which has the form $\\tfrac{\\delta}{2}Z + \\tfrac{\\Omega}{2}X$ of a driven qubit in its rotating frame with detuning $\\delta = 4h$ and Rabi frequency $\\Omega = 2J$. Rabi's formula $P = \\frac{\\Omega^2}{\\Omega^2 + \\delta^2}\\sin^2\\big(\\tfrac12\\sqrt{\\Omega^2 + \\delta^2}\\,t\\big)$ (Driven Qubits and Rabi Oscillations (#/quantum/qubits/driven-qubits)) then gives the probability of $\\vert11\\rangle$, after cancelling the common factors of 4: $P_{11}(t) = \\frac{J^2}{J^2 + 4h^2}\\sin^2\\big(\\sqrt{J^2 + 4h^2}\\,t\\big)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Numbers, $J = 1$, $h = 0.5$: $J^2/(J^2 + 4h^2) = 1/2$ and $\\sqrt{2} = 1.414$. At $t = 0.5$, $P_{11} = 0.5\\sin^2(0.707) = 0.211$, so $\\langle M_z\\rangle = 2(1 - P_{11}) - 2P_{11} = 2(1 - 2\\times0.211) = 1.156$, down from 2 at the start. At $t = 1.111$ $(= \\pi/2\\sqrt2)$, $P_{11}$ reaches its maximum $0.5$ and $\\langle M_z\\rangle = 0$. Total $Z$ swings back and forth; it is not conserved."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which coupling conserves excitations?",
+      "text": "Does $H = Z_1Z_2 + 0.3(Z_1 + Z_2)$ conserve $M_z = Z_1 + Z_2$? Does $H = X_1X_2 - Y_1Y_2$?",
+      "hint": "Act with each Hamiltonian on $\\vert00\\rangle$ and see whether the number of 1s changes.",
+      "solution": [
+        "First: every term is built from $Z$s, which all commute with each other, so $[H, M_z] = 0$. It is diagonal; nothing ever moves.",
+        "Second: on $\\vert00\\rangle$, $X_1X_2\\vert00\\rangle = \\vert11\\rangle$ and $-Y_1Y_2\\vert00\\rangle = -(i)(i)\\vert11\\rangle = +\\vert11\\rangle$. They add, so $H\\vert00\\rangle = 2\\vert11\\rangle$: excitations are created in pairs and $M_z$ changes."
+      ],
+      "answer": "Yes for the first; no for the second"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Parity: the symmetry that survives"
+    },
+    {
+      "type": "prose",
+      "text": "The XX-plus-field Hamiltonian broke total $Z$, but look again at what it did: it turned $\\vert00\\rangle$ into $\\vert11\\rangle$, zero excitations into two. XX couplings create or destroy excitations in pairs. So the count can change, but whether it is even or odd cannot. That is a conserved quantity, the $Z$-parity $\\Pi = Z_1Z_2\\cdots Z_n$, which is $+1$ on basis states with an even number of 1s and $-1$ on those with an odd number."
+    },
+    {
+      "type": "prose",
+      "text": "The proof uses one fact: $X$ and $Z$ on the same qubit anticommute, $XZ = -ZX$, while operators on different qubits commute."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Move $\\Pi = Z_1\\cdots Z_n$ past $X_iX_j$. Each $Z_k$ with $k$ not $i$ or $j$ commutes with it. $Z_i$ passes $X_i$ with one minus sign, and $Z_j$ passes $X_j$ with another."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. The two minus signs cancel: $\\Pi X_iX_j = (-1)^2X_iX_j\\Pi = X_iX_j\\Pi$. So $[\\Pi, X_iX_j] = 0$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Each field term $h_iZ_i$ is a product of $Z$s, which commute with $\\Pi$. So the whole reservoir Hamiltonian $H = \\sum J_{ij}X_iX_j + \\sum h_iZ_i$ (the Fujii-Nakajima model, Spin Models (#/quantum/many-body/spin-models)) satisfies $[H, \\Pi] = 0$."
+    },
+    {
+      "type": "prose",
+      "text": "Parity is a discrete symmetry: $\\Pi$ is both unitary and Hermitian, with $\\Pi^2 = I$. It is in fact the half-turn of every spin about $z$: since $e^{-i\\pi Z/2} = -iZ$, rotating all $n$ spins by $\\pi$ gives $(-i)^n\\Pi$. The XX coupling has lost the full rotation symmetry about $z$ (rotating by a general $\\theta$ turns $X_iX_j$ into a mixture involving $Y$), but it keeps the half-turn, since rotating $X$ by $\\pi$ about $z$ just flips its sign, and two flipped signs cancel. The flip-flop coupling $X_iX_j + Y_iY_j$ keeps both: it conserves $M_z$, and hence also the parity, since parity is $(-1)^{N_{\\mathrm{exc}}}$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: parity of a three-qubit state",
+      "text": "What is the parity $\\Pi = Z_1Z_2Z_3$ of $\\vert110\\rangle$, of $\\vert100\\rangle$, and of $(\\vert000\\rangle + \\vert011\\rangle)/\\sqrt2$?",
+      "solution": [
+        "$\\vert110\\rangle$ has two 1s (even): $Z_1Z_2Z_3\\vert110\\rangle = (-1)(-1)(+1)\\vert110\\rangle = +\\vert110\\rangle$.",
+        "$\\vert100\\rangle$ has one 1 (odd): $-1$.",
+        "Both $\\vert000\\rangle$ and $\\vert011\\rangle$ have an even count, so the superposition is an eigenstate with $\\Pi = +1$. A superposition of an even and an odd state would not have definite parity."
+      ],
+      "answer": "+1, −1, +1"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Splitting the Hamiltonian into blocks"
+    },
+    {
+      "type": "prose",
+      "text": "Here is the practical payoff. If $H$ commutes with a symmetry, you can order the basis so that all states of one sector come first, then the next sector, and so on. Since $H$ never moves amplitude between sectors, every matrix element $\\langle a\\vert H\\vert b\\rangle$ with $a$ and $b$ in different sectors is zero. The matrix is block diagonal, and you can find its eigenvalues one small block at a time. For $n$ qubits with parity symmetry, one $2^n\\times2^n$ problem becomes two problems of size $2^{n-1}$; with total-$Z$ symmetry the blocks are even smaller, of sizes $\\binom{n}{k}$ for $k = 0, 1, \\dots, n$ excitations."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the two-qubit reservoir Hamiltonian"
+    },
+    {
+      "type": "prose",
+      "text": "Find all four energies of $H = JX_1X_2 + h(Z_1 + Z_2)$ with $J = 1$, $h = 0.5$, using parity."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Sort the basis by parity. Even: $\\vert00\\rangle$, $\\vert11\\rangle$. Odd: $\\vert01\\rangle$, $\\vert10\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Even block. The field gives $\\langle00\\vert h(Z_1 + Z_2)\\vert00\\rangle = h(1 + 1) = 2h = 1$ and $\\langle11\\vert\\dots\\vert11\\rangle = -2h = -1$. The coupling gives $\\langle11\\vert X_1X_2\\vert00\\rangle = 1$, so the off-diagonal entries are $J = 1$. The block has rows $(1, 1)$ and $(1, -1)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Its eigenvalues solve $(1 - E)(-1 - E) - 1 = 0$, that is $E^2 - 1 - 1 = 0$, so $E = \\pm\\sqrt2 = \\pm1.414$. In general the even block gives $E = \\pm\\sqrt{4h^2 + J^2}$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Odd block. On $\\vert01\\rangle$ and $\\vert10\\rangle$ the field terms cancel, $h(+1 - 1) = 0$, so the diagonal is zero. The coupling swaps them, so the off-diagonal entries are $J = 1$: rows $(0, 1)$ and $(1, 0)$, with eigenvalues $\\pm J = \\pm1$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5. The full spectrum is $\\{-1.414, -1, 1, 1.414\\}$, which the sample below confirms by diagonalising the full $4\\times4$ matrix. We never had to solve a quartic equation. The eigenvectors also come out labelled by sector: the ground state, at $-1.414$, is $-\\sin(\\pi/8)\\vert00\\rangle + \\cos(\\pi/8)\\vert11\\rangle = -0.383\\vert00\\rangle + 0.924\\vert11\\rangle$, a definite-parity (even) state."
+    },
+    {
+      "type": "prose",
+      "text": "This matters beyond saving work. Statistics of energy levels, used on the QRC shelf to tell chaotic reservoirs from regular ones, must be computed inside one sector: levels from different sectors never interact, so mixing them makes the levels look uncorrelated (Poisson statistics, the signature of a regular, non-chaotic system) even when the dynamics in each block is chaotic (Dynamical Regimes (#/qrc/models/dynamical-regimes))."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a block with a flip-flop coupling",
+      "text": "Find the energies of $H = J(X_1X_2 + Y_1Y_2) + h(Z_1 + Z_2)$ for $J = 1$, $h = 0.3$, using total-$Z$ sectors.",
+      "hint": "Each sector with one state is already a $1\\times1$ block: its energy is its diagonal entry.",
+      "solution": [
+        "Sectors by excitation number: $\\{\\vert00\\rangle\\}$, $\\{\\vert01\\rangle, \\vert10\\rangle\\}$, $\\{\\vert11\\rangle\\}$.",
+        "$\\vert00\\rangle$: the coupling gives 0 (worked above), the field gives $2h = 0.6$. $\\vert11\\rangle$: $-2h = -0.6$.",
+        "Middle block: field terms cancel, coupling gives off-diagonal $2J = 2$; eigenvalues $\\pm2$."
+      ],
+      "answer": "0.6, −0.6, 2, −2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Degeneracy: when a symmetry forces equal energies"
+    },
+    {
+      "type": "prose",
+      "text": "Two different states with the same energy are called degenerate. Degeneracies are rarely accidents; usually a symmetry forces them. The argument is short."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Let $H\\vert E\\rangle = E\\vert E\\rangle$ and let $S$ be a symmetry, $[S, H] = 0$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Then $H(S\\vert E\\rangle) = SH\\vert E\\rangle = E\\,(S\\vert E\\rangle)$. So $S\\vert E\\rangle$ is also an eigenstate with the same energy $E$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Either $S\\vert E\\rangle$ is just $\\vert E\\rangle$ times a phase (the state is symmetric), or it is a genuinely different state, and then $E$ is degenerate."
+    },
+    {
+      "type": "prose",
+      "text": "Example. $H = h(Z_1 + Z_2)$ has the swap symmetry: exchanging the two qubits leaves it unchanged. Its eigenstate $\\vert01\\rangle$ (energy 0) is mapped by the swap to $\\vert10\\rangle$, a different state, so $\\vert10\\rangle$ must have energy 0 too, which you can check directly. Add a coupling $J(X_1X_2 + Y_1Y_2)$ that also respects the swap and the two levels split into $\\pm2J$; the eigenstates become the symmetric and antisymmetric combinations $(\\vert01\\rangle \\pm \\vert10\\rangle)/\\sqrt2$, each mapped to itself (up to sign) by the swap. Why did the swap force a degeneracy before but not after? Without the coupling, $H$ also commutes with $Z_1$ alone, and the swap does not commute with $Z_1$ (it turns $Z_1$ into $Z_2$). Two symmetries that do not commute with each other cannot share all their eigenstates, and that is what forces levels together: $\\vert01\\rangle$ and $\\vert10\\rangle$ are the $Z_1$ eigenstates, and the swap maps one to the other. The coupling breaks the separate conservation of $Z_1$; the symmetries left (the swap and $Z_1 + Z_2$) commute with each other, every eigenstate can be chosen symmetric or antisymmetric, and nothing forces the levels to stay together."
+    },
+    {
+      "type": "prose",
+      "text": "For a reservoir, degeneracies are a warning sign. Two degenerate levels contribute a phase difference that never evolves, so their part of the state just sits there; the eigenvalue gaps $E_a - E_b$ are the frequencies at which a reservoir's features oscillate, and a zero gap is a frequency of zero."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: find the degenerate pair",
+      "text": "Which levels of $H = Z_1Z_2$ (two qubits) are degenerate, and what symmetry would you name for them?",
+      "solution": [
+        "$Z_1Z_2$ is $+1$ on $\\vert00\\rangle$ and $\\vert11\\rangle$ and $-1$ on $\\vert01\\rangle$ and $\\vert10\\rangle$.",
+        "The flip of both qubits, $X_1X_2$, commutes with $Z_1Z_2$ (two anticommutations cancel) and maps $\\vert00\\rangle \\leftrightarrow \\vert11\\rangle$ and $\\vert01\\rangle \\leftrightarrow \\vert10\\rangle$; the swap also maps $\\vert01\\rangle \\leftrightarrow \\vert10\\rangle$.",
+        "What forces the pairing is that $X_1X_2$ does not commute with $Z_1$, another symmetry of $H = Z_1Z_2$ (they anticommute), so as in the example above the two symmetries cannot share all their eigenstates."
+      ],
+      "answer": "|00⟩ and |11⟩ (energy +1); |01⟩ and |10⟩ (energy −1)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Seeing it in code"
+    },
+    {
+      "type": "prose",
+      "text": "The first sample checks the parity symmetry of a random three-qubit reservoir Hamiltonian, computes $\\langle Z_1\\rangle$ at one time in the Schrödinger and Heisenberg pictures (Schrödinger and Heisenberg Pictures (#/quantum/dynamics/pictures-of-time-evolution)), and compares the flip-flop and XX couplings."
     },
     {
       "type": "code",
       "lang": "python",
-      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\nn = 3; rng = np.random.default_rng(2)\n# The reservoir Hamiltonian of the QRC shelf: random XX couplings plus a Z field\nH = sum(rng.uniform(-.5, .5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\nH = H + sum(op(Z, i, n) for i in range(n))\nparity = op(Z, 0, n) @ op(Z, 1, n) @ op(Z, 2, n)\ncomm = lambda A, B: A @ B - B @ A\nprint(\"[H, Z1 Z2 Z3] = 0:\", np.allclose(comm(H, parity), 0), \"   [H, Z1] = 0:\", np.allclose(comm(H, op(Z, 0, n)), 0))\n# Heisenberg picture: <Z1>(t) computed both ways\npsi = np.zeros(8, complex); psi[0b100] = 1          # |100>: qubit 1 excited\nU = expm(-1j * H * 1.3)\nschr = np.vdot(U @ psi, op(Z, 0, n) @ (U @ psi)).real\nheis = np.vdot(psi, (U.conj().T @ op(Z, 0, n) @ U) @ psi).real\nprint(f\"<Z1>(t=1.3): Schrodinger {schr:+.4f}, Heisenberg {heis:+.4f}\")\nprint(f\"parity <Z1Z2Z3> at t=0 and t=1.3: {np.vdot(psi, parity @ psi).real:+.0f}, {np.vdot(U @ psi, parity @ (U @ psi)).real:+.0f}\")\n# XX + YY conserves total Z (excitation number); XX alone does not\nHflip = op(X, 0, 2) @ op(X, 1, 2) + op(Y, 0, 2) @ op(Y, 1, 2); Ztot = op(Z, 0, 2) + op(Z, 1, 2)\nprint(\"[XX+YY, Z1+Z2] = 0:\", np.allclose(comm(Hflip, Ztot), 0), \"   [XX, Z1+Z2] = 0:\", np.allclose(comm(op(X, 0, 2) @ op(X, 1, 2), Ztot), 0))"
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\nn = 3; rng = np.random.default_rng(2)\n# The reservoir Hamiltonian of the QRC shelf: random XX couplings plus a Z field\nH = sum(rng.uniform(-.5, .5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\nH = H + sum(op(Z, i, n) for i in range(n))\nparity = op(Z, 0, n) @ op(Z, 1, n) @ op(Z, 2, n)\ncomm = lambda A, B: A @ B - B @ A\nprint(\"[H, Z1 Z2 Z3] = 0:\", np.allclose(comm(H, parity), 0), \"   [H, Z1] = 0:\", np.allclose(comm(H, op(Z, 0, n)), 0))\n# Heisenberg picture: <Z1>(t) computed both ways\npsi = np.zeros(8, complex); psi[0b100] = 1          # |100>: qubit 1 excited\nU = expm(-1j * H * 1.3)\nschr = np.vdot(U @ psi, op(Z, 0, n) @ (U @ psi)).real\nheis = np.vdot(psi, (U.conj().T @ op(Z, 0, n) @ U) @ psi).real\nprint(f\"<Z1>(t=1.3): Schrodinger {schr:+.4f}, Heisenberg {heis:+.4f}\")\nprint(f\"parity <Z1Z2Z3> at t=0 and t=1.3: {np.vdot(psi, parity @ psi).real:+.0f}, {np.vdot(U @ psi, parity @ (U @ psi)).real:+.0f}\")\n# XX + YY conserves total Z (excitation number); XX alone does not\nHflip = op(X, 0, 2) @ op(X, 1, 2) + op(Y, 0, 2) @ op(Y, 1, 2); Ztot = op(Z, 0, 2) + op(Z, 1, 2)\nprint(\"[XX+YY, Z1+Z2] = 0:\", np.allclose(comm(Hflip, Ztot), 0), \"   [XX, Z1+Z2] = 0:\", np.allclose(comm(op(X, 0, 2) @ op(X, 1, 2), Ztot), 0))\n"
     },
     {
       "type": "prose",
       "text": "Output of the run: for a random 3-qubit reservoir Hamiltonian, $[H, Z_1Z_2Z_3] = 0$ but $[H, Z_1] \\ne 0$. Starting from $\\vert100\\rangle$, $\\langle Z_1\\rangle$ at $t = 1.3$ is $-0.6494$ in both pictures, while the parity stays at $-1$. Flip-flop coupling $XX + YY$ conserves $Z_1 + Z_2$; $XX$ alone does not."
     },
     {
+      "type": "prose",
+      "text": "The second sample does the block splitting of the worked example, then shows the two reservoir consequences of the next section: a conserved sum of features, and an input phase that no parity-symmetric readout can see."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\n# 1. Block splitting of H = J X1X2 + h(Z1+Z2), J = 1, h = 0.5\nJ, h = 1.0, 0.5\nH = J * op(X, 0, 2) @ op(X, 1, 2) + h * (op(Z, 0, 2) + op(Z, 1, 2))\neven, odd = [0b00, 0b11], [0b01, 0b10]\nprint(\"full 4x4 eigenvalues:\", np.round(np.linalg.eigvalsh(H), 4))\nprint(\"even block:\", H[np.ix_(even, even)].real.tolist(), \"->\", np.round(np.linalg.eigvalsh(H[np.ix_(even, even)]), 4))\nprint(\"odd block: \", H[np.ix_(odd, odd)].real.tolist(), \"->\", np.round(np.linalg.eigvalsh(H[np.ix_(odd, odd)]), 4))\nprint(\"elements between sectors all zero:\", np.allclose(H[np.ix_(even, odd)], 0))\n# 2. A conserved quantity in a 3-qubit hopping chain: the features <Z_i> always sum to the same number\nn = 3\nHhop = sum(op(X, i, n) @ op(X, i + 1, n) + op(Y, i, n) @ op(Y, i + 1, n) for i in range(n - 1))\nHhop = Hhop + sum((0.4 + 0.3 * i) * op(Z, i, n) for i in range(n))\npsi0 = np.zeros(8, complex); psi0[0b011] = 1                       # |011>: qubit 1 up, qubits 2 and 3 excited\nfor t in (0.0, 0.7, 2.1, 5.0):\n    psi = expm(-1j * Hhop * t) @ psi0\n    z = [np.vdot(psi, op(Z, i, n) @ psi).real for i in range(n)]\n    print(f\"t={t:3.1f}: <Z1>,<Z2>,<Z3> = {z[0]:+.3f} {z[1]:+.3f} {z[2]:+.3f}   sum = {sum(z):+.3f}\")\n# 3. Information that never enters: a phase between parity sectors is invisible to parity-symmetric readouts\nHres = 1.0 * op(X, 0, 2) @ op(X, 1, 2) + 1.0 * op(Z, 0, 2) + 0.6 * op(Z, 1, 2)\nU = expm(-1j * Hres * 1.7)\nfor phi in (0.0, 1.0, 2.5):\n    psi = U @ (np.array([1, np.exp(1j * phi), 0, 0]) / np.sqrt(2))   # (|00> + e^{i phi}|01>)/sqrt2: even + odd\n    feats = [np.vdot(psi, O @ psi).real for O in (op(Z, 0, 2), op(Z, 1, 2), op(Z, 0, 2) @ op(Z, 1, 2), op(X, 0, 2) @ op(X, 1, 2))]\n    xone = np.vdot(psi, op(X, 1, 2) @ psi).real                    # X2 flips parity: it can see the phase\n    print(f\"phi={phi:3.1f}: <Z1> {feats[0]:+.4f} <Z2> {feats[1]:+.4f} <Z1Z2> {feats[2]:+.4f} <X1X2> {feats[3]:+.4f} | <X2> {xone:+.4f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the full matrix has eigenvalues $-1.4142, -1, 1, 1.4142$; the even block, rows $(1, 1)$ and $(1, -1)$, gives $\\pm1.4142$; the odd block, rows $(0, 1)$ and $(1, 0)$, gives $\\pm1$; every element between sectors is zero. In the hopping chain started in $\\vert011\\rangle$ the three features move (at $t = 0.7$ they are $-0.805, -0.141, -0.053$), but their sum is $-1.000$ at every time. In the last part the features $\\langle Z_1\\rangle$, $\\langle Z_2\\rangle$, $\\langle Z_1Z_2\\rangle$, $\\langle X_1X_2\\rangle$ are identical for the three phases ($+0.1938$, $+0.8038$, $0.0000$ and $+0.3240$ in every row), while $\\langle X_2\\rangle$, an observable that flips parity, reads $+0.2053$, $-0.2025$ and $-0.3874$ for $\\phi = 0$, 1 and 2.5."
+    },
+    {
       "type": "heading",
       "level": 2,
-      "text": "Where QRC uses this"
+      "text": "What symmetries do to a quantum reservoir"
+    },
+    {
+      "type": "prose",
+      "text": "A quantum reservoir computer writes each new input into a quantum system, lets it evolve under a fixed $H$ for a while, and reads out a set of averages (the features), typically $\\langle Z_i\\rangle$, which a trained linear readout turns into a prediction. Two properties make it useful: it should forget its distant past (fading memory, so that the output depends on recent inputs, not on how it was started) and every input should leave a visible mark on the features. A conserved quantity can break either one."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Memory that never fades"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose $[H, Q] = 0$ and the input step also leaves $Q$ alone. Then $\\langle Q\\rangle$ keeps the value it had at the start forever. Whatever the initial state put into $Q$ is never washed out by later inputs, so two copies of the reservoir started differently give different outputs forever, even when fed the same inputs. That is a failure of the echo state property (The Echo State Property (#/qrc/foundations/echo-state-property)), the condition that the reservoir forgets its initial condition."
+    },
+    {
+      "type": "prose",
+      "text": "Even when the input step does change $Q$, the conservation between inputs costs you features. In the hopping chain of the sample, $\\langle Z_1\\rangle + \\langle Z_2\\rangle + \\langle Z_3\\rangle$ is the same at every time between inputs, so the three features are tied together by a linear equation: they carry only two independent numbers between them. A linear readout gains nothing from the third. The cure on the QRC shelf is to choose Hamiltonians with few conserved quantities (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)), and to add dissipation, which breaks unitary conservation laws altogether (Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points)). At the special point $h = 0$ of the spin reservoir, extra conserved quantities appear and the reservoir stops forgetting."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A door the input never passes through"
+    },
+    {
+      "type": "prose",
+      "text": "The other failure is the reverse. Every $Z_i$ and $Z_iZ_j$ commutes with the parity $\\Pi$, so each is block diagonal: it has no matrix elements between the even and odd sectors. Take a state $\\vert\\psi\\rangle = \\vert\\psi_{\\mathrm{even}}\\rangle + \\vert\\psi_{\\mathrm{odd}}\\rangle$ and a parity-symmetric observable $O$. Then"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle\\psi\\vert O\\vert\\psi\\rangle = \\langle\\psi_{\\mathrm{even}}\\vert O\\vert\\psi_{\\mathrm{even}}\\rangle + \\langle\\psi_{\\mathrm{odd}}\\vert O\\vert\\psi_{\\mathrm{odd}}\\rangle",
+      "caption": "The cross terms vanish because O never connects the two sectors."
+    },
+    {
+      "type": "prose",
+      "text": "The relative phase between the even and odd parts appears only in the cross terms, so no parity-symmetric readout can see it. And since $H$ conserves parity, the evolution never converts that phase into something visible. An input written only into that phase would be completely lost: the third part of the sample encodes an angle $\\phi$ as $(\\vert00\\rangle + e^{i\\phi}\\vert01\\rangle)/\\sqrt2$, evolves it, and finds every parity-symmetric feature unchanged by $\\phi$, while $\\langle X_2\\rangle$, which flips parity, does depend on it. This is why the encodings on Input Encoding (#/qrc/models/input-encoding) are chosen to write inputs into populations that $\\langle Z_i\\rangle$ can see."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: will this feature ever help?",
+      "text": "A reservoir conserves $Z_1Z_2Z_3$ and starts in $\\vert000\\rangle$; inputs are written by operations that also commute with $Z_1Z_2Z_3$. Express $\\langle Z_1Z_2\\rangle$ in terms of a single-qubit feature. Is it worth adding to the readout as well as $\\langle Z_3\\rangle$?",
+      "solution": [
+        "The state stays in the parity $+1$ sector, where $Z_1Z_2Z_3 = 1$ on every basis state present.",
+        "Multiply by $Z_3$ and use $Z_3^2 = I$: on that sector $Z_1Z_2 = Z_3$. So $\\langle Z_1Z_2\\rangle = \\langle Z_3\\rangle$ at all times: a duplicate feature that adds nothing to a linear readout."
+      ],
+      "answer": "⟨Z1Z2⟩ = ⟨Z3⟩, so no"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. Three qubits evolve under $H = X_1X_2 + X_2X_3 + 0.8\\,(Z_1 + Z_2 + Z_3)$, starting from $\\vert100\\rangle$. (a) Name a conserved quantity other than energy and give its value. (b) Which basis states can ever have non-zero amplitude? (c) What size are the blocks a computer has to diagonalise? (d) Is $\\langle Z_1 + Z_2 + Z_3\\rangle$ conserved?"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The Hamiltonian is made of XX couplings and $Z$ fields, so the parity $\\Pi = Z_1Z_2Z_3$ is conserved (the two sign flips cancel in each $X_iX_j$). $\\vert100\\rangle$ has one excitation, so $\\Pi = -1$, forever."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Only odd-parity basis states can appear: $\\vert100\\rangle$, $\\vert010\\rangle$, $\\vert001\\rangle$ (one excitation) and $\\vert111\\rangle$ (three). The four even states, $\\vert000\\rangle$, $\\vert110\\rangle$, $\\vert101\\rangle$, $\\vert011\\rangle$, keep amplitude zero."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The $8\\times8$ problem is two $4\\times4$ blocks, one per parity. (There is also a mirror symmetry, swapping qubits 1 and 3, which splits each block further, but $\\vert100\\rangle$ is not mirror-symmetric, so both mirror sectors are involved.)"
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Total $Z$ is not conserved: $X_1X_2\\vert100\\rangle = \\vert010\\rangle$ keeps one excitation, but $X_2X_3\\vert100\\rangle = \\vert111\\rangle$ makes three. So $\\langle Z_1 + Z_2 + Z_3\\rangle$ moves between $+1$ (one excitation) and $-3$ (three)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
     },
     {
       "type": "list",
       "items": [
-        "The parity symmetry and its two blocks: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
-        "Conserved quantities as 'fixed points in disguise' that break the echo state property: Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points).",
-        "Integrable and localised Hamiltonians have many conserved quantities, which is what makes them poor reservoirs: Dynamical Regimes (#/qrc/models/dynamical-regimes)."
+        "$\\tfrac{d}{dt}\\langle A\\rangle = i\\langle[H, A]\\rangle$: an observable that commutes with $H$ has a constant average.",
+        "More than the average: every outcome probability of a conserved $A$ is constant, and each eigenspace of $A$ (a symmetry sector) is never left.",
+        "A symmetry is a unitary $S$ with $[S, H] = 0$. A continuous family $e^{-i\\theta Q}$ of symmetries makes its generator $Q$ conserved (Noether's theorem).",
+        "Flip-flop couplings $X_iX_j + Y_iY_j$ conserve total $Z$ (excitations move but are never created); XX couplings with $Z$ fields conserve only the parity $Z_1\\cdots Z_n$.",
+        "In a basis sorted by sector, $H$ is block diagonal; find energies one block at a time, and compute level statistics within one block.",
+        "A symmetry that maps an eigenstate to a different state forces a degeneracy.",
+        "For reservoirs: a conserved quantity is memory that never fades (and duplicate features), and a phase between sectors is information that parity-symmetric readouts never see."
       ]
     },
     {
@@ -77,6 +537,7 @@
       "type": "problem",
       "title": "Does parity commute with a coupling?",
       "text": "Show that $Z_1Z_2$ commutes with $X_1X_2$.",
+      "hint": "Group the operators qubit by qubit; on one qubit, $XZ = -ZX$.",
       "solution": [
         "$Z_1Z_2X_1X_2 = (Z_1X_1)(Z_2X_2)$, since operators on different qubits commute.",
         "$X_1X_2Z_1Z_2 = (X_1Z_1)(X_2Z_2) = (-Z_1X_1)(-Z_2X_2) = (Z_1X_1)(Z_2X_2)$. Equal, so they commute."
@@ -86,22 +547,74 @@
     {
       "type": "problem",
       "title": "Where can an excitation go?",
-      "text": "Two qubits evolve under $J(X_1X_2 + Y_1Y_2)$ and start in $\\vert01\\rangle$. Which basis states can ever have non-zero amplitude?",
+      "text": "Two qubits evolve under $J(X_1X_2 + Y_1Y_2)$ and start in $\\vert01\\rangle$. Which basis states can ever have non-zero amplitude, and at what time (with $J = 1$) is the excitation first entirely on qubit 1?",
+      "hint": "Find the conserved quantity first, then use the $2\\times2$ block.",
       "solution": [
         "The coupling conserves $Z_1 + Z_2$, which is 0 for $\\vert01\\rangle$ and $\\vert10\\rangle$, $+2$ for $\\vert00\\rangle$ and $-2$ for $\\vert11\\rangle$.",
-        "So the state stays in the span of $\\vert01\\rangle$ and $\\vert10\\rangle$: the excitation hops between the qubits but is never created or lost."
+        "So the state stays in the span of $\\vert01\\rangle$ and $\\vert10\\rangle$: $\\cos(2Jt)\\vert01\\rangle - i\\sin(2Jt)\\vert10\\rangle$.",
+        "The amplitude of $\\vert01\\rangle$ first vanishes when $2Jt = \\pi/2$, at $t = \\pi/4 = 0.785$."
       ],
-      "answer": "Only |01⟩ and |10⟩"
+      "answer": "Only |01⟩ and |10⟩; at t = π/4 ≈ 0.785"
     },
     {
       "type": "problem",
-      "title": "A conserved quantity and a readout",
-      "text": "A reservoir Hamiltonian conserves $Z_1Z_2Z_3$, and the initial state is $\\vert000\\rangle$ with no input. Express $\\langle Z_1Z_2\\rangle$ in terms of a single-qubit feature.",
+      "title": "A commutator that is not zero",
+      "text": "Compute $[X_1X_2, Z_1]$ and use it to write $\\tfrac{d}{dt}\\langle Z_1\\rangle$ for $H = JX_1X_2$.",
+      "hint": "$XZ = -iY$ and $ZX = iY$.",
       "solution": [
-        "The state stays in the parity $+1$ block, where $Z_1Z_2Z_3 = 1$ on every basis state.",
-        "Multiplying by $Z_3$ (with $Z_3^2 = I$): $Z_1Z_2 = Z_3$ on that block, so $\\langle Z_1Z_2\\rangle = \\langle Z_3\\rangle$ at all times."
+        "$[X_1X_2, Z_1] = (X_1Z_1 - Z_1X_1)X_2$, since $X_2$ commutes with $Z_1$.",
+        "$X_1Z_1 = -iY_1$ and $Z_1X_1 = iY_1$, so the bracket is $-2iY_1$, and $[X_1X_2, Z_1] = -2iY_1X_2$.",
+        "Then $\\tfrac{d}{dt}\\langle Z_1\\rangle = i\\langle[H, Z_1]\\rangle = iJ\\langle -2iY_1X_2\\rangle = 2J\\langle Y_1X_2\\rangle$."
       ],
-      "answer": "⟨Z1Z2⟩ = ⟨Z3⟩"
+      "answer": "[X1X2, Z1] = −2i Y1X2, so d⟨Z1⟩/dt = 2J⟨Y1X2⟩"
+    },
+    {
+      "type": "problem",
+      "title": "Energies by blocks",
+      "text": "Find the four energies of $H = 2X_1X_2 + 0.75\\,(Z_1 + Z_2)$.",
+      "hint": "Even block energies are $\\pm\\sqrt{(2h)^2 + J^2}$.",
+      "solution": [
+        "Even block $\\{\\vert00\\rangle, \\vert11\\rangle\\}$: diagonal $\\pm2h = \\pm1.5$, off-diagonal $J = 2$. Eigenvalues $\\pm\\sqrt{1.5^2 + 2^2} = \\pm\\sqrt{6.25} = \\pm2.5$.",
+        "Odd block $\\{\\vert01\\rangle, \\vert10\\rangle\\}$: diagonal 0 (the field terms cancel), off-diagonal 2. Eigenvalues $\\pm2$."
+      ],
+      "answer": "−2.5, −2, 2, 2.5"
+    },
+    {
+      "type": "problem",
+      "title": "A duplicate feature",
+      "text": "A three-qubit reservoir conserves $M_z = Z_1 + Z_2 + Z_3$ between inputs. Just after an input step the features are $\\langle Z_1\\rangle = 0.2$, $\\langle Z_2\\rangle = -0.5$, $\\langle Z_3\\rangle = 0.9$. Later, before the next input, $\\langle Z_1\\rangle = -0.3$ and $\\langle Z_2\\rangle = 0.1$. What is $\\langle Z_3\\rangle$?",
+      "solution": [
+        "$\\langle M_z\\rangle = 0.2 - 0.5 + 0.9 = 0.6$ is conserved until the next input.",
+        "So $\\langle Z_3\\rangle = 0.6 - (-0.3) - 0.1 = 0.8$. You did not need to simulate anything, which is exactly why $\\langle Z_3\\rangle$ adds no new information to a linear readout."
+      ],
+      "answer": "0.8"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The parity symmetry and its two blocks in the reservoir Hamiltonian: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "Conserved quantities as fixed points in disguise that break the echo state property: Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points).",
+        "Integrable and localised Hamiltonians have many conserved quantities, which is what makes them poor reservoirs; level statistics within one sector: Dynamical Regimes (#/qrc/models/dynamical-regimes).",
+        "Choosing an encoding that the readout can see: Input Encoding (#/qrc/models/input-encoding).",
+        "The Heisenberg equation $\\tfrac{d}{dt}A = i[H, A]$ as a way of computing: Schrödinger and Heisenberg Pictures (#/quantum/dynamics/pictures-of-time-evolution)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Going further"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Angular momentum: the conserved quantity of full rotation symmetry, and its ladder of $J_z$ eigenvalues, in Sakurai and Napolitano chapter 3.",
+        "Time-reversal symmetry is antiunitary (it conjugates amplitudes) and gives Kramers degeneracy for half-integer spins; Sakurai and Napolitano chapter 4."
+      ]
     },
     {
       "type": "heading",
@@ -112,7 +625,8 @@
       "type": "list",
       "items": [
         "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapters 2 and 4",
-        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapter 6"
+        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapter 6",
+        "L. Susskind and A. Friedman, Quantum Mechanics: The Theoretical Minimum, Basic Books (2014), lecture 4"
       ]
     }
   ]

@@ -1,0 +1,613 @@
+{
+  "title": "Commutators and Compatible Observables",
+  "intro": "The commutator $[A, B] = AB - BA$ decides whether two quantities can be measured together, whether the order of measurements matters, how sharp two quantities can be at once, and what stays constant in time. This page computes commutators by hand, proves the uncertainty relation, and works through compatible observables on one and two qubits.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "Everything on Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty), and the matrix multiplication of Linear Algebra for Quantum Mechanics (#/quantum/foundations/linear-algebra). The two-qubit examples use kets like $\\vert01\\rangle$ (first qubit 0, second qubit 1) and operators like $Z_1$ (a $Z$ on qubit 1, nothing on qubit 2); Composite Systems and Tensor Products (#/quantum/many-body/composite-systems) treats them properly, but the examples here only need the rule that an operator on one qubit leaves the other alone."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Compute commutators of Pauli operators by hand, by letting them act on $\\vert0\\rangle$ and $\\vert1\\rangle$.",
+        "Predict, before calculating, whether two observables can be measured together, and whether the order of two measurements changes the statistics.",
+        "Find a basis in which two commuting observables are both sharp.",
+        "Derive the uncertainty relation $\\sigma_A\\sigma_B \\ge \\tfrac12\\vert\\langle[A, B]\\rangle\\vert$ from scratch.",
+        "Use commutators to spot conserved quantities and to see why $e^Ae^B \\ne e^{A+B}$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A puzzle: does the order of measurements matter?"
+    },
+    {
+      "type": "prose",
+      "text": "Take the tilted qubit $\\vert\\psi\\rangle = \\tfrac{\\sqrt3}{2}\\vert0\\rangle + \\tfrac12\\vert1\\rangle$ from the previous page and do two measurements in a row, $Z$ and $X$. Ask: what is the probability that both give $+1$? Do it in both orders."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Z first. $P(Z = +1) = \\tfrac34$, and afterwards the state is $\\vert0\\rangle$. Then $P(X = +1) = \\vert\\langle+\\vert0\\rangle\\vert^2 = \\tfrac12$. Both: $\\tfrac34\\times\\tfrac12 = 0.375$.",
+        "X first. $P(X = +1) = 0.933$ (computed on the previous page), and afterwards the state is $\\vert+\\rangle$. Then $P(Z = +1) = \\vert\\langle0\\vert+\\rangle\\vert^2 = \\tfrac12$. Both: $0.933\\times\\tfrac12 = 0.467$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The same two questions, asked in a different order, give different statistics. That never happens with classical quantities: the probability that a person is tall and left-handed does not depend on which you check first. Now repeat the experiment with two different qubits and the observables $Z_1$ (the $Z$ value of qubit 1) and $Z_2$. Take the two-qubit state with amplitudes $\\tfrac12$, $\\tfrac12$, $\\tfrac{1}{\\sqrt2}$, $0$ on $\\vert00\\rangle$, $\\vert01\\rangle$, $\\vert10\\rangle$, $\\vert11\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$Z_1$ first. $P(Z_1 = +1) = \\tfrac14 + \\tfrac14 = \\tfrac12$ (the terms with qubit 1 in $\\vert0\\rangle$). The state becomes $(\\vert00\\rangle + \\vert01\\rangle)/\\sqrt2$, and then $P(Z_2 = +1) = \\tfrac12$. Both: $\\tfrac14$.",
+        "$Z_2$ first. $P(Z_2 = +1) = \\tfrac14 + \\tfrac12 = \\tfrac34$ (terms with qubit 2 in $\\vert0\\rangle$: $\\vert00\\rangle$ and $\\vert10\\rangle$). The state becomes $(\\tfrac12\\vert00\\rangle + \\tfrac{1}{\\sqrt2}\\vert10\\rangle)/\\sqrt{3/4}$, and then $P(Z_1 = +1) = \\tfrac{1/4}{3/4} = \\tfrac13$. Both: $\\tfrac34\\times\\tfrac13 = \\tfrac14$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Here the order does not matter, and the answer is simply $\\vert\\tfrac12\\vert^2$, the probability of $\\vert00\\rangle$. What separates the two cases is one algebraic quantity, the commutator. This page is about that quantity."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a commutator is"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The definition"
+    },
+    {
+      "type": "prose",
+      "text": "For two operators $A$ and $B$, the commutator is"
+    },
+    {
+      "type": "math",
+      "tex": "[A, B] = AB - BA",
+      "caption": "The commutator: how much the order of the product matters."
+    },
+    {
+      "type": "prose",
+      "text": "Ordinary numbers always commute: $3\\times5 = 5\\times3$, so $[3, 5] = 0$. Matrices usually do not, because $AB$ means 'apply $B$, then $A$', and doing two transformations in a different order usually gives a different result. (Rotate a book $90°$ about a vertical axis and then about a horizontal one, then try the other order: it ends up facing differently.) Two operators commute when $[A, B] = 0$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: computing [X, Y] by hand"
+    },
+    {
+      "type": "prose",
+      "text": "The cleanest way to multiply small operators is to see what they do to the basis states. The Pauli matrices act as follows: $X\\vert0\\rangle = \\vert1\\rangle$, $X\\vert1\\rangle = \\vert0\\rangle$; $Y\\vert0\\rangle = i\\vert1\\rangle$, $Y\\vert1\\rangle = -i\\vert0\\rangle$; $Z\\vert0\\rangle = \\vert0\\rangle$, $Z\\vert1\\rangle = -\\vert1\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $XY$ on $\\vert0\\rangle$: first $Y\\vert0\\rangle = i\\vert1\\rangle$, then $X(i\\vert1\\rangle) = i\\vert0\\rangle$. So $XY\\vert0\\rangle = i\\vert0\\rangle$.",
+        "Step 2. $XY$ on $\\vert1\\rangle$: $Y\\vert1\\rangle = -i\\vert0\\rangle$, then $X(-i\\vert0\\rangle) = -i\\vert1\\rangle$. So $XY\\vert1\\rangle = -i\\vert1\\rangle$.",
+        "Step 3. An operator that multiplies $\\vert0\\rangle$ by $i$ and $\\vert1\\rangle$ by $-i$ is $iZ$. So $XY = iZ$.",
+        "Step 4. $YX$ on $\\vert0\\rangle$: $X\\vert0\\rangle = \\vert1\\rangle$, then $Y\\vert1\\rangle = -i\\vert0\\rangle$. On $\\vert1\\rangle$: $X\\vert1\\rangle = \\vert0\\rangle$, then $Y\\vert0\\rangle = i\\vert1\\rangle$. So $YX = -iZ$.",
+        "Step 5. Subtract: $[X, Y] = iZ - (-iZ) = 2iZ$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Doing the same for the other pairs gives the full table, which is worth memorising because nearly every qubit calculation uses it:"
+    },
+    {
+      "type": "math",
+      "tex": "[X, Y] = 2iZ, \\qquad [Y, Z] = 2iX, \\qquad [Z, X] = 2iY",
+      "caption": "The Pauli commutators. Reversing the order flips the sign: [Y, X] = −2iZ."
+    },
+    {
+      "type": "prose",
+      "text": "The pattern is cyclic: $X \\to Y \\to Z \\to X$. Going forward around the cycle gives $+2i$ times the third, going backward gives $-2i$. Along the way we also found the products themselves: $XY = iZ$, $YZ = iX$, $ZX = iY$, and the reversed products carry a minus sign."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Anticommutators"
+    },
+    {
+      "type": "prose",
+      "text": "Since $XY = iZ$ and $YX = -iZ$, the sum $XY + YX$ is zero. The combination $\\{A, B\\} = AB + BA$ is called the anticommutator, and two operators with $\\{A, B\\} = 0$ anticommute. All three pairs of distinct Pauli matrices anticommute. Combined with $X^2 = Y^2 = Z^2 = I$, this explains the shortcut used on the previous page: $(aX + bZ)^2 = a^2X^2 + ab(XZ + ZX) + b^2Z^2 = (a^2 + b^2)I$."
+    },
+    {
+      "type": "prose",
+      "text": "Any product splits into a commutator half and an anticommutator half: $AB = \\tfrac12[A, B] + \\tfrac12\\{A, B\\}$. For two different Paulis the anticommutator half is zero and the product is half the commutator; for a Pauli with itself the commutator half is zero."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a commutator by hand",
+      "text": "Compute $[Y, Z]$ by letting $YZ$ and $ZY$ act on $\\vert0\\rangle$ and $\\vert1\\rangle$.",
+      "hint": "Apply the right-hand operator first.",
+      "solution": [
+        "$YZ\\vert0\\rangle = Y\\vert0\\rangle = i\\vert1\\rangle$; $YZ\\vert1\\rangle = Y(-\\vert1\\rangle) = i\\vert0\\rangle$. An operator sending $\\vert0\\rangle \\to i\\vert1\\rangle$ and $\\vert1\\rangle \\to i\\vert0\\rangle$ is $iX$.",
+        "$ZY\\vert0\\rangle = Z(i\\vert1\\rangle) = -i\\vert1\\rangle$; $ZY\\vert1\\rangle = Z(-i\\vert0\\rangle) = -i\\vert0\\rangle$. So $ZY = -iX$.",
+        "$[Y, Z] = iX - (-iX) = 2iX$."
+      ],
+      "answer": "[Y, Z] = 2iX"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Rules for working with commutators"
+    },
+    {
+      "type": "prose",
+      "text": "A handful of identities let you compute most commutators without multiplying any matrices. Each one follows from the definition in a line or two, and the lines are given so you can rebuild them when you forget."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Antisymmetry: $[B, A] = BA - AB = -[A, B]$. In particular $[A, A] = 0$: everything commutes with itself.",
+        "Linearity: $[A, B + C] = A(B + C) - (B + C)A = [A, B] + [A, C]$, and $[A, cB] = c[A, B]$ for a number $c$.",
+        "Numbers and the identity commute with everything: $[A, cI] = cA - cA = 0$. So shifting an observable by a constant, $A \\to A + cI$, never changes a commutator.",
+        "Product rule: $[A, BC] = [A, B]C + B[A, C]$. To check, expand the right side: $(AB - BA)C + B(AC - CA) = ABC - BAC + BAC - BCA = ABC - BCA$, which is $[A, BC]$.",
+        "Functions of an operator commute with it: $[A, A^2] = A^3 - A^3 = 0$, and by the same argument $[A, f(A)] = 0$ for any power series $f$, including $e^{-iAt}$.",
+        "Hermitian partners: if $A$ and $B$ are Hermitian then $[A, B]^\\dagger = (AB - BA)^\\dagger = BA - AB = -[A, B]$. So $[A, B]$ is anti-Hermitian, and $i[A, B]$ is Hermitian. That is why the Pauli commutators come out as $i$ times a Pauli, and why $\\langle[A, B]\\rangle$ is always purely imaginary.",
+        "Traces: $\\operatorname{Tr}(AB) = \\operatorname{Tr}(BA)$ for any square matrices, so $\\operatorname{Tr}[A, B] = 0$. Every commutator of finite matrices is traceless."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the product rule two ways"
+    },
+    {
+      "type": "prose",
+      "text": "Compute $[Z, XZ]$ directly and with the product rule."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Directly. $XZ = -ZX = -iY$, so $[Z, XZ] = [Z, -iY] = -i[Z, Y] = -i(-2iX) = -2X$.",
+        "With the product rule. $[Z, XZ] = [Z, X]Z + X[Z, Z] = (2iY)Z + 0 = 2i(YZ) = 2i(iX) = -2X$.",
+        "The two agree. The product rule was the safer route: it used only the commutator table and the product $YZ = iX$, with no need to work out $XZ$ first."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why commuting matters for exponentials"
+    },
+    {
+      "type": "prose",
+      "text": "For numbers, $e^ae^b = e^{a+b}$. For matrices this holds only when they commute, and the commutator is exactly the error. Expand both sides to second order, using $e^A = I + A + \\tfrac12A^2 + \\dots$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $e^Ae^B = (I + A + \\tfrac12A^2)(I + B + \\tfrac12B^2) + \\dots = I + A + B + \\tfrac12A^2 + AB + \\tfrac12B^2 + \\dots$",
+        "Step 2. $e^{A+B} = I + (A + B) + \\tfrac12(A + B)^2 + \\dots = I + A + B + \\tfrac12A^2 + \\tfrac12(AB + BA) + \\tfrac12B^2 + \\dots$",
+        "Step 3. Subtract: $e^Ae^B - e^{A+B} = AB - \\tfrac12(AB + BA) + \\dots = \\tfrac12[A, B] + \\dots$"
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So $e^Ae^B = e^{A+B}$ to second order exactly when $[A, B] = 0$ (and if they commute, to all orders). This is why a Hamiltonian $H = H_1 + H_2$ cannot in general be simulated by running $H_1$ and then $H_2$: the error is set by $[H_1, H_2]$. Breaking the time into many short steps shrinks it, which is the Trotter method on Gates and Circuits (#/quantum/qubits/gates-and-circuits)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: using the rules",
+      "text": "Without multiplying matrices, compute $[X, 3I + 2X + 5Y]$.",
+      "hint": "Split the sum and drop everything that commutes trivially.",
+      "solution": [
+        "By linearity: $3[X, I] + 2[X, X] + 5[X, Y]$.",
+        "$[X, I] = 0$ and $[X, X] = 0$, so only $5[X, Y] = 5(2iZ) = 10iZ$ is left."
+      ],
+      "answer": "10iZ"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Compatible observables: when order does not matter"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "Two observables are called compatible when their commutator is zero. The puzzle at the top of the page showed what that buys you: the joint statistics of measuring both do not depend on the order, and a measurement of one leaves the result of the other undisturbed. The reason is that compatible observables share a set of eigenvectors, so there is one basis in which both are sharp. Measure in that basis and you get both values from a single shot."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why commuting observables share eigenvectors"
+    },
+    {
+      "type": "prose",
+      "text": "Here is the argument when $A$ has no repeated eigenvalues."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Let $A\\vert a\\rangle = a\\vert a\\rangle$, and suppose $AB = BA$.",
+        "Step 2. Apply $A$ to the vector $B\\vert a\\rangle$: $A(B\\vert a\\rangle) = B(A\\vert a\\rangle) = B(a\\vert a\\rangle) = a\\,(B\\vert a\\rangle)$.",
+        "Step 3. So $B\\vert a\\rangle$ is also an eigenvector of $A$ with eigenvalue $a$ (or is zero). Because the eigenvalue $a$ is not repeated, the only such vectors are multiples of $\\vert a\\rangle$. So $B\\vert a\\rangle = b\\vert a\\rangle$ for some number $b$.",
+        "Step 4. That says $\\vert a\\rangle$ is an eigenvector of $B$ too. Every eigenvector of $A$ is an eigenvector of $B$: they share an eigenbasis."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "When $A$ does have repeated eigenvalues, step 3 says only that $B$ maps each eigenspace of $A$ into itself. Inside that smaller space $B$ is still Hermitian, so it can be diagonalised there (the spectral theorem again), and the resulting vectors are eigenvectors of both. The conclusion is the same, and it runs both ways: Hermitian $A$ and $B$ commute if and only if they have a common orthonormal eigenbasis. (The reverse direction is easy: if $A = \\sum_k a_k\\vert k\\rangle\\langle k\\vert$ and $B = \\sum_k b_k\\vert k\\rangle\\langle k\\vert$ in the same basis, both products are $\\sum_k a_kb_k\\vert k\\rangle\\langle k\\vert$.)"
+    },
+    {
+      "type": "prose",
+      "text": "In the puzzle, $Z_1$ and $Z_2$ share the computational basis $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$: each of those states has a definite value of both. That is why the joint probability was just $\\vert\\text{amplitude}\\vert^2$ in either order. For $Z$ and $X$ on one qubit there is no shared eigenvector, the first measurement always leaves a state that is random for the second, and order matters."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: two-qubit parities and the Bell basis"
+    },
+    {
+      "type": "prose",
+      "text": "A less obvious pair: the two-qubit parities $Z_1Z_2$ and $X_1X_2$. On a single qubit $Z$ and $X$ anticommute, so you might expect these to clash. Check:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Move $X_1X_2$ through $Z_1Z_2$ one qubit at a time. On qubit 1, $Z_1X_1 = -X_1Z_1$: one minus sign. On qubit 2, $Z_2X_2 = -X_2Z_2$: another. Operators on different qubits commute freely.",
+        "Step 2. So $Z_1Z_2\\,X_1X_2 = (-1)(-1)\\,X_1X_2\\,Z_1Z_2 = X_1X_2\\,Z_1Z_2$. The two signs cancel, and $[Z_1Z_2, X_1X_2] = 0$.",
+        "Step 3. Find the shared eigenbasis. $Z_1Z_2$ is $+1$ on $\\vert00\\rangle, \\vert11\\rangle$ and $-1$ on $\\vert01\\rangle, \\vert10\\rangle$. $X_1X_2$ flips both bits, so it maps $\\vert00\\rangle \\leftrightarrow \\vert11\\rangle$ and $\\vert01\\rangle \\leftrightarrow \\vert10\\rangle$. Its eigenvectors inside each parity pair are the sum and difference.",
+        "Step 4. That gives the four Bell states, with their pairs of values: $\\vert\\Phi^\\pm\\rangle = (\\vert00\\rangle \\pm \\vert11\\rangle)/\\sqrt2$ has $Z_1Z_2 = +1$ and $X_1X_2 = \\pm1$; $\\vert\\Psi^\\pm\\rangle = (\\vert01\\rangle \\pm \\vert10\\rangle)/\\sqrt2$ has $Z_1Z_2 = -1$ and $X_1X_2 = \\pm1$.",
+        "Step 5. Check one: $X_1X_2\\vert\\Phi^-\\rangle = (\\vert11\\rangle - \\vert00\\rangle)/\\sqrt2 = -\\vert\\Phi^-\\rangle$. Eigenvalue $-1$, as listed."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The four pairs of values $(\\pm1, \\pm1)$ label the four Bell states uniquely, so one measurement in the Bell basis reads out both parities at once. This is the basis of quantum error correction, where many commuting parity checks are measured together, and of the Bell measurement used in teleportation (Gates and Circuits (#/quantum/qubits/gates-and-circuits))."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A rule for Pauli strings"
+    },
+    {
+      "type": "prose",
+      "text": "The argument in steps 1 and 2 generalises. A Pauli string is a product with one Pauli (or the identity) on each qubit, like $X_1Z_2Y_3$. Compare two strings qubit by qubit and count the positions where both have a non-identity Pauli and they are different. Each such position contributes a minus sign when you swap the order. So two Pauli strings commute if that count is even and anticommute if it is odd. $Z_1Z_2$ and $X_1X_2$ differ at two positions: commute. $Z_1Z_2$ and $X_1$ differ at one: anticommute. $Z_1$ and $Z_2$ differ at none: commute."
+    },
+    {
+      "type": "prose",
+      "text": "In quantum reservoir computing this rule decides how many shots a readout costs: all $Z_i$ and all products $Z_iZ_j$ commute with each other, so every one of them comes from the same computational-basis shots, while an $X_i$ feature needs separate runs (Readout and Multiplexing (#/qrc/models/readout-and-multiplexing))."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: Pauli strings",
+      "text": "Which of these pairs commute? (a) $X_1X_2$ and $Y_1Y_2$; (b) $X_1Z_2$ and $Z_1X_2$; (c) $Z_1Z_2Z_3$ and $X_2$.",
+      "hint": "Count positions where both strings have different non-identity Paulis.",
+      "solution": [
+        "(a) Positions 1 and 2 both have different Paulis: count 2, even: commute.",
+        "(b) Position 1: $X$ vs $Z$, different; position 2: $Z$ vs $X$, different. Count 2: commute.",
+        "(c) Only position 2 has both non-identity ($Z$ vs $X$): count 1, odd: anticommute."
+      ],
+      "answer": "(a) commute, (b) commute, (c) anticommute"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Deriving the uncertainty relation"
+    },
+    {
+      "type": "prose",
+      "text": "The previous page used the relation $\\sigma_A\\sigma_B \\ge \\tfrac12\\vert\\langle[A, B]\\rangle\\vert$. Here is where it comes from. It needs one tool from geometry, and the rest is careful bookkeeping."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The tool: the Cauchy-Schwarz inequality"
+    },
+    {
+      "type": "prose",
+      "text": "For ordinary arrows in space, $\\vert u\\cdot v\\vert \\le \\vert u\\vert\\,\\vert v\\vert$ for arrows $u$ and $v$, because the dot product is the product of the lengths times the cosine of the angle, and a cosine is at most 1. The same holds for complex vectors:"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\langle f\\vert g\\rangle\\vert^2 \\le \\langle f\\vert f\\rangle\\,\\langle g\\vert g\\rangle",
+      "caption": "The Cauchy-Schwarz inequality: an overlap is never larger than the product of the lengths."
+    },
+    {
+      "type": "prose",
+      "text": "Proof. If $\\vert g\\rangle = 0$ both sides are zero. Otherwise take the part of $\\vert f\\rangle$ left over after removing its component along $\\vert g\\rangle$: $\\vert h\\rangle = \\vert f\\rangle - c\\vert g\\rangle$ with $c = \\langle g\\vert f\\rangle/\\langle g\\vert g\\rangle$. Its squared length cannot be negative. Expanding, $\\langle h\\vert h\\rangle = \\langle f\\vert f\\rangle - \\bar c\\langle g\\vert f\\rangle - c\\langle f\\vert g\\rangle + \\vert c\\vert^2\\langle g\\vert g\\rangle$, and substituting $c$, the last three terms combine to $-\\vert\\langle f\\vert g\\rangle\\vert^2/\\langle g\\vert g\\rangle$. So $\\langle f\\vert f\\rangle - \\vert\\langle f\\vert g\\rangle\\vert^2/\\langle g\\vert g\\rangle \\ge 0$, which rearranges to the inequality. Equality holds exactly when $\\vert h\\rangle = 0$, that is when $\\vert f\\rangle$ and $\\vert g\\rangle$ point the same way."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The derivation, step by step"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Measure each observable from its mean. Let $\\delta A = A - \\langle A\\rangle I$ and $\\delta B = B - \\langle B\\rangle I$, and define the vectors $\\vert f\\rangle = \\delta A\\vert\\psi\\rangle$ and $\\vert g\\rangle = \\delta B\\vert\\psi\\rangle$.",
+        "Step 2. Their lengths are the variances. $\\langle f\\vert f\\rangle = \\langle\\psi\\vert(\\delta A)^2\\vert\\psi\\rangle = \\sigma_A^2$ (shown on the previous page, under 'Sharp values are eigenstates'), and likewise $\\langle g\\vert g\\rangle = \\sigma_B^2$.",
+        "Step 3. Apply Cauchy-Schwarz: $\\sigma_A^2\\sigma_B^2 \\ge \\vert\\langle f\\vert g\\rangle\\vert^2$.",
+        "Step 4. Any complex number $w$ has $\\vert w\\vert^2 = (\\mathrm{Re}\\,w)^2 + (\\mathrm{Im}\\,w)^2 \\ge (\\mathrm{Im}\\,w)^2$, and $\\mathrm{Im}\\,w = (w - \\bar w)/(2i)$. So $\\vert\\langle f\\vert g\\rangle\\vert^2 \\ge \\left(\\frac{\\langle f\\vert g\\rangle - \\langle g\\vert f\\rangle}{2i}\\right)^2$.",
+        "Step 5. Write out the two overlaps: $\\langle f\\vert g\\rangle = \\langle\\psi\\vert\\delta A\\,\\delta B\\vert\\psi\\rangle$ and $\\langle g\\vert f\\rangle = \\langle\\psi\\vert\\delta B\\,\\delta A\\vert\\psi\\rangle$ (the operators are Hermitian, so the dagger of $\\delta A$ is $\\delta A$). Their difference is $\\langle\\psi\\vert[\\delta A, \\delta B]\\vert\\psi\\rangle$.",
+        "Step 6. Shifting by multiples of $I$ does not change a commutator, so $[\\delta A, \\delta B] = [A, B]$.",
+        "Step 7. Put it together: $\\sigma_A^2\\sigma_B^2 \\ge \\left(\\frac{\\langle[A, B]\\rangle}{2i}\\right)^2 = \\tfrac14\\vert\\langle[A, B]\\rangle\\vert^2$, where the last step uses that $\\langle[A, B]\\rangle$ is purely imaginary (from the Hermitian-partners rule). Take square roots and you have the relation."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "\\sigma_A\\,\\sigma_B \\ge \\tfrac12\\left\\vert\\langle[A, B]\\rangle\\right\\vert",
+      "caption": "The Robertson uncertainty relation (Robertson 1929)."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4 threw away the real part. Keeping it gives a stronger bound, the Robertson-Schrödinger relation: $\\sigma_A^2\\sigma_B^2 \\ge \\left\\vert\\tfrac12\\langle[A, B]\\rangle\\right\\vert^2 + \\left(\\tfrac12\\langle\\{A, B\\}\\rangle - \\langle A\\rangle\\langle B\\rangle\\right)^2$. The second term is the quantum version of a covariance: it measures how correlated the two quantities are."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: checking the relation for X and Y"
+    },
+    {
+      "type": "prose",
+      "text": "Take the state with polar angle $60°$ and azimuth $45°$. Its Bloch coordinates are $\\langle X\\rangle = \\langle Y\\rangle = 0.612$ and $\\langle Z\\rangle = 0.5$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Spreads: $\\sigma_X = \\sigma_Y = \\sqrt{1 - 0.375} = 0.791$, so $\\sigma_X\\sigma_Y = 0.625$.",
+        "Step 2. Bound: $[X, Y] = 2iZ$, so $\\tfrac12\\vert\\langle[X, Y]\\rangle\\vert = \\vert\\langle Z\\rangle\\vert = 0.5$. Since $0.625 \\ge 0.5$, Robertson holds with a gap.",
+        "Step 3. The stronger relation: $\\{X, Y\\} = 0$, so the covariance term is $(0 - 0.612\\times0.612)^2 = 0.375^2 = 0.141$. The right side is $0.25 + 0.141 = 0.391$, and the left side is $0.625^2 = 0.391$. Equality.",
+        "Step 4. That equality is not luck: for any pure state of a single qubit the Robertson-Schrödinger relation is an equality for every pair of Pauli observables. The covariance term is exactly the gap Robertson leaves open."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: an uncertainty bound",
+      "text": "For the state $\\vert+\\rangle$, evaluate both sides of the relation for $Y$ and $Z$.",
+      "hint": "$\\vert+\\rangle$ is the $X = +1$ eigenstate.",
+      "solution": [
+        "$\\langle Y\\rangle = \\langle Z\\rangle = 0$ in $\\vert+\\rangle$, so $\\sigma_Y = \\sigma_Z = 1$ and the product is 1.",
+        "$[Y, Z] = 2iX$ and $\\langle X\\rangle = 1$, so the bound is $\\tfrac12\\cdot2 = 1$.",
+        "$1 \\ge 1$: equality."
+      ],
+      "answer": "1 ≥ 1, equality"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The most famous commutator: position and momentum"
+    },
+    {
+      "type": "prose",
+      "text": "For a particle moving along a line, position $x$ and momentum $p$ are observables, but they are not matrices of any finite size: they act on wavefunctions $\\psi(x)$ (Wavefunctions, Position and Momentum (#/quantum/dynamics/wavefunctions)). Position multiplies by $x$, and momentum differentiates: $p\\,\\psi = -i\\,d\\psi/dx$ (with $\\hbar = 1$). Compute their commutator on an arbitrary function $\\psi$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $xp\\,\\psi = x\\cdot(-i\\,\\psi') = -ix\\psi'$.",
+        "Step 2. $px\\,\\psi = -i\\,\\tfrac{d}{dx}(x\\psi) = -i(\\psi + x\\psi')$, by the product rule of calculus.",
+        "Step 3. Subtract: $[x, p]\\psi = -ix\\psi' + i\\psi + ix\\psi' = i\\psi$.",
+        "Step 4. This holds for every $\\psi$, so $[x, p] = i$, the canonical commutation relation (restoring units, $[x, p] = i\\hbar$)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Robertson then gives $\\sigma_x\\sigma_p \\ge \\tfrac12$, or $\\sigma_x\\sigma_p \\ge \\hbar/2$ in ordinary units, for every state of every particle. The bound is reached exactly by Gaussian wave packets, $\\psi(x) \\propto e^{-x^2/(4\\sigma_x^2)}$, and the ground state of the harmonic oscillator is one of them."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: how big is the effect?"
+    },
+    {
+      "type": "prose",
+      "text": "In SI units $\\hbar = 1.055\\times10^{-34}$ J s. The minimum momentum spread is $\\sigma_p = \\hbar/(2\\sigma_x)$, and dividing by the mass gives a velocity spread."
+    },
+    {
+      "type": "list",
+      "items": [
+        "An electron confined to $\\sigma_x = 1$ nm: $\\sigma_p = 1.055\\times10^{-34}/(2\\times10^{-9}) = 5.27\\times10^{-26}$ kg m/s. With $m_e = 9.11\\times10^{-31}$ kg, $\\sigma_v = 5.8\\times10^4$ m/s, about 58 km per second. Confinement at atomic scales forces huge velocities, which is why atoms are quantum objects.",
+        "A proton (mass $1.673\\times10^{-27}$ kg) confined to a nucleus, $\\sigma_x = 10^{-15}$ m: $\\sigma_p = 5.27\\times10^{-20}$ kg m/s and $\\sigma_v = 3.2\\times10^7$ m/s, about a tenth of the speed of light.",
+        "A dust grain of mass $10^{-15}$ kg located to $\\sigma_x = 1$ micrometre: $\\sigma_v = 1.055\\times10^{-34}/(2\\times10^{-6}\\times10^{-15}) = 5.3\\times10^{-14}$ m/s. Far too small to ever notice, which is why everyday objects look classical."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why no finite matrices can do this"
+    },
+    {
+      "type": "prose",
+      "text": "Take the trace of both sides of $[x, p] = iI$. The left side is a commutator, and every commutator of finite matrices is traceless (the trace rule above). The right side has trace $i\\,d$ for $d\\times d$ matrices, which is not zero. So no pair of finite matrices satisfies the canonical commutation relation: position and momentum need an infinite-dimensional space. Qubits never meet this issue, and the only place on these shelves where it matters is the oscillator and the continuous-variable reservoirs built from it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Commutators and change in time"
+    },
+    {
+      "type": "prose",
+      "text": "Commutators also decide what changes in time. A closed system evolves as $\\vert\\psi(t)\\rangle = e^{-iHt}\\vert\\psi(0)\\rangle$, with $H$ the Hamiltonian (The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation)). Differentiating the ket gives $\\tfrac{d}{dt}\\vert\\psi(t)\\rangle = -iH\\vert\\psi(t)\\rangle$, and taking the dagger of that, $\\tfrac{d}{dt}\\langle\\psi(t)\\vert = \\langle\\psi(t)\\vert(iH)$ (the dagger conjugates $-i$ to $i$ and $H^\\dagger = H$). Differentiating $\\langle A\\rangle = \\langle\\psi(t)\\vert A\\vert\\psi(t)\\rangle$ by the product rule gives two terms, one from the bra and one from the ket: $\\tfrac{d}{dt}\\langle A\\rangle = \\langle\\psi\\vert(iH)A\\vert\\psi\\rangle + \\langle\\psi\\vert A(-iH)\\vert\\psi\\rangle$. Collecting,"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{d}{dt}\\langle A\\rangle = i\\,\\langle[H, A]\\rangle",
+      "caption": "How an average changes in time (ħ = 1, A not explicitly time dependent)."
+    },
+    {
+      "type": "prose",
+      "text": "If $[H, A] = 0$, the average of $A$ never changes: $A$ is a conserved quantity. More than that, since $A$ commutes with $e^{-iHt}$, the whole probability distribution of $A$'s results is frozen in time. Symmetries and Conservation (#/quantum/dynamics/symmetries-and-conservation) builds on this; Schrödinger and Heisenberg Pictures (#/quantum/dynamics/pictures-of-time-evolution) turns it into an equation for the operators themselves."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a precessing qubit"
+    },
+    {
+      "type": "prose",
+      "text": "Take $H = \\tfrac{\\omega}{2}Z$, a qubit in a magnetic field along $z$ with frequency $\\omega$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $[H, Z] = 0$, so $\\langle Z\\rangle$ is constant: the field never changes the populations of $\\vert0\\rangle$ and $\\vert1\\rangle$.",
+        "Step 2. $[H, X] = \\tfrac{\\omega}{2}[Z, X] = \\tfrac{\\omega}{2}(2iY) = i\\omega Y$, so $\\tfrac{d}{dt}\\langle X\\rangle = i(i\\omega)\\langle Y\\rangle = -\\omega\\langle Y\\rangle$.",
+        "Step 3. $[H, Y] = \\tfrac{\\omega}{2}[Z, Y] = \\tfrac{\\omega}{2}(-2iX) = -i\\omega X$, so $\\tfrac{d}{dt}\\langle Y\\rangle = \\omega\\langle X\\rangle$.",
+        "Step 4. These are the equations of a point going round a circle at angular speed $\\omega$: starting from $\\langle X\\rangle = 1$, the solution is $\\langle X\\rangle = \\cos\\omega t$, $\\langle Y\\rangle = \\sin\\omega t$. The Bloch arrow precesses about the $z$ axis, at fixed height $\\langle Z\\rangle$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a coupling that conserves magnetisation"
+    },
+    {
+      "type": "prose",
+      "text": "Two spins coupled by the exchange interaction $H = X_1X_2 + Y_1Y_2 + Z_1Z_2$ (the Heisenberg model on Spin Models (#/quantum/many-body/spin-models)) conserve the total magnetisation $M = Z_1 + Z_2$, while the coupling $X_1X_2$ on its own does not. With the Pauli-string rule, $X_1X_2$ differs from $Z_1$ at one position and from $Z_2$ at one position, so it anticommutes with each, and $[X_1X_2, M] = -2i(Y_1X_2 + X_1Y_2)$, which is not zero. Adding the $Y_1Y_2$ and $Z_1Z_2$ terms cancels this; the sample code below checks $[H, M] = 0$ numerically, and Putting it together does the cancellation by hand for the $X_1X_2 + Y_1Y_2$ part (the $Z_1Z_2$ part commutes with $M$ trivially, since it is made of $Z$s)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nI = np.eye(2); X = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\ncomm = lambda A, B: A @ B - B @ A\nprint(\"XY = iZ:\", np.allclose(X @ Y, 1j * Z), \" [X,Y] = 2iZ:\", np.allclose(comm(X, Y), 2j * Z),\n      \" [Y,Z] = 2iX:\", np.allclose(comm(Y, Z), 2j * X), \" [Z,X] = 2iY:\", np.allclose(comm(Z, X), 2j * Y))\nprint(\"{X,Y} = 0:\", np.allclose(X @ Y + Y @ X, 0))\n# Order of measurement: joint probabilities for 'first A, then B'\ndef sequential(psi, A, B):\n    a_vals, Va = np.linalg.eigh(A); b_vals, Vb = np.linalg.eigh(B)\n    out = {}\n    for i, a in enumerate(a_vals):\n        amp = Va[:, i].conj() @ psi; pa = abs(amp) ** 2\n        post = Va[:, i]                     # state after outcome a (non-degenerate A)\n        for j, b in enumerate(b_vals):\n            out[(round(a), round(b))] = pa * abs(Vb[:, j].conj() @ post) ** 2\n    return out\npsi = np.array([np.sqrt(3) / 2, 0.5], complex)\nzx = sequential(psi, Z, X); xz = sequential(psi, X, Z)\nprint(\"Z then X: P(Z=+1, X=+1) =\", round(zx[(1, 1)], 4), \"   X then Z: P(X=+1, Z=+1) =\", round(xz[(1, 1)], 4))\n# Two commuting observables on two qubits: Z1 and Z2, measured in either order\nk = np.kron\nZ1, Z2 = k(Z, I), k(I, Z)\npsi2 = np.array([0.5, 0.5, 1 / np.sqrt(2), 0], complex)       # amplitudes of |00>, |01>, |10>, |11>\ndef measure_proj(psi, P):\n    p = np.vdot(psi, P @ psi).real\n    return p, (P @ psi) / np.sqrt(p) if p > 0 else psi\nPz1, Pz2 = (np.eye(4) + Z1) / 2, (np.eye(4) + Z2) / 2         # projectors onto outcome +1\np1, s = measure_proj(psi2, Pz1); p2, _ = measure_proj(s, Pz2)\nq1, s = measure_proj(psi2, Pz2); q2, _ = measure_proj(s, Pz1)\nprint(f\"Z1 then Z2: {p1:.4f} x {p2:.4f} = {p1*p2:.4f};  Z2 then Z1: {q1:.4f} x {q2:.4f} = {q1*q2:.4f}\")\n# Z1Z2 and X1X2 commute and share the Bell basis\nZZ, XX = k(Z, Z), k(X, X)\nprint(\"[Z1Z2, X1X2] = 0:\", np.allclose(comm(ZZ, XX), 0))\ns2 = 1 / np.sqrt(2)\nbell = {\"Phi+\": [s2, 0, 0, s2], \"Phi-\": [s2, 0, 0, -s2], \"Psi+\": [0, s2, s2, 0], \"Psi-\": [0, s2, -s2, 0]}\nfor name, v in bell.items():\n    v = np.array(v, complex)\n    print(f\"  {name}: Z1Z2 = {np.vdot(v, ZZ @ v).real:+.0f}, X1X2 = {np.vdot(v, XX @ v).real:+.0f}\")\n# A conserved quantity: the Heisenberg coupling conserves total Z\nHh = k(X, X) + k(Y, Y) + k(Z, Z)\nprint(\"[X1X2+Y1Y2+Z1Z2, Z1+Z2] = 0:\", np.allclose(comm(Hh, Z1 + Z2), 0), \"  [X1X2, Z1+Z2] = 0:\", np.allclose(comm(XX, Z1 + Z2), 0))\n# Robertson for X, Y in the state theta = 60, phi = 45 degrees\nth, ph = np.radians(60), np.radians(45)\nv = np.array([np.cos(th / 2), np.exp(1j * ph) * np.sin(th / 2)])\nev = lambda O: np.vdot(v, O @ v).real\nsx, sy = np.sqrt(1 - ev(X) ** 2), np.sqrt(1 - ev(Y) ** 2)\nprint(f\"theta=60, phi=45: sd(X) sd(Y) = {sx*sy:.4f} >= |<Z>| = {abs(ev(Z)):.4f}\")\n# Trace of any commutator is zero, so [x, p] = i I is impossible in finite dimensions\nA, B = np.random.default_rng(0).normal(size=(2, 5, 5))\nprint(\"Tr[A,B] for random 5x5 matrices:\", round(np.trace(comm(A, B)), 12))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: all three Pauli commutators and $\\{X, Y\\} = 0$ check out. The order puzzle reproduces: $Z$ then $X$ gives $P(+1, +1) = 0.375$, $X$ then $Z$ gives $0.4665$, while for the commuting pair $Z_1$, $Z_2$ both orders give $0.25$ ($0.5\\times0.5$ one way, $0.75\\times0.3333$ the other). $[Z_1Z_2, X_1X_2] = 0$, and the four Bell states carry the four sign pairs $(+,+)$, $(+,-)$, $(-,+)$, $(-,-)$ as listed above. The Heisenberg coupling commutes with $Z_1 + Z_2$, the bare $X_1X_2$ does not. For the $60°/45°$ state $\\sigma_X\\sigma_Y = 0.625 \\ge 0.5$, and the trace of a random commutator is $0$ to rounding."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Show by hand that the XY coupling $H = X_1X_2 + Y_1Y_2$ conserves the total magnetisation $M = Z_1 + Z_2$, and say what that means for a state that starts in $\\vert01\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Split by linearity: $[H, M] = [X_1X_2, Z_1] + [X_1X_2, Z_2] + [Y_1Y_2, Z_1] + [Y_1Y_2, Z_2]$.",
+        "Step 2. Each term only involves one qubit's commutator, because the other factor commutes with $Z$ on a different qubit. $[X_1X_2, Z_1] = [X, Z]_1X_2 = -2i\\,Y_1X_2$, using $[X, Z] = -[Z, X] = -2iY$.",
+        "Step 3. Likewise $[X_1X_2, Z_2] = X_1[X, Z]_2 = -2i\\,X_1Y_2$; $[Y_1Y_2, Z_1] = [Y, Z]_1Y_2 = 2i\\,X_1Y_2$; $[Y_1Y_2, Z_2] = Y_1[Y, Z]_2 = 2i\\,Y_1X_2$.",
+        "Step 4. Add: $-2iY_1X_2 - 2iX_1Y_2 + 2iX_1Y_2 + 2iY_1X_2 = 0$. The XX part and the YY part each fail on their own, and their failures cancel.",
+        "Step 5. Meaning: $\\vert01\\rangle$ has $M = 1 - 1 = 0$. Since $M$ is conserved, the state stays in the $M = 0$ subspace spanned by $\\vert01\\rangle$ and $\\vert10\\rangle$ forever. The coupling can only swap the excitation back and forth between the qubits, never create or destroy one. (Indeed $X_1X_2 + Y_1Y_2 = 2(\\vert01\\rangle\\langle10\\vert + \\vert10\\rangle\\langle01\\vert)$, a pure swap of excitations.)"
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$[A, B] = AB - BA$. For the Paulis, $[X, Y] = 2iZ$ and cyclically; distinct Paulis anticommute, $\\{X, Y\\} = 0$.",
+        "Compute small commutators by acting on basis states, and larger ones with linearity and the product rule $[A, BC] = [A, B]C + B[A, C]$.",
+        "Compatible (commuting) observables share an eigenbasis: one measurement gives both, and the order of measuring them does not matter. Non-commuting ones disturb each other.",
+        "Two Pauli strings commute when they differ (both non-identity, different Paulis) at an even number of qubits.",
+        "Cauchy-Schwarz gives $\\sigma_A\\sigma_B \\ge \\tfrac12\\vert\\langle[A, B]\\rangle\\vert$; $[x, p] = i$ gives Heisenberg's $\\sigma_x\\sigma_p \\ge \\tfrac12$, which needs infinite dimensions.",
+        "$\\tfrac{d}{dt}\\langle A\\rangle = i\\langle[H, A]\\rangle$: an observable that commutes with the Hamiltonian is conserved, and $e^Ae^B = e^{A+B}$ only when $A$ and $B$ commute."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "The remaining Pauli commutator",
+      "text": "Compute $[X, Z]$ by acting on $\\vert0\\rangle$ and $\\vert1\\rangle$, and check it against the cyclic table.",
+      "hint": "Going backward around $X \\to Y \\to Z$ gives a minus sign.",
+      "solution": [
+        "$XZ\\vert0\\rangle = X\\vert0\\rangle = \\vert1\\rangle$, $XZ\\vert1\\rangle = X(-\\vert1\\rangle) = -\\vert0\\rangle$.",
+        "$ZX\\vert0\\rangle = Z\\vert1\\rangle = -\\vert1\\rangle$, $ZX\\vert1\\rangle = Z\\vert0\\rangle = \\vert0\\rangle$.",
+        "So $[X, Z]$ sends $\\vert0\\rangle \\to 2\\vert1\\rangle$ and $\\vert1\\rangle \\to -2\\vert0\\rangle$. Since $Y\\vert0\\rangle = i\\vert1\\rangle$ and $Y\\vert1\\rangle = -i\\vert0\\rangle$, this operator is $-2iY$.",
+        "The table gives $[Z, X] = 2iY$, and reversing the order flips the sign: $[X, Z] = -2iY$. They agree."
+      ],
+      "answer": "[X, Z] = −2iY"
+    },
+    {
+      "type": "problem",
+      "title": "Products of parities",
+      "text": "Show that $X_1X_2\\,Y_1Y_2 = -Z_1Z_2$. What does this say about measuring the three parities $X_1X_2$, $Y_1Y_2$ and $Z_1Z_2$ on a Bell state?",
+      "hint": "Use $XY = iZ$ on each qubit.",
+      "solution": [
+        "Multiply qubit by qubit: $(XY)_1(XY)_2 = (iZ)_1(iZ)_2 = i^2 Z_1Z_2 = -Z_1Z_2$.",
+        "All three parities commute with each other (each pair differs at two positions), so they share the Bell basis.",
+        "On any Bell state the three values multiply to $-1$, because the operators multiply to $-I$: $X_1X_2\\,Y_1Y_2\\,Z_1Z_2 = -Z_1Z_2Z_1Z_2 = -I$. For example $\\vert\\Phi^+\\rangle$ has $X_1X_2 = +1$, $Z_1Z_2 = +1$, so $Y_1Y_2 = -1$."
+      ],
+      "answer": "X₁X₂Y₁Y₂ = −Z₁Z₂; the three parities multiply to −1 on every Bell state"
+    },
+    {
+      "type": "problem",
+      "title": "A tight bound",
+      "text": "For the state $\\vert{+i}\\rangle = (\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$, evaluate the uncertainty relation for $Z$ and $X$. Then for $X$ and $Y$.",
+      "hint": "Find the Bloch vector first.",
+      "solution": [
+        "$\\vert{+i}\\rangle$ has Bloch vector $(0, 1, 0)$: $\\langle X\\rangle = 0$, $\\langle Y\\rangle = 1$, $\\langle Z\\rangle = 0$.",
+        "$Z$ and $X$: $\\sigma_Z\\sigma_X = 1\\times1 = 1$; bound $\\tfrac12\\vert\\langle 2iY\\rangle\\vert = 1$. Equality.",
+        "$X$ and $Y$: $\\sigma_X\\sigma_Y = 1\\times0 = 0$; bound $\\vert\\langle Z\\rangle\\vert = 0$. Equality, trivially: the state is sharp in $Y$."
+      ],
+      "answer": "1 ≥ 1 and 0 ≥ 0"
+    },
+    {
+      "type": "problem",
+      "title": "Commuting with a Hamiltonian",
+      "text": "For $H = \\tfrac{\\omega}{2}Z_1 + \\tfrac{\\omega}{2}Z_2 + J Z_1Z_2$, which of these are conserved: $Z_1$, $X_1$, $X_1X_2 + Y_1Y_2$?",
+      "hint": "Use the Pauli-string rule term by term, and the result of Putting it together.",
+      "solution": [
+        "$Z_1$ commutes with every term (all are made of $Z$s): conserved.",
+        "$X_1$ anticommutes with $Z_1$ and with $Z_1Z_2$ (one differing position each) and commutes with $Z_2$, so $[H, X_1] = \\tfrac{\\omega}{2}[Z_1, X_1] + J[Z_1Z_2, X_1] = i\\omega Y_1 + 2iJ\\,Y_1Z_2 \\ne 0$: not conserved.",
+        "$X_1X_2 + Y_1Y_2$ commutes with $Z_1 + Z_2$ (the putting-it-together calculation, read backwards) and with $Z_1Z_2$ (each of $X_1X_2$, $Y_1Y_2$ differs from $Z_1Z_2$ at two positions). So it commutes with $H$: conserved."
+      ],
+      "answer": "Z₁ and X₁X₂ + Y₁Y₂ are conserved; X₁ is not"
+    },
+    {
+      "type": "problem",
+      "title": "Confining a neutron",
+      "text": "A neutron (mass $1.675\\times10^{-27}$ kg) is confined to $\\sigma_x = 5\\times10^{-15}$ m. What is the smallest possible spread in its velocity?",
+      "hint": "$\\sigma_p = \\hbar/(2\\sigma_x)$, then divide by the mass.",
+      "solution": [
+        "$\\sigma_p \\ge \\hbar/(2\\sigma_x) = 1.055\\times10^{-34}/(10^{-14}) = 1.055\\times10^{-20}$ kg m/s.",
+        "$\\sigma_v = \\sigma_p/m = 1.055\\times10^{-20}/1.675\\times10^{-27} = 6.3\\times10^6$ m/s, about 2% of the speed of light."
+      ],
+      "answer": "about 6.3 × 10⁶ m/s"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Which reservoir features can share shots, and why all $Z_i$ and $Z_iZ_j$ come free with each computational-basis measurement: Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
+        "Conserved quantities of the reservoir Hamiltonian split its state space into blocks that inputs cannot mix, one of the things that limit memory: Symmetries and Conservation (#/quantum/dynamics/symmetries-and-conservation) and The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "The Trotter error $\\propto [H_1, H_2]$ decides how gate-based hardware approximates a reservoir's continuous evolution: Gate-Based Devices (#/qrc/hardware/gate-based-devices).",
+        "Measurement disturbance of non-commuting observables is the back-action problem of Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. P. Robertson, The uncertainty principle, Physical Review 34, 163 (1929)",
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), sections 2.1.9 and 2.2.5",
+        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapter 3",
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 1",
+        "N. D. Mermin, Quantum Computer Science: An Introduction, Cambridge University Press (2007)"
+      ]
+    }
+  ]
+}

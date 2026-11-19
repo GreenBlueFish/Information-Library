@@ -1,46 +1,536 @@
 {
   "title": "Pauli Operators and Rotations",
-  "intro": "The Pauli matrices are the observables, the generators of rotations, and (in tensor products) the basis for every operator on many qubits. A rotation of the Bloch sphere is the exponential of a Pauli, which is how inputs are written into qubits.",
+  "intro": "The Pauli matrices are the observables, the generators of rotations, and (in tensor products) the basis for every operator on many qubits. This page works out their algebra, derives why their exponentials rotate the Bloch sphere, and shows how any single-qubit gate is built from rotations.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "The Pauli matrices"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "In the computational basis, $X$ swaps the two basis states ($X\\vert0\\rangle = \\vert1\\rangle$, $X\\vert1\\rangle = \\vert0\\rangle$), $Z$ flips the sign of $\\vert1\\rangle$ ($Z = \\mathrm{diag}(1, -1)$), and $Y = iXZ$ does both with a phase ($Y\\vert0\\rangle = i\\vert1\\rangle$, $Y\\vert1\\rangle = -i\\vert0\\rangle$). As matrices, $X$ has rows $(0, 1)$ and $(1, 0)$, $Y$ has rows $(0, -i)$ and $(i, 0)$, and $Z$ has rows $(1, 0)$ and $(0, -1)$."
+      "text": "Matrix multiplication and the conjugate transpose (Linear Algebra for Quantum Mechanics (#/quantum/foundations/linear-algebra)), eigenvalues (Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors)), and the Bloch sphere (The Qubit and the Bloch Sphere (#/quantum/qubits/bloch-sphere)). You will also meet $e^{ix} = \\cos x + i\\sin x$ and the power series of $\\cos$ and $\\sin$ (Complex Numbers (#/quantum/foundations/complex-numbers))."
     },
     {
-      "type": "prose",
-      "text": "They are Hermitian (so they are observables, each with eigenvalues $\\pm1$) and unitary (so they are also gates: $X$ is the quantum NOT). Their algebra is short enough to memorise:"
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
     },
     {
       "type": "list",
       "items": [
-        "Each squares to the identity: $X^2 = Y^2 = Z^2 = I$.",
-        "Distinct Paulis anticommute: $XY = -YX$, and so on.",
-        "Products cycle: $XY = iZ$, $YZ = iX$, $ZX = iY$. Hence $[X, Y] = 2iZ$ and its cyclic versions.",
-        "Together with $I$ they form a basis of all $2\\times2$ matrices, orthogonal in the sense $\\operatorname{Tr}(PQ) = 2\\delta_{PQ}$."
+        "Apply $X$, $Y$ and $Z$ to any qubit state and multiply Paulis together without a matrix in sight.",
+        "Expand any $2\\times2$ matrix in the Pauli basis.",
+        "Derive the rotation formula $e^{-i\\theta P/2} = \\cos\\frac\\theta2 I - i\\sin\\frac\\theta2 P$ and use it to rotate states by hand.",
+        "Predict where a rotation moves a point on the Bloch sphere, and why the order of two rotations matters.",
+        "Write a gate such as the Hadamard or $S$ as a sequence of rotations (the Z-Y-Z decomposition)."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Rotations of the Bloch sphere"
+      "text": "Three matrices that do three things"
     },
     {
       "type": "prose",
-      "text": "The exponential of a Pauli is a rotation. Because $P^2 = I$, the power series splits into even and odd terms and closes into"
+      "text": "Every operation on one qubit is built from three basic moves. Each is a $2\\times2$ matrix, but it is easiest to remember what each does to the basis states:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$X$ (the bit flip): $X\\vert0\\rangle = \\vert1\\rangle$, $X\\vert1\\rangle = \\vert0\\rangle$. Rows $(0, 1)$ and $(1, 0)$. As outer products, $X = \\vert0\\rangle\\langle1\\vert + \\vert1\\rangle\\langle0\\vert$.",
+        "$Z$ (the phase flip): $Z\\vert0\\rangle = \\vert0\\rangle$, $Z\\vert1\\rangle = -\\vert1\\rangle$. Rows $(1, 0)$ and $(0, -1)$. $Z = \\vert0\\rangle\\langle0\\vert - \\vert1\\rangle\\langle1\\vert$.",
+        "$Y$ (both at once, with a phase): $Y\\vert0\\rangle = i\\vert1\\rangle$, $Y\\vert1\\rangle = -i\\vert0\\rangle$. Rows $(0, -i)$ and $(i, 0)$. $Y = -i\\vert0\\rangle\\langle1\\vert + i\\vert1\\rangle\\langle0\\vert$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Because they are linear, their action on a general state follows by acting on each term. For $\\vert\\psi\\rangle = \\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$:"
     },
     {
       "type": "math",
-      "tex": "R_P(\\theta) = e^{-i\\theta P/2} = \\cos\\frac{\\theta}{2}\\,I - i\\sin\\frac{\\theta}{2}\\,P",
-      "caption": "Rotation by angle θ about the axis of the Pauli P (P = X, Y or Z)."
+      "tex": "X\\vert\\psi\\rangle = \\beta\\vert0\\rangle + \\alpha\\vert1\\rangle,\\qquad Z\\vert\\psi\\rangle = \\alpha\\vert0\\rangle - \\beta\\vert1\\rangle,\\qquad Y\\vert\\psi\\rangle = -i\\beta\\vert0\\rangle + i\\alpha\\vert1\\rangle",
+      "caption": "X swaps the amplitudes, Z negates the second, Y swaps them and multiplies by −i and i."
     },
     {
       "type": "prose",
-      "text": "Acting on a state, $R_P(\\theta)$ turns its Bloch vector by $\\theta$ about the $P$ axis. The factor $1/2$ in the exponent is what makes a full turn $\\theta = 2\\pi$ give $-I$: the same physical state (a global phase), but a reminder that the state space double-covers the sphere. More generally, $e^{-i\\theta\\,\\hat n\\cdot\\vec\\sigma/2}$ rotates about any unit axis $\\hat n$, and every single-qubit unitary is such a rotation up to a phase."
+      "text": "Together with the identity $I$ (do nothing) they are called the Pauli matrices, after Wolfgang Pauli, who introduced them in 1927 to describe the spin of the electron. Physicists often write them $\\sigma_x, \\sigma_y, \\sigma_z$ and collect them in a vector $\\boldsymbol\\sigma = (X, Y, Z)$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: applying the Paulis"
+    },
+    {
+      "type": "prose",
+      "text": "Apply each Pauli to $\\vert\\psi\\rangle = \\frac35\\vert0\\rangle + \\frac{4i}{5}\\vert1\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $X\\vert\\psi\\rangle = \\frac{4i}{5}\\vert0\\rangle + \\frac35\\vert1\\rangle$ (amplitudes swapped).",
+        "Step 2. $Z\\vert\\psi\\rangle = \\frac35\\vert0\\rangle - \\frac{4i}{5}\\vert1\\rangle$ (second amplitude negated).",
+        "Step 3. $Y\\vert\\psi\\rangle = -i\\cdot\\frac{4i}{5}\\vert0\\rangle + i\\cdot\\frac35\\vert1\\rangle = \\frac45\\vert0\\rangle + \\frac{3i}{5}\\vert1\\rangle$, using $-i\\cdot i = 1$.",
+        "Step 4. On the Bloch sphere $\\vert\\psi\\rangle$ is at $(0, 0.96, -0.28)$. $Z\\vert\\psi\\rangle$ has $\\alpha^*\\beta = -12i/25$, so it is at $(0, -0.96, -0.28)$: $Z$ turned the point half way round the $z$ axis. That is the first hint that Paulis are rotations by $180°$."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: Z on the equator",
+      "text": "What is $Z\\vert{+}\\rangle$, and where is it on the Bloch sphere?",
+      "hint": "$Z$ negates the $\\vert1\\rangle$ amplitude.",
+      "solution": [
+        "$Z(\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2 = (\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2 = \\vert{-}\\rangle$.",
+        "$\\vert{+}\\rangle$ is at $+x$ and $\\vert{-}\\rangle$ at $-x$: a half turn about $z$."
+      ],
+      "answer": "|−⟩, at −x"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Observables and gates at the same time"
+    },
+    {
+      "type": "prose",
+      "text": "The Pauli matrices have two properties that are rarely found together, and both matter."
+    },
+    {
+      "type": "prose",
+      "text": "They are Hermitian: each equals its own conjugate transpose. For $Y$, transposing the rows $(0, -i), (i, 0)$ gives $(0, i), (-i, 0)$, and conjugating each entry gives back $(0, -i), (i, 0)$. Hermitian matrices have real eigenvalues, so each Pauli is an observable, something that can be measured, with eigenvalues $+1$ and $-1$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$Z$: eigenvectors $\\vert0\\rangle$ ($+1$) and $\\vert1\\rangle$ ($-1$).",
+        "$X$: eigenvectors $\\vert{+}\\rangle$ ($+1$) and $\\vert{-}\\rangle$ ($-1$). Check: $X\\vert{-}\\rangle = (\\vert1\\rangle - \\vert0\\rangle)/\\sqrt2 = -\\vert{-}\\rangle$.",
+        "$Y$: eigenvectors $\\vert{+i}\\rangle$ ($+1$) and $\\vert{-i}\\rangle$ ($-1$). Check: $Y(\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2 = (i\\vert1\\rangle - i\\cdot i\\vert0\\rangle)/\\sqrt2 = (\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "They are also unitary: each Pauli times its conjugate transpose (itself) is $I$. Applying $X$ twice swaps the amplitudes and swaps them back. Unitary matrices are the allowed operations on a closed quantum system, so each Pauli is also a gate: $X$ is the quantum NOT gate. Most matrices are one or the other; the Paulis are both. When a page says “measure $Z$” it means the observable; when a circuit has a box labelled $Z$ it means the gate. The context tells you which."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: an eigenvector",
+      "text": "Is $\\vert0\\rangle$ an eigenvector of $X$?",
+      "hint": "Is the output a number times the input?",
+      "solution": [
+        "$X\\vert0\\rangle = \\vert1\\rangle$, which is not a multiple of $\\vert0\\rangle$.",
+        "That is why measuring $X$ on $\\vert0\\rangle$ has a random outcome: $\\vert0\\rangle = (\\vert{+}\\rangle + \\vert{-}\\rangle)/\\sqrt2$, a 50/50 mix of the two $X$ eigenstates."
+      ],
+      "answer": "No"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Multiplying Paulis"
+    },
+    {
+      "type": "prose",
+      "text": "Products of Paulis come up constantly: in circuits, in Hamiltonians and in every calculation of an expectation value. Let us work out one product in full and then read off the rest."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: XY by matrix multiplication"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $X$ has rows $(0, 1)$, $(1, 0)$; $Y$ has columns $(0, i)$ (first) and $(-i, 0)$ (second).",
+        "Step 2. Entry (row 1, column 1) of $XY$: row 1 of $X$ times column 1 of $Y$ $= 0\\cdot0 + 1\\cdot i = i$.",
+        "Step 3. Entry (1, 2): $0\\cdot(-i) + 1\\cdot0 = 0$. Entry (2, 1): $1\\cdot0 + 0\\cdot i = 0$. Entry (2, 2): $1\\cdot(-i) + 0\\cdot0 = -i$.",
+        "Step 4. So $XY$ has rows $(i, 0)$ and $(0, -i)$, which is $i$ times $Z$: $XY = iZ$.",
+        "Step 5. Check with kets, no matrices: $XY\\vert0\\rangle = X(i\\vert1\\rangle) = i\\vert0\\rangle = iZ\\vert0\\rangle$, and $XY\\vert1\\rangle = X(-i\\vert0\\rangle) = -i\\vert1\\rangle = iZ\\vert1\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Doing the same for every pair gives the whole multiplication table, which fits in three rules:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Each squares to the identity: $X^2 = Y^2 = Z^2 = I$.",
+        "In the cyclic order $X \\to Y \\to Z \\to X$, the product of two is $i$ times the third: $XY = iZ$, $YZ = iX$, $ZX = iY$.",
+        "Against the cyclic order a minus sign appears: $YX = -iZ$, $ZY = -iX$, $XZ = -iY$. So distinct Paulis anticommute, $XY = -YX$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "From these, the commutator (the difference between the two orders) is $[X, Y] = XY - YX = 2iZ$, and cyclically $[Y, Z] = 2iX$, $[Z, X] = 2iY$. A non-zero commutator means the order matters, and it means $X$ and $Y$ cannot both have definite values at once (Commutators and Compatible Observables (#/quantum/foundations/commutators))."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The Paulis are a basis"
+    },
+    {
+      "type": "prose",
+      "text": "Any $2\\times2$ matrix $M$ can be written as a combination $M = a_0 I + a_1 X + a_2 Y + a_3 Z$. To find the coefficients, use the trace (the sum of the diagonal entries). The trace of a product of two Paulis is $2$ if they are the same and $0$ if different (for example $\\operatorname{Tr}(XY) = \\operatorname{Tr}(iZ) = 0$, while $\\operatorname{Tr}(X^2) = \\operatorname{Tr}(I) = 2$). Multiplying $M$ by a Pauli $P$ and taking the trace kills every term except the one with $P$:"
+    },
+    {
+      "type": "math",
+      "tex": "a_0 = \\tfrac12\\operatorname{Tr}(M),\\quad a_1 = \\tfrac12\\operatorname{Tr}(MX),\\quad a_2 = \\tfrac12\\operatorname{Tr}(MY),\\quad a_3 = \\tfrac12\\operatorname{Tr}(MZ)",
+      "caption": "Pauli expansion of a 2×2 matrix. The coefficients are real exactly when M is Hermitian."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example: $M$ with rows $(2, 1)$ and $(1, 0)$. $\\operatorname{Tr}M = 2$, so $a_0 = 1$. $MX$ has rows $(1, 2)$, $(0, 1)$ (it swaps the columns of $M$), trace 2, so $a_1 = 1$. $MZ$ has rows $(2, -1)$, $(1, 0)$, trace 2, so $a_3 = 1$. $MY$ has rows $(i, -2i)$, $(0, -i)$, trace 0, so $a_2 = 0$. Hence $M = I + X + Z$. This is how Hamiltonians are written on the QRC shelf: as sums of Paulis with real coefficients."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: two more products",
+      "text": "Compute $ZX$ and $YZY$.",
+      "hint": "Use the cyclic rule and anticommutation.",
+      "solution": [
+        "$ZX$ is in the cyclic order $Z \\to X$, so $ZX = iY$.",
+        "$YZY = Y(ZY) = Y(-iX) = -iYX = -i(-iZ) = -Z$."
+      ],
+      "answer": "ZX = iY; YZY = −Z"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spin along any axis"
+    },
+    {
+      "type": "prose",
+      "text": "$X$, $Y$ and $Z$ measure the qubit along three fixed axes. To measure along any other axis, given by a unit vector $\\mathbf n = (n_x, n_y, n_z)$, use the combination"
+    },
+    {
+      "type": "math",
+      "tex": "\\hat n\\cdot\\boldsymbol\\sigma = n_x X + n_y Y + n_z Z",
+      "caption": "The Pauli operator along the axis n. Its +1 eigenstate is the point n on the Bloch sphere."
+    },
+    {
+      "type": "prose",
+      "text": "This matrix squares to the identity, just like a single Pauli. Multiply it out: the square terms give $n_x^2X^2 + n_y^2Y^2 + n_z^2Z^2 = (n_x^2 + n_y^2 + n_z^2)I = I$, since $\\mathbf n$ is a unit vector. The cross terms come in pairs like $n_xn_y(XY + YX)$, and $XY + YX = iZ - iZ = 0$ by anticommutation. So"
+    },
+    {
+      "type": "math",
+      "tex": "(\\hat n\\cdot\\boldsymbol\\sigma)^2 = I",
+      "caption": "Holds for every unit vector n. This one identity is what makes the rotation formula below work."
+    },
+    {
+      "type": "prose",
+      "text": "Since its square is $I$, its eigenvalues can only be $\\pm1$ (if $Av = \\lambda v$ then $A^2v = \\lambda^2v = v$). Its $+1$ eigenstate is the state whose Bloch vector is $\\mathbf n$, and its $-1$ eigenstate is the opposite point. Example: $\\mathbf n = (1, 0, 1)/\\sqrt2$, halfway between $x$ and $z$, gives $(X + Z)/\\sqrt2$, which is exactly the Hadamard matrix $H_d$. Its $+1$ eigenstate sits at $\\theta = 45°$, $\\varphi = 0$: $\\cos(22.5°)\\vert0\\rangle + \\sin(22.5°)\\vert1\\rangle$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a tilted axis",
+      "text": "Show that $(0.6Y + 0.8Z)^2 = I$ using the rules, not matrices.",
+      "hint": "Expand the square keeping the order of products.",
+      "solution": [
+        "$(0.6Y + 0.8Z)^2 = 0.36Y^2 + 0.48YZ + 0.48ZY + 0.64Z^2$.",
+        "$Y^2 = Z^2 = I$ and $YZ + ZY = iX - iX = 0$, so the result is $(0.36 + 0.64)I = I$."
+      ],
+      "answer": "0.36 I + 0.64 I + 0.48(YZ + ZY) = I"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Exponentials of Paulis are rotations"
+    },
+    {
+      "type": "prose",
+      "text": "Why exponentials at all? Because time evolution in quantum mechanics is $e^{-iHt}$ (The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation)), so whenever the Hamiltonian is a Pauli, or a combination along an axis, we need the exponential of a Pauli. And because real hardware implements gates by switching a Hamiltonian on for a while, every single-qubit gate is such an exponential. The surprise is that the exponential of a Pauli has a simple closed form, and that form is a rotation of the Bloch sphere."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Deriving the closed form"
+    },
+    {
+      "type": "prose",
+      "text": "The exponential of a matrix is defined by the same power series as for numbers: $e^A = I + A + A^2/2! + A^3/3! + \\dots$. Take $A = -i\\frac\\theta2P$ where $P$ is any matrix with $P^2 = I$ (a Pauli, or $\\hat n\\cdot\\boldsymbol\\sigma$)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Powers of $P$ alternate: $P^0 = I$, $P^1 = P$, $P^2 = I$, $P^3 = P$, and so on. Even powers are $I$, odd powers are $P$.",
+        "Step 2. Split the series into even and odd terms: $e^{-i\\theta P/2} = \\left[\\sum_{m} \\frac{(-i\\theta/2)^{2m}}{(2m)!}\\right] I + \\left[\\sum_m \\frac{(-i\\theta/2)^{2m+1}}{(2m+1)!}\\right] P$.",
+        "Step 3. Even terms: $(-i)^{2m} = ((-i)^2)^m = (-1)^m$. So the first bracket is $\\sum_m (-1)^m\\frac{(\\theta/2)^{2m}}{(2m)!}$, the power series of $\\cos(\\theta/2)$.",
+        "Step 4. Odd terms: $(-i)^{2m+1} = (-i)(-1)^m$. So the second bracket is $-i\\sum_m(-1)^m\\frac{(\\theta/2)^{2m+1}}{(2m+1)!} = -i\\sin(\\theta/2)$.",
+        "Step 5. Together:"
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "R_{\\hat n}(\\theta) = e^{-i\\theta\\,\\hat n\\cdot\\boldsymbol\\sigma/2} = \\cos\\frac{\\theta}{2}\\,I - i\\sin\\frac{\\theta}{2}\\,\\hat n\\cdot\\boldsymbol\\sigma",
+      "caption": "The rotation by angle θ about the axis n. For n along x, y or z this is R_X(θ), R_Y(θ), R_Z(θ)."
+    },
+    {
+      "type": "prose",
+      "text": "This is the matrix version of Euler's formula $e^{-ix} = \\cos x - i\\sin x$, and it works for the same reason: the powers of $P$ repeat with period two ($I, P, I, P, \\dots$), just as the powers of $i$ repeat with period four ($i, -1, -i, 1, \\dots$), and that repetition is all the derivation used. Written out for the three axes, with $c = \\cos(\\theta/2)$ and $s = \\sin(\\theta/2)$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$R_Z(\\theta)$: rows $(e^{-i\\theta/2}, 0)$ and $(0, e^{i\\theta/2})$, i.e. $\\mathrm{diag}(c - is, c + is)$.",
+        "$R_X(\\theta)$: rows $(c, -is)$ and $(-is, c)$.",
+        "$R_Y(\\theta)$: rows $(c, -s)$ and $(s, c)$. All entries real: $R_Y$ keeps real amplitudes real."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why it is a rotation"
+    },
+    {
+      "type": "prose",
+      "text": "Take $R_Z(\\theta)$ and apply it to a general state $\\cos\\frac{\\vartheta}{2}\\vert0\\rangle + e^{i\\varphi}\\sin\\frac{\\vartheta}{2}\\vert1\\rangle$ (using $\\vartheta$ for the state's polar angle so as not to confuse it with the rotation angle). The first amplitude gets $e^{-i\\theta/2}$, the second $e^{i\\theta/2}$:"
+    },
+    {
+      "type": "math",
+      "tex": "R_Z(\\theta)\\vert\\psi\\rangle = e^{-i\\theta/2}\\left(\\cos\\frac{\\vartheta}{2}\\vert0\\rangle + e^{i(\\varphi + \\theta)}\\sin\\frac{\\vartheta}{2}\\vert1\\rangle\\right)",
+      "caption": "Up to the global phase e^{−iθ/2}, the azimuth φ has become φ + θ."
+    },
+    {
+      "type": "prose",
+      "text": "The polar angle is unchanged and the azimuth has grown by $\\theta$: the Bloch vector has turned by $\\theta$ about the $z$ axis. The same is true for any axis: $R_{\\hat n}(\\theta)$ turns the Bloch vector by the angle $\\theta$ about $\\mathbf n$, in the right-hand sense (point your right thumb along $\\mathbf n$; your fingers curl in the direction of the turn). The general proof conjugates $\\hat n\\cdot\\boldsymbol\\sigma$ through the rotation; it is in Nielsen and Chuang, exercise 4.6, and the worked examples below check it case by case."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: precessing a state",
+      "text": "Apply $R_Z(90°)$ to $\\vert{+}\\rangle$. Which cardinal state do you get?",
+      "hint": "$e^{i\\pi/4}/e^{-i\\pi/4} = e^{i\\pi/2} = i$.",
+      "solution": [
+        "$R_Z(90°)\\vert{+}\\rangle = (e^{-i\\pi/4}\\vert0\\rangle + e^{i\\pi/4}\\vert1\\rangle)/\\sqrt2 = e^{-i\\pi/4}(\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$.",
+        "Up to the global phase that is $\\vert{+i}\\rangle$: the point moved from $+x$ to $+y$, a quarter turn about $z$."
+      ],
+      "answer": "|+i⟩ (up to a global phase)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked rotations with numbers"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Example 1: a quarter turn about x"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $R_X(90°)$ has $c = s = \\cos45° = 1/\\sqrt2$, so rows $(1, -i)/\\sqrt2$ and $(-i, 1)/\\sqrt2$.",
+        "Step 2. Apply to $\\vert0\\rangle$ (the first column): $R_X(90°)\\vert0\\rangle = (\\vert0\\rangle - i\\vert1\\rangle)/\\sqrt2 = \\vert{-i}\\rangle$.",
+        "Step 3. Bloch vector $(0, -1, 0)$. Right-hand rule: thumb along $+x$, fingers curl from $+y$ to $+z$ and from $+z$ to $-y$. The north pole moved to $-y$. Consistent."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Example 2: writing an angle into a qubit"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $R_Y(60°)$ has $c = \\cos30° = 0.866$, $s = \\sin30° = 0.5$.",
+        "Step 2. $R_Y(60°)\\vert0\\rangle$ is the first column: $0.866\\vert0\\rangle + 0.5\\vert1\\rangle$.",
+        "Step 3. Bloch vector $(\\sin60°, 0, \\cos60°) = (0.866, 0, 0.5)$: the north pole tipped $60°$ towards $+x$ in the $xz$ plane. A rotation about $y$ from $\\vert0\\rangle$ always lands on the real meridian, $\\cos\\frac\\theta2\\vert0\\rangle + \\sin\\frac\\theta2\\vert1\\rangle$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Example 3: rotating a general state, two ways"
+    },
+    {
+      "type": "prose",
+      "text": "Rotate $\\vert\\psi\\rangle = \\sqrt{0.8}\\vert0\\rangle + \\sqrt{0.2}e^{i\\pi/3}\\vert1\\rangle$, Bloch vector $(0.4, 0.693, 0.6)$, by $90°$ about $y$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1 (geometry). A right-handed turn by $\\theta$ about $y$ maps $(x, y, z)$ to $(x\\cos\\theta + z\\sin\\theta,\\ y,\\ -x\\sin\\theta + z\\cos\\theta)$. With $\\theta = 90°$: $(0.6, 0.693, -0.4)$.",
+        "Step 2 (matrices). $R_Y(90°)$ has rows $(1, -1)/\\sqrt2$ and $(1, 1)/\\sqrt2$. New amplitudes: $\\alpha' = (\\sqrt{0.8} - \\sqrt{0.2}e^{i\\pi/3})/\\sqrt2$, $\\beta' = (\\sqrt{0.8} + \\sqrt{0.2}e^{i\\pi/3})/\\sqrt2$.",
+        "Step 3. $\\vert\\alpha'\\vert^2 = (0.8 + 0.2 - 2\\sqrt{0.16}\\cos60°)/2 = (1 - 0.4)/2 = 0.3$, so $z' = 0.3 - 0.7 = -0.4$, agreeing with step 1. The sample checks all three coordinates."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Example 4: a turn about a diagonal axis"
+    },
+    {
+      "type": "prose",
+      "text": "Rotate $\\vert0\\rangle$ by $120°$ about $\\mathbf n = (1, 1, 1)/\\sqrt3$. Geometrically, a third of a turn about the cube diagonal cycles the axes $x \\to y \\to z \\to x$, so the north pole should go to $+x$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\cos60° = 1/2$, $\\sin60° = \\sqrt3/2$, so $R = \\frac12 I - i\\frac{\\sqrt3}{2}\\cdot\\frac{X + Y + Z}{\\sqrt3} = \\frac12\\left(I - iX - iY - iZ\\right)$.",
+        "Step 2. Act on $\\vert0\\rangle$: $I\\vert0\\rangle = \\vert0\\rangle$, $X\\vert0\\rangle = \\vert1\\rangle$, $Y\\vert0\\rangle = i\\vert1\\rangle$, $Z\\vert0\\rangle = \\vert0\\rangle$.",
+        "Step 3. $R\\vert0\\rangle = \\frac12(\\vert0\\rangle - i\\vert1\\rangle - i\\cdot i\\vert1\\rangle - i\\vert0\\rangle) = \\frac12\\left((1 - i)\\vert0\\rangle + (1 - i)\\vert1\\rangle\\right)$.",
+        "Step 4. Factor out $(1 - i)/\\sqrt2 = e^{-i\\pi/4}$: $R\\vert0\\rangle = e^{-i\\pi/4}(\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2 = e^{-i\\pi/4}\\vert{+}\\rangle$. The north pole went to $+x$, as predicted."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a half turn",
+      "text": "What is $R_Y(180°)\\vert0\\rangle$, and $R_X(180°)\\vert0\\rangle$?",
+      "hint": "At θ = 180° the cosine term vanishes.",
+      "solution": [
+        "$R_Y(180°) = \\cos90° I - i\\sin90° Y = -iY$; $-iY\\vert0\\rangle = -i\\cdot i\\vert1\\rangle = \\vert1\\rangle$.",
+        "$R_X(180°) = -iX$; $-iX\\vert0\\rangle = -i\\vert1\\rangle$: the south pole again, with a global phase."
+      ],
+      "answer": "|1⟩ and −i|1⟩ (the same state)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why the half angle: a full turn is not the identity"
+    },
+    {
+      "type": "prose",
+      "text": "Set $\\theta = 360°$ in the rotation formula: $R_{\\hat n}(360°) = \\cos180° I - i\\sin180°\\,\\hat n\\cdot\\boldsymbol\\sigma = -I$. A full turn of the Bloch sphere multiplies the state by $-1$. Only at $\\theta = 720°$ does $\\cos360° = 1$ bring back $+I$."
+    },
+    {
+      "type": "prose",
+      "text": "For a single qubit on its own, $-1$ is a global phase and invisible, so the Bloch vector really is back where it started. But a global phase on part of a system is a relative phase of the whole. If a particle is split into two paths and only one path is rotated by $360°$, the two paths come back with opposite signs, and their interference pattern flips. This was seen in 1975 with neutrons, whose spin is a qubit: rotating the spin in one arm of a neutron interferometer by $360°$ turned bright output into dark, and $720°$ restored it (Rauch et al. 1975; Werner et al. 1975). Objects like the qubit, which need two full turns to come back, are called spinors."
+    },
+    {
+      "type": "prose",
+      "text": "There is a neat circuit version. Apply $R_Z(360°) = -I$ to a target qubit only when a control qubit is $\\vert1\\rangle$. On the target the gate does nothing visible, but the control's $\\vert1\\rangle$ branch picks up $-1$: the controlled full turn acts on the control as a $Z$ gate. Interference is the subject of Interference of Amplitudes (#/quantum/qubits/interference)."
+    },
+    {
+      "type": "callout",
+      "text": "The half angle in $R(\\theta) = e^{-i\\theta P/2}$ and the half angle in the Bloch parametrisation $\\cos\\frac\\theta2\\vert0\\rangle + \\dots$ are the same fact seen twice: the state space is a double cover of the sphere. Turning the state vector through $\\Theta_H$ turns the Bloch vector through $2\\Theta_H$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a full turn about x",
+      "text": "Compute $R_X(360°)\\vert0\\rangle$ and $R_X(720°)\\vert0\\rangle$.",
+      "hint": "Put $\\theta/2 = 180°$ and $360°$ into the formula.",
+      "solution": [
+        "$R_X(360°) = \\cos180° I - i\\sin180° X = -I$, so the result is $-\\vert0\\rangle$.",
+        "$R_X(720°) = \\cos360° I = I$, so the result is $\\vert0\\rangle$."
+      ],
+      "answer": "−|0⟩ and |0⟩"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Composing rotations, and why order matters"
+    },
+    {
+      "type": "prose",
+      "text": "Two gates in a row multiply as matrices, with the first gate on the right: doing $A$ then $B$ is $BA\\vert\\psi\\rangle$. For rotations, the result is again a rotation (about some new axis), but it depends on the order whenever the axes differ. Rotating a book $90°$ about a vertical axis and then $90°$ about a horizontal one leaves it differently placed from doing the two the other way round; qubits behave the same way."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: x then z, versus z then x"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $R_X(90°)$ first, then $R_Z(90°)$, on $\\vert0\\rangle$. $R_X(90°)$ takes the north pole to $-y$ (example 1). $R_Z(90°)$ turns $-y$ a quarter turn about $z$: $(x, y) \\to (x\\cos90° - y\\sin90°,\\ x\\sin90° + y\\cos90°) = (0 - (-1),\\ 0) = (1, 0)$. The result is $+x$, the state $\\vert{+}\\rangle$.",
+        "Step 2. $R_Z(90°)$ first, then $R_X(90°)$. The north pole is on the $z$ axis, so $R_Z$ does nothing to it. Then $R_X(90°)$ takes it to $-y$, the state $\\vert{-i}\\rangle$.",
+        "Step 3. Different end points, $+x$ versus $-y$. The matrices do not commute: $R_Z(90°)R_X(90°) \\neq R_X(90°)R_Z(90°)$, a direct consequence of $XZ \\neq ZX$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "This is why the order of gates in a circuit matters, and why a Hamiltonian $A + B$ whose parts do not commute cannot simply be split into “$A$ for a while, then $B$ for a while” without error (the Trotter error on Gates and Circuits (#/quantum/qubits/gates-and-circuits))."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: order on the equator",
+      "text": "Start at $\\vert{+}\\rangle$. Apply $R_Y(90°)$ then $R_Z(90°)$. Where do you end?",
+      "hint": "Use the rotation formula for y from example 3.",
+      "solution": [
+        "$R_Y(90°)$ maps $(x, y, z) \\to (x\\cos90° + z\\sin90°, y, -x\\sin90° + z\\cos90°) = (z, y, -x)$. From $(1, 0, 0)$: $(0, 0, -1)$.",
+        "$R_Z(90°)$ does nothing to the south pole. End: $(0, 0, -1)$, the state $\\vert1\\rangle$."
+      ],
+      "answer": "−z: the state |1⟩"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Every single-qubit gate is a rotation"
+    },
+    {
+      "type": "prose",
+      "text": "Here is a strong statement: every $2\\times2$ unitary $U$ is a rotation of the Bloch sphere, up to a global phase: $U = e^{i\\alpha}R_{\\hat n}(\\theta)$ for some phase $\\alpha$, axis $\\mathbf n$ and angle $\\theta$. The reason in one line: dividing $U$ by a square root of its determinant leaves a unitary with determinant 1, and every such matrix has the form $\\cos\\frac\\theta2 I - i\\sin\\frac\\theta2\\,\\hat n\\cdot\\boldsymbol\\sigma$ (expand it in the Pauli basis and use unitarity to show the coefficients are $\\cos\\frac\\theta2$ and $\\sin\\frac\\theta2$ times a unit vector)."
+    },
+    {
+      "type": "prose",
+      "text": "For hardware, a fixed set of axes is more useful than an arbitrary one. The Z-Y-Z decomposition says that any $U$ can be written with just two kinds of rotation:"
+    },
+    {
+      "type": "math",
+      "tex": "U = e^{i\\alpha}\\,R_Z(\\beta)\\,R_Y(\\gamma)\\,R_Z(\\delta)",
+      "caption": "Z-Y-Z (Euler-angle) decomposition: first R_Z(δ), then R_Y(γ), then R_Z(β); α is a global phase."
+    },
+    {
+      "type": "prose",
+      "text": "These are the Euler angles of the rotation, the same three angles used to orient a spinning top. Multiplying out the three matrices (with determinant-1 $U$) gives rows $\\left(e^{-i(\\beta+\\delta)/2}\\cos\\frac\\gamma2,\\ -e^{-i(\\beta-\\delta)/2}\\sin\\frac\\gamma2\\right)$ and $\\left(e^{i(\\beta-\\delta)/2}\\sin\\frac\\gamma2,\\ e^{i(\\beta+\\delta)/2}\\cos\\frac\\gamma2\\right)$. So the recipe is: $\\gamma$ from the sizes of the entries, $\\beta + \\delta$ from the phase of the top-left entry, $\\beta - \\delta$ from the phase of the bottom-left entry. On superconducting processors $R_Z$ is applied in software, by shifting the phase of later pulses, so it costs nothing (McKay et al. 2017); the decomposition then needs only one physical pulse type."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the Hadamard as rotations"
+    },
+    {
+      "type": "prose",
+      "text": "The Hadamard $H_d = (X + Z)/\\sqrt2$ has rows $(1, 1)/\\sqrt2$ and $(1, -1)/\\sqrt2$. Find its Z-Y-Z angles."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\det H_d = (-1 - 1)/2 = -1$. A square root of $-1$ is $i = e^{i\\pi/2}$, so $\\alpha = 90°$ and $V = H_d/i = -iH_d$ has rows $(-i, -i)/\\sqrt2$ and $(-i, i)/\\sqrt2$, determinant 1.",
+        "Step 2. Sizes: every entry has size $1/\\sqrt2$, so $\\cos\\frac\\gamma2 = \\sin\\frac\\gamma2$ and $\\gamma = 90°$.",
+        "Step 3. The top-left entry $-i/\\sqrt2$ has phase $-90°$, which must equal $-(\\beta + \\delta)/2$: so $\\beta + \\delta = 180°$.",
+        "Step 4. The bottom-left entry $-i/\\sqrt2$ has phase $-90°$, which must equal $(\\beta - \\delta)/2$: so $\\beta - \\delta = -180°$.",
+        "Step 5. Solve: $\\beta = 0$, $\\delta = 180°$. So $H_d = i\\,R_Y(90°)\\,R_Z(180°)$.",
+        "Step 6. Check by algebra: $R_Z(180°) = -iZ$ and $R_Y(90°) = (I - iY)/\\sqrt2$. Their product is $(I - iY)(-iZ)/\\sqrt2 = (-iZ - YZ)/\\sqrt2 = (-iZ - iX)/\\sqrt2 = -iH_d$, using $YZ = iX$. Times $i$ gives $H_d$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Geometrically: a half turn about $z$ followed by a quarter turn about $y$. Alternatively, as a single rotation, $H_d = i\\,R_{\\hat n}(180°)$ with $\\mathbf n = (1, 0, 1)/\\sqrt2$: a half turn about the axis between $x$ and $z$, which swaps $x$ and $z$ and flips $y$. Other common gates are simpler: $S = \\mathrm{diag}(1, i) = e^{i\\pi/4}R_Z(90°)$, $T = \\mathrm{diag}(1, e^{i\\pi/4}) = e^{i\\pi/8}R_Z(45°)$, and $X = iR_X(180°)$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: S as a rotation",
+      "text": "Show that $S = e^{i\\pi/4}R_Z(90°)$.",
+      "hint": "Write out $R_Z(90°)$ as a diagonal matrix.",
+      "solution": [
+        "$R_Z(90°) = \\mathrm{diag}(e^{-i\\pi/4}, e^{i\\pi/4})$.",
+        "Multiply by $e^{i\\pi/4}$: $\\mathrm{diag}(1, e^{i\\pi/2}) = \\mathrm{diag}(1, i) = S$."
+      ],
+      "answer": "e^{iπ/4} diag(e^{−iπ/4}, e^{iπ/4}) = diag(1, i)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Writing an input into a qubit"
+    },
+    {
+      "type": "prose",
+      "text": "A rotation about $y$ from $\\vert0\\rangle$ stays on the real meridian: $R_Y(\\theta)\\vert0\\rangle = \\cos\\frac\\theta2\\vert0\\rangle + \\sin\\frac\\theta2\\vert1\\rangle$. Choosing $\\theta = 2\\arcsin\\sqrt s$ makes the $\\vert1\\rangle$ amplitude $\\sqrt s$, which is the Fujii–Nakajima input state. Choosing $\\theta = \\pi s$ instead gives angle encoding, with $P(1) = \\sin^2(\\pi s/2)$. Same gate, different map from $s$ to angle, different function class for the reservoir (Input Encoding (#/qrc/models/input-encoding)). For example, $s = 0.25$: amplitude encoding needs $\\theta = 2\\arcsin(0.5) = 60°$ and gives $P(1) = 0.25$; angle encoding uses $\\theta = 45°$ and gives $P(1) = \\sin^2(22.5°) = 0.146$."
+    },
+    {
+      "type": "prose",
+      "text": "The sample checks the closed form against a numerical matrix exponential, the Pauli algebra and expansion, every worked rotation on this page, the Z-Y-Z angles of several gates, and the input encoding."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\nI = np.eye(2)\ndef R(P, theta): return expm(-1j * theta * P / 2)\ndef bloch(v): return np.real([np.vdot(v, P @ v) for P in (X, Y, Z)])\n# Closed form: R_P(theta) = cos(theta/2) I - i sin(theta/2) P for any Pauli P\nprint(\"closed form holds:\", all(np.allclose(R(P, 0.8), np.cos(0.4) * I - 1j * np.sin(0.4) * P) for P in (X, Y, Z)))\n# Pauli algebra\nprint(\"XY = iZ:\", np.allclose(X @ Y, 1j * Z), \"  YZ = iX:\", np.allclose(Y @ Z, 1j * X), \"  ZX = iY:\", np.allclose(Z @ X, 1j * Y))\nprint(\"X^2 = I:\", np.allclose(X @ X, I), \"  {X, Z} = 0:\", np.allclose(X @ Z + Z @ X, 0), \"  [X, Y] = 2iZ:\", np.allclose(X @ Y - Y @ X, 2j * Z))\n# Pauli expansion of a matrix: M = (Tr M I + Tr(MX) X + Tr(MY) Y + Tr(MZ) Z) / 2\nM = np.array([[2, 1], [1, 0]], complex)\nprint(\"coefficients of M on I, X, Y, Z:\", [float(np.round(np.trace(M @ P).real / 2, 4)) for P in (I, X, Y, Z)])\n# (n.sigma)^2 = I for a unit axis\nn = np.array([0, 0.6, 0.8]); ns = n[0] * X + n[1] * Y + n[2] * Z\nprint(\"(0.6 Y + 0.8 Z)^2 = I:\", np.allclose(ns @ ns, I))\n# Worked rotations\nv = R(X, np.pi / 2) @ np.array([1, 0]); print(\"R_X(90)|0> =\", np.round(v, 4), \" Bloch\", np.round(bloch(v), 3))\nv = R(Y, np.pi / 3) @ np.array([1, 0]); print(\"R_Y(60)|0> =\", np.round(v.real, 4), \" Bloch\", np.round(bloch(v), 3))\npsi = np.array([np.sqrt(0.8), np.sqrt(0.2) * np.exp(1j * np.pi / 3)])\nprint(\"Bloch before R_Y(90):\", np.round(bloch(psi), 3), \" after:\", np.round(bloch(R(Y, np.pi / 2) @ psi), 3))\nn111 = (X + Y + Z) / np.sqrt(3); v = expm(-1j * (2 * np.pi / 3) / 2 * n111) @ np.array([1, 0])\nprint(\"120 deg about (1,1,1)/sqrt3 on |0>:\", np.round(v, 4), \" Bloch\", np.round(bloch(v), 3))\n# Order matters\nprint(\"R_Z(90) R_X(90)|0> Bloch:\", np.round(bloch(R(Z, np.pi/2) @ R(X, np.pi/2) @ [1, 0]), 3),\n      \"  R_X(90) R_Z(90)|0> Bloch:\", np.round(bloch(R(X, np.pi/2) @ R(Z, np.pi/2) @ [1, 0]), 3))\n# A 2 pi rotation gives -I; 4 pi gives +I\nprint(\"R_Z(2 pi) = -I:\", np.allclose(R(Z, 2 * np.pi), -I), \"  R_Z(4 pi) = I:\", np.allclose(R(Z, 4 * np.pi), I))\n# Gates as rotations\nHd = (X + Z) / np.sqrt(2); S = np.diag([1, 1j]); T = np.diag([1, np.exp(1j * np.pi / 4)])\nprint(\"H = i R_Y(90) R_Z(180):\", np.allclose(Hd, 1j * R(Y, np.pi / 2) @ R(Z, np.pi)))\nprint(\"H = i R_n(180), n = (x+z)/sqrt2:\", np.allclose(Hd, 1j * expm(-1j * np.pi / 2 * Hd)))\nprint(\"S = e^{i pi/4} R_Z(90):\", np.allclose(S, np.exp(1j * np.pi / 4) * R(Z, np.pi / 2)),\n      \"  T = e^{i pi/8} R_Z(45):\", np.allclose(T, np.exp(1j * np.pi / 8) * R(Z, np.pi / 4)), \"  X = i R_X(180):\", np.allclose(X, 1j * R(X, np.pi)))\n# Z-Y-Z angles of any unitary: U = e^{i a} R_Z(b) R_Y(g) R_Z(d)\ndef zyz(U):\n    a = np.angle(np.linalg.det(U)) / 2; V = U * np.exp(-1j * a)          # det V = 1\n    g = 2 * np.arctan2(abs(V[1, 0]), abs(V[0, 0]))\n    s, d_ = -np.angle(V[0, 0]), np.angle(V[1, 0])                         # s = (b+d)/2, d_ = (b-d)/2\n    b, d = s + d_, s - d_\n    W = np.exp(1j * a) * R(Z, b) @ R(Y, g) @ R(Z, d)\n    if not np.allclose(W, U): a += np.pi                                 # the overall sign is ambiguous\n    return a, b, g, d\nfor name, U in {\"H\": Hd, \"S\": S, \"T\": T, \"X\": X, \"R_X(90)\": R(X, np.pi / 2)}.items():\n    a, b, g, d = zyz(U); W = np.exp(1j * a) * R(Z, b) @ R(Y, g) @ R(Z, d)\n    print(f\"{name:8s} alpha = {np.degrees(a) % 360:6.1f}, beta = {np.degrees(b):7.1f}, gamma = {np.degrees(g):6.1f}, delta = {np.degrees(d):7.1f} deg  reproduces U: {np.allclose(W, U)}\")\n# H then S then H on |0>\nv = Hd @ S @ Hd @ np.array([1, 0]); print(\"H S H |0> =\", np.round(v, 4), \" Bloch\", np.round(bloch(v), 3))\n# The QRC amplitude encoding: R_Y(2 arcsin sqrt(s))|0> = sqrt(1-s)|0> + sqrt(s)|1>\nfor s in (0.1, 0.25, 0.7):\n    v = R(Y, 2 * np.arcsin(np.sqrt(s))) @ np.array([1, 0])\n    print(f\"s = {s}: R_Y|0> = {np.round(v.real, 4)}, target {np.round([np.sqrt(1-s), np.sqrt(s)], 4)}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the closed form matches SciPy's numerical matrix exponential for all three axes; $XY = iZ$, $YZ = iX$, $ZX = iY$, $X^2 = I$, $XZ + ZX = 0$ and $[X, Y] = 2iZ$ all hold; $M$ expands with coefficients $(1, 1, 0, 1)$ on $(I, X, Y, Z)$; $(0.6Y + 0.8Z)^2 = I$. $R_X(90°)\\vert0\\rangle = (0.7071, -0.7071i)$ at $(0, -1, 0)$; $R_Y(60°)\\vert0\\rangle = (0.866, 0.5)$ at $(0.866, 0, 0.5)$; the general state moves from $(0.4, 0.693, 0.6)$ to $(0.6, 0.693, -0.4)$; the $120°$ diagonal turn gives $(0.5 - 0.5i)(1, 1)$ at $(1, 0, 0)$. $R_ZR_X$ ends at $(1, 0, 0)$, $R_XR_Z$ at $(0, -1, 0)$. $R_Z(360°) = -I$ and $R_Z(720°) = I$. The decompositions reproduce each gate: $H_d$ gives $\\alpha = 90°$, $\\beta = 0$, $\\gamma = 90°$, $\\delta = 180°$; $S$ gives $\\alpha = 45°$ with $\\beta + \\delta = 90°$, $\\gamma = 0$; and $H_dSH_d\\vert0\\rangle = (0.5 + 0.5i, 0.5 - 0.5i)$ at $(0, -1, 0)$. $R_Y(2\\arcsin\\sqrt s)\\vert0\\rangle$ reproduces $(\\sqrt{1-s}, \\sqrt s)$ for $s = 0.1, 0.25, 0.7$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Try the rotations yourself"
     },
     {
       "type": "widget",
@@ -92,34 +582,111 @@
     },
     {
       "type": "prose",
-      "text": "Try it: the blue arrow is the starting state, the red one the state after the rotation, and the dashed arc the path between them. From $\\vert0\\rangle$, a 180° rotation about Y lands on $\\vert1\\rangle$, while 90° lands on $\\vert+\\rangle$. Rotating $\\vert0\\rangle$ about Z does nothing at all: the north pole is on the axis. To see the input encoding, keep the axis on Y and set the angle to $2\\arcsin\\sqrt s$ (for $s = 0.25$ that is 60°). Then put the start on the equator (θ = 90) and compare a 90° turn about X with one about Z."
+      "text": "Try this. The blue arrow is the starting state, the red one the state after the rotation, and the dashed arc the path between them. (1) From $\\vert0\\rangle$ (θ = 0), rotate 180° about Y and land on $\\vert1\\rangle$; 90° lands on $\\vert+\\rangle$. (2) Rotate $\\vert0\\rangle$ about Z: nothing happens, the north pole is on the axis. (3) Set the axis to X and the angle to 90 to reproduce example 1: the arrow ends on $-y$. (4) Put the start on the equator at θ = 90, φ = 0 (the state $\\vert{+}\\rangle$) with angle 90. About X nothing moves: $\\vert{+}\\rangle$ lies on the $x$ axis. About Z the arrow goes to $+y$ ($\\vert{+i}\\rangle$). About Y it goes to the south pole, as the rule $(x, y, z) \\to (z, y, -x)$ of example 3 predicts. (5) To see the input encoding, keep the axis on Y and set the angle to $2\\arcsin\\sqrt s$; for $s = 0.25$ that is 60°."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Rotations do not commute"
+      "text": "Putting it together"
     },
     {
       "type": "prose",
-      "text": "Rotating about $x$ then $z$ is not the same as $z$ then $x$, for qubits as for books on a table. This is the commutator at work, and it is why the order of gates in a circuit matters and why a Hamiltonian $A + B$ with non-commuting parts cannot simply be split (Gates and Circuits (#/quantum/qubits/gates-and-circuits))."
+      "text": "Follow $\\vert0\\rangle$ through the gates $H_d$, then $S$, then $H_d$, using only rotations, and check with amplitudes."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $H_d = iR_Y(90°)R_Z(180°)$. On $\\vert0\\rangle$, $R_Z(180°)$ does nothing (north pole on the axis); $R_Y(90°)$ tips it to $+x$. So $H_d\\vert0\\rangle = \\vert{+}\\rangle$, Bloch vector $(1, 0, 0)$.",
+        "Step 2. $S = e^{i\\pi/4}R_Z(90°)$ turns $+x$ to $+y$: Bloch vector $(0, 1, 0)$, the state $\\vert{+i}\\rangle$.",
+        "Step 3. $H_d$ is a half turn about $(1, 0, 1)/\\sqrt2$, which swaps $x$ with $z$ and sends $y$ to $-y$. So $(0, 1, 0) \\to (0, -1, 0)$: the state $\\vert{-i}\\rangle$.",
+        "Step 4. Check with amplitudes: $H_d\\vert{+i}\\rangle = \\frac{1}{\\sqrt2}\\left(\\frac{\\vert0\\rangle + \\vert1\\rangle}{\\sqrt2} + i\\frac{\\vert0\\rangle - \\vert1\\rangle}{\\sqrt2}\\right) = \\frac{(1 + i)\\vert0\\rangle + (1 - i)\\vert1\\rangle}{2}$.",
+        "Step 5. Factor out $(1 + i)/\\sqrt2 = e^{i\\pi/4}$: the bracket becomes $\\vert0\\rangle + \\frac{1 - i}{1 + i}\\vert1\\rangle = \\vert0\\rangle - i\\vert1\\rangle$, so the state is $e^{i\\pi/4}\\vert{-i}\\rangle$. Measuring $Z$ gives 0 or 1 with probability 1/2 each."
+      ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Writing an input into a qubit"
+      "text": "Key points"
     },
     {
-      "type": "prose",
-      "text": "A rotation about $y$ from $\\vert0\\rangle$ stays on the real meridian: $R_Y(\\theta)\\vert0\\rangle = \\cos\\frac\\theta2\\vert0\\rangle + \\sin\\frac\\theta2\\vert1\\rangle$. Choosing $\\theta = 2\\arcsin\\sqrt s$ makes the $\\vert1\\rangle$ amplitude $\\sqrt s$, which is the Fujii–Nakajima input state. Choosing $\\theta = \\pi s$ instead gives angle encoding, with $P(1) = \\sin^2(\\pi s/2)$. Same gate, different map from $s$ to angle, different function class for the reservoir (Input Encoding (#/qrc/models/input-encoding))."
+      "type": "list",
+      "items": [
+        "$X$ swaps amplitudes, $Z$ negates the $\\vert1\\rangle$ amplitude, $Y = iXZ$ does both with a phase.",
+        "Paulis are Hermitian (observables with eigenvalues $\\pm1$) and unitary (gates).",
+        "$X^2 = Y^2 = Z^2 = I$; $XY = iZ$ cyclically; distinct Paulis anticommute; $[X, Y] = 2iZ$.",
+        "$I, X, Y, Z$ are a basis for $2\\times2$ matrices, with coefficients $\\frac12\\operatorname{Tr}(MP)$.",
+        "$(\\hat n\\cdot\\boldsymbol\\sigma)^2 = I$ gives $e^{-i\\theta\\hat n\\cdot\\boldsymbol\\sigma/2} = \\cos\\frac\\theta2 I - i\\sin\\frac\\theta2\\hat n\\cdot\\boldsymbol\\sigma$, a right-handed rotation of the Bloch sphere by $\\theta$ about $\\mathbf n$.",
+        "A $360°$ turn is $-I$: invisible alone, visible in interference.",
+        "Rotations about different axes do not commute; every single-qubit gate is $e^{i\\alpha}R_Z(\\beta)R_Y(\\gamma)R_Z(\\delta)$."
+      ]
     },
     {
-      "type": "code",
-      "lang": "python",
-      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\nI = np.eye(2)\ndef R(P, theta): return expm(-1j * theta * P / 2)\n# Closed form: R_P(theta) = cos(theta/2) I - i sin(theta/2) P for any Pauli P\nprint(\"closed form holds:\", all(np.allclose(R(P, 0.8), np.cos(0.4) * I - 1j * np.sin(0.4) * P) for P in (X, Y, Z)))\n# The QRC amplitude encoding: R_Y(2 arcsin sqrt(s))|0> = sqrt(1-s)|0> + sqrt(s)|1>\nfor s in (0.1, 0.25, 0.7):\n    v = R(Y, 2 * np.arcsin(np.sqrt(s))) @ np.array([1, 0])\n    print(f\"s = {s}: R_Y|0> = {np.round(v.real, 4)}, target {np.round([np.sqrt(1-s), np.sqrt(s)], 4)}\")\n# A 2 pi rotation gives -I: the global phase that spin-1/2 is famous for\nprint(\"R_Z(2 pi) = -I:\", np.allclose(R(Z, 2 * np.pi), -I))\n# Rotations about different axes do not commute\nprint(\"R_X(pi/2) R_Z(pi/2) == R_Z(pi/2) R_X(pi/2):\", np.allclose(R(X, np.pi/2) @ R(Z, np.pi/2), R(Z, np.pi/2) @ R(X, np.pi/2)))\n# Pauli algebra\nprint(\"XY = iZ:\", np.allclose(X @ Y, 1j * Z), \"  X^2 = I:\", np.allclose(X @ X, I), \"  {X, Z} = 0:\", np.allclose(X @ Z + Z @ X, 0))"
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
-      "type": "prose",
-      "text": "Output of the run: the closed form matches `expm` for all three axes; $R_Y(2\\arcsin\\sqrt s)\\vert0\\rangle$ reproduces $(\\sqrt{1-s}, \\sqrt s)$ for $s = 0.1, 0.25, 0.7$; $R_Z(2\\pi) = -I$; $R_X(\\pi/2)$ and $R_Z(\\pi/2)$ do not commute; and $XY = iZ$, $X^2 = I$, $XZ + ZX = 0$ all hold."
+      "type": "problem",
+      "title": "Precessing an equatorial state",
+      "text": "Apply $R_Z(\\varphi)$ to $\\vert{+}\\rangle$ for a general angle $\\varphi$. What is the Bloch vector, and which of $\\langle X\\rangle$, $\\langle Y\\rangle$, $\\langle Z\\rangle$ change?",
+      "hint": "A turn about z moves the point round the equator.",
+      "solution": [
+        "$R_Z(\\varphi)\\vert{+}\\rangle = (e^{-i\\varphi/2}\\vert0\\rangle + e^{i\\varphi/2}\\vert1\\rangle)/\\sqrt2 = e^{-i\\varphi/2}(\\vert0\\rangle + e^{i\\varphi}\\vert1\\rangle)/\\sqrt2$.",
+        "Ignoring the global phase, $\\alpha^*\\beta = e^{i\\varphi}/2$, so $x = \\cos\\varphi$, $y = \\sin\\varphi$, $z = 0$.",
+        "$\\langle X\\rangle$ and $\\langle Y\\rangle$ change; $\\langle Z\\rangle = 0$ does not. A readout that only measures $Z$ cannot see a $Z$ rotation."
+      ],
+      "answer": "(cos φ, sin φ, 0); only ⟨X⟩ and ⟨Y⟩ change"
+    },
+    {
+      "type": "problem",
+      "title": "A 60-degree turn about x",
+      "text": "Compute $R_X(60°)\\vert0\\rangle$, its Bloch vector, and check the result with the right-hand rule.",
+      "hint": "Take the first column of $R_X(\\theta)$ with $c = \\cos(\\theta/2)$, $s = \\sin(\\theta/2)$.",
+      "solution": [
+        "$c = \\cos30° = 0.866$, $s = \\sin30° = 0.5$. $R_X(60°)$ has rows $(c, -is)$ and $(-is, c)$; its first column is $(c, -is)$.",
+        "So $R_X(60°)\\vert0\\rangle = 0.866\\vert0\\rangle - 0.5i\\vert1\\rangle$.",
+        "$\\alpha^*\\beta = 0.866\\cdot(-0.5i) = -0.433i$, so $x = 0$, $y = 2(-0.433) = -0.866$, $z = 0.75 - 0.25 = 0.5$.",
+        "Right-hand rule about $+x$: $+z$ turns towards $-y$. After $60°$ the north pole is at $(0, -\\sin60°, \\cos60°) = (0, -0.866, 0.5)$. Agreed."
+      ],
+      "answer": "0.866|0⟩ − 0.5i|1⟩; r = (0, −0.866, 0.5)"
+    },
+    {
+      "type": "problem",
+      "title": "Hadamard conjugation",
+      "text": "The Hadamard is $H_d = (X + Z)/\\sqrt2$. Show that $H_dZH_d = X$, and say what this means for measurements.",
+      "hint": "Expand the product, keep the order of factors, and use the cyclic rule.",
+      "solution": [
+        "$H_dZ = (XZ + Z^2)/\\sqrt2 = (XZ + I)/\\sqrt2$.",
+        "$H_dZH_d = (XZ + I)(X + Z)/2 = (XZX + XZZ + X + Z)/2$.",
+        "$XZX = X(ZX) = X(iY) = i(XY) = i(iZ) = -Z$, and $XZZ = X$. So the sum is $(-Z + X + X + Z)/2 = X$.",
+        "Meaning: applying $H_d$ and then measuring $Z$ gives the same statistics as measuring $X$ on the original state. This is how hardware that can only measure $Z$ measures $X$."
+      ],
+      "answer": "H Z H = X (measuring Z after H measures X)"
+    },
+    {
+      "type": "problem",
+      "title": "Z-Y-Z angles of X",
+      "text": "Find $\\alpha, \\beta, \\gamma, \\delta$ with $X = e^{i\\alpha}R_Z(\\beta)R_Y(\\gamma)R_Z(\\delta)$.",
+      "hint": "Use the recipe; one combination of β and δ is free when γ = 180°.",
+      "solution": [
+        "$\\det X = -1$, so take $\\alpha = 90°$ and $V = -iX$, rows $(0, -i)$ and $(-i, 0)$.",
+        "Top-left entry is 0, so $\\cos\\frac\\gamma2 = 0$ and $\\gamma = 180°$.",
+        "Bottom-left entry $-i$ has phase $-90° = (\\beta - \\delta)/2$, so $\\beta - \\delta = -180°$. Top-right $-i$ equals $-e^{-i(\\beta-\\delta)/2}\\sin90° = -e^{i90°} = -i$. Consistent.",
+        "With $\\cos\\frac\\gamma2 = 0$ only $\\beta - \\delta$ is fixed; pick $\\beta = -90°$, $\\delta = 90°$ (what the sample prints). Check: $R_Z(-90°)R_Y(180°)R_Z(90°)$ with the $i$ in front gives $X$ (the sample confirms)."
+      ],
+      "answer": "α = 90°, γ = 180°, β − δ = −180° (e.g. β = −90°, δ = 90°)"
+    },
+    {
+      "type": "problem",
+      "title": "The Hadamard's axis",
+      "text": "Show directly that $H_d = iR_{\\hat n}(180°)$ with $\\mathbf n = (1, 0, 1)/\\sqrt2$, and use it to find $H_dYH_d$.",
+      "hint": "Conjugating a Pauli by a rotation rotates its axis.",
+      "solution": [
+        "$R_{\\hat n}(180°) = \\cos90° I - i\\sin90°\\,\\hat n\\cdot\\boldsymbol\\sigma = -i(X + Z)/\\sqrt2 = -iH_d$, so $iR_{\\hat n}(180°) = H_d$.",
+        "A half turn about the $x$–$z$ diagonal sends the $y$ axis to $-y$, so conjugating $Y$ flips its sign: $H_dYH_d = -Y$.",
+        "Check by algebra: $(X + Z)Y(X + Z)/2 = (XYX + XYZ + ZYX + ZYZ)/2 = (-Y + iI - iI - Y)/2 = -Y$, using $XYZ = iI$ and $ZYX = -iI$."
+      ],
+      "answer": "H Y H = −Y"
     },
     {
       "type": "heading",
@@ -137,41 +704,6 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Problems"
-    },
-    {
-      "type": "problem",
-      "title": "A half turn",
-      "text": "What is $R_Y(\\pi)\\vert0\\rangle$? And $R_X(\\pi)\\vert0\\rangle$?",
-      "solution": [
-        "$R_Y(\\pi) = \\cos\\frac\\pi2 I - i\\sin\\frac\\pi2 Y = -iY$, and $-iY\\vert0\\rangle = -i\\cdot i\\vert1\\rangle = \\vert1\\rangle$.",
-        "$R_X(\\pi) = -iX$, so $R_X(\\pi)\\vert0\\rangle = -i\\vert1\\rangle$: the same state $\\vert1\\rangle$ up to a global phase."
-      ],
-      "answer": "|1⟩, and −i|1⟩ (the same state)"
-    },
-    {
-      "type": "problem",
-      "title": "Hadamard conjugation",
-      "text": "The Hadamard $H_d = (X + Z)/\\sqrt2$. Show that $H_dZH_d = X$.",
-      "solution": [
-        "$H_dZ = (XZ + Z^2)/\\sqrt2 = (XZ + I)/\\sqrt2$.",
-        "$H_dZH_d = (XZ + I)(X + Z)/2 = (XZX + XZZ + X + Z)/2 = (-Z + X + X + Z)/2 = X$, using $XZX = -Z$."
-      ],
-      "answer": "H Z H = X (so measuring Z after H measures X)"
-    },
-    {
-      "type": "problem",
-      "title": "Precessing an equatorial state",
-      "text": "Apply $R_Z(\\varphi)$ to $\\vert+\\rangle$. What is the Bloch vector, and which expectation values change?",
-      "solution": [
-        "$R_Z(\\varphi)$ turns the Bloch vector by $\\varphi$ about $z$, so $(1, 0, 0) \\to (\\cos\\varphi, \\sin\\varphi, 0)$.",
-        "$\\langle X\\rangle$ and $\\langle Y\\rangle$ change; $\\langle Z\\rangle = 0$ does not. A $Z$-only readout cannot see a $Z$ rotation."
-      ],
-      "answer": "(cos φ, sin φ, 0); only ⟨X⟩ and ⟨Y⟩"
-    },
-    {
-      "type": "heading",
-      "level": 2,
       "text": "Sources and further reading"
     },
     {
@@ -179,7 +711,10 @@
       "items": [
         "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), sections 2.1.3 and 4.2",
         "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 3",
-        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 2"
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 2",
+        "H. Rauch, A. Zeilinger, G. Badurek, A. Wilfing, W. Bauspiess and U. Bonse, Verification of coherent spinor rotation of fermions, Physics Letters A 54, 425 (1975)",
+        "S. A. Werner, R. Colella, A. W. Overhauser and C. F. Eagen, Observation of the phase shift of a neutron due to precession in a magnetic field, Physical Review Letters 35, 1053 (1975)",
+        "D. C. McKay, C. J. Wood, S. Sheldon, J. M. Chow and J. M. Gambetta, Efficient Z gates for quantum computing, Physical Review A 96, 022330 (2017)"
       ]
     }
   ]

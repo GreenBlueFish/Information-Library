@@ -1,30 +1,350 @@
 {
   "title": "Gates and Circuits",
-  "intro": "On a gate-based quantum computer every evolution is a sequence of one- and two-qubit unitaries. This page covers the gates a reservoir circuit needs, how an $XX$ coupling is built from two CNOTs, and how Trotter steps turn a Hamiltonian into a circuit.",
+  "intro": "A quantum circuit is a recipe of gates, each a small matrix acting on the qubits' amplitudes. This page teaches you to read circuits and run them by hand: single-qubit gates, the CNOT and entanglement, gate identities, building an $XX$ coupling and a whole Hamiltonian from CNOTs, and what circuit size means on real hardware.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Single-qubit gates"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "Any single-qubit gate is a rotation (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)). Three have names worth knowing: the Pauli gates themselves, the Hadamard $H_d = (X+Z)/\\sqrt2$, which swaps the $Z$ and $X$ bases ($H_d\\vert0\\rangle = \\vert+\\rangle$), and the phase gate $S = \\mathrm{diag}(1, i)$. Hardware typically offers arbitrary $R_Z$ cheaply (often as a software frame change) and builds the rest from a few calibrated pulses."
+      "text": "How a gate rotates a single qubit (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)), what a ket and an amplitude are (States and Dirac Notation (#/quantum/foundations/states-and-dirac-notation)), and multiplying a matrix by a column of numbers (Linear Algebra for Quantum Mechanics (#/quantum/foundations/linear-algebra)). Two-qubit states are introduced here as far as this page needs them; the full story is in Composite Systems and Tensor Products (#/quantum/many-body/composite-systems)."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "The CNOT and entanglement"
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Read a quantum circuit diagram and turn it into a sequence of matrix multiplications in the right order.",
+        "Apply the gates $X$, $Z$, $H_d$, $S$ and $T$ to any qubit state by hand, amplitude by amplitude.",
+        "Work out what a CNOT does to any two-qubit state, including superpositions, follow the Bell circuit for all four inputs, and test whether the result is entangled.",
+        "Prove gate identities such as $H_d Z H_d = X$ and use them to build an $X\\otimes X$ coupling out of CNOTs.",
+        "Estimate how many gates a computation needs, what its depth is, and roughly how likely it is to run without an error on real hardware."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading a circuit diagram"
     },
     {
       "type": "prose",
-      "text": "The controlled-NOT flips the target qubit when the control is $\\vert1\\rangle$: $\\vert c, t\\rangle \\to \\vert c, t\\oplus c\\rangle$. On basis states it is a reversible XOR; on superpositions it creates entanglement. A Hadamard on the control followed by a CNOT turns $\\vert00\\rangle$ into the Bell state $(\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$ (Entanglement and Reduced States (#/quantum/many-body/entanglement)). CNOT plus single-qubit rotations is a universal gate set: any unitary on any number of qubits can be built from them."
+      "text": "Why we need it. Everything a gate-based quantum computer does, from a textbook algorithm to a quantum reservoir, is written down as a circuit diagram. The diagram is a precise piece of mathematics, but it is read in a direction that trips up almost everyone at first, so it is worth learning the rules carefully before doing anything else with it."
+    },
+    {
+      "type": "prose",
+      "text": "The idea. Each horizontal line, called a wire, is one qubit. It is not a physical wire: it is that qubit's history, with time running from left to right. A box on a wire is a gate, an operation applied to that qubit at that moment. A vertical line joining two wires is a gate that acts on both qubits at once. At the far left the qubits start in a known state, almost always $\\vert0\\rangle$ each; at the far right a meter symbol means the qubit is measured. On this shelf the top wire is qubit 1, and in a ket like $\\vert10\\rangle$ the left digit belongs to qubit 1."
+    },
+    {
+      "type": "prose",
+      "text": "The one rule that matters. A gate is a matrix, and applying a gate to a state means multiplying the state's column of amplitudes by that matrix from the left. If a circuit applies $A$ first and then $B$, the state goes $\\vert\\psi\\rangle \\to A\\vert\\psi\\rangle \\to B(A\\vert\\psi\\rangle)$. So the matrix product is $BA$: written in the opposite order to the picture. Left-to-right in the diagram becomes right-to-left in the algebra."
+    },
+    {
+      "type": "math",
+      "tex": "\\text{circuit: } A \\text{ then } B \\text{ then } C \\qquad\\Leftrightarrow\\qquad \\vert\\psi_{\\text{out}}\\rangle = C\\,B\\,A\\,\\vert\\psi_{\\text{in}}\\rangle",
+      "caption": "A circuit read left to right is a matrix product written right to left."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. A single wire starts in $\\vert0\\rangle$, then has an $X$ box, then an $H_d$ box (the Hadamard; this shelf writes $H_d$ so it is not confused with a Hamiltonian $H$)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Write the algebra in reverse picture order: $\\vert\\psi_{\\text{out}}\\rangle = H_d\\,X\\,\\vert0\\rangle$.",
+        "Step 2. Do the rightmost multiplication first. $X$ swaps $\\vert0\\rangle$ and $\\vert1\\rangle$, so $X\\vert0\\rangle = \\vert1\\rangle$.",
+        "Step 3. Now the Hadamard: $H_d\\vert1\\rangle = (\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2 = \\vert-\\rangle$.",
+        "Step 4. Check the other order to see that it matters: $X H_d\\vert0\\rangle = X\\vert+\\rangle = (\\vert1\\rangle + \\vert0\\rangle)/\\sqrt2 = \\vert+\\rangle$. A different state, so the order of gates is not a detail."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Common mistake. Writing the matrices in the order you see them ($X H_d$ for the circuit above). For two gates on the same qubit that usually gives the wrong answer, because most pairs of gates do not commute. Gates on different wires at the same moment are the exception: they act on different qubits, so their order does not matter."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: reading the order",
+      "text": "A wire starts in $\\vert0\\rangle$ and passes through $H_d$, then $Z$, then $H_d$. Write the state at the end.",
+      "hint": "Work right to left in the algebra, which is left to right in the picture, one gate at a time.",
+      "solution": [
+        "Algebra: $H_d Z H_d\\vert0\\rangle$; start from the right.",
+        "$H_d\\vert0\\rangle = \\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$.",
+        "$Z$ flips the sign of the $\\vert1\\rangle$ amplitude: $(\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2 = \\vert-\\rangle$.",
+        "$H_d\\vert-\\rangle = \\vert1\\rangle$. So the three gates together acted like an $X$ on this input; the identities section shows they act like $X$ on every input."
+      ],
+      "answer": "|1⟩"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Single-qubit gates as matrices acting on amplitudes"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. A qubit state $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$ is just two complex numbers, the amplitudes $\\alpha$ and $\\beta$. Every single-qubit gate does one thing: it replaces that pair by a new pair, in a way that keeps $\\vert\\alpha\\vert^2 + \\vert\\beta\\vert^2 = 1$. Once you can do that replacement by hand, every circuit on this shelf is within reach."
+    },
+    {
+      "type": "prose",
+      "text": "The idea. Write the state as a column with $\\alpha$ on top and $\\beta$ below. A gate is a 2 by 2 matrix with entries $g_{00}, g_{01}$ in row 1 and $g_{10}, g_{11}$ in row 2. Multiplying gives the new amplitudes: each new amplitude is a row of the matrix dotted with the old column."
+    },
+    {
+      "type": "math",
+      "tex": "\\alpha' = g_{00}\\,\\alpha + g_{01}\\,\\beta, \\qquad \\beta' = g_{10}\\,\\alpha + g_{11}\\,\\beta",
+      "caption": "A gate acting on a qubit: each new amplitude is a weighted sum of the old ones."
+    },
+    {
+      "type": "prose",
+      "text": "The entry $g_{jk}$ is the amplitude for going from $\\vert k\\rangle$ to $\\vert j\\rangle$. In Dirac notation the same gate is $g = \\sum_{j,k} g_{jk}\\vert j\\rangle\\langle k\\vert$, and you can read every gate below either way. Here are the ones you will meet constantly, each with its rows and what it does to the amplitudes:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$X$ (the bit flip): rows $(0, 1)$ and $(1, 0)$; $X = \\vert0\\rangle\\langle1\\vert + \\vert1\\rangle\\langle0\\vert$. It swaps the amplitudes: $(\\alpha, \\beta) \\to (\\beta, \\alpha)$. It is the quantum NOT gate.",
+        "$Z$ (the phase flip): rows $(1, 0)$ and $(0, -1)$. It leaves $\\alpha$ alone and flips the sign of $\\beta$: $(\\alpha, \\beta) \\to (\\alpha, -\\beta)$. On $\\vert0\\rangle$ or $\\vert1\\rangle$ alone it changes nothing you can measure, but it turns $\\vert+\\rangle$ into $\\vert-\\rangle$.",
+        "$Y$: rows $(0, -i)$ and $(i, 0)$, so $(\\alpha, \\beta) \\to (-i\\beta, i\\alpha)$: a swap and a phase at once. ($Y = iXZ$, as the identities section shows.)",
+        "$H_d$ (the Hadamard): rows $(1, 1)/\\sqrt2$ and $(1, -1)/\\sqrt2$, so $(\\alpha, \\beta) \\to ((\\alpha + \\beta)/\\sqrt2,\\ (\\alpha - \\beta)/\\sqrt2)$. It takes $\\vert0\\rangle \\to \\vert+\\rangle$ and $\\vert1\\rangle \\to \\vert-\\rangle$, and back again: it swaps the $Z$ basis and the $X$ basis.",
+        "$S$ (the phase gate): rows $(1, 0)$ and $(0, i)$, so $(\\alpha, \\beta) \\to (\\alpha, i\\beta)$. A quarter turn about the $z$ axis of the Bloch sphere: $S\\vert+\\rangle = \\vert{+i}\\rangle$.",
+        "$T$: rows $(1, 0)$ and $(0, e^{i\\pi/4})$, so $(\\alpha, \\beta) \\to (\\alpha, e^{i\\pi/4}\\beta)$. An eighth of a turn about $z$. It matters because $H_d$, $S$ and CNOT alone cannot make every gate, and adding $T$ fixes that (see the universality section).",
+        "Rotations $R_X(\\theta)$, $R_Y(\\theta)$, $R_Z(\\theta)$: turns by any angle $\\theta$ about an axis of the Bloch sphere, $R_P(\\theta) = \\cos(\\theta/2)\\,I - i\\sin(\\theta/2)\\,P$; they are derived in Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. Apply $H_d$ to the state with $\\alpha = 0.6$, $\\beta = 0.8$ (a real state just below the equator of the Bloch sphere, at polar angle $\\theta \\approx 106°$; $0.36 + 0.64 = 1$, so it is normalised)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. New top amplitude: $\\alpha' = (\\alpha + \\beta)/\\sqrt2 = 1.4/1.41421 = 0.98995$.",
+        "Step 2. New bottom amplitude: $\\beta' = (\\alpha - \\beta)/\\sqrt2 = -0.2/1.41421 = -0.14142$.",
+        "Step 3. Check normalisation: $0.98995^2 + 0.14142^2 = 0.98 + 0.02 = 1$. A gate never changes the total probability.",
+        "Step 4. Read off the measurement probabilities: before the gate $P(0) = 0.36$; after it $P(0) = 0.98$. The Hadamard has turned an uncertain $Z$ outcome into an almost certain one, because the original state was close to $\\vert+\\rangle$ on the Bloch sphere (only $16°$ away) and $H_d$ sends $\\vert+\\rangle$ to $\\vert0\\rangle$.",
+        "Step 5. Apply $H_d$ again: $(0.98995 - 0.14142)/\\sqrt2 = 0.6$ and $(0.98995 + 0.14142)/\\sqrt2 = 0.8$. Back where we started, because $H_d H_d = I$. The sample below prints both results."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "What a gate cannot do. Every gate is unitary ($g^\\dagger g = I$), which is exactly the condition for keeping the total probability equal to 1 for every input. Unitary maps are reversible: the gate $g^\\dagger$ undoes $g$. So a gate can never erase information or copy a state; only measurement is irreversible. That is why a circuit is drawn with no wire ever ending except at a measurement."
+    },
+    {
+      "type": "prose",
+      "text": "Common mistake. Thinking $Z$ does nothing because $Z\\vert0\\rangle = \\vert0\\rangle$ and $Z\\vert1\\rangle = -\\vert1\\rangle$ look like the same states. On a basis state the sign is a global phase and is indeed invisible. On a superposition it is a relative phase, and it changes the state completely: $\\vert+\\rangle$ and $\\vert-\\rangle$ are orthogonal. Whether a phase matters depends on what else is in the superposition."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a phase gate on a superposition",
+      "text": "Apply $S$ to $\\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$, then apply $S$ again. Name the two states you get.",
+      "hint": "$S$ leaves $\\alpha$ alone and multiplies $\\beta$ by $i$.",
+      "solution": [
+        "$S$ multiplies the $\\vert1\\rangle$ amplitude by $i$: $S\\vert+\\rangle = (\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2 = \\vert{+i}\\rangle$, the $+y$ point on the Bloch sphere.",
+        "Again: the $\\vert1\\rangle$ amplitude becomes $i\\cdot i = -1$: $(\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2 = \\vert-\\rangle$.",
+        "So $S^2$ acted like $Z$; indeed $S^2 = Z$ as matrices (two quarter turns make a half turn)."
+      ],
+      "answer": "|+i⟩, then |−⟩"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gate identities and how to prove them"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need them. Different sequences of gates can do exactly the same thing. Knowing a few of these equalities lets you simplify a circuit, translate between what an algorithm asks for and what a machine offers, and, below, build a two-qubit interaction out of the gates hardware actually has."
+    },
+    {
+      "type": "prose",
+      "text": "The idea. Two gates are equal if they do the same thing to every input. Because gates are linear, it is enough to check the two basis states $\\vert0\\rangle$ and $\\vert1\\rangle$: whatever a gate does to them fixes what it does to every superposition $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$. That gives a proof method that needs no matrix multiplication at all."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example: proving $H_d Z H_d = X$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Feed in $\\vert0\\rangle$ and go right to left: $H_d\\vert0\\rangle = \\vert+\\rangle$; $Z\\vert+\\rangle = \\vert-\\rangle$; $H_d\\vert-\\rangle = \\vert1\\rangle$. So $H_dZH_d\\vert0\\rangle = \\vert1\\rangle = X\\vert0\\rangle$.",
+        "Step 2. Feed in $\\vert1\\rangle$: $H_d\\vert1\\rangle = \\vert-\\rangle$; $Z\\vert-\\rangle = \\vert+\\rangle$; $H_d\\vert+\\rangle = \\vert0\\rangle$. So $H_dZH_d\\vert1\\rangle = \\vert0\\rangle = X\\vert1\\rangle$.",
+        "Step 3. Same action on both basis states, so by linearity $H_d Z H_d = X$ on every state. Geometrically: $H_d$ turns the $Z$ axis into the $X$ axis, so a flip about $z$, seen through a pair of Hadamards, is a flip about $x$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The same method (or multiplying out the rows, which the sample does) gives a short list that is worth knowing by heart:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$X^2 = Y^2 = Z^2 = H_d^2 = I$: each of these gates undoes itself.",
+        "$H_d X H_d = Z$ and $H_d Z H_d = X$: the Hadamard swaps the roles of $X$ and $Z$. $H_d Y H_d = -Y$.",
+        "$S^2 = Z$ and $T^2 = S$: quarter turns and eighth turns about $z$ add up.",
+        "$XZ = -ZX$: $X$ and $Z$ anticommute. Proof on $\\vert0\\rangle$: $XZ\\vert0\\rangle = X\\vert0\\rangle = \\vert1\\rangle$, while $ZX\\vert0\\rangle = Z\\vert1\\rangle = -\\vert1\\rangle$. (On $\\vert1\\rangle$: $XZ\\vert1\\rangle = -\\vert0\\rangle$ and $ZX\\vert1\\rangle = \\vert0\\rangle$.)",
+        "$XZ = -iY$, equivalently $Y = iXZ$. Two gates whose product differs only by an overall factor like $-i$ are physically the same operation: a global phase is never measurable."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Common mistake. Concluding that $XZ$ and $ZX$ are different operations because they differ by a sign. They differ by an overall factor $-1$, a global phase, so on their own they have identical effects. The sign does matter when the gate is used inside a larger interference experiment where the factor multiplies only one branch, which is what controlled gates do; see Interference of Amplitudes (#/quantum/qubits/interference)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: an identity by basis states",
+      "text": "Show that $X$ sandwiched by Hadamards, $H_d X H_d$, acts as $Z$ on $\\vert1\\rangle$.",
+      "hint": "$X\\vert-\\rangle$: swap the two amplitudes of $(\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$.",
+      "solution": [
+        "$H_d\\vert1\\rangle = \\vert-\\rangle$.",
+        "$X\\vert-\\rangle = (\\vert1\\rangle - \\vert0\\rangle)/\\sqrt2 = -\\vert-\\rangle$ (the minus sign is global for this one state).",
+        "$H_d(-\\vert-\\rangle) = -\\vert1\\rangle$, which is $Z\\vert1\\rangle$. Together with $H_dXH_d\\vert0\\rangle = \\vert0\\rangle$ this proves $H_dXH_d = Z$."
+      ],
+      "answer": "H_d X H_d|1⟩ = −|1⟩ = Z|1⟩"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two qubits: four amplitudes"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. One qubit can only be rotated. All the interesting behaviour, entanglement above all, needs at least two qubits and a gate that makes them interact. Before we meet that gate we need to know what a two-qubit state looks like."
+    },
+    {
+      "type": "prose",
+      "text": "The idea. Two qubits have four basis states, $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$ (left digit qubit 1, right digit qubit 2), and a general state has an amplitude for each:"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi\\rangle = a\\,\\vert00\\rangle + b\\,\\vert01\\rangle + c\\,\\vert10\\rangle + d\\,\\vert11\\rangle, \\qquad \\vert a\\vert^2 + \\vert b\\vert^2 + \\vert c\\vert^2 + \\vert d\\vert^2 = 1",
+      "caption": "A two-qubit state: four complex amplitudes, in this order."
+    },
+    {
+      "type": "prose",
+      "text": "A gate on qubit 1 alone (written $G\\otimes I$, the $I$ meaning qubit 2 is left alone) acts on qubit 1's digit and leaves qubit 2's digit as a passenger. In practice: pair up the amplitudes whose kets differ only in qubit 1, $(a, c)$ for qubit 2 in $\\vert0\\rangle$ and $(b, d)$ for qubit 2 in $\\vert1\\rangle$, and apply the single-qubit rule to each pair. For a gate on qubit 2 the pairs are $(a, b)$ and $(c, d)$."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. Apply $H_d$ to qubit 1 of $\\vert00\\rangle$, so $a = 1$ and $b = c = d = 0$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The pairs for a qubit-1 gate are $(a, c) = (1, 0)$ and $(b, d) = (0, 0)$.",
+        "Step 2. Apply the Hadamard rule to $(1, 0)$: $(1/\\sqrt2, 1/\\sqrt2)$. The pair $(0, 0)$ stays $(0, 0)$.",
+        "Step 3. Put the amplitudes back: $a = c = 1/\\sqrt2$, so the state is $(\\vert00\\rangle + \\vert10\\rangle)/\\sqrt2 = \\vert+\\rangle\\otimes\\vert0\\rangle$. Qubit 1 is in $\\vert+\\rangle$, qubit 2 still in $\\vert0\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A state that can be written as (state of qubit 1) $\\otimes$ (state of qubit 2) is a product state. A quick test: $a\\vert00\\rangle + b\\vert01\\rangle + c\\vert10\\rangle + d\\vert11\\rangle$ is a product state exactly when $ad - bc = 0$. (If it equals $(p\\vert0\\rangle + q\\vert1\\rangle)\\otimes(r\\vert0\\rangle + s\\vert1\\rangle)$ then $a = pr$, $b = ps$, $c = qr$, $d = qs$, so $ad = pqrs = bc$; the converse is proved in Entanglement and Reduced States (#/quantum/many-body/entanglement).) For $\\vert+\\rangle\\vert0\\rangle$: $ad - bc = (1/\\sqrt2)(0) - (0)(1/\\sqrt2) = 0$, a product, as it should be."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The CNOT gate"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. Gates on single qubits can never create correlations between qubits: a product state stays a product state. We need a gate where what happens to one qubit depends on the other. The standard one is the controlled-NOT."
+    },
+    {
+      "type": "prose",
+      "text": "The idea. The CNOT has a control qubit (drawn as a dot ●) and a target qubit (drawn as ⊕). If the control is $\\vert0\\rangle$ nothing happens; if it is $\\vert1\\rangle$ the target gets an $X$. On basis states it is the classical rule 'flip the target if the control is 1', which is the XOR: $\\vert c, t\\rangle \\to \\vert c, t\\oplus c\\rangle$, where $\\oplus$ is addition mod 2. With qubit 1 as control, all four basis states:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\vert00\\rangle \\to \\vert00\\rangle$ (control 0: nothing).",
+        "$\\vert01\\rangle \\to \\vert01\\rangle$ (control 0: nothing).",
+        "$\\vert10\\rangle \\to \\vert11\\rangle$ (control 1: flip the target).",
+        "$\\vert11\\rangle \\to \\vert10\\rangle$ (control 1: flip the target)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "On a superposition, use linearity: the CNOT acts on each term separately. Since it only swaps $\\vert10\\rangle$ and $\\vert11\\rangle$, its whole effect on the four amplitudes is to swap the last two:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{CNOT}\\,(a\\vert00\\rangle + b\\vert01\\rangle + c\\vert10\\rangle + d\\vert11\\rangle) = a\\vert00\\rangle + b\\vert01\\rangle + d\\vert10\\rangle + c\\vert11\\rangle",
+      "caption": "With qubit 1 as control, the CNOT swaps the amplitudes c and d."
+    },
+    {
+      "type": "prose",
+      "text": "Worked examples. Three inputs that behave very differently."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Input $\\vert+\\rangle\\vert0\\rangle = (\\vert00\\rangle + \\vert10\\rangle)/\\sqrt2$: $(a, b, c, d) = (0.707, 0, 0.707, 0)$. Swap $c$ and $d$: $(0.707, 0, 0, 0.707)$, the state $(\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$. Product test: $ad - bc = 0.5 \\ne 0$, so it is entangled. A superposed control has made the target a copy of it in each branch.",
+        "Input $\\vert+\\rangle\\vert+\\rangle$: all four amplitudes are $0.5$. Swapping $c$ and $d$ changes nothing. The CNOT left this state alone, so a CNOT does not always entangle; it depends on the input.",
+        "Input $\\vert+\\rangle\\vert-\\rangle$: amplitudes $(0.5, -0.5, 0.5, -0.5)$. Swap $c$ and $d$: $(0.5, -0.5, -0.5, 0.5)$. Factor it: $(\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2 \\otimes (\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2 = \\vert-\\rangle\\vert-\\rangle$. The target did not change at all, but the control went from $\\vert+\\rangle$ to $\\vert-\\rangle$. This is called phase kickback: a target in $\\vert-\\rangle$ is an eigenstate of $X$ with eigenvalue $-1$, so 'apply $X$ if the control is 1' becomes 'multiply by $-1$ if the control is 1', which is a $Z$ on the control. Kickback is the engine of many quantum algorithms, starting with Deutsch\\'s algorithm in Interference of Amplitudes (#/quantum/qubits/interference)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Common mistake. Reading 'control' and 'target' as 'input' and 'output', as if information flowed only from control to target. The last example shows it flowing the other way. Which qubit is the control is a matter of basis: sandwich a CNOT in Hadamards on both qubits and the roles of control and target swap."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a CNOT on a superposition",
+      "text": "Apply a CNOT (qubit 1 control) to $\\vert+\\rangle\\otimes\\vert1\\rangle$. Is the result entangled?",
+      "hint": "Write out the four amplitudes, then swap the last two.",
+      "solution": [
+        "$\\vert+\\rangle\\vert1\\rangle = (\\vert01\\rangle + \\vert11\\rangle)/\\sqrt2$, so $(a, b, c, d) = (0, 0.707, 0, 0.707)$.",
+        "Swap $c$ and $d$: $(0, 0.707, 0.707, 0)$, the state $(\\vert01\\rangle + \\vert10\\rangle)/\\sqrt2$.",
+        "$ad - bc = 0 - 0.5 = -0.5 \\ne 0$: entangled. The two qubits now always disagree when measured in the $Z$ basis."
+      ],
+      "answer": "(|01⟩ + |10⟩)/√2, entangled"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Bell circuit, amplitude by amplitude"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. The simplest entangling circuit, a Hadamard followed by a CNOT, is the 'hello world' of quantum computing. It makes the four Bell states, which are the reference examples of entanglement in Entanglement and Reduced States (#/quantum/many-body/entanglement) and the resource behind the Bell inequalities met on a later page of the Many Qubits chapter. Doing it slowly once shows every rule on this page at work."
     },
     {
       "type": "figure",
       "src": "assets/figures/quantum/bell-circuit.svg",
       "alt": "Two-qubit circuit: a Hadamard gate on qubit 1 followed by a CNOT whose control is qubit 1 and target is qubit 2. The state is |00> before, (|00> + |10>)/sqrt2 after the Hadamard, and (|00> + |11>)/sqrt2 after the CNOT.",
       "caption": "A Hadamard and a CNOT turn |00⟩ into a Bell state."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. Start in $\\vert00\\rangle$ and track the four amplitudes $(a, b, c, d)$ for $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 0. Start: $(1, 0, 0, 0)$.",
+        "Step 1. $H_d$ on qubit 1: apply the Hadamard rule to the pairs $(a, c)$ and $(b, d)$. $(a, c) = (1, 0) \\to (0.707, 0.707)$; $(b, d) = (0, 0)$ stays. Now $(0.707, 0, 0.707, 0)$: the state $(\\vert00\\rangle + \\vert10\\rangle)/\\sqrt2$, still a product.",
+        "Step 2. CNOT: swap $c$ and $d$. Now $(0.707, 0, 0, 0.707)$: the Bell state $\\vert\\Phi^+\\rangle = (\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$.",
+        "Step 3. Measure both qubits. Born rule: $P(00) = P(11) = 0.5$, $P(01) = P(10) = 0$. Each qubit on its own is a fair coin, but the two coins always agree."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The same two gates on the other three inputs give the other three Bell states (the sample prints each step):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\vert01\\rangle \\to (\\vert01\\rangle + \\vert11\\rangle)/\\sqrt2 \\to (\\vert01\\rangle + \\vert10\\rangle)/\\sqrt2 = \\vert\\Psi^+\\rangle$.",
+        "$\\vert10\\rangle \\to (\\vert00\\rangle - \\vert10\\rangle)/\\sqrt2 \\to (\\vert00\\rangle - \\vert11\\rangle)/\\sqrt2 = \\vert\\Phi^-\\rangle$.",
+        "$\\vert11\\rangle \\to (\\vert01\\rangle - \\vert11\\rangle)/\\sqrt2 \\to (\\vert01\\rangle - \\vert10\\rangle)/\\sqrt2 = \\vert\\Psi^-\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So the circuit is a one-to-one map from the four ordinary basis states onto the four Bell states; they form an orthonormal basis of their own, the Bell basis. Running the circuit backwards (CNOT first, then $H_d$ on qubit 1, then measure) maps each Bell state back to a distinct basis state, so it measures 'which Bell state is this?'. That backwards circuit is the Bell measurement used in teleportation."
+    },
+    {
+      "type": "prose",
+      "text": "Why the result is entangled, in plain words. To describe $\\vert\\Phi^+\\rangle$ as 'qubit 1 is in some state and qubit 2 is in some state' you would need qubit 1 to give 0 or 1 at random and qubit 2 to give the same random answer, with no shared state behind it. The product test makes that exact: $ad - bc = 0.5$, not 0. Quantitatively, qubit 1's reduced state is maximally mixed and carries one full bit of entanglement entropy (Entanglement and Reduced States (#/quantum/many-body/entanglement))."
     },
     {
       "type": "widget",
@@ -227,16 +547,46 @@
     },
     {
       "type": "prose",
-      "text": "Try it: the defaults build the Bell state, with 50/50 outcomes on $\\vert00\\rangle$ and $\\vert11\\rangle$ and one full bit of entanglement. Delete the ● or the ⊕ and the state becomes a product again. Put an X on qubit 1 in step 1 instead of the H and the CNOT just copies the bit, giving $\\vert11\\rangle$: no superposition, no entanglement. Add H on both qubits in step 3 and nothing changes: this Bell state is the same in the X basis, which is why its $\\langle X\\otimes X\\rangle$ is 1 as well as its $\\langle Z\\otimes Z\\rangle$. A CNOT needs one ● and one ⊕ in the same step, and the widget flags any step where they do not pair up."
+      "text": "Try it: the defaults (H on qubit 1 in step 1, then ● on qubit 1 and ⊕ on qubit 2 in step 2) build the Bell state, with 50/50 outcomes on $\\vert00\\rangle$ and $\\vert11\\rangle$ and one full bit of entanglement. Then try these, predicting each answer before you look:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Delete the ● or the ⊕. The state becomes $\\vert+\\rangle\\vert0\\rangle$ again, a product with 50/50 outcomes on $\\vert00\\rangle$ and $\\vert10\\rangle$ and zero entanglement.",
+        "Put an X on qubit 1 in step 1 instead of the H. The CNOT just copies the bit, giving $\\vert11\\rangle$: no superposition, no entanglement.",
+        "Put X on qubit 2 in step 1 as well as the H on qubit 1. You get $\\vert\\Psi^+\\rangle$: outcomes $\\vert01\\rangle$ and $\\vert10\\rangle$ only.",
+        "Back at the defaults, add H on both qubits in step 3. Nothing changes: $\\vert\\Phi^+\\rangle$ looks the same in the $X$ basis, which is why its $\\langle X\\otimes X\\rangle$ is 1 as well as its $\\langle Z\\otimes Z\\rangle$.",
+        "Undo the entanglement: at the defaults, add ● on qubit 1 and ⊕ on qubit 2 in step 3, then H on qubit 1 in step 4. You are back at $\\vert00\\rangle$ with zero entanglement. (A CNOT needs one ● and one ⊕ in the same step; the widget flags any step where they do not pair up.)"
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: the Bell measurement",
+      "text": "Run the Bell circuit backwards on $\\vert\\Psi^-\\rangle = (\\vert01\\rangle - \\vert10\\rangle)/\\sqrt2$: first a CNOT (qubit 1 control), then $H_d$ on qubit 1. Which basis state comes out?",
+      "hint": "Do the CNOT first (swap $c$ and $d$), then the Hadamard rule on the pairs $(a, c)$ and $(b, d)$.",
+      "solution": [
+        "Amplitudes $(a, b, c, d) = (0, 0.707, -0.707, 0)$. The CNOT swaps $c$ and $d$: $(0, 0.707, 0, -0.707)$, the state $(\\vert01\\rangle - \\vert11\\rangle)/\\sqrt2 = \\vert-\\rangle\\otimes\\vert1\\rangle$.",
+        "$H_d$ on qubit 1 acts on the pairs $(a, c) = (0, 0)$, which stays $(0, 0)$, and $(b, d) = (0.707, -0.707) \\to ((0.707 - 0.707)/\\sqrt2,\\ (0.707 + 0.707)/\\sqrt2) = (0, 1)$.",
+        "So $d = 1$: the output is $\\vert11\\rangle$, the input the forward circuit turned into $\\vert\\Psi^-\\rangle$. Measuring both qubits now reads off which Bell state came in."
+      ],
+      "answer": "|11⟩"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "An XX coupling from two CNOTs"
+      "text": "Building an interaction: an XX coupling from two CNOTs"
     },
     {
       "type": "prose",
-      "text": "The reservoir Hamiltonian couples qubits through $X_iX_j$. On hardware the corresponding unitary $e^{-i\\theta X\\otimes X/2}$ is built as follows. Conjugating $I\\otimes Z$ by a CNOT gives $Z\\otimes Z$, so"
+      "text": "Why we need it. A quantum reservoir, and most physics simulations, are defined by a Hamiltonian with terms like $J\\,X_iX_j$ that couple pairs of qubits. A gate-based machine has no '$X\\otimes X$ interaction' button; it has CNOTs and single-qubit rotations. We need to build the evolution $e^{-i\\theta X\\otimes X/2}$ out of those, and the identities above are exactly the tools."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1: a $Z\\otimes Z$ phase from two CNOTs. Consider the sandwich $\\mathrm{CNOT}\\,(I\\otimes Z)\\,\\mathrm{CNOT}$ and follow a basis state $\\vert a\\,b\\rangle$ through it. The first CNOT gives $\\vert a,\\ a\\oplus b\\rangle$. The $Z$ on qubit 2 multiplies by $(-1)^{a\\oplus b}$. The second CNOT turns $\\vert a,\\ a\\oplus b\\rangle$ back into $\\vert a\\,b\\rangle$ (since $(a\\oplus b)\\oplus a = b$). Net effect: $\\vert ab\\rangle \\to (-1)^{a\\oplus b}\\vert ab\\rangle$, which is $+1$ when the bits agree and $-1$ when they differ. That is exactly what $Z\\otimes Z$ does, so $\\mathrm{CNOT}\\,(I\\otimes Z)\\,\\mathrm{CNOT} = Z\\otimes Z$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2: the same with a rotation. Replace $Z$ by $R_Z(\\theta) = e^{-i\\theta Z/2}$, which multiplies $\\vert0\\rangle$ by $e^{-i\\theta/2}$ and $\\vert1\\rangle$ by $e^{+i\\theta/2}$, that is, a state with $Z$ eigenvalue $z$ by $e^{-i\\theta z/2}$. The same tracking gives $\\vert ab\\rangle \\to e^{-i\\theta(-1)^{a\\oplus b}/2}\\vert ab\\rangle$: a phase that depends only on the $Z\\otimes Z$ eigenvalue. That is the definition of $e^{-i\\theta Z\\otimes Z/2}$:"
     },
     {
       "type": "math",
@@ -245,7 +595,7 @@
     },
     {
       "type": "prose",
-      "text": "Sandwiching that between Hadamards on both qubits turns each $Z$ into an $X$, giving $e^{-i\\theta\\,X\\otimes X/2}$. So every coupling term costs two CNOTs, and an all-to-all reservoir on $n$ qubits costs $n(n-1)$ CNOTs per time slice. The sample checks this identity numerically."
+      "text": "Step 3: turn $Z$s into $X$s. From the identities, $H_d Z H_d = X$, so $(H_d\\otimes H_d)(Z\\otimes Z)(H_d\\otimes H_d) = X\\otimes X$, and the same conjugation turns $e^{-i\\theta Z\\otimes Z/2}$ into $e^{-i\\theta X\\otimes X/2}$. So: Hadamards on both qubits, CNOT, $R_Z(\\theta)$ on qubit 2, CNOT, Hadamards on both qubits."
     },
     {
       "type": "figure",
@@ -254,31 +604,49 @@
       "caption": "An XX rotation compiled into two CNOTs, one Z rotation and four Hadamards."
     },
     {
+      "type": "prose",
+      "text": "Worked example: the cost of a reservoir. Each coupling term costs two CNOTs. An all-to-all reservoir on $n$ qubits has $\\binom{n}{2} = n(n-1)/2$ pairs, so $n(n-1)$ CNOTs per time slice. For $n = 5$: $10$ pairs, $20$ CNOTs. With three time slices per input (the Trotter steps of the next section), that is 60 CNOTs per input, before counting any extra gates needed because real chips only connect neighbouring qubits."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which phase each basis state gets",
+      "text": "Under $e^{-i\\theta Z\\otimes Z/2}$ with $\\theta = \\pi/2$, what phase factor multiplies $\\vert01\\rangle$, and what multiplies $\\vert11\\rangle$?",
+      "hint": "First find the $Z\\otimes Z$ eigenvalue: $+1$ if the bits agree, $-1$ if they differ.",
+      "solution": [
+        "The $Z\\otimes Z$ eigenvalue is $(-1)^{a\\oplus b}$: for $\\vert01\\rangle$ the bits differ, eigenvalue $-1$; for $\\vert11\\rangle$ they agree, eigenvalue $+1$.",
+        "Phase $e^{-i\\theta z/2}$: for $z = -1$, $e^{+i\\pi/4}$; for $z = +1$, $e^{-i\\pi/4}$."
+      ],
+      "answer": "|01⟩ gets e^{+iπ/4}; |11⟩ gets e^{−iπ/4}"
+    },
+    {
       "type": "heading",
       "level": 2,
-      "text": "Trotter steps"
+      "text": "From a Hamiltonian to a circuit: Trotter steps"
     },
     {
       "type": "prose",
-      "text": "A reservoir Hamiltonian $H = A + B$ (here $A$ the couplings, $B$ the field) has parts that do not commute, so $e^{-iHt} \\ne e^{-iAt}e^{-iBt}$. Splitting the time into $r$ short steps fixes this in the limit (the Lie–Trotter product formula):"
+      "text": "Why we need it. The previous section builds the evolution of one coupling term. A real Hamiltonian is a sum of many terms, $H = A + B$, say couplings $A = J\\,X\\otimes X$ plus fields $B = h(Z_1 + Z_2)$. If $A$ and $B$ commuted ($AB = BA$) we could simply run $e^{-iAt}$ and then $e^{-iBt}$. They usually do not (here $X$ and $Z$ anticommute on each qubit), and then $e^{-i(A+B)t} \\ne e^{-iAt}e^{-iBt}$."
+    },
+    {
+      "type": "prose",
+      "text": "The idea. Over a very short time the two parts hardly have time to interfere with each other, so splitting is almost right. Chop the time $t$ into $r$ short steps of length $t/r$, alternate the two parts within each step, and the error shrinks as $r$ grows. This is the Lie–Trotter product formula:"
     },
     {
       "type": "math",
       "tex": "e^{-i(A+B)t} = \\lim_{r\\to\\infty}\\left(e^{-iAt/r}\\,e^{-iBt/r}\\right)^{r}, \\qquad \\text{error per step} \\approx \\frac{t^2}{2r^2}\\,\\Vert[A, B]\\Vert",
-      "caption": "First-order Trotterisation. The total error falls roughly as t²/r."
+      "caption": "First-order Trotterisation. With r steps the total error falls roughly as t²/r."
     },
     {
       "type": "prose",
-      "text": "The symmetric (second-order) version $e^{-iBt/2r}e^{-iAt/r}e^{-iBt/2r}$ has error per step of order $(t/r)^3$. This is how quantum computers simulate Hamiltonians (Lloyd 1996). For a reservoir the accuracy matters less than you might think: the readout is trained on whatever the circuit does, so a coarse Trotter step can be a perfectly good reservoir even when it is a poor simulation of $H$ (Gate-Based Devices (#/qrc/hardware/gate-based-devices) makes this point with numbers)."
-    },
-    {
-      "type": "code",
-      "lang": "python",
-      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1., -1.]).astype(complex); I = np.eye(2)\nH = np.array([[1, 1], [1, -1]]) / np.sqrt(2)\nCNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], complex)   # control = left qubit\n# Hadamard then CNOT makes a Bell state from |00>\npsi = CNOT @ np.kron(H, I) @ np.array([1, 0, 0, 0])\nprint(\"CNOT (H (x) I)|00> =\", np.round(psi.real, 3))\n# R_XX(theta) = exp(-i theta X(x)X / 2) from two CNOTs, one R_Z and Hadamards on both qubits\nRX = lambda t: expm(-1j * t * X / 2)\nfor t in (0.3, 1.1, 2.5):\n    direct = expm(-1j * t * np.kron(X, X) / 2)\n    # CNOT . (I (x) R_Z) . CNOT = exp(-i theta Z(x)Z / 2); Hadamards turn Z's into X's\n    HH = np.kron(H, H)\n    RZ = lambda a: expm(-1j * a * Z / 2)\n    circuit = HH @ CNOT @ np.kron(I, RZ(t)) @ CNOT @ HH\n    print(f\"theta={t}: two-CNOT circuit equals exp(-i theta XX/2): {np.allclose(direct, circuit)}\")\n# A first-order Trotter step for H = J XX + h(Z1 + Z2) against the exact evolution\nJ, h = 0.5, 1.0\nHxx = J * np.kron(X, X); Hz = h * (np.kron(Z, I) + np.kron(I, Z))\nfor steps in (1, 4, 16, 64):\n    dt = 2.0 / steps\n    U = np.linalg.matrix_power(expm(-1j * Hz * dt) @ expm(-1j * Hxx * dt), steps)\n    F = abs(np.trace(expm(-1j * (Hxx + Hz) * 2.0).conj().T @ U) / 4) ** 2\n    print(f\"t = 2, {steps:2d} Trotter steps: gate fidelity {F:.4f}\")"
+      "text": "Where the error comes from. Expand both sides for a short time $\\tau$ to second order: $e^{-iA\\tau}e^{-iB\\tau} \\approx I - i(A+B)\\tau - \\tfrac12(A^2 + 2AB + B^2)\\tau^2$, while $e^{-i(A+B)\\tau} \\approx I - i(A+B)\\tau - \\tfrac12(A^2 + AB + BA + B^2)\\tau^2$. The first-order terms agree; the difference at second order is $\\tfrac12(AB - BA)\\tau^2 = \\tfrac12[A, B]\\tau^2$, the commutator (Commutators (#/quantum/foundations/commutators)). One step of length $\\tau = t/r$ is off by about $\\tfrac12\\Vert[A,B]\\Vert\\,t^2/r^2$, and $r$ steps add up to about $\\tfrac12\\Vert[A,B]\\Vert\\,t^2/r$: twice the steps, half the error. Here $\\Vert M\\Vert$, the norm of a matrix, is the largest factor by which $M$ can stretch the length of a state; it measures how big the commutator is."
     },
     {
       "type": "prose",
-      "text": "Output of the run: Hadamard then CNOT on $\\vert00\\rangle$ gives amplitudes $(0.707, 0, 0, 0.707)$, the Bell state. The two-CNOT circuit equals $e^{-i\\theta XX/2}$ for $\\theta = 0.3, 1.1, 2.5$. For $H = 0.5\\,XX + Z_1 + Z_2$ evolved to $t = 2$, the gate fidelity of the Trotterised circuit is 0.670 with 1 step, 0.977 with 4, 0.9987 with 16 and 0.9999 with 64."
+      "text": "The symmetric, second-order version $e^{-iBt/2r}\\,e^{-iAt/r}\\,e^{-iBt/2r}$ cancels the second-order term by symmetry, leaving an error of order $(t/r)^3$ per step and $t^3/r^2$ overall. It costs almost nothing extra, because the half-steps of neighbouring slices merge. Simulating a Hamiltonian this way on a quantum computer was proposed by Lloyd (1996)."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. The sample below compares $(e^{-iBt/r}e^{-iAt/r})^r$ with the exact evolution for $H = 0.5\\,X\\otimes X + Z_1 + Z_2$ at $t = 2$, using the gate fidelity (1 means identical, up to a global phase). One step gives 0.670, four steps 0.977, sixteen 0.9987 and sixty-four 0.9999. From 4 to 16 steps the infidelity $1 - F$ falls from 0.023 to 0.0013, a factor of about 18 for four times the steps; fidelity measures the squared error, so this matches the error itself falling about four times."
     },
     {
       "type": "widget",
@@ -332,19 +700,165 @@
     },
     {
       "type": "prose",
-      "text": "Try it: at the defaults the first-order circuit reaches 0.67 with one step and climbs towards 1, while the symmetric second-order circuit gets there much faster. Set J or h to 0 and both curves sit at exactly 1: when one part of $H$ vanishes, nothing fails to commute. Lengthen $t$ and watch how many more steps the same fidelity needs."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Where QRC uses this"
+      "text": "Try it:"
     },
     {
       "type": "list",
       "items": [
-        "Compiling the spin reservoir into circuits, and why Trotter accuracy hardly matters: Gate-Based Devices (#/qrc/hardware/gate-based-devices).",
-        "Mid-circuit measurement and reset, the gate-level version of the input reset: Online Measurement Protocols (#/qrc/hardware/online-protocols).",
-        "Haar-random unitaries as reservoirs in the extreme-learning-machine examples: Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines)."
+        "At the defaults ($J = 0.5$, $h = 1$, $t = 2$) the first-order curve starts at 0.670 with one step and passes 0.99 at 6 steps. The second-order curve starts lower, 0.460 at one step (a single symmetric step is no better), but overtakes at 2 steps and passes 0.99 at 3.",
+        "Set J or h to 0. Both curves sit at exactly 1 for every number of steps: when one part of $H$ vanishes there is nothing left that fails to commute.",
+        "Back at the defaults, set $t = 4$. Now first order needs 14 steps to pass 0.99 and second order 7: a longer evolution needs proportionally more steps."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Why it matters less for a reservoir than for a simulation. A quantum reservoir's readout is trained on whatever the circuit actually does. A coarse Trotter step can be a poor simulation of $H$ and still a perfectly good reservoir; Gate-Based Devices (#/qrc/hardware/gate-based-devices) makes this point with numbers."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: halving the Trotter error",
+      "text": "A first-order simulation with 10 steps has error $0.02$. Roughly how many steps bring it to $0.005$? And how many with the second-order formula, if it also had error $0.02$ at 10 steps?",
+      "hint": "First-order error goes as $1/r$, second-order as $1/r^2$.",
+      "solution": [
+        "First order: error $\\propto 1/r$. A quarter of the error needs four times the steps: 40.",
+        "Second order: error $\\propto 1/r^2$. A quarter of the error needs twice the steps: 20."
+      ],
+      "answer": "About 40 first-order steps; about 20 second-order steps"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Universality: a small set of gates is enough"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. A computer that needed a different piece of hardware for every operation would be useless. Classical computers get away with one kind of gate: every Boolean function can be built from NAND gates alone. Is there a quantum equivalent?"
+    },
+    {
+      "type": "prose",
+      "text": "The idea, in plain words. Yes, in two senses. First, exact universality: any unitary on any number of qubits can be written exactly as a product of CNOTs and single-qubit rotations (with arbitrary angles). The proof breaks a big unitary into pieces that each act on two basis states at a time, and builds each piece from controlled single-qubit gates (Nielsen and Chuang, chapter 4). Second, approximate universality with a finite menu: the set $\\{H_d,\\ T,\\ \\mathrm{CNOT}\\}$ can approximate any unitary as closely as you like. $H_d$ and $T$ together generate rotations about two different axes by an angle that is an irrational fraction of a full turn, so repeating them reaches every rotation to any accuracy. The Solovay–Kitaev theorem says the cost is modest: accuracy $\\varepsilon$ needs a number of gates that grows only like a power of $\\log(1/\\varepsilon)$."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example: why the $T$ gate is needed. The gates $H_d$, $S$ and CNOT (the Clifford gates) map Pauli operators to Pauli operators: $H_dXH_d = Z$, $SXS^\\dagger = Y$ and so on. So they only ever move the Bloch vector of $\\vert0\\rangle$ between the six points $\\pm x, \\pm y, \\pm z$. Circuits made only from them can even be simulated efficiently on an ordinary computer (the Gottesman–Knill theorem). $T$ is a turn by $45°$, which takes $\\vert+\\rangle$ to a point on the equator halfway between $+x$ and $+y$, off that set of six. That single step outside is what makes the set universal."
+    },
+    {
+      "type": "prose",
+      "text": "Universal does not mean efficient. Counting shows that almost all unitaries on $n$ qubits need a number of gates that grows exponentially in $n$, because a general unitary has about $4^n$ real parameters and each gate supplies only a few. Quantum algorithms are valuable precisely because they find the rare unitaries that are both useful and cheap. For two qubits the counting is friendly: any two-qubit gate needs at most three CNOTs plus single-qubit rotations (Vatan and Williams 2004)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: counting parameters",
+      "text": "A general unitary on $n$ qubits has $4^n$ real parameters ($4^n - 1$ once the global phase is ignored). How many for $n = 2$ and $n = 10$? Why can't a circuit with a few hundred gates make a general 10-qubit unitary?",
+      "hint": "Compare how many numbers the circuit can tune with how many the unitary needs.",
+      "solution": [
+        "$4^2 = 16$; $4^{10} = 1\\,048\\,576$.",
+        "Each single-qubit rotation supplies up to 3 parameters and a CNOT none, so $N$ gates supply at most about $3N$ parameters. A few hundred gates give at most about a thousand: far short of a million, so almost every 10-qubit unitary is out of reach."
+      ],
+      "answer": "16 and about a million; a few hundred gates have only a few hundred to a few thousand parameters"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Circuit depth and why hardware cares"
+    },
+    {
+      "type": "prose",
+      "text": "Why we need it. On paper a circuit is perfect. On a machine, each gate has a small chance of going wrong, and the qubits slowly lose their quantum state just by waiting (decoherence, introduced with Mixed States (#/quantum/many-body/mixed-states) and treated on a later page of the Many Qubits chapter). The size and shape of a circuit therefore decide whether its output means anything."
+    },
+    {
+      "type": "prose",
+      "text": "The idea. Two numbers describe a circuit's cost. The gate count is how many gates it has. The depth is how many time steps it takes when gates on different qubits run in parallel: group the gates into layers in which no qubit is used twice, and count the layers. Gate count controls the total error; depth controls how long the qubits must survive."
+    },
+    {
+      "type": "prose",
+      "text": "A rough error budget. If each two-qubit gate fails with probability $p$, and failures are independent, a circuit with $N$ such gates runs without any failure with probability $(1-p)^N \\approx e^{-pN}$. Two-qubit gate error rates on good current superconducting and trapped-ion devices are typically in the range of about $10^{-3}$ to $10^{-2}$, and the two-qubit gates usually dominate the error."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. Take the 5-qubit all-to-all reservoir above: 60 CNOTs per input."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. With $p = 0.01$: $(0.99)^{60} = 0.547$. Roughly half the runs contain at least one error, for a single input.",
+        "Step 2. With $p = 0.005$: $(0.995)^{60} = 0.740$.",
+        "Step 3. With $p = 0.001$: $(0.999)^{60} = 0.942$.",
+        "Step 4. Now feed in 100 inputs without restarting: $6000$ CNOTs, and even at $p = 0.001$ the chance of no error is $e^{-6} \\approx 0.0025$. A reservoir needs its own fading memory to forgive old errors, a point the QRC shelf returns to."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Connectivity. Most chips only allow two-qubit gates between physically neighbouring qubits, often on a line or a square grid. Coupling two distant qubits means first moving a state next to its partner with SWAP gates, and each SWAP costs three CNOTs. An all-to-all reservoir on a line of $n$ qubits therefore costs much more than $n(n-1)$ CNOTs. Hardware-friendly reservoirs couple only neighbours, which keeps both the count and the depth low."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example: depth of a coupling layer. On a line of 4 qubits, couple each neighbouring pair (1-2, 2-3, 3-4) with an $XX$ rotation. The pairs 1-2 and 3-4 share no qubit, so they run in the same layer; 2-3 must wait. Two layers of couplings, each costing a CNOT-$R_Z$-CNOT sandwich (plus Hadamards), so the CNOT depth is $2\\times 2 = 4$ per time slice, while the CNOT count is $3\\times 2 = 6$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a budget for a circuit",
+      "text": "A circuit has 40 CNOTs, each with error 0.004. What is the probability it runs with no CNOT error? How small must the error be for 90%?",
+      "hint": "Use $(1-p)^N \\approx e^{-pN}$.",
+      "solution": [
+        "$(1 - 0.004)^{40} = 0.996^{40} \\approx e^{-0.16} = 0.852$.",
+        "For 0.9: $40\\,p \\approx -\\ln 0.9 = 0.105$, so $p \\approx 0.0026$."
+      ],
+      "answer": "about 0.85; p ≤ about 0.0026"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A circuit on two qubits, starting in $\\vert00\\rangle$: $H_d$ on qubit 1; CNOT (qubit 1 control); $S$ on qubit 2; $H_d$ on both qubits; measure both. Find all four outcome probabilities."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $H_d$ on qubit 1 and then the CNOT make $\\vert\\Phi^+\\rangle = (\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$, amplitudes $(0.707, 0, 0, 0.707)$, exactly as in the Bell section.",
+        "Step 2. $S$ on qubit 2 multiplies every amplitude whose qubit-2 digit is 1 by $i$: that is $b$ and $d$. Only $d$ is non-zero, so the state is $(\\vert00\\rangle + i\\vert11\\rangle)/\\sqrt2$.",
+        "Step 3. $H_d$ on both qubits. Each basis ket becomes a sum over all four kets: $H_d\\otimes H_d\\vert00\\rangle = \\tfrac12(\\vert00\\rangle + \\vert01\\rangle + \\vert10\\rangle + \\vert11\\rangle)$ and $H_d\\otimes H_d\\vert11\\rangle = \\tfrac12(\\vert00\\rangle - \\vert01\\rangle - \\vert10\\rangle + \\vert11\\rangle)$ (a minus sign for each qubit that was 1 and ends as 1).",
+        "Step 4. Add them with their weights $1/\\sqrt2$ and $i/\\sqrt2$: the amplitude of $\\vert00\\rangle$ is $(1 + i)/(2\\sqrt2)$, of $\\vert01\\rangle$ is $(1 - i)/(2\\sqrt2)$, of $\\vert10\\rangle$ is $(1 - i)/(2\\sqrt2)$, of $\\vert11\\rangle$ is $(1 + i)/(2\\sqrt2)$. Numerically $0.354 \\pm 0.354i$, as the sample prints.",
+        "Step 5. Each has $\\vert\\cdot\\vert^2 = (0.354^2 + 0.354^2) = 0.25$. All four outcomes are equally likely. Compare: without the $S$ gate the state stays $\\vert\\Phi^+\\rangle$ and only $00$ and $11$ appear. The phase $i$ on one branch has destroyed the perfect correlation in the $X$ basis, even though it did nothing to the $Z$-basis statistics after step 2. Phases are invisible in one basis and decisive in another."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1, -1]).astype(complex)\nI = np.eye(2); Hd = np.array([[1, 1], [1, -1]]) / np.sqrt(2)\nS = np.diag([1, 1j]); T = np.diag([1, np.exp(1j * np.pi / 4)])\nCNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], complex)   # control = qubit 1 (left)\nket = {\"00\": 0, \"01\": 1, \"10\": 2, \"11\": 3}\ndef show(v):\n    \"\"\"Write a 2-qubit state as a sum of basis kets, dropping zero amplitudes.\"\"\"\n    terms = [f\"({a.real:+.3f}{a.imag:+.3f}i)|{k}>\" if abs(a.imag) > 1e-12 else f\"{a.real:+.3f}|{k}>\"\n             for k, a in zip(ket, v) if abs(a) > 1e-12]\n    return \" \".join(terms)\n# 1. A gate is a matrix acting on the amplitude column\nv = np.array([0.6, 0.8])\nprint(\"H_d (0.6, 0.8) =\", np.round(Hd @ v, 5), \" probabilities\", np.round(abs(Hd @ v) ** 2, 4))\nprint(\"H_d H_d (0.6, 0.8) =\", np.round(Hd @ Hd @ v, 5))\n# 2. Identities, checked as matrices\nchecks = {\"H X H = Z\": (Hd @ X @ Hd, Z), \"H Z H = X\": (Hd @ Z @ Hd, X), \"H Y H = -Y\": (Hd @ Y @ Hd, -Y),\n          \"S S = Z\": (S @ S, Z), \"T T = S\": (T @ T, S), \"X Z = -i Y\": (X @ Z, -1j * Y), \"X Z = -Z X\": (X @ Z, -Z @ X)}\nfor name, (a, b) in checks.items():\n    print(f\"{name:12s}\", np.allclose(a, b))\n# 3. CNOT on the four basis states, and on superpositions\nfor k in ket:\n    e = np.zeros(4); e[ket[k]] = 1\n    print(f\"CNOT|{k}> =\", show(CNOT @ e))\nplus = np.array([1, 1]) / np.sqrt(2); minus = np.array([1, -1]) / np.sqrt(2)\nprint(\"CNOT |+>|0> =\", show(CNOT @ np.kron(plus, [1, 0])))\nprint(\"CNOT |+>|+> =\", show(CNOT @ np.kron(plus, plus)), \" (unchanged)\")\nprint(\"CNOT |+>|-> =\", show(CNOT @ np.kron(plus, minus)), \" = |->|-> :\", np.allclose(CNOT @ np.kron(plus, minus), np.kron(minus, minus)))\n# 4. The Bell circuit on each basis input, step by step\nfor k in ket:\n    e = np.zeros(4, complex); e[ket[k]] = 1\n    a = np.kron(Hd, I) @ e; b = CNOT @ a\n    print(f\"|{k}>  -> after H on qubit 1: {show(a)}  -> after CNOT: {show(b)}\")\n# 5. Product test: a|00>+b|01>+c|10>+d|11> is a product state exactly when ad - bc = 0\nfor name, v in [(\"|+>|0>\", np.kron(plus, [1, 0])), (\"Bell\", CNOT @ np.kron(plus, [1, 0]))]:\n    a, b, c, d = v\n    print(f\"{name}: ad - bc = {a*d - b*c:.3f}\")\n# 6. CNOT (I x Z) CNOT = Z x Z, and the putting-together circuit\nprint(\"CNOT (I x Z) CNOT = Z x Z:\", np.allclose(CNOT @ np.kron(I, Z) @ CNOT, np.kron(Z, Z)))\npsi = np.array([1, 0, 0, 0], complex)\npsi = CNOT @ np.kron(Hd, I) @ psi; psi = np.kron(I, S) @ psi; psi = np.kron(Hd, Hd) @ psi\nprint(\"H1, CNOT, S2, H1 H2 on |00>:\", show(psi))\nprint(\"probabilities:\", np.round(abs(psi) ** 2, 4))\n# 7. Error budget: chance that N gates with error p all succeed\nfor p in (0.001, 0.005, 0.01):\n    print(f\"p = {p}: 60 gates succeed with probability {(1 - p) ** 60:.3f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: every number in this page's worked examples comes out as quoted above (the Hadamard example, all seven identities True, the CNOT table and its three superposition inputs, the four Bell states, the product test, the putting-together amplitudes $0.354\\pm0.354i$ with probability 0.25 each, and the 60-gate success probabilities)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1., -1.]).astype(complex); I = np.eye(2)\nH = np.array([[1, 1], [1, -1]]) / np.sqrt(2)\nCNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]], complex)   # control = left qubit\n# Hadamard then CNOT makes a Bell state from |00>\npsi = CNOT @ np.kron(H, I) @ np.array([1, 0, 0, 0])\nprint(\"CNOT (H (x) I)|00> =\", np.round(psi.real, 3))\n# R_XX(theta) = exp(-i theta X(x)X / 2) from two CNOTs, one R_Z and Hadamards on both qubits\nRX = lambda t: expm(-1j * t * X / 2)\nfor t in (0.3, 1.1, 2.5):\n    direct = expm(-1j * t * np.kron(X, X) / 2)\n    # CNOT . (I (x) R_Z) . CNOT = exp(-i theta Z(x)Z / 2); Hadamards turn Z's into X's\n    HH = np.kron(H, H)\n    RZ = lambda a: expm(-1j * a * Z / 2)\n    circuit = HH @ CNOT @ np.kron(I, RZ(t)) @ CNOT @ HH\n    print(f\"theta={t}: two-CNOT circuit equals exp(-i theta XX/2): {np.allclose(direct, circuit)}\")\n# A first-order Trotter step for H = J XX + h(Z1 + Z2) against the exact evolution\nJ, h = 0.5, 1.0\nHxx = J * np.kron(X, X); Hz = h * (np.kron(Z, I) + np.kron(I, Z))\nfor steps in (1, 4, 16, 64):\n    dt = 2.0 / steps\n    U = np.linalg.matrix_power(expm(-1j * Hz * dt) @ expm(-1j * Hxx * dt), steps)\n    F = abs(np.trace(expm(-1j * (Hxx + Hz) * 2.0).conj().T @ U) / 4) ** 2\n    print(f\"t = 2, {steps:2d} Trotter steps: gate fidelity {F:.4f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the Bell amplitudes $(0.707, 0, 0, 0.707)$; the two-CNOT circuit equals $e^{-i\\theta XX/2}$ (True) for $\\theta = 0.3, 1.1, 2.5$; and Trotter fidelities 0.6699, 0.9767, 0.9987 and 0.9999 for 1, 4, 16 and 64 steps."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A circuit is read left to right, but its matrix product is written right to left: $A$ then $B$ is $BA$.",
+        "A single-qubit gate replaces the amplitude pair $(\\alpha, \\beta)$ by a new pair; every gate is unitary, so it is reversible and keeps total probability 1.",
+        "Two gates are equal if they agree on $\\vert0\\rangle$ and $\\vert1\\rangle$. Key identities: $H_dZH_d = X$, $H_dXH_d = Z$, $S^2 = Z$, $T^2 = S$, $XZ = -ZX$.",
+        "With qubit 1 as control, a CNOT swaps the amplitudes of $\\vert10\\rangle$ and $\\vert11\\rangle$. It entangles a superposed control with a target in $\\vert0\\rangle$, but can also leave states unchanged or kick a phase back onto the control.",
+        "$H_d$ then CNOT maps the four basis states onto the four Bell states; a state is a product exactly when $ad - bc = 0$.",
+        "An $XX$ coupling costs two CNOTs, one $R_Z$ and four Hadamards; Trotter steps stitch many such terms into the evolution of a whole Hamiltonian, with error falling as $1/r$ (first order) or $1/r^2$ (second order).",
+        "CNOT plus single-qubit gates is universal, and $\\{H_d, T, \\mathrm{CNOT}\\}$ approximates anything, but most unitaries still need exponentially many gates.",
+        "On hardware, gate count sets the error budget, roughly $e^{-pN}$, and depth sets how long the qubits must survive."
       ]
     },
     {
@@ -354,33 +868,53 @@
     },
     {
       "type": "problem",
-      "title": "CNOT on basis and superposition states",
-      "text": "Apply a CNOT (control qubit 1) to $\\vert10\\rangle$ and to $\\vert+\\rangle\\otimes\\vert0\\rangle$.",
+      "title": "An entangled or a product state?",
+      "text": "After some circuit two qubits are in $\\tfrac12(\\vert00\\rangle + \\vert01\\rangle - \\vert10\\rangle - \\vert11\\rangle)$. Is it entangled? If not, factor it.",
+      "hint": "Compute $ad - bc$.",
       "solution": [
-        "$\\vert10\\rangle$: control is 1, so the target flips: $\\vert11\\rangle$.",
-        "$\\vert+\\rangle\\vert0\\rangle = (\\vert00\\rangle + \\vert10\\rangle)/\\sqrt2 \\to (\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$, a Bell state."
+        "$(a, b, c, d) = (0.5, 0.5, -0.5, -0.5)$; $ad - bc = -0.25 - (-0.25) = 0$, so it is a product state.",
+        "Factor: $\\tfrac12(\\vert0\\rangle - \\vert1\\rangle)\\otimes(\\vert0\\rangle + \\vert1\\rangle) = \\vert-\\rangle\\otimes\\vert+\\rangle$."
       ],
-      "answer": "|11⟩, and the Bell state (|00⟩ + |11⟩)/√2"
+      "answer": "Not entangled: |−⟩⊗|+⟩"
     },
     {
       "type": "problem",
-      "title": "CNOT budget",
-      "text": "A 5-qubit reservoir has an $X_iX_j$ coupling on every pair and uses 3 first-order Trotter steps per input. How many CNOTs per input?",
+      "title": "Reversing control and target",
+      "text": "Apply $H_d\\otimes H_d$, then a CNOT with qubit 1 as control, then $H_d\\otimes H_d$ again, to the input $\\vert01\\rangle$. What comes out, and which qubit acted as the control?",
+      "hint": "Use the phase-kickback result for $\\vert+\\rangle\\vert-\\rangle$.",
       "solution": [
-        "Pairs: $\\binom52 = 10$, at 2 CNOTs each: 20 per Trotter step.",
-        "Three steps: 60 CNOTs per input, before any SWAPs needed for limited connectivity."
+        "$H_d\\otimes H_d\\vert01\\rangle = \\vert+\\rangle\\vert-\\rangle$.",
+        "From the phase-kickback example, $\\mathrm{CNOT}\\vert+\\rangle\\vert-\\rangle = \\vert-\\rangle\\vert-\\rangle$.",
+        "$H_d\\otimes H_d\\vert-\\rangle\\vert-\\rangle = \\vert11\\rangle$.",
+        "So $\\vert01\\rangle \\to \\vert11\\rangle$: qubit 1 flipped because qubit 2 was 1. The sandwiched gate is a CNOT with qubit 2 as control and qubit 1 as target."
       ],
-      "answer": "60"
+      "answer": "|11⟩; qubit 2 acted as the control"
     },
     {
       "type": "problem",
       "title": "Halving the Trotter error",
       "text": "A first-order Trotter simulation to time $t$ with $r$ steps has error about $c\\,t^2/r$. How many steps halve the error? What does the second-order formula need?",
+      "hint": "Write the total error as a power of $r$.",
       "solution": [
         "First order: error $\\propto 1/r$, so double the steps.",
         "Second order: error per step $\\propto (t/r)^3$, total $\\propto t^3/r^2$, so multiplying $r$ by $\\sqrt2 \\approx 1.41$ halves it."
       ],
       "answer": "2× the steps; about 1.41× for second order"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The rabi-pulse picture of how a single-qubit gate is physically made: Driven Qubits and Rabi Oscillations (#/quantum/qubits/driven-qubits).",
+        "Entanglement in detail, reduced states and the entropy the widget reports: Entanglement and Reduced States (#/quantum/many-body/entanglement).",
+        "Compiling the spin reservoir into circuits, and why Trotter accuracy hardly matters: Gate-Based Devices (#/qrc/hardware/gate-based-devices).",
+        "Mid-circuit measurement and reset, the gate-level version of the input reset: Online Measurement Protocols (#/qrc/hardware/online-protocols).",
+        "Haar-random unitaries as reservoirs in the extreme-learning-machine examples: Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines)."
+      ]
     },
     {
       "type": "heading",
@@ -391,8 +925,10 @@
       "type": "list",
       "items": [
         "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), chapter 4",
+        "N. D. Mermin, Quantum Computer Science: An Introduction, Cambridge University Press (2007), chapters 1 and 2",
         "S. Lloyd, Universal quantum simulators, Science 273, 1073 (1996)",
-        "M. Suzuki, Generalized Trotter's formula and systematic approximants of exponential operators and inner derivations with applications to many-body problems, Communications in Mathematical Physics 51, 183 (1976)"
+        "M. Suzuki, Generalized Trotter's formula and systematic approximants of exponential operators and inner derivations with applications to many-body problems, Communications in Mathematical Physics 51, 183 (1976)",
+        "F. Vatan and C. Williams, Optimal quantum circuits for general two-qubit gates, Physical Review A 69, 032315 (2004)"
       ]
     }
   ]

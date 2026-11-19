@@ -1,0 +1,711 @@
+{
+  "title": "Eigenvalues and Eigenvectors",
+  "intro": "Eigenvectors are the directions a matrix only stretches, and eigenvalues are the stretch factors. In quantum mechanics they are the possible measurement results and the states that give them, and they turn the time-evolution operator $e^{-iHt}$ into a list of phases.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "What you need first: Linear Algebra for Quantum Mechanics (#/quantum/foundations/linear-algebra) (vectors, matrices, the adjoint, Hermitian and unitary matrices) and Complex Numbers (#/quantum/foundations/complex-numbers) (multiplying and conjugating complex numbers)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Say in words, and show in a picture, what it means for a vector to be an eigenvector of a matrix.",
+        "Find the eigenvalues and normalised eigenvectors of any $2\\times2$ matrix by hand, real or complex.",
+        "Recognise a degenerate eigenvalue and describe its whole eigenspace.",
+        "Write a Hermitian matrix as a sum of eigenvalues times projectors (its spectral decomposition), and use that to compute $e^{-iHt}$ or any other function of the matrix.",
+        "Explain why Hermitian matrices have real eigenvalues and why unitary matrices have eigenvalues of size 1, and check all of it with numpy."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why eigenvectors matter so much in quantum mechanics"
+    },
+    {
+      "type": "prose",
+      "text": "Almost every question you will ask on this shelf ends in the same calculation. What values can a measurement of energy give? The eigenvalues of the Hamiltonian. Which states give one definite result when you measure? The eigenvectors. How does a state change in time? Write it in the eigenvectors of the Hamiltonian and each piece just turns its phase. How do you build the gate $e^{-iHt}$ that a quantum computer applies? From the eigenvalues and eigenvectors again."
+    },
+    {
+      "type": "prose",
+      "text": "So the eigen-problem is not one topic among many: it is the tool you will use on nearly every page. The good news is that for the $2\\times2$ matrices of a single qubit it can be done completely by hand in a few lines, and once you have done it a few times the larger cases are the same idea, handed to a computer."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The idea: directions a matrix does not turn"
+    },
+    {
+      "type": "prose",
+      "text": "A matrix is a machine that takes a vector in and gives a vector out: $v\\mapsto Av$. For most input vectors the output points in a different direction from the input. But for special directions the output is the input, only stretched, shrunk or flipped. Those directions are the eigenvectors, and the stretch factor is the eigenvalue."
+    },
+    {
+      "type": "math",
+      "tex": "A v = \\lambda v, \\qquad v \\ne 0",
+      "caption": "The eigenvalue equation. The vector v is an eigenvector of A and the number λ is its eigenvalue."
+    },
+    {
+      "type": "prose",
+      "text": "The word eigen is German for own or characteristic: these are the matrix's own directions. The vector must not be zero, because $A0 = \\lambda 0$ holds for every $\\lambda$ and would tell us nothing."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A picture in the plane"
+    },
+    {
+      "type": "prose",
+      "text": "Take the real matrix $A$ with rows $(2, 1)$ and $(1, 2)$. Feed it a few vectors and watch what comes out."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $v = (1, 0)$: $Av = (2\\cdot1 + 1\\cdot0,\\ 1\\cdot1 + 2\\cdot0) = (2, 1)$. The output points up and to the right; the input pointed straight right. The direction has turned, so $(1, 0)$ is not an eigenvector.",
+        "Step 2. $v = (1, 1)$: $Av = (2 + 1,\\ 1 + 2) = (3, 3) = 3\\,(1, 1)$. Same direction, three times as long. So $(1, 1)$ is an eigenvector with eigenvalue $3$.",
+        "Step 3. $v = (1, -1)$: $Av = (2 - 1,\\ 1 - 2) = (1, -1) = 1\\cdot(1, -1)$. Same direction, same length: an eigenvector with eigenvalue $1$.",
+        "Step 4. $v = (2, 2)$: $Av = (6, 6) = 3\\,(2, 2)$. Any multiple of an eigenvector is again an eigenvector with the same eigenvalue. What matters is the direction (the line through the origin), not the particular arrow."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So this matrix stretches the plane by 3 along the diagonal line $y = x$ and leaves the perpendicular line $y = -x$ alone. Every other vector is a mix of those two directions, and the matrix stretches the two parts by different amounts, which is why its direction turns. Once you know the eigenvectors and eigenvalues you know everything the matrix does."
+    },
+    {
+      "type": "prose",
+      "text": "A negative eigenvalue flips the vector to point the other way along its line (eigenvalue $-1$ is a pure flip). A zero eigenvalue squashes that direction to nothing. A complex eigenvalue has no picture in the real plane at all: it shows up when a matrix rotates every real direction, as the rotation example near the end of this page shows."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: is it an eigenvector?",
+      "text": "For the same matrix $A$ (rows $(2, 1)$ and $(1, 2)$), is $(3, -3)$ an eigenvector? Is $(1, 2)$?",
+      "hint": "Multiply, then ask whether the result is a single number times the input.",
+      "solution": [
+        "$A(3, -3) = (6 - 3,\\ 3 - 6) = (3, -3)$: the same vector, so it is an eigenvector with eigenvalue 1 (it is $3$ times $(1, -1)$).",
+        "$A(1, 2) = (2 + 2,\\ 1 + 4) = (4, 5)$. Is $(4, 5)$ a multiple of $(1, 2)$? It would have to be $c(1, 2) = (c, 2c)$, so $c = 4$ and $2c = 8 \\ne 5$. No."
+      ],
+      "answer": "(3, −3) yes, with eigenvalue 1; (1, 2) no"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Finding eigenvalues: the characteristic polynomial"
+    },
+    {
+      "type": "prose",
+      "text": "Guessing works for the example above but not in general. Here is the systematic method. Start from $Av = \\lambda v$ and move everything to one side. To subtract a number times a vector from a matrix times a vector we write the number as a multiple of the identity matrix $I$ (ones on the diagonal, zeros elsewhere), because $\\lambda v = \\lambda I v$:"
+    },
+    {
+      "type": "math",
+      "tex": "(A - \\lambda I)\\,v = 0",
+      "caption": "The eigenvalue equation rearranged. We need a non-zero v that this matrix sends to zero."
+    },
+    {
+      "type": "prose",
+      "text": "A matrix that sends a non-zero vector to zero squashes some direction flat, so it cannot be undone: it has no inverse. A square matrix has no inverse exactly when its determinant is zero. So the eigenvalues are the numbers $\\lambda$ that make"
+    },
+    {
+      "type": "math",
+      "tex": "\\det(A - \\lambda I) = 0",
+      "caption": "The characteristic equation. Its left-hand side, a polynomial in λ, is the characteristic polynomial."
+    },
+    {
+      "type": "prose",
+      "text": "For a $2\\times2$ matrix with rows $(a, b)$ and $(c, d)$ the determinant is $ad - bc$. Subtracting $\\lambda I$ changes the rows to $(a - \\lambda, b)$ and $(c, d - \\lambda)$, so"
+    },
+    {
+      "type": "math",
+      "tex": "\\det(A - \\lambda I) = (a-\\lambda)(d-\\lambda) - bc = \\lambda^2 - (a + d)\\lambda + (ad - bc)",
+      "caption": "Multiply out the brackets: the λ term collects a + d and the constant collects ad − bc."
+    },
+    {
+      "type": "prose",
+      "text": "The two numbers that appear have names. $a + d$, the sum of the diagonal, is the trace $\\operatorname{Tr}A$. $ad - bc$ is the determinant $\\det A$. So for every $2\\times2$ matrix the characteristic equation is $\\lambda^2 - (\\operatorname{Tr}A)\\,\\lambda + \\det A = 0$, and the quadratic formula gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\lambda_\\pm = \\frac{\\operatorname{Tr}A \\pm \\sqrt{(\\operatorname{Tr}A)^2 - 4\\det A}}{2}",
+      "caption": "The two eigenvalues of any 2×2 matrix."
+    },
+    {
+      "type": "prose",
+      "text": "Two checks fall out for free and catch most arithmetic slips: the eigenvalues add up to the trace, $\\lambda_+ + \\lambda_- = \\operatorname{Tr}A$, and multiply to the determinant, $\\lambda_+\\lambda_- = \\det A$. (These hold for square matrices of any size: the trace is the sum of all the eigenvalues and the determinant is their product.)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Finding eigenvectors once you have an eigenvalue"
+    },
+    {
+      "type": "prose",
+      "text": "Put one eigenvalue back into $(A - \\lambda I)v = 0$ and solve for $v = (x, y)$. Because $\\lambda$ was chosen to make the determinant zero, the two rows of this system are multiples of each other: they say the same thing. So you only ever use one row, which fixes the ratio $y/x$, and the overall size of $v$ is left free (any multiple of an eigenvector is one). You then pick the size by normalising, which the next section covers."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked examples: the Pauli matrices Z and X"
+    },
+    {
+      "type": "prose",
+      "text": "The Pauli matrices are the three $2\\times2$ matrices that measure a qubit along the three axes (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations) covers them in depth). Their eigenvectors are the measurement bases you will use constantly, so they are the first examples to do."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Z: a diagonal matrix"
+    },
+    {
+      "type": "prose",
+      "text": "$Z$ has rows $(1, 0)$ and $(0, -1)$. A diagonal matrix only stretches the coordinate axes: $Z(1, 0) = (1, 0)$ and $Z(0, 1) = (0, -1) = -1\\cdot(0, 1)$. So the eigenvalues are the diagonal entries $+1$ and $-1$, and the eigenvectors are $(1, 0)$ and $(0, 1)$. In quantum mechanics these two vectors get the names $\\vert0\\rangle$ and $\\vert1\\rangle$, read ket 0 and ket 1: the symbol $\\vert\\cdot\\rangle$ just marks a column vector, and States and Dirac Notation explains the notation fully. On this page $\\vert v\\rangle$ always means the column vector $v$. The method agrees: trace 0, determinant $-1$, so $\\lambda^2 - 1 = 0$ and $\\lambda = \\pm1$."
+    },
+    {
+      "type": "prose",
+      "text": "In general, the eigenvalues of a diagonal (or triangular) matrix are its diagonal entries. No calculation needed."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "X: the bit flip"
+    },
+    {
+      "type": "prose",
+      "text": "$X$ has rows $(0, 1)$ and $(1, 0)$; it swaps the two components of a vector. Follow the method."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Trace: $0 + 0 = 0$. Determinant: $0\\cdot0 - 1\\cdot1 = -1$.",
+        "Step 2. Characteristic equation: $\\lambda^2 - 0\\cdot\\lambda - 1 = 0$, so $\\lambda = +1$ or $\\lambda = -1$. Check: they add to 0 (the trace) and multiply to $-1$ (the determinant).",
+        "Step 3. Eigenvector for $\\lambda = +1$: $A - I$ has rows $(-1, 1)$ and $(1, -1)$. The first row says $-x + y = 0$, so $y = x$. Take $x = 1$: $v = (1, 1)$.",
+        "Step 4. Eigenvector for $\\lambda = -1$: $A + I$ has rows $(1, 1)$ and $(1, 1)$. The first row says $x + y = 0$, so $y = -x$: $v = (1, -1)$.",
+        "Step 5. Check directly: $X(1, 1) = (1, 1)$ and $X(1, -1) = (-1, 1) = -1\\cdot(1, -1)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "After normalising (dividing by the length $\\sqrt2$) these are the states $\\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$ and $\\vert-\\rangle = (\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$. They are the states with a definite value of $X$, and measuring a qubit in the $X$ basis means asking which of these two it is."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Normalising an eigenvector"
+    },
+    {
+      "type": "prose",
+      "text": "In quantum mechanics a state is a vector of length 1, so eigenvectors are almost always scaled to length 1. The length of a complex vector $v = (x, y)$ is $\\Vert v\\Vert = \\sqrt{\\vert x\\vert^2 + \\vert y\\vert^2}$, where $\\vert x\\vert^2 = \\bar x x$ is the squared modulus ($\\bar x$ is the complex conjugate, written $x^*$ on Complex Numbers; both notations are common) (for $x = a + ib$ it is $a^2 + b^2$). Divide the vector by its length and you are done."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $v = (1, 1)$: $\\Vert v\\Vert^2 = 1 + 1 = 2$, so the unit vector is $(1, 1)/\\sqrt2$.",
+        "Step 2. $v = (1, i)$: $\\Vert v\\Vert^2 = \\vert1\\vert^2 + \\vert i\\vert^2 = 1 + 1 = 2$, not $1 + i^2 = 0$. Forgetting the complex conjugate is the most common slip with complex vectors. The unit vector is $(1, i)/\\sqrt2$.",
+        "Step 3. $v = (2, 1 + i)$: $\\vert 1 + i\\vert^2 = 1^2 + 1^2 = 2$, so $\\Vert v\\Vert^2 = 4 + 2 = 6$ and the unit vector is $(2, 1 + i)/\\sqrt6$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Even a unit eigenvector is not unique: multiplying it by any phase $e^{i\\gamma}$ keeps both its length and the eigenvalue equation. So $(1, 1)/\\sqrt2$ and $-(1, 1)/\\sqrt2$ are equally good answers, and a computer may hand you either. In quantum mechanics this does no harm, because an overall phase does not change a physical state (States and Dirac Notation explains why). Expect it whenever you compare your hand calculation with numpy."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked example: a real symmetric matrix with unequal eigenvalues"
+    },
+    {
+      "type": "prose",
+      "text": "The Pauli examples have neat answers. Here is one where nothing is guessable. Let $A$ have rows $(1, 2)$ and $(2, -2)$. It is symmetric (the top-right entry equals the bottom-left), which for a real matrix is the same as being Hermitian."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Trace $= 1 + (-2) = -1$. Determinant $= 1\\cdot(-2) - 2\\cdot2 = -6$.",
+        "Step 2. Characteristic equation: $\\lambda^2 - (-1)\\lambda + (-6) = \\lambda^2 + \\lambda - 6 = 0$. It factors as $(\\lambda - 2)(\\lambda + 3) = 0$, so $\\lambda = 2$ or $\\lambda = -3$. Check: $2 + (-3) = -1$ (trace) and $2\\cdot(-3) = -6$ (determinant).",
+        "Step 3. For $\\lambda = 2$: $A - 2I$ has rows $(-1, 2)$ and $(2, -4)$. The second row is $-2$ times the first, as promised. The first row: $-x + 2y = 0$, so $x = 2y$. Take $y = 1$: $v = (2, 1)$, length $\\sqrt{4 + 1} = \\sqrt5$. Unit eigenvector $v_2 = (2, 1)/\\sqrt5$.",
+        "Step 4. For $\\lambda = -3$: $A + 3I$ has rows $(4, 2)$ and $(2, 1)$. The second row: $2x + y = 0$, so $y = -2x$. Take $x = 1$: $v = (1, -2)$, unit eigenvector $v_{-3} = (1, -2)/\\sqrt5$.",
+        "Step 5. Check one: $A(2, 1) = (1\\cdot2 + 2\\cdot1,\\ 2\\cdot2 - 2\\cdot1) = (4, 2) = 2\\,(2, 1)$.",
+        "Step 6. Notice: $(2, 1)\\cdot(1, -2) = 2 - 2 = 0$. The two eigenvectors are perpendicular. That is not luck; the next section proves it always happens for Hermitian matrices."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: eigen-pairs of a symmetric matrix",
+      "text": "Find the eigenvalues and unit eigenvectors of the matrix with rows $(3, 1)$ and $(1, 3)$.",
+      "hint": "Use trace and determinant, then one row of $A - \\lambda I$.",
+      "solution": [
+        "Trace 6, determinant $9 - 1 = 8$: $\\lambda^2 - 6\\lambda + 8 = (\\lambda - 4)(\\lambda - 2) = 0$.",
+        "$\\lambda = 4$: $A - 4I$ has first row $(-1, 1)$, so $y = x$: $(1, 1)/\\sqrt2$.",
+        "$\\lambda = 2$: $A - 2I$ has first row $(1, 1)$, so $y = -x$: $(1, -1)/\\sqrt2$.",
+        "This matrix is $3I + X$. Adding $3I$ shifts every eigenvalue of $X$ up by 3 and leaves the eigenvectors alone, which is a quick way to see the answer."
+      ],
+      "answer": "4 with (1, 1)/√2; 2 with (1, −1)/√2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked examples with complex entries"
+    },
+    {
+      "type": "prose",
+      "text": "Quantum matrices usually have complex entries. The method is identical; you only have to be careful with $i$ and with conjugates."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Y, the third Pauli matrix"
+    },
+    {
+      "type": "prose",
+      "text": "$Y$ has rows $(0, -i)$ and $(i, 0)$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Trace $0$. Determinant $0\\cdot0 - (-i)(i) = -(-i^2) = -(1) = -1$. (Carefully: $(-i)(i) = -i^2 = 1$, and we subtract it.)",
+        "Step 2. So again $\\lambda^2 - 1 = 0$ and $\\lambda = \\pm1$. All three Pauli matrices have eigenvalues $+1$ and $-1$; they differ only in their eigenvectors.",
+        "Step 3. $\\lambda = +1$: $Y - I$ has first row $(-1, -i)$, so $-x - iy = 0$, giving $y = -x/i = ix$ (since $1/i = -i$). Take $x = 1$: $v = (1, i)$, unit vector $(1, i)/\\sqrt2 = \\vert{+i}\\rangle$.",
+        "Step 4. $\\lambda = -1$: $Y + I$ has first row $(1, -i)$, so $x - iy = 0$, giving $y = x/i = -ix$: $v = (1, -i)/\\sqrt2 = \\vert{-i}\\rangle$.",
+        "Step 5. Check: $Y(1, i) = (0\\cdot1 + (-i)(i),\\ i\\cdot1 + 0) = (1, i)$. Good."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Are these two perpendicular? For complex vectors the right test conjugates the first vector: $\\langle u, v\\rangle = \\bar u_1 v_1 + \\bar u_2 v_2$. Here $\\overline{1}\\cdot1 + \\overline{i}\\cdot(-i) = 1 + (-i)(-i) = 1 + i^2 = 0$. Yes. Without the conjugate you would get $1 + i(-i) = 2$ and wrongly conclude they are not."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A general complex Hermitian matrix"
+    },
+    {
+      "type": "prose",
+      "text": "Let $B$ have rows $(2, 1 - i)$ and $(1 + i, 1)$. It is Hermitian: the bottom-left entry $1 + i$ is the complex conjugate of the top-right entry $1 - i$, and the diagonal is real."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Trace $= 2 + 1 = 3$. Determinant $= 2\\cdot1 - (1 - i)(1 + i) = 2 - (1 - i^2) = 2 - 2 = 0$.",
+        "Step 2. $\\lambda^2 - 3\\lambda + 0 = \\lambda(\\lambda - 3) = 0$, so $\\lambda = 0$ or $\\lambda = 3$. A zero eigenvalue is allowed: it just means some direction is squashed to nothing (and it is why the determinant is 0).",
+        "Step 3. $\\lambda = 3$: $B - 3I$ has first row $(-1, 1 - i)$, so $-x + (1 - i)y = 0$ and $x = (1 - i)y$. Take $y = 1 + i$ to clear the bracket: $x = (1 - i)(1 + i) = 2$. So $v = (2, 1 + i)$, and from the normalising section its unit version is $v_3 = (2, 1 + i)/\\sqrt6$.",
+        "Step 4. $\\lambda = 0$: $B$ itself has first row $(2, 1 - i)$, so $2x + (1 - i)y = 0$. Take $x = 1$: $y = -2/(1 - i) = -2(1 + i)/((1 - i)(1 + i)) = -(1 + i)$. So $v = (1, -(1 + i))$, length$^2$ $= 1 + 2 = 3$, unit $v_0 = (1, -1 - i)/\\sqrt3$.",
+        "Step 5. Orthogonality: $\\langle v_3, v_0\\rangle \\propto \\bar2\\cdot1 + \\overline{(1 + i)}\\cdot(-(1 + i)) = 2 - (1 - i)(1 + i) = 2 - 2 = 0$.",
+        "Step 6. Dividing by a complex number: multiply top and bottom by the conjugate of the bottom, as in Step 4. $(1 - i)(1 + i) = 1 + 1 = 2$ is real, so the division becomes easy."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a Hermitian matrix with complex entries",
+      "text": "Find the eigenvalues of the matrix with rows $(1, i)$ and $(-i, 1)$, and a unit eigenvector for the larger one.",
+      "hint": "$(i)(-i) = -i^2 = 1$.",
+      "solution": [
+        "Trace 2. Determinant $1 - (i)(-i) = 1 - (-i^2) = 1 - 1 = 0$. So $\\lambda(\\lambda - 2) = 0$: $\\lambda = 0, 2$.",
+        "$\\lambda = 2$: first row of $A - 2I$ is $(-1, i)$: $-x + iy = 0$, so $x = iy$. Take $y = 1$: $(i, 1)$. Multiplying by the phase $-i$ gives the equivalent $(1, -i)$. Length$^2$ 2: unit vector $(1, -i)/\\sqrt2$.",
+        "Check: $A(1, -i) = (1 + i(-i),\\ -i + (-i)) = (1 + 1, -2i) = 2\\,(1, -i)$."
+      ],
+      "answer": "2 and 0; (1, −i)/√2 for λ = 2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why Hermitian matrices have real eigenvalues and perpendicular eigenvectors"
+    },
+    {
+      "type": "prose",
+      "text": "Every example so far had real eigenvalues and perpendicular eigenvectors. For Hermitian matrices ($A^\\dagger = A$, where $A^\\dagger$ is the conjugate transpose) this is guaranteed, and the proof is short enough to follow line by line. It uses Dirac's bracket $\\langle u\\vert v\\rangle = \\sum_i \\bar u_i v_i$, the complex inner product, and the fact that $\\langle u\\vert Av\\rangle = \\langle A^\\dagger u\\vert v\\rangle$ (moving a matrix across the bracket turns it into its adjoint)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Real eigenvalues"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Suppose $Av = \\lambda v$ with $v \\ne 0$. Take the bracket of both sides with $v$: $\\langle v\\vert Av\\rangle = \\lambda\\langle v\\vert v\\rangle$.",
+        "Step 2. Move $A$ across: $\\langle v\\vert Av\\rangle = \\langle A^\\dagger v\\vert v\\rangle = \\langle Av\\vert v\\rangle$, using $A^\\dagger = A$.",
+        "Step 3. $\\langle Av\\vert v\\rangle = \\langle\\lambda v\\vert v\\rangle = \\bar\\lambda\\langle v\\vert v\\rangle$, because the bracket conjugates numbers in its first slot.",
+        "Step 4. So $\\lambda\\langle v\\vert v\\rangle = \\bar\\lambda\\langle v\\vert v\\rangle$. Since $\\langle v\\vert v\\rangle = \\Vert v\\Vert^2 > 0$, divide by it: $\\lambda = \\bar\\lambda$. A number equal to its own conjugate is real."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "This is why observables are Hermitian. A measurement result is a real number read off a dial, and the possible results are the eigenvalues, so they had better be real."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Perpendicular eigenvectors"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Take $Au = \\mu u$ and $Av = \\lambda v$ with $\\mu \\ne \\lambda$ (both real, from above).",
+        "Step 2. Compute $\\langle u\\vert Av\\rangle$ two ways. Directly: $\\langle u\\vert \\lambda v\\rangle = \\lambda\\langle u\\vert v\\rangle$.",
+        "Step 3. Moving $A$ across: $\\langle Au\\vert v\\rangle = \\langle\\mu u\\vert v\\rangle = \\bar\\mu\\langle u\\vert v\\rangle = \\mu\\langle u\\vert v\\rangle$.",
+        "Step 4. Subtract: $(\\lambda - \\mu)\\langle u\\vert v\\rangle = 0$. Since $\\lambda \\ne \\mu$, $\\langle u\\vert v\\rangle = 0$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "In quantum language: states with different definite values of an observable are perfectly distinguishable. If a qubit is in an eigenstate with $X = +1$, a measurement of $X$ will never report $-1$, because the overlap with the $-1$ eigenstate is zero."
+    },
+    {
+      "type": "prose",
+      "text": "A non-Hermitian matrix need not behave. The matrix with rows $(1, 1)$ and $(0, 2)$ has eigenvalues 1 and 2 (the diagonal, since it is triangular) with eigenvectors $(1, 0)$ and $(1, 1)$, which are not perpendicular. And some matrices, such as rows $(0, 1)$ and $(0, 0)$, have only one eigenvector direction at all (rows $(0, 1)$ and $(0, 0)$: the only eigenvalue is 0, and $(A - 0I)v = 0$ says $y = 0$, so every eigenvector is a multiple of $(1, 0)$). A matrix like that, without a full set of eigenvectors, is called defective. Quantum observables are never like this."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Degenerate eigenvalues and eigenspaces"
+    },
+    {
+      "type": "prose",
+      "text": "Sometimes two or more independent eigenvectors share the same eigenvalue. The eigenvalue is then called degenerate, and the number of independent eigenvectors it has is its degeneracy. When that happens, not just those vectors but every combination of them is an eigenvector too:"
+    },
+    {
+      "type": "math",
+      "tex": "A u = \\lambda u,\\ A w = \\lambda w \\ \\Rightarrow\\ A(au + bw) = aAu + bAw = \\lambda(au + bw)",
+      "caption": "Combinations of eigenvectors with the same eigenvalue are eigenvectors with that eigenvalue."
+    },
+    {
+      "type": "prose",
+      "text": "So a degenerate eigenvalue does not have an eigen-direction but a whole eigen-plane (or higher-dimensional eigenspace): the set of all vectors with $Av = \\lambda v$. The extreme case is the identity matrix, for which every vector is an eigenvector with eigenvalue 1."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the parity of two qubits"
+    },
+    {
+      "type": "prose",
+      "text": "Two qubits have four basis states $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$, so their matrices are $4\\times4$. The observable $Z\\otimes Z$ (read: $Z$ on qubit 1 times $Z$ on qubit 2) is diagonal in this basis, with each basis state picking up the product of its two $Z$ values: $+1\\cdot+1 = +1$ for $\\vert00\\rangle$, $+1\\cdot-1 = -1$ for $\\vert01\\rangle$, $-1$ for $\\vert10\\rangle$ and $+1$ for $\\vert11\\rangle$. So the diagonal is $(1, -1, -1, 1)$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Eigenvalues: $+1$ (twice) and $-1$ (twice). Both are degenerate, with degeneracy 2.",
+        "Step 2. The $+1$ eigenspace is everything of the form $a\\vert00\\rangle + d\\vert11\\rangle$: the states of even parity (the two bits agree).",
+        "Step 3. The $-1$ eigenspace is everything of the form $b\\vert01\\rangle + c\\vert10\\rangle$: odd parity (the bits disagree).",
+        "Step 4. So $(\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$, an entangled Bell state, is an eigenvector of $Z\\otimes Z$ with eigenvalue $+1$: its two bits always agree even though neither bit has a definite value."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Degeneracy matters for measurement. Measuring $Z\\otimes Z$ only asks whether the bits agree; it does not ask what they are. A degenerate outcome projects the state onto the whole eigenspace, not onto one basis vector, which keeps any superposition inside that eigenspace intact (Measurement and the Born Rule works this through)."
+    },
+    {
+      "type": "prose",
+      "text": "Inside a degenerate eigenspace you may choose any orthonormal basis you like. This freedom is real: numpy may return a different basis from yours, and both are correct. When you need a specific one, you pick it using a second observable that commutes with the first (Commutators shows how)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: degeneracy",
+      "text": "The matrix $Z\\otimes I$ ($Z$ on qubit 1, nothing on qubit 2) is diagonal on $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$. What are its diagonal entries, its eigenvalues and their eigenspaces?",
+      "hint": "Qubit 2 does not affect the value at all, so each eigenvalue appears once for each state of qubit 2.",
+      "solution": [
+        "Each basis state picks up the $Z$ value of qubit 1 only: $+1, +1, -1, -1$.",
+        "Eigenvalue $+1$ is doubly degenerate, with eigenspace all $a\\vert00\\rangle + b\\vert01\\rangle = \\vert0\\rangle\\otimes(a\\vert0\\rangle + b\\vert1\\rangle)$: qubit 1 is 0 and qubit 2 is anything.",
+        "Eigenvalue $-1$: all $\\vert1\\rangle\\otimes(\\text{anything})$."
+      ],
+      "answer": "diagonal (1, 1, −1, −1); +1 on span{|00⟩, |01⟩}, −1 on span{|10⟩, |11⟩}"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The spectral theorem: a matrix from its eigenvalues"
+    },
+    {
+      "type": "prose",
+      "text": "For Hermitian matrices the facts above add up to one statement, the most used identity on this shelf. A $d\\times d$ Hermitian matrix always has $d$ orthonormal eigenvectors $v_1, \\dots, v_d$ (picking an orthonormal basis inside any degenerate eigenspace), with real eigenvalues $\\lambda_1, \\dots, \\lambda_d$, and it can be rebuilt from them:"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\sum_{k=1}^{d} \\lambda_k\\, \\vert v_k\\rangle\\langle v_k\\vert = V\\,\\mathrm{diag}(\\lambda_1, \\dots, \\lambda_d)\\,V^\\dagger",
+      "caption": "The spectral theorem. V is the unitary matrix whose columns are the eigenvectors."
+    },
+    {
+      "type": "prose",
+      "text": "The piece $\\vert v_k\\rangle\\langle v_k\\vert$ (written $v_kv_k^\\dagger$ on Linear Algebra for Quantum Mechanics) is an outer product: the column $v_k$ times the row $\\langle v_k\\vert = v_k^\\dagger$ (its conjugate transpose), which makes a matrix. Acting on any vector $w$, it gives $\\vert v_k\\rangle\\langle v_k\\vert w\\rangle$: the component of $w$ along $v_k$, as a vector. That is a projector, $P_k$, the matrix that drops the perpendicular shadow of $w$ onto the line of $v_k$. Projectors satisfy $P_k^2 = P_k$ (projecting twice is the same as once) and, because the eigenvectors are orthonormal and complete, $\\sum_k P_k = I$."
+    },
+    {
+      "type": "prose",
+      "text": "Read the theorem as a recipe for what $A$ does to a vector $w$: split $w$ into its components along the eigenvectors, multiply each component by its eigenvalue, and add the pieces back. That is the picture from the start of the page, written as algebra."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked decomposition"
+    },
+    {
+      "type": "prose",
+      "text": "Use the matrix $A$ with rows $(1, 2)$ and $(2, -2)$, eigenvalue 2 with $v_2 = (2, 1)/\\sqrt5$ and eigenvalue $-3$ with $v_{-3} = (1, -2)/\\sqrt5$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Build $P_2 = v_2 v_2^\\dagger$: entry $(i, j)$ is $(v_2)_i\\overline{(v_2)_j}$. With $v_2 = (2, 1)/\\sqrt5$: $P_2 = \\frac15\\times$ rows $(4, 2)$ and $(2, 1)$.",
+        "Step 2. Similarly $P_{-3} = \\frac15\\times$ rows $(1, -2)$ and $(-2, 4)$.",
+        "Step 3. Check completeness: $P_2 + P_{-3} = \\frac15\\times$ rows $(5, 0)$ and $(0, 5)$ $= I$.",
+        "Step 4. Rebuild: $2P_2 - 3P_{-3} = \\frac15\\times$ rows $(8 - 3,\\ 4 + 6)$ and $(4 + 6,\\ 2 - 12)$ $= \\frac15\\times$ rows $(5, 10)$ and $(10, -10)$, which is rows $(1, 2)$ and $(2, -2)$. That is $A$.",
+        "Step 5. Use it: $A$ applied to $w = (1, 0)$. Components: $\\langle v_2\\vert w\\rangle = 2/\\sqrt5$ and $\\langle v_{-3}\\vert w\\rangle = 1/\\sqrt5$. So $Aw = 2\\cdot\\frac{2}{\\sqrt5}v_2 - 3\\cdot\\frac{1}{\\sqrt5}v_{-3} = \\frac45(2, 1) - \\frac35(1, -2) = (\\frac{8 - 3}{5}, \\frac{4 + 6}{5}) = (1, 2)$, the first column of $A$, as it should be."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For a complex matrix the only change is the conjugate in the outer product. For $B$ above, $v_3 = (2, 1 + i)/\\sqrt6$ gives $P_3 = \\frac16\\times$ rows $(2\\cdot\\bar2,\\ 2\\cdot\\overline{(1 + i)})$ and $((1 + i)\\cdot\\bar2,\\ (1 + i)\\overline{(1 + i)})$ $= \\frac16\\times$ rows $(4, 2 - 2i)$ and $(2 + 2i, 2)$. Since the other eigenvalue is 0, the theorem says $B = 3P_3$: indeed $3\\cdot\\frac16\\times$ rows $(4, 2 - 2i)$ and $(2 + 2i, 2)$ is rows $(2, 1 - i)$ and $(1 + i, 1)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Functions of a matrix, and the time-evolution operator"
+    },
+    {
+      "type": "prose",
+      "text": "How do you square a matrix, take its square root, or exponentiate it? Squaring is easy to define (multiply it by itself) but the spectral theorem makes all of them easy to compute. Square the decomposition: $A^2 = (\\sum_k \\lambda_k P_k)(\\sum_j \\lambda_j P_j) = \\sum_{k,j}\\lambda_k\\lambda_j P_kP_j$. Projectors onto perpendicular eigenvectors kill each other ($P_kP_j = 0$ for $k \\ne j$) and $P_k^2 = P_k$, so only the $k = j$ terms survive: $A^2 = \\sum_k \\lambda_k^2 P_k$. The same holds for any power, and so for any function built from powers:"
+    },
+    {
+      "type": "math",
+      "tex": "f(A) = \\sum_k f(\\lambda_k)\\,\\vert v_k\\rangle\\langle v_k\\vert",
+      "caption": "Apply the function to the eigenvalues; keep the eigenvectors."
+    },
+    {
+      "type": "prose",
+      "text": "The one that matters most is the exponential. In quantum mechanics a state evolves for a time $t$ under the Hamiltonian $H$ (the energy matrix) by $\\vert\\psi(t)\\rangle = e^{-iHt}\\vert\\psi(0)\\rangle$ (The Schrödinger Equation derives this). With the spectral theorem:"
+    },
+    {
+      "type": "math",
+      "tex": "e^{-iHt} = \\sum_k e^{-iE_k t}\\,\\vert v_k\\rangle\\langle v_k\\vert",
+      "caption": "Each energy eigenvalue E_k becomes a phase that turns at rate E_k."
+    },
+    {
+      "type": "prose",
+      "text": "In words: an energy eigenstate never changes except for an overall phase (which, as States and Dirac Notation explains, is invisible), and any other state is a superposition of eigenstates whose phases turn at different rates. All of quantum dynamics is that sentence."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: exponentiating X"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $X$ has eigenvalue $+1$ with projector $\\vert+\\rangle\\langle+\\vert = \\frac12\\times$ rows $(1, 1)$ and $(1, 1)$, and eigenvalue $-1$ with $\\vert-\\rangle\\langle-\\vert = \\frac12\\times$ rows $(1, -1)$ and $(-1, 1)$.",
+        "Step 2. $e^{-iXt} = e^{-it}\\vert+\\rangle\\langle+\\vert + e^{it}\\vert-\\rangle\\langle-\\vert$.",
+        "Step 3. Diagonal entries: $\\frac12(e^{-it} + e^{it}) = \\cos t$. Off-diagonal entries: $\\frac12(e^{-it} - e^{it}) = -i\\sin t$ (Euler's formula $e^{i t} = \\cos t + i\\sin t$ gives both).",
+        "Step 4. So $e^{-iXt} = \\cos t\\, I - i\\sin t\\, X$: rows $(\\cos t, -i\\sin t)$ and $(-i\\sin t, \\cos t)$.",
+        "Step 5. Start in $\\vert0\\rangle = (1, 0)$: $e^{-iXt}\\vert0\\rangle = \\cos t\\vert0\\rangle - i\\sin t\\vert1\\rangle$. The probability of finding 1 is $\\sin^2 t$. At $t = \\pi/6$ it is $(1/2)^2 = 0.25$; at $t = \\pi/2$ it is 1: the qubit has been completely flipped."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "That $\\sin^2 t$ is the simplest Rabi oscillation, the population swinging back and forth between $\\vert0\\rangle$ and $\\vert1\\rangle$; Driven Qubits and Rabi Oscillations builds the real thing."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a complex Hamiltonian"
+    },
+    {
+      "type": "prose",
+      "text": "Take $H = B$ (rows $(2, 1 - i)$ and $(1 + i, 1)$, eigenvalues 0 and 3) and $t = \\pi/3$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The phases: $e^{-i\\cdot0\\cdot t} = 1$ and $e^{-i\\cdot3\\cdot\\pi/3} = e^{-i\\pi} = -1$.",
+        "Step 2. So $e^{-iBt} = 1\\cdot P_0 + (-1)\\cdot P_3 = (I - P_3) - P_3 = I - 2P_3$, using $P_0 + P_3 = I$.",
+        "Step 3. With $P_3 = \\frac16\\times$ rows $(4, 2 - 2i)$ and $(2 + 2i, 2)$: $I - 2P_3$ has rows $(1 - \\frac43,\\ -\\frac{2 - 2i}{3})$ and $(-\\frac{2 + 2i}{3},\\ 1 - \\frac23)$, that is rows $(-\\frac13, \\frac{-2 + 2i}{3})$ and $(\\frac{-2 - 2i}{3}, \\frac13)$.",
+        "Step 4. Apply it to $\\vert0\\rangle$: take the first column, $(-\\frac13, -\\frac{2 + 2i}{3})$.",
+        "Step 5. $P(1) = \\vert{-(2 + 2i)/3}\\vert^2 = (4 + 4)/9 = 8/9 \\approx 0.889$, and $P(0) = 1/9$. They add to 1, as they must for a unitary."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a function of a matrix",
+      "text": "Using the spectral theorem, find $\\sqrt{A}$ for $A$ with rows $(2, 1)$ and $(1, 2)$ (eigenvalue 3 on $(1, 1)/\\sqrt2$, eigenvalue 1 on $(1, -1)/\\sqrt2$), and check that squaring it gives $A$.",
+      "hint": "Square-root each eigenvalue, keep the projectors.",
+      "solution": [
+        "$\\sqrt A = \\sqrt3\\,P_3 + \\sqrt1\\,P_1$ with $P_3 = \\frac12\\times$ rows $(1, 1), (1, 1)$ and $P_1 = \\frac12\\times$ rows $(1, -1), (-1, 1)$.",
+        "Diagonal: $(\\sqrt3 + 1)/2 = 1.366$. Off-diagonal: $(\\sqrt3 - 1)/2 = 0.366$.",
+        "Square: diagonal $1.366^2 + 0.366^2 = 1.866 + 0.134 = 2.000$, off-diagonal $2\\times1.366\\times0.366 = 1.000$. That is $A$."
+      ],
+      "answer": "rows (1.366, 0.366) and (0.366, 1.366)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Eigenvalues of unitary matrices lie on the unit circle"
+    },
+    {
+      "type": "prose",
+      "text": "A unitary matrix $U$ ($U^\\dagger U = I$) preserves lengths: $\\Vert Uv\\Vert^2 = \\langle Uv\\vert Uv\\rangle = \\langle v\\vert U^\\dagger U v\\rangle = \\langle v\\vert v\\rangle$. Apply that to an eigenvector, $Uv = \\lambda v$: then $\\Vert Uv\\Vert = \\vert\\lambda\\vert\\,\\Vert v\\Vert$ must equal $\\Vert v\\Vert$, so $\\vert\\lambda\\vert = 1$. Every eigenvalue of a unitary is a phase $e^{i\\theta}$, a point on the unit circle in the complex plane. Gates and time evolution are unitary, so their eigenvalues are phases, just as the formula $e^{-iE_kt}$ said."
+    },
+    {
+      "type": "list",
+      "items": [
+        "The phase gate $S$ is diagonal with entries $1$ and $i$: eigenvalues $1 = e^{i0}$ and $i = e^{i\\pi/2}$.",
+        "The Hadamard gate $H_d$ (rows $(1, 1)/\\sqrt2$ and $(1, -1)/\\sqrt2$) is both Hermitian and unitary, so its eigenvalues are real and of size 1: they are $+1$ and $-1$.",
+        "The ordinary rotation of the real plane by an angle $\\theta$, rows $(\\cos\\theta, -\\sin\\theta)$ and $(\\sin\\theta, \\cos\\theta)$, has trace $2\\cos\\theta$ and determinant $1$, so $\\lambda = \\cos\\theta \\pm \\sqrt{\\cos^2\\theta - 1} = \\cos\\theta \\pm i\\sin\\theta = e^{\\pm i\\theta}$. For $\\theta = 60°$ these are $0.5 \\pm 0.866i$. Its eigenvectors are $(1, \\mp i)/\\sqrt2$, complex. This is the case from the start of the page with no real picture: a rotation turns every real direction, so no real vector keeps its direction, yet over the complex numbers it has two eigenvectors like any other $2\\times2$ matrix."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The last example is one reason quantum mechanics uses complex numbers: over the complex numbers every square matrix has at least one eigenvector (the characteristic polynomial always has a root), and every Hermitian or unitary matrix has a full orthonormal set of them."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Checking it all with numpy"
+    },
+    {
+      "type": "prose",
+      "text": "By hand for $2\\times2$, by computer for anything larger. Numpy has two routines. np.linalg.eigh is for Hermitian (or real symmetric) matrices: it returns real eigenvalues in ascending order and orthonormal eigenvectors as the columns of a matrix. np.linalg.eig is for general matrices and makes no such promises. Use eigh whenever you can; it is faster and more accurate. The sample below checks every worked example on this page."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nnp.set_printoptions(precision=4, suppress=True)\n\n# 1. The real symmetric example of this page: rows (1, 2) and (2, -2).\nA = np.array([[1, 2], [2, -2]])\nE, V = np.linalg.eigh(A)              # eigh: for Hermitian matrices; eigenvalues come out sorted, ascending\nprint(\"eigenvalues of A:\", E)\nprint(\"eigenvectors (columns):\")\nprint(V)\nfor k in range(2):\n    v = V[:, k]\n    print(f\"  A v = {A @ v}   lambda v = {E[k] * v}\")   # the defining equation, checked\n\n# 2. The spectral decomposition rebuilds A from projectors.\nP = [np.outer(V[:, k], V[:, k].conj()) for k in range(2)]\nprint(\"A == sum_k lambda_k P_k:\", np.allclose(A, E[0] * P[0] + E[1] * P[1]))\nprint(\"P_k are projectors (P^2 = P):\", all(np.allclose(p @ p, p) for p in P))\n\n# 3. The complex Hermitian example: rows (2, 1-i) and (1+i, 1).\nB = np.array([[2, 1 - 1j], [1 + 1j, 1]])\nE, V = np.linalg.eigh(B)\nprint(\"eigenvalues of B:\", np.round(E, 10))\nprint(\"<v_0|v_1> =\", np.round(np.vdot(V[:, 0], V[:, 1]), 12))      # orthogonal\n\n# 4. A function of a matrix: exp(-i B t) at t = pi/3, two ways.\nt = np.pi / 3\nU1 = V @ np.diag(np.exp(-1j * E * t)) @ V.conj().T\nU2 = expm(-1j * B * t)\nprint(\"eigenbasis formula == scipy expm:\", np.allclose(U1, U2))\nout = U1 @ np.array([1, 0])\nprint(\"exp(-iBt)|0> =\", np.round(out, 4), \"  P(1) =\", round(abs(out[1]) ** 2, 4))\n\n# 5. Unitary eigenvalues sit on the unit circle.\nth = np.pi / 3\nR = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])\nlam = np.linalg.eigvals(R)\nprint(\"rotation by 60 degrees: eigenvalues\", np.round(lam, 4), \" moduli\", np.round(abs(lam), 12))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: for $A$ (rows $(1, 2)$, $(2, -2)$) numpy gives eigenvalues $-3$ and $2$ in that order (ascending), with eigenvector columns $(-0.4472, 0.8944)$ and $(-0.8944, -0.4472)$. These are $-(1, -2)/\\sqrt5$ and $-(2, 1)/\\sqrt5$: the same as ours up to a sign, the phase freedom from the normalising section. The defining equation, the spectral decomposition and $P_k^2 = P_k$ all check out. For $B$ the eigenvalues are 0 and 3 (numpy prints the 0 as -0., a rounding error of order $10^{-16}$ that happens to be negative) with $\\langle v_0\\vert v_1\\rangle = 0$. The eigenbasis formula for $e^{-iBt}$ agrees with scipy's expm, and $e^{-iBt}\\vert0\\rangle = (-0.3333, -0.6667 - 0.6667i)$ with $P(1) = 0.8889$, as in the worked example. The $60°$ rotation has eigenvalues $0.5 \\pm 0.866i$, both of modulus 1."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together: a qubit in a tilted field"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit's Hamiltonian is $H = \\frac12(Z + X)$, which (as Driven Qubits and Rabi Oscillations explains) describes a spin in a magnetic field tilted halfway between the $z$ and $x$ axes. Start in $\\vert0\\rangle$. What is the probability of finding $\\vert1\\rangle$ at time $t$?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $H$ has rows $(\\frac12, \\frac12)$ and $(\\frac12, -\\frac12)$. Trace 0, determinant $-\\frac14 - \\frac14 = -\\frac12$. So $\\lambda^2 - \\frac12 = 0$ and $E_\\pm = \\pm\\frac{1}{\\sqrt2} \\approx \\pm0.7071$.",
+        "Step 2. Eigenvector for $E_+ = 1/\\sqrt2$: first row of $H - E_+I$ is $(\\frac12 - \\frac1{\\sqrt2}, \\frac12)$, so $y = (\\sqrt2 - 1)x$. With $x = 1$: $v_+ \\propto (1, 0.4142)$, length $\\sqrt{1 + 0.1716} = 1.0824$, so $v_+ = (0.9239, 0.3827)$. These are $\\cos(\\pi/8)$ and $\\sin(\\pi/8)$.",
+        "Step 3. The other eigenvector is perpendicular: $v_- = (-0.3827, 0.9239)$.",
+        "Step 4. Write $\\vert0\\rangle$ in the eigenbasis: $\\vert0\\rangle = c_+v_+ + c_-v_-$ with $c_\\pm = \\langle v_\\pm\\vert0\\rangle$, so $c_+ = 0.9239$ and $c_- = -0.3827$.",
+        "Step 5. Evolve: each part turns its phase. $\\vert\\psi(t)\\rangle = c_+e^{-iE_+t}v_+ + c_-e^{-iE_-t}v_-$.",
+        "Step 6. The amplitude of $\\vert1\\rangle$ is the second component: $c_+e^{-iE_+t}(0.3827) + c_-e^{-iE_-t}(0.9239) = 0.3536\\,(e^{-it/\\sqrt2} - e^{it/\\sqrt2}) = -0.7071\\,i\\sin(t/\\sqrt2)$, since $0.9239\\times0.3827 = 0.3536$.",
+        "Step 7. $P(1, t) = 0.5\\sin^2(t/\\sqrt2)$. It never exceeds 0.5: a tilted field can only swing the qubit halfway over. The first maximum is at $t = \\pi/\\sqrt2 \\approx 2.22$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Every step was one of this page's tools: characteristic polynomial, eigenvectors, normalising, changing to the eigenbasis, phases from the spectral theorem, back to the original basis. The same steps, with numpy doing step 1 to step 3, simulate every quantum system on this site."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "An eigenvector is a direction a matrix only stretches: $Av = \\lambda v$, with $v \\ne 0$; $\\lambda$ is the stretch factor.",
+        "Eigenvalues solve $\\det(A - \\lambda I) = 0$; for $2\\times2$ matrices, $\\lambda^2 - (\\operatorname{Tr}A)\\lambda + \\det A = 0$. They add to the trace and multiply to the determinant.",
+        "An eigenvector comes from one row of $(A - \\lambda I)v = 0$; normalise with $\\Vert v\\Vert^2 = \\sum\\vert v_i\\vert^2$, and remember an overall phase is free.",
+        "Hermitian matrices have real eigenvalues and orthogonal eigenvectors; unitary matrices have eigenvalues of modulus 1.",
+        "A degenerate eigenvalue has a whole eigenspace; any combination of its eigenvectors is one.",
+        "Spectral theorem: $A = \\sum_k\\lambda_k\\vert v_k\\rangle\\langle v_k\\vert$, and $f(A) = \\sum_k f(\\lambda_k)\\vert v_k\\rangle\\langle v_k\\vert$, which gives $e^{-iHt}$.",
+        "Use np.linalg.eigh for Hermitian matrices; expect its eigenvectors to differ from yours by a phase."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Trace and determinant shortcut",
+      "text": "A $2\\times2$ matrix has trace 5 and determinant 6. What are its eigenvalues? If it is also Hermitian, can its eigenvectors be $(1, 0)$ and $(1, 1)$?",
+      "hint": "Sum = trace, product = determinant.",
+      "solution": [
+        "$\\lambda^2 - 5\\lambda + 6 = (\\lambda - 2)(\\lambda - 3) = 0$: eigenvalues 2 and 3.",
+        "For a Hermitian matrix with two different eigenvalues the eigenvectors must be orthogonal. $\\langle(1, 0)\\vert(1, 1)\\rangle = 1 \\ne 0$, so no."
+      ],
+      "answer": "2 and 3; no"
+    },
+    {
+      "type": "problem",
+      "title": "Eigenvectors of the Hadamard gate",
+      "text": "The Hadamard gate $H_d$ has rows $(1, 1)/\\sqrt2$ and $(1, -1)/\\sqrt2$. Find its eigenvalues and an (unnormalised) eigenvector for $+1$.",
+      "hint": "Same matrix as in Putting it together, times $\\sqrt2$.",
+      "solution": [
+        "Trace 0, determinant $(-1 - 1)/2 = -1$: $\\lambda = \\pm1$.",
+        "$\\lambda = 1$: the first row of $H_d - I$ is $(\\frac1{\\sqrt2} - 1, \\frac1{\\sqrt2})$, so $y = (\\sqrt2 - 1)x$. With $x = 1$: $(1, 0.4142)$.",
+        "Normalised: $(0.9239, 0.3827) = (\\cos\\frac\\pi8, \\sin\\frac\\pi8)$, the direction halfway between $z$ and $x$ on the Bloch sphere. (The Hadamard is a half-turn about that axis.)"
+      ],
+      "answer": "±1; (1, √2 − 1) for +1"
+    },
+    {
+      "type": "problem",
+      "title": "Degenerate or not",
+      "text": "Find the eigenvalues of the $3\\times3$ diagonal matrix with diagonal $(2, 5, 2)$, and describe the eigenspace of the degenerate one. Is $(1, 0, 1)/\\sqrt2$ an eigenvector?",
+      "hint": "A combination of eigenvectors with the same eigenvalue is one.",
+      "solution": [
+        "Diagonal, so the eigenvalues are 2, 5, 2: eigenvalue 2 has degeneracy 2.",
+        "Its eigenspace is all vectors $(a, 0, b)$.",
+        "$(1, 0, 1)/\\sqrt2$ is of that form, so yes, with eigenvalue 2: the matrix gives $(2, 0, 2)/\\sqrt2$."
+      ],
+      "answer": "2 (twice) and 5; yes, eigenvalue 2"
+    },
+    {
+      "type": "problem",
+      "title": "Evolving under Z",
+      "text": "A qubit starts in $\\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$ and evolves under $H = \\frac{\\omega}{2}Z$. Write $\\vert\\psi(t)\\rangle$ and find the probability of $\\vert+\\rangle$ at time $t$. When does it first reach 0?",
+      "hint": "$\\vert0\\rangle$ and $\\vert1\\rangle$ are already energy eigenstates.",
+      "solution": [
+        "$Z$ is diagonal with eigenvalues $\\pm1$ on $\\vert0\\rangle, \\vert1\\rangle$, so $e^{-iHt} = \\mathrm{diag}(e^{-i\\omega t/2}, e^{i\\omega t/2})$.",
+        "$\\vert\\psi(t)\\rangle = (e^{-i\\omega t/2}\\vert0\\rangle + e^{i\\omega t/2}\\vert1\\rangle)/\\sqrt2$.",
+        "$\\langle+\\vert\\psi(t)\\rangle = (e^{-i\\omega t/2} + e^{i\\omega t/2})/2 = \\cos(\\omega t/2)$, so $P(+) = \\cos^2(\\omega t/2)$.",
+        "It first reaches 0 at $\\omega t/2 = \\pi/2$, that is $t = \\pi/\\omega$, when the state is $\\vert-\\rangle$ up to a phase. The populations of $\\vert0\\rangle$ and $\\vert1\\rangle$ stay at 1/2 the whole time: only the relative phase turns."
+      ],
+      "answer": "P(+) = cos²(ωt/2); first zero at t = π/ω"
+    },
+    {
+      "type": "problem",
+      "title": "Prove that projectors are idempotent",
+      "text": "Show that $P = \\vert v\\rangle\\langle v\\vert$ satisfies $P^2 = P$ when $v$ is a unit vector, and find the eigenvalues of $P$.",
+      "hint": "The bracket in the middle is a number.",
+      "solution": [
+        "$P^2 = \\vert v\\rangle\\langle v\\vert v\\rangle\\langle v\\vert = \\vert v\\rangle\\cdot1\\cdot\\langle v\\vert = P$, using $\\langle v\\vert v\\rangle = 1$.",
+        "If $Pw = \\lambda w$ then $P^2w = \\lambda^2 w$, but $P^2 = P$ so $\\lambda^2 = \\lambda$: $\\lambda = 0$ or $1$.",
+        "Eigenvalue 1 on $v$ itself; eigenvalue 0 on everything perpendicular to $v$ (degenerate, for dimension above 2)."
+      ],
+      "answer": "P² = P; eigenvalues 1 (on v) and 0 (on everything orthogonal)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Measurement outcomes are eigenvalues and measurement projectors are the $P_k$: Measurement and the Born Rule (#/quantum/foundations/measurement).",
+        "Expectation values and uncertainty use the eigen-decomposition of an observable: Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty).",
+        "Time evolution $e^{-iHt}$ from the spectrum of $H$: The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation).",
+        "Every quantum reservoir simulator diagonalises its Hamiltonian once with eigh and reuses the eigenbasis at every step: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "S. Axler, Linear Algebra Done Right, 4th edition, Springer (2024), chapters 5 and 7",
+        "G. Strang, Introduction to Linear Algebra, 6th edition, Wellesley-Cambridge Press (2023), chapter 6",
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 2.1",
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 1"
+      ]
+    }
+  ]
+}

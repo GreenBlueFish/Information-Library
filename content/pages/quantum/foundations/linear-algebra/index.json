@@ -1,115 +1,551 @@
 {
   "title": "Linear Algebra for Quantum Mechanics",
-  "intro": "Every calculation in quantum mechanics is a matrix calculation over the complex numbers. This page collects the pieces used on every later page: inner products, adjoints, Hermitian and unitary matrices, eigen-decomposition, matrix exponentials and Kronecker products.",
+  "intro": "Every calculation in quantum mechanics is a calculation with complex vectors and matrices. This page teaches it from the start, with every step shown: inner products and lengths, bases and components, matrix products and why their order matters, Hermitian and unitary matrices, outer products and projectors, the matrix exponential and tensor products.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Complex vectors and the inner product"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "A state of a $d$-level system is a column vector $v \\in \\mathbb{C}^d$. The inner product conjugates the first argument, $\\langle u, v\\rangle = \\sum_i \\bar u_i v_i$, so that $\\langle v, v\\rangle = \\sum_i \\vert v_i\\vert^2$ is real and non-negative: it is the squared length. Two vectors are orthogonal when their inner product is zero, and an orthonormal basis is $d$ mutually orthogonal unit vectors."
-    },
-    {
-      "type": "prose",
-      "text": "Numpy's `np.vdot(u, v)` conjugates its first argument and computes exactly this; `u @ v` does not conjugate and is the wrong tool for complex states."
+      "text": "Complex numbers: modulus, conjugate and $\\vert z\\vert^2 = zz^*$, from Complex Numbers for Quantum Mechanics (#/quantum/foundations/complex-numbers). It helps to have read Why Quantum Mechanics: The Experiments (#/quantum/foundations/why-quantum) to know why states are lists of amplitudes."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "The adjoint, Hermitian and unitary matrices"
-    },
-    {
-      "type": "prose",
-      "text": "The adjoint (conjugate transpose) of a matrix is $A^\\dagger = \\bar A^{\\top}$. It is defined so that $\\langle u, Av\\rangle = \\langle A^\\dagger u, v\\rangle$. Two families of matrices matter most."
+      "text": "What you will be able to do"
     },
     {
       "type": "list",
       "items": [
-        "Hermitian: $A^\\dagger = A$. Their eigenvalues are real and eigenvectors for different eigenvalues are orthogonal. Observables and Hamiltonians are Hermitian.",
-        "Unitary: $U^\\dagger U = I$. They preserve inner products, hence lengths and angles, and their eigenvalues have modulus 1. Time evolution and quantum gates are unitary."
+        "Compute the inner product, the length and the angle between complex vectors, and normalise a vector.",
+        "Write a vector in a different orthonormal basis and read off its components.",
+        "Multiply a matrix by a vector and two matrices together by hand, and explain why the order matters.",
+        "Find a conjugate transpose and recognise Hermitian and unitary matrices.",
+        "Build matrices from outer products and projectors, and exponentiate a matrix whose square is the identity.",
+        "Form the tensor product of two small vectors or matrices."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Eigen-decomposition (the spectral theorem)"
+      "text": "Why linear algebra"
     },
     {
       "type": "prose",
-      "text": "Every Hermitian matrix can be written in terms of its eigenvalues $\\lambda_k$ and an orthonormal basis of eigenvectors $v_k$:"
-    },
-    {
-      "type": "math",
-      "tex": "A = \\sum_k \\lambda_k\\, v_k v_k^\\dagger = V\\,\\mathrm{diag}(\\lambda)\\,V^\\dagger",
-      "caption": "The spectral theorem: V is unitary, with the eigenvectors as its columns."
-    },
-    {
-      "type": "prose",
-      "text": "This is the most useful identity on the shelf. It says a Hermitian matrix just stretches space by real factors along a set of perpendicular directions. Each $v_kv_k^\\dagger$ is the projector onto one direction, which is how measurement outcomes will be defined."
+      "text": "The experiments on Why Quantum Mechanics: The Experiments (#/quantum/foundations/why-quantum) showed that a quantum system is described by a list of complex amplitudes, one for each distinguishable outcome. A list of numbers is a vector. Everything that happens to the system, a beam splitter, a magnetic field, a gate in a quantum computer, takes the list of amplitudes to a new list, and does so linearly: it acts on a sum of amplitudes by acting on each part and adding. Linear maps of vectors are matrices. So the whole of quantum mechanics, at the level this shelf needs, is calculation with complex vectors and matrices. This page teaches that calculation from the beginning, with every step shown. It is the longest page in Foundations because every later page leans on it."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Functions of matrices and the exponential"
+      "text": "Vectors"
     },
     {
       "type": "prose",
-      "text": "Because of the decomposition, any function of a Hermitian matrix is defined by applying the function to the eigenvalues: $f(A) = V\\,\\mathrm{diag}(f(\\lambda))\\,V^\\dagger$. The one that matters is the exponential:"
-    },
-    {
-      "type": "math",
-      "tex": "e^{-iAt} = V\\,\\mathrm{diag}\\left(e^{-i\\lambda_1 t}, \\dots, e^{-i\\lambda_d t}\\right)V^\\dagger",
-      "caption": "For Hermitian A this is unitary: each eigenvalue becomes a phase."
+      "text": "A vector here is a column of $d$ complex numbers, its components. We write it as a column but, to save space on the page, list the components in round brackets: $v = (v_1, v_2)$ means the column with $v_1$ on top and $v_2$ below. The set of all such vectors is written $\\mathbb{C}^d$. A qubit lives in $\\mathbb{C}^2$; three qubits live in $\\mathbb{C}^8$."
     },
     {
       "type": "prose",
-      "text": "This is how every QRC simulator on this site builds its time-evolution operator: diagonalise the Hamiltonian once with `np.linalg.eigh`, then reuse the eigenbasis for any time. The power series $e^{X} = \\sum_n X^n/n!$ gives the same result and is what `scipy.linalg.expm` computes for general matrices. Note that $e^{A+B} = e^Ae^B$ only when $AB = BA$; the gap between the two is what Trotterisation (#/quantum/qubits/gates-and-circuits) controls."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "The commutator"
-    },
-    {
-      "type": "prose",
-      "text": "The commutator $[A, B] = AB - BA$ measures how far two matrices are from commuting. Commuting Hermitian matrices share an eigenbasis, so they can be measured together and their exponentials can be split. Non-commuting ones cannot, and that single fact is behind the uncertainty principle, the order-dependence of rotations, and Trotter error."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Kronecker (tensor) products"
-    },
-    {
-      "type": "prose",
-      "text": "For an $m\\times m$ matrix $A$ and an $n\\times n$ matrix $B$, the Kronecker product $A\\otimes B$ is the $mn\\times mn$ block matrix whose $(i,j)$ block is $A_{ij}B$. It is how state spaces and operators of separate systems combine (Composite Systems (#/quantum/many-body/composite-systems)). Two rules carry most of the weight: $(A\\otimes B)(C\\otimes D) = AC\\otimes BD$, and $(A\\otimes B)^\\dagger = A^\\dagger\\otimes B^\\dagger$. Dimensions multiply, which is why $n$ qubits need $2^n$ amplitudes."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Checking it all numerically"
-    },
-    {
-      "type": "code",
-      "lang": "python",
-      "source": "import numpy as np\nfrom scipy.linalg import expm\n# A random Hermitian matrix, its eigen-decomposition, and the unitary it generates.\nrng = np.random.default_rng(0)\nA = rng.normal(size=(4, 4)) + 1j * rng.normal(size=(4, 4))\nH = (A + A.conj().T) / 2                       # Hermitian: H = H^dagger\nE, V = np.linalg.eigh(H)                       # real eigenvalues, orthonormal eigenvectors\nprint(\"eigenvalues (real):\", np.round(E, 3))\nprint(\"V unitary:\", np.allclose(V.conj().T @ V, np.eye(4)))\nprint(\"H = V diag(E) V^dagger:\", np.allclose(H, V @ np.diag(E) @ V.conj().T))\nU = expm(-1j * H * 0.7)                        # exponential of -i H t\nU2 = V @ np.diag(np.exp(-1j * E * 0.7)) @ V.conj().T\nprint(\"expm agrees with the eigenbasis formula:\", np.allclose(U, U2))\nprint(\"U unitary:\", np.allclose(U.conj().T @ U, np.eye(4)))\n# Kronecker products: dimensions multiply, and (A x B)(C x D) = AC x BD\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1, -1])\nprint(\"X (x) Z is\", np.kron(X, Z).shape, \"and (X(x)Z)(Z(x)X) = XZ (x) ZX:\",\n      np.allclose(np.kron(X, Z) @ np.kron(Z, X), np.kron(X @ Z, Z @ X)))"
-    },
-    {
-      "type": "prose",
-      "text": "Output of the run: the eigenvalues come out real (−1.891, −0.808, 0.46, 1.371), the eigenvector matrix is unitary, the decomposition rebuilds $H$, `expm` and the eigenbasis formula give the same unitary, and the Kronecker mixed-product rule holds."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Where QRC uses this"
+      "text": "Two operations make vectors useful, and both work component by component."
     },
     {
       "type": "list",
       "items": [
-        "Every reservoir step $\\rho\\mapsto U\\rho U^\\dagger$ uses a unitary built by eigen-decomposition: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
-        "The Liouvillian of Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics) is built entirely from Kronecker products.",
-        "Ridge regression on the readout is real linear algebra: the SVD form on Echo State Networks (#/qrc/foundations/echo-state-networks) is the real-valued cousin of the spectral theorem."
+        "Adding: $(1, 2i) + (3, -i) = (1 + 3, 2i - i) = (4, i)$.",
+        "Scaling by a number $c$ (a scalar): $i\\cdot(1, 2i) = (i, 2i^2) = (i, -2)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A combination like $c_1v + c_2w$ is called a linear combination. In quantum mechanics a linear combination of states is a superposition, and the numbers $c_1, c_2$ are amplitudes. The vectors $e_1 = (1, 0)$ and $e_2 = (0, 1)$ are special: any vector in $\\mathbb{C}^2$ is a combination of them, $(v_1, v_2) = v_1e_1 + v_2e_2$. On a qubit these are the states $\\vert0\\rangle$ and $\\vert1\\rangle$ (the notation is explained on States and Dirac Notation (#/quantum/foundations/states-and-dirac-notation))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The inner product"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The real case first"
+    },
+    {
+      "type": "prose",
+      "text": "For ordinary real vectors you may know the dot product: multiply matching components and add. $(1, 2)\\cdot(3, 4) = 3 + 8 = 11$. It measures how much two vectors point the same way, and a vector dotted with itself gives its squared length: $(3, 4)\\cdot(3, 4) = 9 + 16 = 25$, length 5."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why complex vectors need a conjugate"
+    },
+    {
+      "type": "prose",
+      "text": "Try the same with $w = (1, i)$: $w\\cdot w = 1\\cdot1 + i\\cdot i = 1 - 1 = 0$. A non-zero vector with length zero is nonsense. The fix is to conjugate the components of the first vector before multiplying, because $z^*z = \\vert z\\vert^2$ is always positive. The inner product of $u$ and $v$ is"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle u, v\\rangle = \\sum_{k=1}^{d} u_k^*\\,v_k = u_1^*v_1 + u_2^*v_2 + \\cdots + u_d^*v_d",
+      "caption": "Conjugate the first vector, multiply component by component, add."
+    },
+    {
+      "type": "prose",
+      "text": "Now $\\langle w, w\\rangle = 1^*\\cdot1 + i^*\\cdot i = 1 + (-i)(i) = 1 + 1 = 2$, so $w$ has length $\\sqrt2$, as it should. Properties to remember:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\langle v, v\\rangle = \\sum_k\\vert v_k\\vert^2$ is real and positive for every non-zero $v$.",
+        "Swapping the order conjugates the result: $\\langle v, u\\rangle = \\langle u, v\\rangle^*$. So the order matters for complex vectors.",
+        "It is linear in the second slot, $\\langle u, av + bw\\rangle = a\\langle u, v\\rangle + b\\langle u, w\\rangle$, and picks up conjugates in the first: $\\langle au, v\\rangle = a^*\\langle u, v\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Physicists conjugate the first vector; some mathematics books conjugate the second. Python's numpy follows the physicists in np.vdot(u, v); plain u @ v does not conjugate and gives the wrong answer for complex states."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Length and normalising"
+    },
+    {
+      "type": "prose",
+      "text": "The length (norm) of $v$ is $\\Vert v\\Vert = \\sqrt{\\langle v, v\\rangle}$. A unit vector has length 1. Quantum states are always unit vectors, because the squared moduli of the amplitudes are probabilities and must add to 1. To normalise a vector, divide it by its length."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Example: $v = (3, 4i)$. Step 1. $\\langle v, v\\rangle = \\vert3\\vert^2 + \\vert4i\\vert^2 = 9 + 16 = 25$. Step 2. $\\Vert v\\Vert = 5$. Step 3. The unit vector is $(3/5, 4i/5) = (0.6, 0.8i)$, whose squared moduli $0.36$ and $0.64$ add to 1.",
+        "Example: $v = (1, 2i)$. $\\langle v, v\\rangle = 1 + 4 = 5$, so the unit vector is $(1, 2i)/\\sqrt5 \\approx (0.447, 0.894i)$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Orthogonality"
+    },
+    {
+      "type": "prose",
+      "text": "Two vectors are orthogonal when their inner product is zero; for real vectors this means perpendicular. For example $u = (1, i)/\\sqrt2$ and $v = (1, -i)/\\sqrt2$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Conjugate $u$: $u^* = (1, -i)/\\sqrt2$.",
+        "Step 2. Multiply by $v$ component by component: $1\\cdot1 + (-i)(-i) = 1 + i^2 = 1 - 1 = 0$, times $\\tfrac12$.",
+        "Step 3. $\\langle u, v\\rangle = 0$: orthogonal. (Without the conjugate you would get $1 + i(-i) = 2$, the wrong answer.)"
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "In quantum mechanics, orthogonal states are perfectly distinguishable: there is a measurement that always tells them apart. The two outputs of a Stern–Gerlach magnet are orthogonal states."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: inner products",
+      "text": "Let $a = (0.6, 0.8)$ and $b = (1, i)/\\sqrt2$. Compute $\\langle b, a\\rangle$ and $\\vert\\langle b, a\\rangle\\vert^2$. Is $\\langle a, b\\rangle$ the same number?",
+      "hint": "Conjugate the components of the first vector, then multiply and add.",
+      "solution": [
+        "Step 1. Conjugate $b$: $(1, -i)/\\sqrt2$.",
+        "Step 2. $\\langle b, a\\rangle = (1\\cdot0.6 + (-i)\\cdot0.8)/\\sqrt2 = (0.6 - 0.8i)/\\sqrt2$.",
+        "Step 3. $\\vert0.6 - 0.8i\\vert^2 = 0.36 + 0.64 = 1$, divided by $(\\sqrt2)^2 = 2$: $0.5$.",
+        "Step 4. $\\langle a, b\\rangle = \\langle b, a\\rangle^* = (0.6 + 0.8i)/\\sqrt2$: same size, different number."
+      ],
+      "answer": "$\\langle b, a\\rangle = (0.6 - 0.8i)/\\sqrt2$, $\\vert\\langle b, a\\rangle\\vert^2 = 0.5$; $\\langle a, b\\rangle$ is its conjugate"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Orthonormal bases and components"
+    },
+    {
+      "type": "prose",
+      "text": "An orthonormal basis of $\\mathbb{C}^d$ is a set of $d$ unit vectors that are all orthogonal to one another. The standard basis $e_1 = (1, 0)$, $e_2 = (0, 1)$ is one. Another, used constantly for qubits, is"
+    },
+    {
+      "type": "math",
+      "tex": "f_+ = \\frac{1}{\\sqrt2}(1, 1),\\qquad f_- = \\frac{1}{\\sqrt2}(1, -1)",
+      "caption": "On a qubit these are the states |+⟩ and |−⟩, the two outputs of an X measurement."
+    },
+    {
+      "type": "prose",
+      "text": "Check: each has length 1 ($\\tfrac12 + \\tfrac12$), and $\\langle f_+, f_-\\rangle = \\tfrac12(1 - 1) = 0$. Every vector can be written as a combination of the vectors of any orthonormal basis, and the coefficients are found by inner products:"
+    },
+    {
+      "type": "math",
+      "tex": "v = \\sum_k c_k\\,f_k,\\qquad c_k = \\langle f_k, v\\rangle",
+      "caption": "Expanding a vector in an orthonormal basis. In quantum mechanics |c_k|² is the probability of outcome k when measuring in that basis."
+    },
+    {
+      "type": "prose",
+      "text": "Why does that work? Take the inner product of both sides of $v = c_1f_1 + c_2f_2$ with $f_1$: $\\langle f_1, v\\rangle = c_1\\langle f_1, f_1\\rangle + c_2\\langle f_1, f_2\\rangle = c_1\\cdot1 + c_2\\cdot0 = c_1$. Orthonormality kills every term but one."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. Write $v = (0.6, 0.8)$ in the $f_\\pm$ basis."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $c_+ = \\langle f_+, v\\rangle = (0.6 + 0.8)/\\sqrt2 = 1.4/\\sqrt2 = 0.98995$.",
+        "Step 2. $c_- = \\langle f_-, v\\rangle = (0.6 - 0.8)/\\sqrt2 = -0.2/\\sqrt2 = -0.14142$.",
+        "Step 3. Check: $c_+f_+ + c_-f_- = \\tfrac{1}{2}(1.4 - 0.2,\\ 1.4 + 0.2) = (0.6, 0.8)$. Correct.",
+        "Step 4. $\\vert c_+\\vert^2 + \\vert c_-\\vert^2 = 0.98 + 0.02 = 1$: the length is the same in any orthonormal basis."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "That last point is important. The vector is the same object; only its description changed. Quantum mechanics is full of changes of basis, because each measurement has its own basis, and the components in that basis give the probabilities. Here a measurement in the $f_\\pm$ basis would give $+$ with probability 0.98 and $-$ with probability 0.02."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: changing basis",
+      "text": "Write $e_1 = (1, 0)$ in the $f_\\pm$ basis. What are the probabilities of $+$ and $-$?",
+      "hint": "Use $c_k = \\langle f_k, e_1\\rangle$.",
+      "solution": [
+        "Step 1. $c_+ = \\langle f_+, e_1\\rangle = (1\\cdot1 + 1\\cdot0)/\\sqrt2 = 1/\\sqrt2$.",
+        "Step 2. $c_- = \\langle f_-, e_1\\rangle = (1\\cdot1 + (-1)\\cdot0)/\\sqrt2 = 1/\\sqrt2$.",
+        "Step 3. Check: $(f_+ + f_-)/\\sqrt2 = \\tfrac12(1 + 1, 1 - 1) = (1, 0)$. Probabilities $\\vert c_\\pm\\vert^2 = \\tfrac12$ each: an atom that is up along $z$ goes $+x$ or $-x$ half the time each, as on Why Quantum Mechanics: The Experiments (#/quantum/foundations/why-quantum)."
+      ],
+      "answer": "$e_1 = (f_+ + f_-)/\\sqrt2$; probabilities $\\tfrac12$ and $\\tfrac12$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Matrices are maps"
+    },
+    {
+      "type": "prose",
+      "text": "A $d\\times d$ matrix $A$ is a square array of numbers $A_{jk}$ (row $j$, column $k$) that takes a vector $v$ to a new vector $Av$. Component $j$ of the result is row $j$ of the matrix times $v$, entry by entry, added up:"
+    },
+    {
+      "type": "math",
+      "tex": "(Av)_j = \\sum_k A_{jk}\\,v_k",
+      "caption": "Multiply along the row, add. No conjugates here."
+    },
+    {
+      "type": "prose",
+      "text": "Since the renderer here cannot draw a grid of numbers, this shelf writes a $2\\times2$ matrix by its rows: 'rows $(a, b)$ and $(c, d)$' means $a$ and $b$ in the top row, $c$ and $d$ in the bottom row. Three matrices you will meet on every page:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$X$, with rows $(0, 1)$ and $(1, 0)$. It swaps the two components: $X(v_1, v_2) = (0\\cdot v_1 + 1\\cdot v_2,\\ 1\\cdot v_1 + 0\\cdot v_2) = (v_2, v_1)$. On a qubit it is the NOT gate.",
+        "$Z$, with rows $(1, 0)$ and $(0, -1)$. It flips the sign of the second component: $Z(v_1, v_2) = (v_1, -v_2)$.",
+        "The identity $I$, with rows $(1, 0)$ and $(0, 1)$, which changes nothing: $Iv = v$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So $X(0.6, 0.8) = (0.8, 0.6)$ and $Z(0.6, 0.8) = (0.6, -0.8)$. A useful way to read any matrix: its first column is where it sends $e_1$, its second column is where it sends $e_2$. $X$ has first column $(0, 1)$: it sends $e_1$ to $e_2$."
+    },
+    {
+      "type": "prose",
+      "text": "Matrices are linear: $A(av + bw) = aAv + bAw$. This is the deep reason superposition works. If a device sends $\\vert0\\rangle$ somewhere and $\\vert1\\rangle$ somewhere else, it sends a superposition of the two to the same superposition of the results."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Multiplying matrices"
+    },
+    {
+      "type": "prose",
+      "text": "Doing $B$ first and then $A$ to a vector gives $A(Bv)$. This combined map is itself a matrix, the product $AB$. Notice the order: the matrix written on the right acts first. Entry $(j, k)$ of $AB$ is row $j$ of $A$ times column $k$ of $B$:"
+    },
+    {
+      "type": "math",
+      "tex": "(AB)_{jk} = \\sum_m A_{jm}B_{mk}",
+      "caption": "Row of the left matrix times column of the right matrix."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. $A$ has rows $(1, 2)$, $(3, 4)$ and $B$ has rows $(0, 1)$, $(5, -1)$. The columns of $B$ are $(0, 5)$ and $(1, -1)$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Entry (1,1): row 1 of $A$ times column 1 of $B$: $1\\cdot0 + 2\\cdot5 = 10$.",
+        "Step 2. Entry (1,2): row 1 of $A$ times column 2 of $B$: $1\\cdot1 + 2\\cdot(-1) = -1$.",
+        "Step 3. Entry (2,1): $3\\cdot0 + 4\\cdot5 = 20$. Entry (2,2): $3\\cdot1 + 4\\cdot(-1) = -1$.",
+        "Step 4. $AB$ has rows $(10, -1)$ and $(20, -1)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Now in the other order. $BA$: row 1 of $B$, $(0, 1)$, times the columns of $A$, $(1, 3)$ and $(2, 4)$, gives $3$ and $4$; row 2, $(5, -1)$, gives $5 - 3 = 2$ and $10 - 4 = 6$. So $BA$ has rows $(3, 4)$ and $(2, 6)$, completely different from $AB$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Order matters: XZ is not ZX"
+    },
+    {
+      "type": "prose",
+      "text": "Matrix multiplication is usually not commutative: $AB \\ne BA$. For quantum mechanics this is not a nuisance but the heart of the subject. Compute it for $X$ and $Z$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $XZ$: row 1 of $X$, $(0, 1)$, times the columns of $Z$, $(1, 0)$ and $(0, -1)$: $0$ and $-1$. Row 2, $(1, 0)$: $1$ and $0$. So $XZ$ has rows $(0, -1)$ and $(1, 0)$.",
+        "Step 2. $ZX$: row 1 of $Z$, $(1, 0)$, times the columns of $X$, $(0, 1)$ and $(1, 0)$: $0$ and $1$. Row 2, $(0, -1)$: $-1$ and $0$. So $ZX$ has rows $(0, 1)$ and $(-1, 0)$.",
+        "Step 3. $ZX = -XZ$: they differ by a sign."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The difference $AB - BA$ is called the commutator $[A, B]$. Here $[X, Z] = XZ - ZX$ has rows $(0, -2)$ and $(2, 0)$, which equals $-2iY$ where $Y$ is the third Pauli matrix, with rows $(0, -i)$ and $(i, 0)$. In the Stern–Gerlach experiment, measuring $Z$ then $X$ is not the same as $X$ then $Z$; this non-commuting pair of matrices is the mathematical form of that fact. The full story, including why commuting matrices can be measured together, is on Commutators and Compatible Observables (#/quantum/foundations/commutators)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: matrix products",
+      "text": "Compute $XY$ and $YX$, where $Y$ has rows $(0, -i)$ and $(i, 0)$. How are they related to $Z$?",
+      "hint": "Write down the columns of the right-hand matrix first.",
+      "solution": [
+        "Step 1. The columns of $Y$ are $(0, i)$ and $(-i, 0)$.",
+        "Step 2. $XY$: row $(0, 1)$ gives $i$ and $0$; row $(1, 0)$ gives $0$ and $-i$. Rows $(i, 0)$ and $(0, -i)$, which is $iZ$.",
+        "Step 3. $YX$: the columns of $X$ are $(0, 1)$ and $(1, 0)$. Row $(0, -i)$ gives $-i$ and $0$; row $(i, 0)$ gives $0$ and $i$. Rows $(-i, 0)$ and $(0, i)$, which is $-iZ$."
+      ],
+      "answer": "$XY = iZ$ and $YX = -iZ$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The conjugate transpose"
+    },
+    {
+      "type": "prose",
+      "text": "The conjugate transpose (or adjoint) $A^\\dagger$ ('A dagger') of a matrix is made in two moves: transpose (turn rows into columns, so entry $(j, k)$ goes to $(k, j)$), then conjugate every entry. In symbols $(A^\\dagger)_{jk} = A_{kj}^*$. For a column vector $v$, $v^\\dagger$ is the row of conjugated components, and then the inner product is just a matrix product: $\\langle u, v\\rangle = u^\\dagger v$."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. $N$ has rows $(2, 1 + i)$ and $(3i, 0)$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Transpose: rows $(2, 3i)$ and $(1 + i, 0)$.",
+        "Step 2. Conjugate each entry: rows $(2, -3i)$ and $(1 - i, 0)$. That is $N^\\dagger$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The reason the adjoint exists: it is the matrix that moves to the other side of an inner product, $\\langle u, Av\\rangle = \\langle A^\\dagger u, v\\rangle$. Two rules: $(A^\\dagger)^\\dagger = A$, and $(AB)^\\dagger = B^\\dagger A^\\dagger$ (the order reverses, like taking off socks and shoes)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Hermitian matrices"
+    },
+    {
+      "type": "prose",
+      "text": "A matrix is Hermitian when it equals its own adjoint, $A^\\dagger = A$. Looking at the definition: the diagonal entries must equal their own conjugates, so they are real; and each entry below the diagonal is the conjugate of the matching entry above it."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. $M$ has rows $(1, i)$ and $(-i, 2)$. Its transpose has rows $(1, -i)$ and $(i, 2)$; conjugating gives rows $(1, i)$ and $(-i, 2)$, which is $M$ again. So $M$ is Hermitian. $X$, $Y$ and $Z$ are all Hermitian too."
+    },
+    {
+      "type": "prose",
+      "text": "Why they matter: every quantity you can measure, energy, spin along an axis, position, is represented by a Hermitian matrix (an observable), and the energy matrix, the Hamiltonian, decides how the system moves in time. The property that makes them right for the job is that their eigenvalues, the possible measurement results, are always real numbers. That is the subject of the next page, Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors), which also shows that a Hermitian matrix has an orthonormal basis of eigenvectors (the spectral theorem); that basis is the measurement basis."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Unitary matrices"
+    },
+    {
+      "type": "prose",
+      "text": "A matrix $U$ is unitary when its adjoint is its inverse: $U^\\dagger U = I$. What that means is clearest from what it does to inner products:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\langle Uu, Uv\\rangle = (Uu)^\\dagger(Uv) = u^\\dagger U^\\dagger Uv$, using $(Uu)^\\dagger = u^\\dagger U^\\dagger$.",
+        "Step 2. $U^\\dagger U = I$, so this is $u^\\dagger v = \\langle u, v\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So a unitary keeps every inner product, and therefore every length and every angle, unchanged. It is a rigid rotation (possibly with reflections) of complex space. Because quantum states must stay unit vectors, every change that happens to an isolated quantum system, whether a gate in a circuit or evolution over time, is a unitary matrix. A practical test: $U$ is unitary exactly when its columns form an orthonormal basis (because entry $(j, k)$ of $U^\\dagger U$ is the inner product of column $j$ with column $k$)."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example: the Hadamard matrix $H_d$, with rows $(1, 1)/\\sqrt2$ and $(1, -1)/\\sqrt2$. Its columns are $f_+$ and $f_-$, which we showed are orthonormal, so it is unitary. It sends $e_1 = (1, 0)$ to $f_+$ and $e_2$ to $f_-$: it switches between the $Z$ basis and the $X$ basis. It is also Hermitian, so it is its own inverse: $H_dH_d = I$. Applied to $(0.6, 0.8i)$, it gives $(0.6 + 0.8i, 0.6 - 0.8i)/\\sqrt2$, and the length is still 1."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example: $S$, with rows $(1, 0)$ and $(0, i)$. Columns $(1, 0)$ and $(0, i)$ have length 1 and inner product 0, so $S$ is unitary. But $S^\\dagger$ has rows $(1, 0)$ and $(0, -i)$, not $S$, so $S$ is not Hermitian. Unitary and Hermitian are different properties; a matrix can have one, both or neither."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: is it unitary?",
+      "text": "Is the matrix with rows $(1, i)/\\sqrt2$ and $(i, 1)/\\sqrt2$ unitary? Is it Hermitian?",
+      "hint": "Check the columns are orthonormal; for Hermitian, compare the off-diagonal entries.",
+      "solution": [
+        "Step 1. Columns: $c_1 = (1, i)/\\sqrt2$ and $c_2 = (i, 1)/\\sqrt2$, each of squared length $\\tfrac12(1 + 1) = 1$.",
+        "Step 2. $\\langle c_1, c_2\\rangle = \\tfrac12(1^*\\cdot i + i^*\\cdot 1) = \\tfrac12(i - i) = 0$. Orthonormal columns: unitary.",
+        "Step 3. The adjoint has rows $(1, -i)/\\sqrt2$ and $(-i, 1)/\\sqrt2$, different from the matrix: not Hermitian."
+      ],
+      "answer": "unitary, not Hermitian"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Outer products and projectors"
+    },
+    {
+      "type": "prose",
+      "text": "The inner product $u^\\dagger v$ (a row times a column) is a number. The other way round, a column times a row, $uv^\\dagger$, is a matrix, called the outer product: entry $(j, k)$ is $u_jv_k^*$. In Dirac notation it is written $\\vert u\\rangle\\langle v\\vert$. It acts on a vector $w$ as $(uv^\\dagger)w = u\\,(v^\\dagger w) = \\langle v, w\\rangle\\,u$: take the inner product with $v$, and use it to scale $u$."
+    },
+    {
+      "type": "prose",
+      "text": "Worked examples. $e_1e_2^\\dagger$ has the single entry 1 in row 1, column 2 (rows $(0, 1)$ and $(0, 0)$): it sends $e_2$ to $e_1$ and kills $e_1$. Adding the mirror image, $e_1e_2^\\dagger + e_2e_1^\\dagger$ has rows $(0, 1)$ and $(1, 0)$, which is $X$. In Dirac notation, $X = \\vert0\\rangle\\langle1\\vert + \\vert1\\rangle\\langle0\\vert$ and $Z = \\vert0\\rangle\\langle0\\vert - \\vert1\\rangle\\langle1\\vert$. Building matrices from outer products is how this shelf writes them without drawing grids."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Projectors"
+    },
+    {
+      "type": "prose",
+      "text": "For a unit vector $f$, the matrix $P = ff^\\dagger$ is the projector onto $f$. It takes any vector to its shadow along $f$: $Pw = \\langle f, w\\rangle f$. Projecting twice is the same as projecting once, $P^2 = P$, because $P^2 = f(f^\\dagger f)f^\\dagger = f\\cdot1\\cdot f^\\dagger$. Projectors are also Hermitian."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. $P_+ = f_+f_+^\\dagger$ has every entry equal to $\\tfrac12$ (rows $(\\tfrac12, \\tfrac12)$, $(\\tfrac12, \\tfrac12)$). Applied to $v = (0.6, 0.8)$: $P_+v = (0.7, 0.7)$. Its squared length is $0.49 + 0.49 = 0.98$, which equals $\\vert c_+\\vert^2$ from the change-of-basis example. In general $\\langle v, Pv\\rangle = \\vert\\langle f, v\\rangle\\vert^2$ is the probability of the outcome $f$, and measurement is described by projectors on Measurement and the Born Rule (#/quantum/foundations/measurement)."
+    },
+    {
+      "type": "prose",
+      "text": "The projectors onto the vectors of an orthonormal basis add up to the identity: $e_1e_1^\\dagger + e_2e_2^\\dagger = I$, and likewise $P_+ + P_- = I$. This completeness relation says that the outcomes of a measurement cover every possibility, and in calculations it lets you insert $I = \\sum_k f_kf_k^\\dagger$ anywhere to change basis."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Functions of matrices: the exponential"
+    },
+    {
+      "type": "prose",
+      "text": "On The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation) the change of a quantum state over time $t$ is the matrix $e^{-iHt}$, where $H$ is the Hamiltonian. What does the exponential of a matrix mean? The same power series as for numbers, with powers of the matrix:"
+    },
+    {
+      "type": "math",
+      "tex": "e^{A} = I + A + \\frac{A^2}{2!} + \\frac{A^3}{3!} + \\cdots",
+      "caption": "Defined for any square matrix; the series always converges."
+    },
+    {
+      "type": "prose",
+      "text": "Two cases can be done by hand, and between them they cover a lot of this shelf."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Diagonal matrices"
+    },
+    {
+      "type": "prose",
+      "text": "If $A$ is diagonal, every power is diagonal with the powers of the diagonal entries, so the series acts on each diagonal entry separately: $e^{A}$ is diagonal with entries $e^{A_{11}}, e^{A_{22}}, \\dots$. For example $e^{-i\\theta Z}$ is diagonal with entries $e^{-i\\theta}$ and $e^{i\\theta}$. With $\\theta = 0.3$ these are $0.9553 - 0.2955i$ and $0.9553 + 0.2955i$. Each entry is a phase, so the result is unitary."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Matrices that square to the identity"
+    },
+    {
+      "type": "prose",
+      "text": "$X$, $Y$ and $Z$ each satisfy $A^2 = I$ (check: $X$ swaps twice and gets back where it started). Then all even powers are $I$ and all odd powers are $A$, and the series splits like Euler's formula on Complex Numbers for Quantum Mechanics (#/quantum/foundations/complex-numbers):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $e^{-i\\theta X} = I + (-i\\theta)X + \\frac{(-i\\theta)^2}{2!}I + \\frac{(-i\\theta)^3}{3!}X + \\frac{(-i\\theta)^4}{4!}I + \\cdots$",
+        "Step 2. Even terms: $\\left(1 - \\frac{\\theta^2}{2!} + \\frac{\\theta^4}{4!} - \\cdots\\right)I = \\cos\\theta\\,I$.",
+        "Step 3. Odd terms: $-i\\left(\\theta - \\frac{\\theta^3}{3!} + \\cdots\\right)X = -i\\sin\\theta\\,X$."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "e^{-i\\theta X} = \\cos\\theta\\,I - i\\sin\\theta\\,X\\qquad(\\text{valid whenever } X^2 = I)",
+      "caption": "The rotation formula used on Pauli Operators and Rotations."
+    },
+    {
+      "type": "prose",
+      "text": "For $\\theta = 0.3$ the result has rows $(0.9553, -0.2955i)$ and $(-0.2955i, 0.9553)$. This one formula gives every single-qubit rotation gate on Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations). For a general Hermitian matrix the exponential is computed in its eigenbasis, where it is diagonal; that method is on Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors)."
+    },
+    {
+      "type": "prose",
+      "text": "A warning that matters later. For numbers, $e^{a + b} = e^ae^b$. For matrices it is guaranteed only when $AB = BA$, and it usually fails otherwise. Since $XZ \\ne ZX$, $e^{X + Z} \\ne e^Xe^Z$ (the code below confirms it). Simulating a Hamiltonian made of non-commuting parts by doing each part separately, Trotterisation, carries an error for exactly this reason (Gates and Circuits (#/quantum/qubits/gates-and-circuits))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A first look at eigenvalues"
+    },
+    {
+      "type": "prose",
+      "text": "Some vectors are only stretched by a matrix, not turned: $Av = \\lambda v$ for a number $\\lambda$. Such a $v$ is an eigenvector and $\\lambda$ its eigenvalue; for an observable the eigenvalues are the possible measurement results and the eigenvectors the states with a definite result. They are important enough to get their own page, Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors); here are two you can already check by hand."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $Z e_1 = (1, 0) = +1\\cdot e_1$ and $Z e_2 = (0, -1) = -1\\cdot e_2$: the standard basis vectors are eigenvectors of $Z$, with eigenvalues $+1$ and $-1$. These are the two results of a Z measurement, up and down.",
+        "Step 2. $X f_+ = X(1, 1)/\\sqrt2 = (1, 1)/\\sqrt2 = +1\\cdot f_+$ and $X f_- = X(1, -1)/\\sqrt2 = (-1, 1)/\\sqrt2 = -1\\cdot f_-$: the $f_\\pm$ basis consists of eigenvectors of $X$, with eigenvalues $\\pm1$.",
+        "Step 3. A vector that is not an eigenvector gets turned: $X e_1 = e_2$, which is not a multiple of $e_1$. So $e_1$ (definite up along $z$) has no definite value of $X$, which is the Stern–Gerlach Z–X–Z result in matrix form."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Tensor products: a preview"
+    },
+    {
+      "type": "prose",
+      "text": "How do you describe two systems at once, two qubits for instance? If qubit 1 has amplitudes $(a_1, a_2)$ and qubit 2 has $(b_1, b_2)$, the pair has one amplitude for each combination of outcomes, $00, 01, 10, 11$, and the amplitude of a combination is the product. That list is the tensor (Kronecker) product:"
+    },
+    {
+      "type": "math",
+      "tex": "(a_1, a_2)\\otimes(b_1, b_2) = (a_1b_1,\\ a_1b_2,\\ a_2b_1,\\ a_2b_2)",
+      "caption": "Dimensions multiply: 2 × 2 = 4, and n qubits need 2ⁿ amplitudes."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. $(0.6, 0.8)\\otimes f_+ = (0.6, 0.6, 0.8, 0.8)/\\sqrt2 = (0.4243, 0.4243, 0.5657, 0.5657)$. Matrices combine the same way: $A\\otimes B$ is the big matrix made of blocks, block $(j, k)$ being $A_{jk}B$. So $X\\otimes Z$ is $4\\times4$: the top-left and bottom-right blocks are $0\\cdot Z$ and the other two are $1\\cdot Z$, giving rows $(0, 0, 1, 0)$, $(0, 0, 0, -1)$, $(1, 0, 0, 0)$, $(0, -1, 0, 0)$. Two rules carry most of the weight: $(A\\otimes B)(u\\otimes v) = Au\\otimes Bv$ (each matrix acts on its own system) and $(A\\otimes B)(C\\otimes D) = AC\\otimes BD$. The full treatment, including which qubit is written first, is on Composite Systems and Tensor Products (#/quantum/many-body/composite-systems); most two-qubit states are not tensor products of one-qubit states at all, which is entanglement (Entanglement and Reduced States (#/quantum/many-body/entanglement))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "problem",
+      "title": "A beam splitter as a matrix",
+      "text": "Model a beam splitter by the Hadamard matrix $H_d$ (rows $(1, 1)/\\sqrt2$ and $(1, -1)/\\sqrt2$), acting on the amplitudes (upper, lower). A photon enters as $(1, 0)$. Compute the amplitudes after one splitter, after a phase $e^{i\\varphi}$ on the lower path (the diagonal matrix with entries $1$ and $e^{i\\varphi}$), and after a second splitter. What is the probability of the first output, and check it for $\\varphi = 0$ and $\\varphi = \\pi$.",
+      "hint": "Use $\\vert1 + e^{i\\varphi}\\vert^2 = 2 + 2\\cos\\varphi$.",
+      "solution": [
+        "Step 1. $H_d(1, 0) = (1, 1)/\\sqrt2$: equal amplitudes on both paths.",
+        "Step 2. Phase: $(1, e^{i\\varphi})/\\sqrt2$.",
+        "Step 3. Second splitter: $H_d(1, e^{i\\varphi})/\\sqrt2 = \\tfrac12(1 + e^{i\\varphi},\\ 1 - e^{i\\varphi})$.",
+        "Step 4. $P(\\text{first}) = \\tfrac14\\vert1 + e^{i\\varphi}\\vert^2 = \\tfrac14(1 + 1 + 2\\cos\\varphi) = \\tfrac12(1 + \\cos\\varphi) = \\cos^2(\\varphi/2)$.",
+        "Step 5. $\\varphi = 0$: probability 1. $\\varphi = \\pi$: probability 0. This is the interferometer of Why Quantum Mechanics: The Experiments (#/quantum/foundations/why-quantum) as three matrices multiplied together."
+      ],
+      "answer": "$\\cos^2(\\varphi/2)$: 1 at φ = 0, 0 at φ = π"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "States are complex vectors; the inner product $\\langle u, v\\rangle = \\sum_k u_k^*v_k$ conjugates the first vector.",
+        "Length $\\Vert v\\Vert = \\sqrt{\\langle v, v\\rangle}$; states are unit vectors; orthogonal means inner product zero.",
+        "In an orthonormal basis, the components are $c_k = \\langle f_k, v\\rangle$, and $\\vert c_k\\vert^2$ add to 1.",
+        "Matrices act on vectors row by row; $AB$ means $B$ first; usually $AB \\ne BA$, and $[X, Z] = -2iY$.",
+        "$A^\\dagger$ is the conjugate transpose. Hermitian: $A^\\dagger = A$ (observables). Unitary: $U^\\dagger U = I$ (evolution and gates), which keeps lengths and angles.",
+        "Outer products $uv^\\dagger$ build matrices; projectors $ff^\\dagger$ satisfy $P^2 = P$ and sum to $I$ over a basis.",
+        "$e^{-i\\theta A} = \\cos\\theta\\,I - i\\sin\\theta\\,A$ when $A^2 = I$; $e^{A + B} = e^Ae^B$ is guaranteed only when $AB = BA$.",
+        "Tensor products multiply dimensions."
       ]
     },
     {
@@ -120,33 +556,86 @@
     {
       "type": "problem",
       "title": "Hermitian or not",
-      "text": "Is the matrix with rows $(1, i)$ and $(-i, 2)$ Hermitian? Find its eigenvalues.",
+      "text": "Is the matrix with rows $(1, i)$ and $(-i, 2)$ Hermitian? What does it do to $e_1 = (1, 0)$, and what is $\\langle e_1, Me_1\\rangle$?",
       "solution": [
-        "The adjoint swaps and conjugates the off-diagonal entries: the top-right entry of $A^\\dagger$ is $\\overline{-i} = i$, the bottom-left is $\\overline{i} = -i$. So $A^\\dagger = A$: it is Hermitian.",
-        "Trace 3 and determinant $1\\cdot 2 - (i)(-i) = 2 - 1 = 1$, so $\\lambda^2 - 3\\lambda + 1 = 0$.",
-        "$\\lambda = (3\\pm\\sqrt5)/2 \\approx 2.618$ and $0.382$: real, as they must be."
+        "Step 1. The adjoint swaps and conjugates the off-diagonal entries: the top-right entry of $M^\\dagger$ is $(-i)^* = i$, the bottom-left is $i^* = -i$, and the diagonal $1, 2$ is real. So $M^\\dagger = M$: Hermitian.",
+        "Step 2. $Me_1$ is the first column, $(1, -i)$.",
+        "Step 3. $\\langle e_1, Me_1\\rangle = 1\\cdot1 + 0\\cdot(-i) = 1$, a real number, as it must be for a Hermitian matrix (this is the expectation value of Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty))."
       ],
-      "answer": "Hermitian; eigenvalues 2.618 and 0.382"
+      "answer": "Hermitian; $Me_1 = (1, -i)$; $\\langle e_1, Me_1\\rangle = 1$"
     },
     {
       "type": "problem",
       "title": "Exponential of a diagonal matrix",
-      "text": "Write $e^{-i\\theta Z}$ as a matrix, where $Z$ is diagonal with entries $1$ and $-1$. Is it unitary?",
+      "text": "Write $e^{-i\\theta Z}$ as a matrix, where $Z$ is diagonal with entries $1$ and $-1$. Is it unitary? What does it do to $f_+$?",
       "solution": [
-        "$Z$ is already diagonal, so exponentiate the diagonal: $e^{-i\\theta Z} = \\mathrm{diag}(e^{-i\\theta}, e^{i\\theta})$.",
-        "Each entry has modulus 1 and the matrix is diagonal, so $U^\\dagger U = \\mathrm{diag}(1, 1) = I$: unitary."
+        "Step 1. $Z$ is diagonal, so exponentiate the diagonal: $e^{-i\\theta Z}$ is diagonal with entries $e^{-i\\theta}$ and $e^{i\\theta}$.",
+        "Step 2. Each entry has modulus 1 and the matrix is diagonal, so $U^\\dagger U$ is diagonal with entries $\\vert e^{\\mp i\\theta}\\vert^2 = 1$: unitary.",
+        "Step 3. $e^{-i\\theta Z}f_+ = (e^{-i\\theta}, e^{i\\theta})/\\sqrt2 = e^{-i\\theta}(1, e^{2i\\theta})/\\sqrt2$: up to a global phase, a relative phase $2\\theta$ between the components."
       ],
-      "answer": "diag(e^{-iθ}, e^{iθ}); yes"
+      "answer": "diagonal with $e^{-i\\theta}, e^{i\\theta}$; unitary; it gives $f_+$ a relative phase of $2\\theta$"
+    },
+    {
+      "type": "problem",
+      "title": "A projector and a probability",
+      "text": "For $v = (0.6, 0.8i)$, compute $P_0v$ where $P_0 = e_1e_1^\\dagger$, and $\\langle v, P_0v\\rangle$. Then compute $\\vert\\langle f_+, v\\rangle\\vert^2$.",
+      "solution": [
+        "Step 1. $P_0$ keeps the first component and zeroes the second: $P_0v = (0.6, 0)$.",
+        "Step 2. $\\langle v, P_0v\\rangle = 0.6^*\\cdot0.6 + (0.8i)^*\\cdot0 = 0.36$.",
+        "Step 3. $\\langle f_+, v\\rangle = (0.6 + 0.8i)/\\sqrt2$, with squared modulus $(0.36 + 0.64)/2 = 0.5$."
+      ],
+      "answer": "(0.6, 0); 0.36; 0.5"
     },
     {
       "type": "problem",
       "title": "Sizes of tensor products",
-      "text": "A system of one qubit and one 4-level system is described by vectors of what dimension? What is the size of $X\\otimes B$ for $X$ a $2\\times2$ and $B$ a $4\\times4$ matrix?",
+      "text": "A system of one qubit and one 4-level system is described by vectors of what dimension? What is the size of $X\\otimes B$ for $B$ a $4\\times4$ matrix? Write $(1, 0)\\otimes(0.6, 0.8)$.",
       "solution": [
-        "Dimensions multiply: $2\\times4 = 8$.",
-        "$X\\otimes B$ is $8\\times8$, made of four $4\\times4$ blocks $X_{ij}B$."
+        "Step 1. Dimensions multiply: $2\\times4 = 8$.",
+        "Step 2. $X\\otimes B$ is $8\\times8$, made of four $4\\times4$ blocks $X_{jk}B$.",
+        "Step 3. $(1, 0)\\otimes(0.6, 0.8) = (1\\cdot0.6, 1\\cdot0.8, 0\\cdot0.6, 0\\cdot0.8) = (0.6, 0.8, 0, 0)$."
       ],
-      "answer": "8; an 8×8 matrix"
+      "answer": "8; an 8×8 matrix; (0.6, 0.8, 0, 0)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Checking it all numerically"
+    },
+    {
+      "type": "prose",
+      "text": "The first program checks every worked example on this page, in the order they appear."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# Inner products: conjugate the first vector\nu = np.array([1, 1j]) / np.sqrt(2)\nv = np.array([1, -1j]) / np.sqrt(2)\nw = np.array([1, 1j])\nprint(\"w . w without conjugate:\", w @ w, \"  <w|w> with conjugate:\", np.vdot(w, w))\nprint(\"<u|v> =\", np.round(np.vdot(u, v), 10), \" (orthogonal)\")\npsi = np.array([3, 4j]) / 5\nprint(\"norm of (3, 4i)/5:\", np.linalg.norm(psi))\n# Expanding a vector in the |+>, |-> basis\nplus, minus = np.array([1, 1]) / np.sqrt(2), np.array([1, -1]) / np.sqrt(2)\nphi = np.array([0.6, 0.8])\ncp, cm = np.vdot(plus, phi), np.vdot(minus, phi)\nprint(f\"coefficients in the +/- basis: c+ = {cp:.6f}, c- = {cm:.6f}; rebuilt:\", cp * plus + cm * minus)\n# Matrices as maps\nX = np.array([[0, 1], [1, 0]]); Z = np.array([[1, 0], [0, -1]]); Y = np.array([[0, -1j], [1j, 0]])\nprint(\"X (0.6, 0.8) =\", X @ phi, \"  Z (0.6, 0.8) =\", Z @ phi)\nprint(\"XZ =\", (X @ Z).tolist(), \"  ZX =\", (Z @ X).tolist())\nprint(\"XZ - ZX =\", (X @ Z - Z @ X).tolist(), \" equals -2iY:\", np.allclose(X @ Z - Z @ X, -2j * Y))\nA = np.array([[1, 2], [3, 4]]); B = np.array([[0, 1], [5, -1]])\nprint(\"AB =\", (A @ B).tolist(), \"  BA =\", (B @ A).tolist())\n# Conjugate transpose, Hermitian, unitary\nM = np.array([[1, 1j], [-1j, 2]])\nprint(\"M^dagger == M:\", np.allclose(M.conj().T, M))\nN = np.array([[2, 1 + 1j], [3j, 0]])\nprint(\"N^dagger =\", N.conj().T.tolist())\nHd = np.array([[1, 1], [1, -1]]) / np.sqrt(2)\nprint(\"Hd^dagger Hd = I:\", np.allclose(Hd.conj().T @ Hd, np.eye(2)))\nS = np.array([[1, 0], [0, 1j]])\nprint(\"S unitary:\", np.allclose(S.conj().T @ S, np.eye(2)), \"  S Hermitian:\", np.allclose(S.conj().T, S))\nx = np.array([0.6, 0.8j])\nprint(\"length before/after Hd:\", np.linalg.norm(x), np.linalg.norm(Hd @ x))\n# Outer products and projectors\nk0, k1 = np.array([1, 0]), np.array([0, 1])\nprint(\"|0><1| =\", np.outer(k0, k1.conj()).tolist())\nprint(\"|0><1| + |1><0| == X:\", np.allclose(np.outer(k0, k1) + np.outer(k1, k0), X))\nP = np.outer(plus, plus.conj())\nprint(\"P+ =\", np.round(P, 3).tolist(), \"  P+^2 == P+:\", np.allclose(P @ P, P))\nprint(\"P+ (0.6, 0.8) =\", np.round(P @ phi, 4), \"  probability =\", round(np.vdot(phi, P @ phi).real, 4))\nprint(\"|0><0| + |1><1| == I:\", np.allclose(np.outer(k0, k0) + np.outer(k1, k1), np.eye(2)))\n# Matrix exponential: e^{-i theta X} = cos(theta) I - i sin(theta) X\nfrom scipy.linalg import expm\nth = 0.3\nprint(\"e^{-i0.3X} by expm == cos I - i sin X:\", np.allclose(expm(-1j * th * X), np.cos(th) * np.eye(2) - 1j * np.sin(th) * X))\nprint(\"e^{-i0.3X} =\", np.round(expm(-1j * th * X), 4).tolist())\nprint(\"e^{-i0.3Z} =\", np.round(np.diag(np.exp(-1j * th * np.diag(Z))), 4).tolist())\n# e^{A+B} vs e^A e^B\nprint(\"e^{X+Z} == e^X e^Z ?\", np.allclose(expm(X + Z), expm(X) @ expm(Z)))\n# Tensor (Kronecker) products\na, b = np.array([0.6, 0.8]), np.array([1, 1]) / np.sqrt(2)\nprint(\"(0.6,0.8) (x) |+> =\", np.round(np.kron(a, b), 4))\nprint(\"X (x) Z =\", np.kron(X, Z).tolist())\n"
+    },
+    {
+      "type": "prose",
+      "text": "The second goes one step further, into material from Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors): it builds a random $4\\times4$ Hermitian matrix, finds its eigenvalues and eigenvectors, rebuilds it from them, and computes its exponential two ways. Come back to it after that page."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\n# A random Hermitian matrix, its eigen-decomposition, and the unitary it generates.\nrng = np.random.default_rng(0)\nA = rng.normal(size=(4, 4)) + 1j * rng.normal(size=(4, 4))\nH = (A + A.conj().T) / 2                       # Hermitian: H = H^dagger\nE, V = np.linalg.eigh(H)                       # real eigenvalues, orthonormal eigenvectors\nprint(\"eigenvalues (real):\", np.round(E, 3))\nprint(\"V unitary:\", np.allclose(V.conj().T @ V, np.eye(4)))\nprint(\"H = V diag(E) V^dagger:\", np.allclose(H, V @ np.diag(E) @ V.conj().T))\nU = expm(-1j * H * 0.7)                        # exponential of -i H t\nU2 = V @ np.diag(np.exp(-1j * E * 0.7)) @ V.conj().T\nprint(\"expm agrees with the eigenbasis formula:\", np.allclose(U, U2))\nprint(\"U unitary:\", np.allclose(U.conj().T @ U, np.eye(4)))\n# Kronecker products: dimensions multiply, and (A x B)(C x D) = AC x BD\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1, -1])\nprint(\"X (x) Z is\", np.kron(X, Z).shape, \"and (X(x)Z)(Z(x)X) = XZ (x) ZX:\",\n      np.allclose(np.kron(X, Z) @ np.kron(Z, X), np.kron(X @ Z, Z @ X)))"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the eigenvalues come out real ($-1.891$, $-0.808$, $0.46$, $1.371$), the eigenvector matrix is unitary, the decomposition rebuilds $H$, scipy's expm and the eigenbasis formula give the same unitary, and the Kronecker mixed-product rule holds."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Every step of a quantum reservoir applies a unitary matrix built from the eigenvalues and eigenvectors of its Hamiltonian: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "The Liouvillian of Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics) is built entirely from Kronecker products.",
+        "Ridge regression on the readout is real linear algebra: the SVD form on Echo State Networks (#/qrc/foundations/echo-state-networks) is the real-valued cousin of the spectral theorem."
+      ]
     },
     {
       "type": "heading",
@@ -157,8 +646,9 @@
       "type": "list",
       "items": [
         "S. Axler, Linear Algebra Done Right, 4th edition, Springer (2024)",
-        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), chapter 2",
-        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 1"
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 2.1",
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 1",
+        "N. D. Mermin, Quantum Computer Science: An Introduction, Cambridge University Press (2007), chapter 1 and appendix A"
       ]
     }
   ]
