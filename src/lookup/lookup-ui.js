@@ -120,6 +120,8 @@ const EMPTY_PANEL_DISMISS_MS = 1800;
 
 /** Gap (px) between the bottom of the selection and the top of the panel. */
 const PANEL_GAP_PX = 6;
+/** Least gap (px) between the panel and the viewport edge or the topic navigation. */
+const PANEL_EDGE_PX = 12;
 
 /**
  * The data the lookup closure reads for each selection. `update()` swaps these
@@ -317,10 +319,45 @@ export function installLookup(rootEl, options) {
    */
   function positionPanel(rect) {
     if (!panel) return;
-    const scrollX = doc.defaultView ? doc.defaultView.scrollX : 0;
-    const scrollY = doc.defaultView ? doc.defaultView.scrollY : 0;
-    panel.style.left = `${rect.left + scrollX}px`;
+    const win = doc.defaultView;
+    const scrollX = win ? win.scrollX : 0;
+    const scrollY = win ? win.scrollY : 0;
     panel.style.top = `${rect.bottom + scrollY + PANEL_GAP_PX}px`;
+
+    // The room the panel may use: the viewport, less the topic navigation when
+    // it sits on the left beside the page (the panel must never cover it).
+    const vw = (doc.documentElement && doc.documentElement.clientWidth) || (win ? win.innerWidth : 0);
+    if (!vw) {
+      panel.style.left = `${rect.left + scrollX}px`;
+      return;
+    }
+    let minLeft = PANEL_EDGE_PX;
+    const nav = doc.getElementById("nav");
+    if (nav && win) {
+      const nr = nav.getBoundingClientRect();
+      const cs = win.getComputedStyle(nav);
+      const shown = nr.width > 0 && nr.height > 0 && cs.display !== "none" && cs.visibility !== "hidden";
+      // Only a nav column on the left of the selection counts; an overlay
+      // drawer covering most of a phone screen is left out.
+      if (shown && nr.right <= rect.left + 1 && nr.right < vw / 2) minLeft = Math.max(minLeft, nr.right + PANEL_EDGE_PX);
+    }
+    const maxRight = vw - PANEL_EDGE_PX;
+    const room = Math.max(160, maxRight - minLeft);
+
+    // Size the panel to its content, capped by the reading measure and the
+    // room, so it is never squeezed against the right edge.
+    panel.style.left = `${minLeft + scrollX}px`;
+    panel.style.width = "max-content";
+    panel.style.maxWidth = `min(var(--measure-panel, 70ch), ${room}px)`;
+    const w = panel.offsetWidth || Math.min(room, 480);
+
+    // Open to the right of the selection when it fits; otherwise open to the
+    // left (right edges aligned); otherwise use the side with more room.
+    let left;
+    if (rect.left + w <= maxRight) left = Math.max(rect.left, minLeft);
+    else if (rect.right - w >= minLeft) left = Math.min(rect.right, maxRight) - w;
+    else left = Math.max(minLeft, maxRight - w);
+    panel.style.left = `${left + scrollX}px`;
   }
 
   /**
