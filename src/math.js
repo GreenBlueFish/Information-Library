@@ -537,17 +537,19 @@ export function hasMath(text) {
  */
 export function appendRichText(node, text) {
   const parts = splitMath(text);
-  // Text with no formula is set exactly as before, as one text value.
+  // Text with no formula and no page link is set exactly as before, as one text value.
   if (!parts.some((p) => "tex" in p)) {
     const plain = parts.map((p) => p.text).join("");
-    if (!node.firstChild) node.textContent = plain;
-    else node.appendChild(node.ownerDocument.createTextNode(plain));
-    return node;
+    if (!LINK_TEST.test(plain)) {
+      if (!node.firstChild) node.textContent = plain;
+      else node.appendChild(node.ownerDocument.createTextNode(plain));
+      return node;
+    }
   }
   const doc = node.ownerDocument;
   for (const part of parts) {
     if ("text" in part) {
-      node.appendChild(doc.createTextNode(part.text));
+      appendTextWithLinks(node, doc, part.text);
       continue;
     }
     try {
@@ -564,6 +566,58 @@ export function appendRichText(node, text) {
   return node;
 }
 
+/*
+ * Page links in content text. Pages write a link as "Page Title (#/route)".
+ * When the words just before the parenthesis are the linked page's title, they
+ * become the link and the "(#/route)" goes; otherwise the words stay as they
+ * are and a small arrow link to the page follows them. Titles come from the topic tree via
+ * setLinkTitles(); without them the link text is the route's last segment.
+ */
+let LINK_TITLES = new Map();
+const LINK_TEST = /\((#\/[A-Za-z0-9/_.-]*)\)/;
+const LINK_RE = /[ \u00a0]?\((#\/[A-Za-z0-9/_.-]*)\)/g;
+
+/**
+ * Tell the renderer each route's page title, for in-text links.
+ * @param {Map<string, string>|Record<string, string>} titles route ("/a/b") -> title
+ */
+export function setLinkTitles(titles) {
+  LINK_TITLES = titles instanceof Map ? titles : new Map(Object.entries(titles || {}));
+}
+
+function appendTextWithLinks(node, doc, text) {
+  let last = 0;
+  let m;
+  LINK_RE.lastIndex = 0;
+  while ((m = LINK_RE.exec(text))) {
+    const href = m[1];
+    const route = href.slice(1).replace(/\/+$/, "") || "/";
+    let before = text.slice(last, m.index);
+    const title = LINK_TITLES.get(route);
+    const a = doc.createElement("a");
+    a.className = "text-link";
+    a.setAttribute("href", href);
+    if (title && before.toLowerCase().endsWith(title.toLowerCase())) {
+      a.textContent = before.slice(before.length - title.length);
+      before = before.slice(0, before.length - title.length);
+      if (before) node.appendChild(doc.createTextNode(before));
+      node.appendChild(a);
+    } else {
+      // The text names the page in its own words: keep them, and add a small
+      // arrow link carrying the page's title.
+      const name = title || route.split("/").pop().replace(/-/g, " ") || "home";
+      a.className = "text-link text-link--arrow";
+      a.textContent = "\u2197";
+      a.setAttribute("title", name);
+      a.setAttribute("aria-label", `Open page: ${name}`);
+      if (before) node.appendChild(doc.createTextNode(before));
+      node.appendChild(a);
+    }
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) node.appendChild(doc.createTextNode(text.slice(last)));
+}
+
 /**
  * The text a reader would see, with each formula's source in place of the
  * MathML (for search indexing and plain-text uses).
@@ -572,5 +626,5 @@ export function appendRichText(node, text) {
  * @returns {string}
  */
 export function plainText(text) {
-  return splitMath(text).map((p) => ("text" in p ? p.text : p.tex)).join("");
+  return splitMath(text).map((p) => ("text" in p ? p.text.replace(LINK_RE, "") : p.tex)).join("");
 }

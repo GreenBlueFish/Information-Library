@@ -82,6 +82,7 @@ import {
   ContentLoadError,
 } from "./content-loader.js";
 import { renderPage, renderNav, renderError } from "./renderer.js";
+import { setLinkTitles } from "./math.js";
 import { buildIndex, mergeIndexes } from "./lookup/search-index.js";
 import { findMatches } from "./lookup/matches.js";
 import { installLookup } from "./lookup/lookup-ui.js";
@@ -150,6 +151,29 @@ import "./widgets/types/qubit-circuit.js";
  */
 function scopeRoute(segments) {
   return segments.length === 0 ? "/" : "/" + segments.join("/");
+}
+
+/**
+ * Route -> page title for every page in the tree (and every redirect source),
+ * used to turn "Title (#/route)" in page text into a link.
+ *
+ * @param {TopicNode} tree
+ * @param {Record<string, string>} [redirects]
+ * @returns {Map<string, string>}
+ */
+export function linkTitles(tree, redirects = {}) {
+  const titles = new Map();
+  const walk = (node, route) => {
+    for (const child of (node && node.children) || []) {
+      if (!child || !child.slug) continue;
+      const r = `${route}/${child.slug}`;
+      if (child.title) titles.set(r, child.title);
+      walk(child, r);
+    }
+  };
+  walk(tree, "");
+  for (const [from, to] of Object.entries(redirects || {})) if (!titles.has(from) && titles.has(to)) titles.set(from, titles.get(to));
+  return titles;
 }
 
 /**
@@ -467,6 +491,7 @@ export async function boot() {
     reportBootError(err, app);
     return;
   }
+  setLinkTitles(linkTitles(tree, redirects));
 
   /**
    * Lazily load every Manifest glossary and concatenate their entries — the
