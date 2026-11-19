@@ -1,46 +1,396 @@
 {
   "title": "The Schrödinger Equation",
-  "intro": "The Hamiltonian generates time evolution: $\\vert\\psi(t)\\rangle = e^{-iHt}\\vert\\psi(0)\\rangle$. In the energy eigenbasis each component just turns its phase at its own frequency, and every observable effect of evolution comes from the beating of those phases.",
+  "intro": "The Hamiltonian generates time evolution: $\\vert\\psi(t)\\rangle = e^{-iHt}\\vert\\psi(0)\\rangle$. This lesson solves the equation step by step, shows why energy eigenstates never change and how every visible motion comes from energies beating against each other, and works through precession, Rabi oscillations, the energy–time speed limit and numerical solution.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "The equation and its solution"
-    },
-    {
-      "type": "math",
-      "tex": "i\\,\\frac{d}{dt}\\vert\\psi(t)\\rangle = H\\,\\vert\\psi(t)\\rangle \\qquad\\text{so}\\qquad \\vert\\psi(t)\\rangle = U(t)\\vert\\psi(0)\\rangle,\\quad U(t) = e^{-iHt}",
-      "caption": "The Schrödinger equation with ħ = 1, for a time-independent Hamiltonian."
+      "text": "Before you start"
     },
     {
       "type": "prose",
-      "text": "$H$ is Hermitian, so $U(t)$ is unitary: lengths and inner products are preserved, and the evolution is reversible ($U(-t)$ undoes it). The Hamiltonian is also the energy observable; its eigenvalues are the allowed energies."
+      "text": "What you need first: kets, inner products and expansion in a basis from States and Dirac Notation (#/quantum/foundations/states-and-dirac-notation); eigenvalues and eigenvectors of a Hermitian matrix from Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors); the Pauli matrices and rotations from Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)."
+    },
+    {
+      "type": "prose",
+      "text": "What you will be able to do by the end of this page:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Say in words what the Schrödinger equation claims, and why it has an $i$ in it.",
+        "Solve it for any time-independent Hamiltonian by the three-step recipe: expand in energy eigenstates, attach a phase $e^{-iE_kt}$ to each, add back up.",
+        "Explain why an energy eigenstate never changes in any measurable way, and why every visible change comes from two energies beating against each other.",
+        "Write down $e^{-iHt}$ for any qubit Hamiltonian in closed form and read it as a rotation of the Bloch sphere.",
+        "Estimate how fast a state can change from its energy spread, and step the equation forward on a computer without the norm drifting."
+      ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Energy eigenstates only rotate their phase"
+      "text": "What the equation says"
     },
     {
       "type": "prose",
-      "text": "Expand the state in the eigenbasis of $H = \\sum_k E_k\\vert E_k\\rangle\\langle E_k\\vert$:"
+      "text": "Every page so far has been a snapshot: a state, a measurement, a probability. But the world moves. A spin sitting in a magnetic field turns; an atom that absorbed light later emits it; a quantum reservoir fed an input at one moment still carries a trace of it ten steps later. We need a rule that says, given the state now, what the state will be a moment from now. The Schrödinger equation is that rule."
+    },
+    {
+      "type": "prose",
+      "text": "In words: the rate at which the state changes is $-i$ times the Hamiltonian applied to the state. The Hamiltonian $H$ is the observable for energy, a Hermitian matrix like any other observable. So the same matrix plays two roles: measured, it gives the allowed energies; applied to the state, it tells the state how to move."
     },
     {
       "type": "math",
-      "tex": "\\vert\\psi(t)\\rangle = \\sum_k c_k\\,e^{-iE_kt}\\,\\vert E_k\\rangle, \\qquad c_k = \\langle E_k\\vert\\psi(0)\\rangle"
+      "tex": "i\\,\\frac{d}{dt}\\vert\\psi(t)\\rangle = H\\,\\vert\\psi(t)\\rangle",
+      "caption": "The time-dependent Schrödinger equation, with $\\hbar = 1$ (the shelf's convention; in SI units the left side is $i\\hbar\\,d\\vert\\psi\\rangle/dt$)."
     },
     {
       "type": "prose",
-      "text": "The populations $\\vert c_k\\vert^2$ never change. An energy eigenstate on its own is stationary: it picks up only a global phase, and no measurement can tell. Anything that does change, an expectation value moving in time, comes from interference between two components, at the difference frequency $E_k - E_l$. That is why a reservoir needs its input to land on a superposition of many energy eigenstates: those differences are the clock frequencies of its dynamics."
+      "text": "Read it one symbol at a time. $\\vert\\psi(t)\\rangle$ is a column of complex amplitudes, one for each basis state, and each amplitude is a function of time. $\\frac{d}{dt}\\vert\\psi(t)\\rangle$ is the column of their time derivatives: how fast each amplitude is changing. $H\\vert\\psi(t)\\rangle$ is a matrix times a column, another column. The equation says these two columns are equal after multiplying the left one by $i$. So for a qubit it is really two ordinary differential equations, one for each amplitude, coupled together by the off-diagonal entries of $H$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Where the equation comes from"
+    },
+    {
+      "type": "prose",
+      "text": "The Schrödinger equation is a postulate: it is not derived from anything deeper, and it is trusted because its predictions agree with experiment. But its shape is forced on us by two requirements that are easy to accept, and seeing them makes the $i$ less mysterious."
+    },
+    {
+      "type": "prose",
+      "text": "Requirement 1: evolution is linear. If the state $\\vert a\\rangle$ would become $\\vert a'\\rangle$ and $\\vert b\\rangle$ would become $\\vert b'\\rangle$, then $\\alpha\\vert a\\rangle + \\beta\\vert b\\rangle$ becomes $\\alpha\\vert a'\\rangle + \\beta\\vert b'\\rangle$. Superpositions evolve part by part. That means the state after a short time $dt$ is some matrix times the state now: $\\vert\\psi(t+dt)\\rangle = U(dt)\\vert\\psi(t)\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Requirement 2: probabilities still add to 1. The total probability is $\\langle\\psi\\vert\\psi\\rangle$, so the matrix must keep the length of every vector: $U^\\dagger U = I$. A matrix with that property is unitary."
+    },
+    {
+      "type": "prose",
+      "text": "Now let $dt$ be tiny. Doing nothing for zero time is the identity, so for small $dt$ we can write $U(dt) = I - iH\\,dt$ for some matrix $H$ (the factor $-i$ is a choice of how to name the matrix; you will see in a moment why it is the convenient one). Put this into the unitarity condition and keep only terms up to first order in $dt$:"
+    },
+    {
+      "type": "math",
+      "tex": "U^\\dagger U = (I + iH^\\dagger dt)(I - iH\\,dt) = I + i\\,(H^\\dagger - H)\\,dt + H^\\dagger H\\,dt^2",
+      "caption": "Multiplying out the two brackets. The $dt^2$ term is negligible for tiny $dt$."
+    },
+    {
+      "type": "prose",
+      "text": "For this to equal $I$ we need $H^\\dagger - H = 0$, that is $H^\\dagger = H$: the matrix must be Hermitian. That is why the generator of time evolution can be an observable (observables are exactly the Hermitian matrices), and the $-i$ in front is what makes a Hermitian $H$ give a unitary step. Without the $i$, a Hermitian $H$ would stretch or shrink vectors and probabilities would leak away. Finally, rearrange $\\vert\\psi(t+dt)\\rangle = \\vert\\psi(t)\\rangle - iH\\,dt\\,\\vert\\psi(t)\\rangle$ into"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\vert\\psi(t+dt)\\rangle - \\vert\\psi(t)\\rangle}{dt} = -iH\\vert\\psi(t)\\rangle",
+      "caption": "Divide by $dt$ and let it go to zero: the left side becomes the derivative, and multiplying both sides by $i$ gives the Schrödinger equation."
+    },
+    {
+      "type": "prose",
+      "text": "That $H$ is the energy is the physical content: the matrix that generates time evolution is the same one whose eigenvalues are measured energies. This is the quantum version of a fact from classical mechanics, where the energy function generates motion through Hamilton's equations, which is where the name Hamiltonian comes from."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Checking that the norm stays 1"
+    },
+    {
+      "type": "prose",
+      "text": "Let us confirm directly that the equation never changes the total probability. Write $N(t) = \\langle\\psi(t)\\vert\\psi(t)\\rangle$ and differentiate with the product rule. The equation gives $\\frac{d}{dt}\\vert\\psi\\rangle = -iH\\vert\\psi\\rangle$; taking the dagger of both sides (which conjugates $-i$ to $+i$ and uses $H^\\dagger = H$) gives $\\frac{d}{dt}\\langle\\psi\\vert = i\\langle\\psi\\vert H$. So"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{dN}{dt} = \\left(\\frac{d}{dt}\\langle\\psi\\vert\\right)\\vert\\psi\\rangle + \\langle\\psi\\vert\\left(\\frac{d}{dt}\\vert\\psi\\rangle\\right) = i\\langle\\psi\\vert H\\vert\\psi\\rangle - i\\langle\\psi\\vert H\\vert\\psi\\rangle = 0",
+      "caption": "The two terms cancel exactly, at every moment, for every state."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A first worked example: one instant of motion"
+    },
+    {
+      "type": "prose",
+      "text": "Take the Hamiltonian $H = X$ (the Pauli $X$ matrix, which swaps $\\vert0\\rangle$ and $\\vert1\\rangle$) and the starting state $\\vert\\psi(0)\\rangle = \\vert0\\rangle$. Which way does the state start to move?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Apply $H$: $X\\vert0\\rangle = \\vert1\\rangle$.",
+        "Step 2. Multiply by $-i$: $\\frac{d}{dt}\\vert\\psi\\rangle = -i\\vert1\\rangle$ at $t = 0$.",
+        "Step 3. Read it off. The amplitude of $\\vert0\\rangle$ has zero derivative at $t = 0$ (it is at a maximum, about to fall), and the amplitude of $\\vert1\\rangle$ grows from 0 at rate $-i$. After a short time $dt$ the state is approximately $\\vert0\\rangle - i\\,dt\\,\\vert1\\rangle$.",
+        "Step 4. Interpret. Amplitude flows from $\\vert0\\rangle$ into $\\vert1\\rangle$, and it arrives with a phase of $-i$, not $+1$. That phase is not decoration: it is what keeps the length fixed. The squared length of $\\vert0\\rangle - i\\,dt\\,\\vert1\\rangle$ is $1 + dt^2$, which differs from 1 only at second order, as the norm check above promised."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "You will see below that the exact answer is $\\vert\\psi(t)\\rangle = \\cos t\\,\\vert0\\rangle - i\\sin t\\,\\vert1\\rangle$, whose derivative at $t = 0$ is indeed $-i\\vert1\\rangle$."
+    },
+    {
+      "type": "callout",
+      "text": "Common confusion: the $i$ does not mean anything is 'imaginary' in the everyday sense. Amplitudes are complex numbers throughout quantum mechanics, and $i$ is simply the number that turns a Hermitian generator into a length-preserving motion. Another: $\\hbar = 1$ is a choice of units, like measuring distance in light-seconds. With $\\hbar$ restored, every $E t$ in a phase becomes $Et/\\hbar$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: the first instant",
+      "text": "With $H = Z$ and $\\vert\\psi(0)\\rangle = \\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$, compute $\\frac{d}{dt}\\vert\\psi\\rangle$ at $t = 0$. Does probability flow between $\\vert0\\rangle$ and $\\vert1\\rangle$?",
+      "hint": "$Z$ leaves $\\vert0\\rangle$ alone and flips the sign of $\\vert1\\rangle$.",
+      "solution": [
+        "$Z\\vert+\\rangle = (\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2 = \\vert-\\rangle$.",
+        "Multiply by $-i$: $\\frac{d}{dt}\\vert\\psi\\rangle = -i(\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$.",
+        "The change in each amplitude is $-i$ times that amplitude (up to sign), a pure turn of its phase. The sizes $\\vert\\alpha\\vert$ and $\\vert\\beta\\vert$ do not change, so no probability moves; only the relative phase does. This is precession, met again below."
+      ],
+      "answer": "$-\\frac{i}{\\sqrt2}(\\vert0\\rangle - \\vert1\\rangle)$; no"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "A spin in a field: precession"
+      "text": "Solving it with energy eigenstates"
     },
     {
       "type": "prose",
-      "text": "For $H = hZ$ the eigenvalues are $\\pm h$, so the relative phase between $\\vert0\\rangle$ and $\\vert1\\rangle$ advances at rate $2h$. On the Bloch sphere this is a rotation about $z$ at angular frequency $2h$: $U(t) = e^{-ihZt} = R_Z(2ht)$. A state on the equator goes round, $\\langle X\\rangle = \\cos 2ht$, while $\\langle Z\\rangle$ stays fixed. This is the 'precession frequency $2h_i$' of each qubit in the QRC spin reservoir."
+      "text": "For a Hamiltonian that does not change in time, there is a recipe that solves the Schrödinger equation completely. It rests on one observation: in the basis of energy eigenstates, the coupled equations come apart into separate, trivially solvable ones."
+    },
+    {
+      "type": "prose",
+      "text": "Let the eigenvalues of $H$ be $E_1, E_2, \\dots$ (the allowed energies) with orthonormal eigenvectors $\\vert E_1\\rangle, \\vert E_2\\rangle, \\dots$, so $H\\vert E_k\\rangle = E_k\\vert E_k\\rangle$. Because the eigenvectors form a basis, the state at any time can be written as $\\vert\\psi(t)\\rangle = \\sum_k c_k(t)\\vert E_k\\rangle$ with $c_k(t) = \\langle E_k\\vert\\psi(t)\\rangle$. Put this into the equation:"
+    },
+    {
+      "type": "math",
+      "tex": "i\\sum_k \\frac{dc_k}{dt}\\vert E_k\\rangle = H\\sum_k c_k\\vert E_k\\rangle = \\sum_k E_k\\,c_k\\vert E_k\\rangle",
+      "caption": "$H$ acting on each eigenvector just multiplies it by its energy."
+    },
+    {
+      "type": "prose",
+      "text": "Two vectors are equal exactly when their components in a basis are equal, so for each $k$ separately $i\\,dc_k/dt = E_k c_k$. This is the simplest differential equation there is: a quantity whose rate of change is proportional to itself. Its solution is $c_k(t) = c_k(0)\\,e^{-iE_kt}$ (check: differentiating gives $-iE_k c_k$, and multiplying by $i$ gives $E_kc_k$). Since $\\vert e^{-iE_kt}\\vert = 1$, each coefficient keeps its size and only turns its phase, at a rate equal to its energy."
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi(t)\\rangle = \\sum_k c_k\\,e^{-iE_kt}\\,\\vert E_k\\rangle, \\qquad c_k = \\langle E_k\\vert\\psi(0)\\rangle",
+      "caption": "The general solution for a time-independent Hamiltonian."
+    },
+    {
+      "type": "prose",
+      "text": "So the recipe is:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Diagonalise $H$: find the energies $E_k$ and eigenvectors $\\vert E_k\\rangle$.",
+        "Step 2. Expand the starting state: $c_k = \\langle E_k\\vert\\psi(0)\\rangle$.",
+        "Step 3. Attach the phase $e^{-iE_kt}$ to each coefficient and add the terms back up, then (if you want amplitudes in the original basis) rewrite each $\\vert E_k\\rangle$ in that basis."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The same steps written as matrices give the time-evolution operator (also called the propagator), which takes any starting state to its state at time $t$:"
+    },
+    {
+      "type": "math",
+      "tex": "U(t) = e^{-iHt} = \\sum_k e^{-iE_kt}\\,\\vert E_k\\rangle\\langle E_k\\vert, \\qquad \\vert\\psi(t)\\rangle = U(t)\\vert\\psi(0)\\rangle",
+      "caption": "The exponential of a matrix is defined by its eigenvalues: same eigenvectors, each eigenvalue $E_k$ replaced by $e^{-iE_kt}$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a qubit with H = X"
+    },
+    {
+      "type": "prose",
+      "text": "Start in $\\vert0\\rangle$ with $H = X$. We find the state at every time."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Diagonalise. $X\\vert+\\rangle = \\vert+\\rangle$ and $X\\vert-\\rangle = -\\vert-\\rangle$, with $\\vert\\pm\\rangle = (\\vert0\\rangle \\pm \\vert1\\rangle)/\\sqrt2$. So the energies are $E_+ = +1$ and $E_- = -1$.",
+        "Step 2. Expand. $c_+ = \\langle+\\vert0\\rangle = 1/\\sqrt2$ and $c_- = \\langle-\\vert0\\rangle = 1/\\sqrt2$, so $\\vert0\\rangle = (\\vert+\\rangle + \\vert-\\rangle)/\\sqrt2$.",
+        "Step 3. Attach phases: $\\vert\\psi(t)\\rangle = \\frac{1}{\\sqrt2}\\left(e^{-it}\\vert+\\rangle + e^{it}\\vert-\\rangle\\right)$.",
+        "Step 4. Back to the computational basis. Substitute $\\vert\\pm\\rangle$: the $\\vert0\\rangle$ amplitude is $\\frac12(e^{-it} + e^{it}) = \\cos t$ and the $\\vert1\\rangle$ amplitude is $\\frac12(e^{-it} - e^{it}) = -i\\sin t$ (using $e^{\\pm it} = \\cos t \\pm i\\sin t$).",
+        "Result: $\\vert\\psi(t)\\rangle = \\cos t\\,\\vert0\\rangle - i\\sin t\\,\\vert1\\rangle$. The probability of finding $\\vert1\\rangle$ is $P_1(t) = \\sin^2 t$: the population swings fully to $\\vert1\\rangle$ at $t = \\pi/2 \\approx 1.571$ and back by $t = \\pi$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Notice what moved and what did not. In the energy basis only two phases turned, in opposite directions, and the sizes $\\vert c_\\pm\\vert = 1/\\sqrt2$ stayed fixed; in the computational basis, probability swung fully back and forth. The energy basis is the one where the motion is simplest."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: solve with the recipe",
+      "text": "With $H = Z$ and $\\vert\\psi(0)\\rangle = \\vert+\\rangle$, find $\\vert\\psi(t)\\rangle$ and the probability $P(+)$ of finding $\\vert+\\rangle$ again at time $t$. Evaluate it at $t = \\pi/4$.",
+      "solution": [
+        "Energies: $Z\\vert0\\rangle = \\vert0\\rangle$, $Z\\vert1\\rangle = -\\vert1\\rangle$, so $E = +1$ for $\\vert0\\rangle$ and $-1$ for $\\vert1\\rangle$; the computational basis is already the energy basis.",
+        "Expand: $c_0 = c_1 = 1/\\sqrt2$.",
+        "Attach phases: $\\vert\\psi(t)\\rangle = (e^{-it}\\vert0\\rangle + e^{it}\\vert1\\rangle)/\\sqrt2$.",
+        "$\\langle+\\vert\\psi(t)\\rangle = \\frac12(e^{-it} + e^{it}) = \\cos t$, so $P(+) = \\cos^2 t$.",
+        "At $t = \\pi/4$: $\\cos^2(\\pi/4) = 0.5$. At $t = \\pi/2$ it is 0: the state has become $\\vert-\\rangle$ (up to a global phase)."
+      ],
+      "answer": "$P(+) = \\cos^2 t$, which is 0.5 at $t = \\pi/4$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stationary states"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose the starting state is itself an energy eigenstate, $\\vert\\psi(0)\\rangle = \\vert E_k\\rangle$. The recipe gives $\\vert\\psi(t)\\rangle = e^{-iE_kt}\\vert E_k\\rangle$: the same vector times a phase. The phase is a global phase (it multiplies the whole state), and a global phase changes nothing measurable. To see it concretely, compute the expectation value of any observable $A$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle A\\rangle(t) = \\langle E_k\\vert\\,e^{+iE_kt}\\,A\\,e^{-iE_kt}\\,\\vert E_k\\rangle = \\underbrace{e^{iE_kt}e^{-iE_kt}}_{=\\,1}\\,\\langle E_k\\vert A\\vert E_k\\rangle",
+      "caption": "The phase on the bra is the complex conjugate of the phase on the ket, so they cancel."
+    },
+    {
+      "type": "prose",
+      "text": "No probability, no average, no measurable quantity changes. That is why energy eigenstates are called stationary states. An atom in its ground state just sits there; a qubit in $\\vert0\\rangle$ under $H = Z$ never moves on the Bloch sphere. Everything that does move is built from more than one energy."
+    },
+    {
+      "type": "prose",
+      "text": "A second, weaker fact holds for every state: the populations in the energy basis, $\\vert c_k(t)\\vert^2 = \\vert c_k\\vert^2$, never change. A closed system never changes how much of it has each energy. This is the quantum statement of energy conservation."
+    },
+    {
+      "type": "callout",
+      "text": "Common confusion: 'stationary' does not mean the amplitudes are constant. They rotate in the complex plane at rate $E_k$. It means nothing you can measure changes."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which states are stationary",
+      "text": "Under $H = Z$, which of $\\vert0\\rangle$, $\\vert1\\rangle$, $\\vert+\\rangle$, $(\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$ are stationary?",
+      "solution": [
+        "The energy eigenstates of $Z$ are $\\vert0\\rangle$ (energy $+1$) and $\\vert1\\rangle$ (energy $-1$); those two are stationary.",
+        "$\\vert+\\rangle$ and $(\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$ mix both energies with weight 1/2 each, so their relative phase turns at rate $E_0 - E_1 = 2$ and they move around the equator of the Bloch sphere."
+      ],
+      "answer": "only $\\vert0\\rangle$ and $\\vert1\\rangle$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two energies beating"
+    },
+    {
+      "type": "prose",
+      "text": "If every energy component only turns its phase, how does anything visible ever happen? The answer is interference between components. Take a state with just two energies, $\\vert\\psi(t)\\rangle = c_0e^{-iE_0t}\\vert E_0\\rangle + c_1e^{-iE_1t}\\vert E_1\\rangle$, and compute the expectation value of an observable $A$ step by step."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Write the bra: $\\langle\\psi(t)\\vert = \\bar c_0e^{iE_0t}\\langle E_0\\vert + \\bar c_1e^{iE_1t}\\langle E_1\\vert$ (bars are complex conjugates).",
+        "Step 2. Sandwich $A$ and multiply out the four terms. Write $A_{jk} = \\langle E_j\\vert A\\vert E_k\\rangle$ for the matrix elements of $A$ in the energy basis.",
+        "Step 3. The two diagonal terms have phases that cancel: $\\vert c_0\\vert^2A_{00} + \\vert c_1\\vert^2A_{11}$, constant in time.",
+        "Step 4. The two cross terms keep a phase: $\\bar c_0c_1A_{01}e^{-i(E_1 - E_0)t}$ plus its complex conjugate, which together make twice the real part."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "\\langle A\\rangle(t) = \\vert c_0\\vert^2A_{00} + \\vert c_1\\vert^2A_{11} + 2\\,\\mathrm{Re}\\!\\left(\\bar c_0\\,c_1\\,A_{01}\\,e^{-i(E_1 - E_0)t}\\right)",
+      "caption": "Every time dependence comes from the cross term, which oscillates at the difference frequency $E_1 - E_0$."
+    },
+    {
+      "type": "prose",
+      "text": "Three things to read off. First, an expectation value oscillates at the energy difference $E_1 - E_0$ (a Bohr frequency), never at an energy itself; adding a constant to every energy changes nothing observable. Second, the oscillation needs both components present ($c_0c_1 \\ne 0$): a stationary state has no cross term. Third, it needs $A$ to connect the two levels ($A_{01} \\ne 0$): an observable that commutes with $H$ has $A_{01} = 0$ and stays constant. With many energies there is one such term for every pair, so the signal is a sum of oscillations at all the differences $E_k - E_l$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example with numbers"
+    },
+    {
+      "type": "prose",
+      "text": "Take $H = 0.3X + 0.8Z$ and the starting state $\\vert\\psi(0)\\rangle = 0.6\\vert0\\rangle + 0.8\\vert1\\rangle$ (its length is $\\sqrt{0.36 + 0.64} = 1$). We predict the period of $\\langle Z\\rangle(t)$ before computing anything else."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Energies. For $H = aX + bZ$ the eigenvalues are $\\pm\\sqrt{a^2 + b^2}$ (derived in the next section), so $E = \\pm\\sqrt{0.09 + 0.64} = \\pm\\sqrt{0.73} = \\pm0.8544$.",
+        "Step 2. The beat frequency is $E_1 - E_0 = 1.7088$, so the period is $2\\pi/1.7088 = 3.677$ time units. $\\langle Z\\rangle$ must return to its starting value $0.36 - 0.64 = -0.28$ at $t = 3.677$.",
+        "Step 3. Populations. Expanding $\\vert\\psi(0)\\rangle$ in the eigenvectors (the sample does it numerically) gives $\\vert c_0\\vert^2 = 0.4625$ and $\\vert c_1\\vert^2 = 0.5375$, fixed for all time.",
+        "Step 4. The sample below runs the three-step recipe and prints $P(0)$ and $\\langle Z\\rangle$: $P(0) = 0.36,\\ 0.5592,\\ 0.7035,\\ 0.4646$ and $\\langle Z\\rangle = -0.28,\\ +0.1183,\\ +0.4070,\\ -0.0707$ at $t = 0, 1, 2, 3$, rising to a maximum near half the period and coming back. It also checks the recipe against a library matrix exponential (difference about $10^{-16}$, rounding error) and that the norm stays 1."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1., -1.]).astype(complex)\n# Recipe: solve i d/dt |psi> = H |psi> by expanding in energy eigenstates.\nH = 0.3 * X + 0.8 * Z\npsi0 = np.array([0.6, 0.8], complex)\nE, V = np.linalg.eigh(H)                 # step 1: energies E_k, eigenvectors in the columns of V\nc = V.conj().T @ psi0                    # step 2: c_k = <E_k|psi(0)>\nprint(\"energies:\", np.round(E, 4))\nprint(\"populations |c_k|^2:\", np.round(abs(c)**2, 4))\ndef psi(t):                              # step 3: attach e^{-i E_k t} and add up\n    return V @ (np.exp(-1j * E * t) * c)\nfor t in (0.0, 1.0, 2.0, 3.0):\n    p = psi(t)\n    ex = expm(-1j * H * t) @ psi0        # check against the matrix exponential\n    print(f\"t = {t}: P(0) = {abs(p[0])**2:.4f}, <Z> = {np.real(np.vdot(p, Z @ p)):+.4f}, \"\n          f\"norm = {np.linalg.norm(p):.6f}, max difference from expm = {np.max(abs(p - ex)):.1e}\")\nw = E[1] - E[0]\nprint(f\"beat angular frequency E1 - E0 = {w:.4f}, period 2*pi/(E1 - E0) = {2*np.pi/w:.4f}\")\n# Closed form for a qubit: e^{-iHt} = cos(wt) I - i sin(wt) H/w, with w = sqrt(0.3^2 + 0.8^2)\nw1 = np.sqrt(0.3**2 + 0.8**2)\nU_formula = np.cos(w1) * np.eye(2) - 1j * np.sin(w1) * H / w1\nprint(\"U(1) by the formula:\", np.round(U_formula, 4).tolist())\nprint(\"formula vs expm, max difference:\", f\"{np.max(abs(U_formula - expm(-1j * H))):.1e}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Why this matters beyond one qubit: the frequencies at which a system can respond are exactly its energy differences. A quantum reservoir with $n$ qubits has up to $2^n$ energies and so up to about $4^n/2$ distinct differences; the richer that set, the more different time scales the reservoir's outputs contain. That is the reason, on The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir), that inputs should land on superpositions of many energy eigenstates rather than on a few."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: predict a period",
+      "text": "A qubit has $H = 0.6X + 0.8Z$ and starts in $\\vert0\\rangle$. What is the period of $\\langle Z\\rangle(t)$?",
+      "hint": "Only the energy difference matters.",
+      "solution": [
+        "Energies $\\pm\\sqrt{0.36 + 0.64} = \\pm1$.",
+        "Beat frequency $E_1 - E_0 = 2$, so the period is $2\\pi/2 = \\pi$."
+      ],
+      "answer": "$\\pi \\approx 3.142$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The propagator of a qubit in closed form"
+    },
+    {
+      "type": "prose",
+      "text": "For a single qubit we can do better than diagonalising numerically: there is a formula for $e^{-iHt}$ that works for every Hamiltonian. It turns 'evolve under $H$ for a time $t$' into 'rotate the Bloch sphere about an axis by an angle', a picture used constantly."
+    },
+    {
+      "type": "prose",
+      "text": "Any Hermitian $2\\times2$ matrix can be written as $H = e_0I + \\omega\\,(n_xX + n_yY + n_zZ)$ with real numbers $e_0$, $\\omega \\ge 0$ and a unit vector $\\hat n = (n_x, n_y, n_z)$. The $e_0I$ part shifts both energies equally; it contributes only a global phase $e^{-ie_0t}$, so we drop it. Write $\\sigma_n = n_xX + n_yY + n_zZ$ for the Pauli matrix along $\\hat n$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Square it. Multiplying out $\\sigma_n^2$ gives the squares $n_x^2X^2 + n_y^2Y^2 + n_z^2Z^2 = (n_x^2 + n_y^2 + n_z^2)I = I$, plus cross terms like $n_xn_z(XZ + ZX)$. Different Pauli matrices anticommute ($XZ = -ZX$, and similarly for the other pairs), so every cross term vanishes. Result: $\\sigma_n^2 = I$.",
+        "Step 2. Consequences. The eigenvalues of $\\sigma_n$ are $\\pm1$, so those of $H$ (without $e_0$) are $\\pm\\omega$. With $\\omega = \\sqrt{a^2 + b^2}$ for $H = aX + bZ$, this is the formula used in the worked example above.",
+        "Step 3. Expand the exponential as a power series, $e^{-i\\omega t\\sigma_n} = \\sum_m (-i\\omega t)^m\\sigma_n^m/m!$, and use $\\sigma_n^2 = I$: even powers give $I$ and odd powers give $\\sigma_n$. The even terms are the series for $\\cos\\omega t$ and the odd terms the series for $-i\\sin\\omega t$."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "e^{-iHt} = \\cos(\\omega t)\\,I - i\\sin(\\omega t)\\,\\sigma_n = R_{\\hat n}(2\\omega t)",
+      "caption": "The qubit propagator (global phase dropped). It is a rotation of the Bloch sphere about $\\hat n$ by the angle $2\\omega t$, the energy splitting times the time."
+    },
+    {
+      "type": "prose",
+      "text": "The factor of 2 is the one that confuses everybody once. The two energies are $\\pm\\omega$, so the splitting is $2\\omega$; the Bloch vector turns at the splitting, not at $\\omega$. That is why on Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations) the rotation gate is $R_n(\\theta) = e^{-i\\theta\\sigma_n/2}$, with a half."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked examples"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Example 1: $H = X$, $t = \\pi/4$. Here $\\omega = 1$ and $\\hat n = \\hat x$. Then $U = \\cos(\\pi/4)I - i\\sin(\\pi/4)X = (I - iX)/\\sqrt2$, and $U\\vert0\\rangle = (\\vert0\\rangle - i\\vert1\\rangle)/\\sqrt2$: halfway to $\\vert1\\rangle$, agreeing with $\\cos t\\vert0\\rangle - i\\sin t\\vert1\\rangle$ at $t = \\pi/4$. On the Bloch sphere it is a rotation by $2\\omega t = \\pi/2$ about $x$, taking the north pole to the point $-\\hat y$.",
+        "Example 2: $H = 0.3X + 0.8Z$, $t = 1$. Here $\\omega = 0.8544$, $\\cos\\omega = 0.6567$ and $\\sin\\omega = 0.7542$. So $U = 0.6567\\,I - i\\,0.7542\\,(0.3X + 0.8Z)/0.8544 = 0.6567\\,I - 0.2648\\,iX - 0.7062\\,iZ$. As a matrix: row 1 is $(0.6567 - 0.7062i,\\ -0.2648i)$, row 2 is $(-0.2648i,\\ 0.6567 + 0.7062i)$. The sample prints exactly this and agrees with the library exponential to $2.5\\times10^{-16}$."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a rotation angle",
+      "text": "For how long must $H = 2Y$ act to rotate the Bloch vector by $90^\\circ$ about the $y$ axis?",
+      "solution": [
+        "Here $\\omega = 2$, so the rotation angle is $2\\omega t = 4t$.",
+        "Set $4t = \\pi/2$: $t = \\pi/8 \\approx 0.393$."
+      ],
+      "answer": "$t = \\pi/8 \\approx 0.393$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Precession: a spin in a field"
+    },
+    {
+      "type": "prose",
+      "text": "The simplest Hamiltonian with physical meaning is $H = hZ$: a spin-1/2 in a magnetic field along $z$, or a qubit whose two levels differ in energy by $2h$. Its energy eigenstates are $\\vert0\\rangle$ (energy $+h$) and $\\vert1\\rangle$ (energy $-h$), so by the formula above $U(t) = e^{-ihZt} = R_Z(2ht)$: a rotation of the Bloch sphere about $z$ at angular frequency $2h$."
+    },
+    {
+      "type": "prose",
+      "text": "Follow the state $\\vert+\\rangle$, which points along $+x$. Step by step: its components are $c_0 = c_1 = 1/\\sqrt2$; after time $t$ it is $(e^{-iht}\\vert0\\rangle + e^{iht}\\vert1\\rangle)/\\sqrt2$, which is, up to a global phase $e^{-iht}$, the state $(\\vert0\\rangle + e^{2iht}\\vert1\\rangle)/\\sqrt2$ with relative phase $\\phi = 2ht$. On the Bloch sphere $\\phi$ is the azimuthal angle, so the vector goes around the equator: $\\langle X\\rangle = \\cos2ht$, $\\langle Y\\rangle = \\sin2ht$, while $\\langle Z\\rangle = 0$ never changes. The populations of $\\vert0\\rangle$ and $\\vert1\\rangle$ stay at 1/2 because they are the energy populations."
+    },
+    {
+      "type": "prose",
+      "text": "Physically this is Larmor precession, the motion of a magnetic moment in a field, and it is the 'precession frequency $2h_i$' of each qubit in the QRC spin reservoir. It is also the reason a qubit's phase is fragile: any uncontrolled change in $h$ changes how fast the phase turns."
     },
     {
       "type": "widget",
@@ -92,25 +442,11 @@
     },
     {
       "type": "prose",
-      "text": "Try it: under $H = hZ$ for a time $t$ the state turns by $2ht$ about the z axis, so this rotation angle is $2ht$. Starting on the equator, a quarter turn takes $\\vert+\\rangle$ to $\\vert+i\\rangle$; the probabilities in the bars never change, because precession only moves the relative phase. Lower θ and the vector traces a smaller cone around the axis."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Rabi oscillation"
+      "text": "Try this. Under $H = hZ$ for a time $t$, the state turns by the angle $2ht$ about $z$, so the widget's rotation angle stands for $2ht$. (1) With θ = 90 and φ = 0 (the state $\\vert+\\rangle$), set the angle to 90: the state moves a quarter turn to $\\vert+i\\rangle$ on the $y$ axis, and the probability bars do not move, because precession changes only the relative phase. (2) Set the angle to 180: the state reaches $\\vert-\\rangle$. (3) Lower θ to 30 and set the angle to 360: the arc is now a full small circle around the $z$ axis (the vector sweeps a cone), and the readout shows $\\langle Z\\rangle = \\cos30^\\circ = 0.866$ for both the start and the end. (4) Set θ to 0: the start and end vectors coincide, because $\\vert0\\rangle$ is stationary."
     },
     {
       "type": "prose",
-      "text": "Now add a transverse drive. For $H = \\tfrac\\delta2 Z + \\tfrac\\Omega2 X$ (a two-level system driven at Rabi frequency $\\Omega$ with detuning $\\delta$), starting in $\\vert0\\rangle$,"
-    },
-    {
-      "type": "math",
-      "tex": "P_1(t) = \\frac{\\Omega^2}{\\Omega^2 + \\delta^2}\\,\\sin^2\\!\\left(\\frac{\\sqrt{\\Omega^2+\\delta^2}\\;t}{2}\\right)",
-      "caption": "Rabi's formula. On resonance (δ = 0) the population swings fully between |0⟩ and |1⟩."
-    },
-    {
-      "type": "prose",
-      "text": "Detuning both speeds up the oscillation and caps how much population moves. The same formula, read for two coupled qubits with different fields, explains on the QRC shelf's Dynamical Regimes (#/qrc/models/dynamical-regimes) page why strong disorder stops information leaving the input qubit: neighbouring spins are too detuned to exchange an excitation."
+      "text": "The sample below checks precession numerically, and also Rabi's formula from the next section and the constant energy-basis populations."
     },
     {
       "type": "code",
@@ -119,7 +455,44 @@
     },
     {
       "type": "prose",
-      "text": "Output of the run: under $H = Z$ the state $\\vert+\\rangle$ goes round the equator, $\\langle X\\rangle$ following $\\cos2t$ exactly (1, 0.707, 0, −1 at $t = 0$, $\\pi/8$, $\\pi/4$, $\\pi/2$) with $\\langle Z\\rangle = 0$ throughout. The numerical Rabi probabilities at $\\Omega = 1$, $\\delta = 0.5$ match the formula (0.2250, 0.6469, 0.4952 at $t = 1, 2, 4$). The energy-basis populations of a state are 0.4625 and 0.5375 at both $t = 0$ and $t = 5$."
+      "text": "Output of the run: under $H = Z$ the state $\\vert+\\rangle$ gives $\\langle X\\rangle = 1,\\ 0.707,\\ 0,\\ -1$ at $t = 0,\\ \\pi/8,\\ \\pi/4,\\ \\pi/2$, exactly $\\cos2t$, with $\\langle Z\\rangle = 0$ throughout; the numerical Rabi probabilities at $\\Omega = 1$, $\\delta = 0.5$ match the formula (0.2250, 0.6469, 0.4952 at $t = 1, 2, 4$); and the energy-basis populations of $0.6\\vert0\\rangle + 0.8\\vert1\\rangle$ under $0.3X + 0.8Z$ are 0.4625 and 0.5375 at both $t = 0$ and $t = 5$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: precession period",
+      "text": "A qubit has $H = 2Z$. How long does an equatorial state take to come back to where it started?",
+      "solution": [
+        "The Bloch vector turns at angular frequency $2h = 4$.",
+        "A full turn is $2\\pi$, so it takes $2\\pi/4 = \\pi/2 \\approx 1.571$ time units."
+      ],
+      "answer": "$\\pi/2 \\approx 1.571$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Rabi oscillation: a first look"
+    },
+    {
+      "type": "prose",
+      "text": "Precession never moves population between $\\vert0\\rangle$ and $\\vert1\\rangle$, because they are the energy eigenstates. To move population you need a Hamiltonian with an off-diagonal part. In a lab this is a drive: a microwave or laser field oscillating at nearly the qubit's own frequency. Seen from a frame that turns along with the drive (how to make that change of frame is on Schrödinger and Heisenberg Pictures (#/quantum/dynamics/pictures-of-time-evolution)), the Hamiltonian becomes constant:"
+    },
+    {
+      "type": "math",
+      "tex": "H = \\tfrac\\delta2 Z + \\tfrac\\Omega2 X",
+      "caption": "A driven qubit in the rotating frame. $\\Omega$ (the Rabi frequency) is the drive strength; $\\delta$ (the detuning) is how far the drive frequency is from the qubit's."
+    },
+    {
+      "type": "prose",
+      "text": "This is exactly the case $H = aX + bZ$ we already solved. Step 1: $\\omega = \\frac12\\sqrt{\\Omega^2 + \\delta^2}$, so the Bloch vector rotates at $W = \\sqrt{\\Omega^2 + \\delta^2}$ about the axis $\\hat n = (\\Omega, 0, \\delta)/W$. Step 2: start in $\\vert0\\rangle$; by the propagator formula the amplitude of $\\vert1\\rangle$ is $\\langle1\\vert e^{-iHt}\\vert0\\rangle = -i\\sin(\\omega t)\\,\\langle1\\vert\\sigma_n\\vert0\\rangle$ (the $I$ term gives $\\langle1\\vert0\\rangle = 0$). Here $\\langle1\\vert\\sigma_n\\vert0\\rangle = n_x\\langle1\\vert X\\vert0\\rangle + n_z\\langle1\\vert Z\\vert0\\rangle = n_x = \\Omega/W$, and $\\omega t = Wt/2$, so the amplitude is $-i\\,(\\Omega/W)\\sin(Wt/2)$. Step 3: square it."
+    },
+    {
+      "type": "math",
+      "tex": "P_1(t) = \\frac{\\Omega^2}{\\Omega^2 + \\delta^2}\\,\\sin^2\\!\\left(\\frac{\\sqrt{\\Omega^2+\\delta^2}\\;t}{2}\\right)",
+      "caption": "Rabi's formula. On resonance ($\\delta = 0$) the population swings fully between $\\vert0\\rangle$ and $\\vert1\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Detuning does two things at once: it speeds the oscillation up (the frequency is $W$, larger than $\\Omega$) and it caps how much population moves (the maximum is $\\Omega^2/W^2$). The geometric reason: the rotation axis tilts toward $z$, and a north-pole vector rotating about a tilted axis traces a cone that never reaches the south pole. The full story of driven qubits, including where the rotating frame comes from and how pulses are shaped, is on Driven Qubits and Rabi Oscillations (#/quantum/qubits/driven-qubits)."
     },
     {
       "type": "widget",
@@ -164,7 +537,120 @@
     },
     {
       "type": "prose",
-      "text": "Try it: on resonance (δ = 0) the population swings all the way to $\\vert1\\rangle$ and back. Raise the detuning and the oscillation gets faster while its ceiling $\\Omega^2/(\\Omega^2 + \\delta^2)$ drops: at δ = 5 with Ω = 0.5 almost nothing moves. That is the effect that stops a strongly detuned qubit in a disordered reservoir passing on its excitation."
+      "text": "Try this. (1) Leave δ = 0 and Ω = 1: the curve reaches 1 at $t = \\pi \\approx 3.14$, a full transfer (a π pulse). (2) Raise δ to 1: the ceiling drops to $1/(1 + 1) = 0.5$ and the period shortens from $2\\pi$ to $2\\pi/\\sqrt2 \\approx 4.44$. (3) Set Ω = 0.5 and δ = 5: the ceiling is $0.25/25.25 \\approx 0.01$, and almost nothing moves. That last case is why, on Dynamical Regimes (#/qrc/models/dynamical-regimes), two neighbouring spins with very different local fields cannot pass an excitation between them: they are too detuned from each other."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a π pulse",
+      "text": "On resonance with Rabi frequency $\\Omega$, how long must the drive be on to move $\\vert0\\rangle$ completely to $\\vert1\\rangle$?",
+      "solution": [
+        "With $\\delta = 0$, $P_1 = \\sin^2(\\Omega t/2)$.",
+        "$P_1 = 1$ first when $\\Omega t/2 = \\pi/2$, so $t = \\pi/\\Omega$. This rotation by $\\pi$ about $x$ is called a π pulse."
+      ],
+      "answer": "$t = \\pi/\\Omega$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Energy and time"
+    },
+    {
+      "type": "prose",
+      "text": "The beating formula says that the only clock a quantum system has is its energy differences. That has a useful consequence: how fast a state can change is limited by how spread out its energy is. A state with a definite energy cannot change at all (it is stationary); a state with a large energy spread can change fast."
+    },
+    {
+      "type": "prose",
+      "text": "To make this precise we need a measure of 'change' and a measure of 'spread'. For change, ask how long it takes a state to evolve into one that is orthogonal to where it started, completely distinguishable from it; call that time $t_\\perp$. For spread, use the standard deviation of energy, $\\Delta E = \\sqrt{\\langle H^2\\rangle - \\langle H\\rangle^2}$. Mandelstam and Tamm proved in 1945 that"
+    },
+    {
+      "type": "math",
+      "tex": "t_\\perp \\ge \\frac{\\pi}{2\\,\\Delta E}",
+      "caption": "The Mandelstam–Tamm bound, a precise form of the energy–time uncertainty relation ($\\hbar = 1$; in SI units the right side is $\\pi\\hbar/(2\\Delta E)$)."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example: the state $\\vert+\\rangle$ under $H = Z$. Step 1: the energies are $\\pm1$ with probability 1/2 each, so $\\langle H\\rangle = 0$, $\\langle H^2\\rangle = 1$ and $\\Delta E = 1$. Step 2: the bound says $t_\\perp \\ge \\pi/2$. Step 3: the actual evolution gives $\\vert\\langle+\\vert\\psi(t)\\rangle\\vert^2 = \\cos^2t$, which first reaches 0 at $t = \\pi/2$. The bound is met exactly. An equal superposition of two energies is the fastest way to reach an orthogonal state for a given energy spread."
+    },
+    {
+      "type": "prose",
+      "text": "How to read this, and how not to. It is not a statement that 'time is uncertain': time in quantum mechanics is a parameter on a clock, not an observable with an operator. It is a statement about rates: a system's energy spread sets the fastest rate at which anything about it can change. For a quantum reservoir this sets a speed limit on how quickly it can respond to a new input: a reservoir whose state carries a small energy spread will barely react within one time step."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a speed limit",
+      "text": "A qubit with $H = 3Z$ starts in $\\vert+\\rangle$. Use the Mandelstam–Tamm bound to find the shortest time in which it can become orthogonal to its start, and check it against precession.",
+      "solution": [
+        "Energies $\\pm3$ with probability 1/2 each: $\\Delta E = 3$.",
+        "Bound: $t_\\perp \\ge \\pi/(2\\cdot3) = \\pi/6$.",
+        "Precession at angular frequency $2h = 6$ turns $\\vert+\\rangle$ into $\\vert-\\rangle$ (half a turn, angle $\\pi$) at $t = \\pi/6$. The bound is met."
+      ],
+      "answer": "$\\pi/6 \\approx 0.524$, and precession reaches $\\vert-\\rangle$ at exactly that time"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Solving it on a computer"
+    },
+    {
+      "type": "prose",
+      "text": "For a reservoir of several qubits, or a Hamiltonian that changes in time, you integrate the equation numerically. The obvious method is a trap."
+    },
+    {
+      "type": "prose",
+      "text": "The obvious method (Euler's) steps forward with the first-order formula: $\\vert\\psi(t + dt)\\rangle \\approx \\vert\\psi(t)\\rangle - i\\,dt\\,H\\vert\\psi(t)\\rangle = (I - iH\\,dt)\\vert\\psi(t)\\rangle$. Apply this to an energy eigenstate with energy $E$: each step multiplies it by $1 - iE\\,dt$, a complex number of size $\\sqrt{1 + E^2dt^2}$, slightly more than 1. So every step stretches the state a little, and after many steps the norm drifts upward and probabilities add to more than 1. The step is unitary only to first order in $dt$, as the derivation at the top of the page showed."
+    },
+    {
+      "type": "prose",
+      "text": "Two fixes. A higher-order method such as fourth-order Runge–Kutta (RK4) makes the per-step error so small (order $dt^5$) that the drift is invisible at ordinary step sizes. Better still for a time-independent $H$: compute the exact step $e^{-iH\\,dt}$ once (it is unitary to rounding error) and multiply by it repeatedly. The sample compares all three on $H = X$ from $\\vert0\\rangle$, with 1000 steps up to $t = 10$, where the exact answer is $P_1 = \\sin^2 10 = 0.295959$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]], complex)\n# Step the Schrodinger equation forward in time numerically, for H = X starting in |0>.\n# The exact answer is cos(t)|0> - i sin(t)|1>, so P(1) = sin(t)^2.\nH = X\nT, n = 10.0, 1000\ndt = T / n\ndef euler(psi):          # psi(t+dt) = psi - i dt H psi : simplest, but not unitary\n    return psi - 1j * dt * (H @ psi)\ndef rk4(psi):            # classic fourth-order Runge-Kutta for d psi/dt = -i H psi\n    f = lambda v: -1j * (H @ v)\n    k1 = f(psi); k2 = f(psi + dt/2 * k1); k3 = f(psi + dt/2 * k2); k4 = f(psi + dt * k3)\n    return psi + dt/6 * (k1 + 2*k2 + 2*k3 + k4)\nUstep = expm(-1j * H * dt)\ndef exact_step(psi):     # multiply by e^{-i H dt}: exactly unitary\n    return Ustep @ psi\nfor name, step in ((\"Euler\", euler), (\"RK4\", rk4), (\"e^{-iH dt}\", exact_step)):\n    psi = np.array([1, 0], complex)\n    for _ in range(n):\n        psi = step(psi)\n    print(f\"{name:11s} after t = {T}: norm = {np.linalg.norm(psi):.6f}, P(1) = {abs(psi[1])**2:.6f}\")\nprint(f\"exact       sin(10)^2 = {np.sin(T)**2:.6f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: Euler ends with norm 1.051268 and $P_1 = 0.326747$ (wrong in the second digit); RK4 and the exact step both give norm 1.000000 and $P_1 = 0.295959$, matching $\\sin^2 10$. The Euler norm is what the argument above predicts: both energies here are $\\pm1$, so each step multiplies the norm by $\\sqrt{1 + dt^2}$, and $(1 + 10^{-4})^{500} = e^{0.05} \\approx 1.0513$."
+    },
+    {
+      "type": "callout",
+      "text": "Rule of thumb for simulating quantum reservoirs: with a fixed Hamiltonian between inputs, compute $U = e^{-iH\\Delta t}$ once and reuse it every step. Every reservoir simulation on the QRC shelf, and the widget code behind it, works this way."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A problem that uses the whole page. A qubit has $H = 0.5\\,X$ and starts in $\\vert0\\rangle$. (a) What are the energies, and is the starting state stationary? (b) Give $\\vert\\psi(t)\\rangle$. (c) When is $P_1 = 1$ for the first time? (d) What is the period of $\\langle Z\\rangle$? (e) Does the Mandelstam–Tamm bound allow the answer to (c)?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "(a) $\\omega = 0.5$, so the energies are $\\pm0.5$. The energy eigenstates are $\\vert\\pm\\rangle$, and $\\vert0\\rangle = (\\vert+\\rangle + \\vert-\\rangle)/\\sqrt2$ is a superposition of both, so it is not stationary.",
+        "(b) The qubit propagator gives $U = \\cos(0.5t)I - i\\sin(0.5t)X$, so $\\vert\\psi(t)\\rangle = \\cos(t/2)\\vert0\\rangle - i\\sin(t/2)\\vert1\\rangle$.",
+        "(c) $P_1 = \\sin^2(t/2) = 1$ first at $t/2 = \\pi/2$, so $t = \\pi \\approx 3.142$. This is a π pulse with $\\Omega = 1$ (compare $H = \\frac\\Omega2X$).",
+        "(d) $\\langle Z\\rangle = \\cos^2(t/2) - \\sin^2(t/2) = \\cos t$, period $2\\pi$. Check: the energy difference is $0.5 - (-0.5) = 1$, so the period is $2\\pi/1$.",
+        "(e) $\\Delta E = 0.5$, so $t_\\perp \\ge \\pi/(2\\cdot0.5) = \\pi$. The state reaches $\\vert1\\rangle$, orthogonal to $\\vert0\\rangle$, at exactly $t = \\pi$: the bound is met."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The Schrödinger equation $i\\,d\\vert\\psi\\rangle/dt = H\\vert\\psi\\rangle$ says the Hamiltonian generates motion. Linearity and conservation of probability force this shape, with $H$ Hermitian and the $i$ in front.",
+        "For a time-independent $H$: expand in energy eigenstates, give each a phase $e^{-iE_kt}$, add up. Equivalently $\\vert\\psi(t)\\rangle = e^{-iHt}\\vert\\psi(0)\\rangle$.",
+        "Energy eigenstates are stationary: nothing measurable about them changes. Energy-basis populations never change for any state.",
+        "Everything visible comes from interference between energies and oscillates at energy differences $E_k - E_l$.",
+        "For a qubit, $e^{-iHt} = \\cos(\\omega t)I - i\\sin(\\omega t)\\sigma_n$: a rotation by $2\\omega t$ about $\\hat n$. $H = hZ$ gives precession at $2h$; adding a drive gives Rabi oscillations.",
+        "A state can change no faster than its energy spread allows: $t_\\perp \\ge \\pi/(2\\Delta E)$.",
+        "Numerically, step with the exact unitary $e^{-iH\\,dt}$ (or RK4), never with Euler's method."
+      ]
     },
     {
       "type": "heading",
@@ -174,9 +660,10 @@
     {
       "type": "list",
       "items": [
-        "Between inputs every reservoir evolves by $U = e^{-iH\\Delta t}$, applied $V$ times in sub-steps for virtual nodes: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
-        "The detuning argument for many-body localisation in small reservoirs: Dynamical Regimes (#/qrc/models/dynamical-regimes).",
-        "Adding dissipation turns this equation into the Lindblad equation: Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics)."
+        "Between inputs every reservoir evolves by $U = e^{-iH\\Delta t}$, often split into several shorter sub-steps whose readouts act as extra 'virtual' features: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "The detuning argument for why strong disorder freezes small reservoirs: Dynamical Regimes (#/qrc/models/dynamical-regimes).",
+        "Adding dissipation turns this equation into the Lindblad equation: Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics).",
+        "The same evolution with the operators moving instead of the state, which is how many QRC papers analyse their features: Schrödinger and Heisenberg Pictures (#/quantum/dynamics/pictures-of-time-evolution)."
       ]
     },
     {
@@ -186,33 +673,47 @@
     },
     {
       "type": "problem",
-      "title": "Precession period",
-      "text": "A qubit has $H = 2Z$. How long does an equatorial state take to come back to where it started?",
-      "solution": [
-        "The Bloch vector turns at angular frequency $2h = 4$.",
-        "A full turn takes $2\\pi/4 = \\pi/2 \\approx 1.571$ time units."
-      ],
-      "answer": "π/2 ≈ 1.57"
-    },
-    {
-      "type": "problem",
-      "title": "A π pulse",
-      "text": "On resonance with Rabi frequency $\\Omega$, how long must the drive be on to move $\\vert0\\rangle$ completely to $\\vert1\\rangle$?",
-      "solution": [
-        "With $\\delta = 0$, $P_1 = \\sin^2(\\Omega t/2)$.",
-        "$P_1 = 1$ first at $\\Omega t/2 = \\pi/2$, so $t = \\pi/\\Omega$. This rotation by $\\pi$ about $x$ is called a π pulse."
-      ],
-      "answer": "t = π/Ω"
-    },
-    {
-      "type": "problem",
       "title": "Beating between two levels",
-      "text": "A system with energies $E_0 = -1$ and $E_1 = +1$ starts in $(\\vert E_0\\rangle + \\vert E_1\\rangle)/\\sqrt2$. At what angular frequency does an observable that connects the two levels oscillate?",
+      "text": "A system with energies $E_0 = -1$ and $E_1 = +1$ starts in $(\\vert E_0\\rangle + \\vert E_1\\rangle)/\\sqrt2$. At what angular frequency does an observable that connects the two levels oscillate? What happens to the populations of $\\vert E_0\\rangle$ and $\\vert E_1\\rangle$?",
+      "hint": "Only the cross term in the beating formula depends on time.",
       "solution": [
         "The relative phase between the components is $e^{-i(E_1 - E_0)t}$.",
-        "So the expectation value oscillates at $E_1 - E_0 = 2$. Populations of $\\vert E_0\\rangle$, $\\vert E_1\\rangle$ stay at 1/2."
+        "So the expectation value oscillates at $E_1 - E_0 = 2$. The populations of $\\vert E_0\\rangle$ and $\\vert E_1\\rangle$ stay at 1/2 for all time."
       ],
-      "answer": "2 (the energy difference)"
+      "answer": "2 (the energy difference); the populations stay at 1/2"
+    },
+    {
+      "type": "problem",
+      "title": "A shifted Hamiltonian",
+      "text": "Show that $H' = H + 5I$ gives exactly the same predictions as $H$ for every measurement.",
+      "hint": "What happens to the energy differences?",
+      "solution": [
+        "$H$ and $5I$ commute, so $e^{-iH't} = e^{-5it}e^{-iHt}$.",
+        "The factor $e^{-5it}$ multiplies the whole state: a global phase, which cancels in every probability and expectation value. Equivalently, every energy shifts by 5 and every difference $E_k - E_l$ is unchanged."
+      ],
+      "answer": "it adds only a global phase"
+    },
+    {
+      "type": "problem",
+      "title": "Evolving a superposition",
+      "text": "With $H = X$, find $\\vert\\psi(t)\\rangle$ for $\\vert\\psi(0)\\rangle = \\vert+\\rangle$ and for $\\vert\\psi(0)\\rangle = (\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$. Which one moves?",
+      "solution": [
+        "$\\vert+\\rangle$ is an eigenstate of $X$ with energy $+1$: $\\vert\\psi(t)\\rangle = e^{-it}\\vert+\\rangle$, stationary.",
+        "$(\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$ is the $+y$ state. Use $U = \\cos t\\,I - i\\sin t\\,X$: $U\\vert0\\rangle = \\cos t\\vert0\\rangle - i\\sin t\\vert1\\rangle$ and $U\\vert1\\rangle = \\cos t\\vert1\\rangle - i\\sin t\\vert0\\rangle$.",
+        "So the state becomes $\\frac{1}{\\sqrt2}\\left[(\\cos t + \\sin t)\\vert0\\rangle + i(\\cos t - \\sin t)\\vert1\\rangle\\right]$. It moves: it rotates about $x$ through the $y$–$z$ plane, and $P_0 = (1 + \\sin2t)/2$."
+      ],
+      "answer": "$\\vert+\\rangle$ is stationary; the $+y$ state rotates about $x$ with $P_0 = (1+\\sin 2t)/2$"
+    },
+    {
+      "type": "problem",
+      "title": "Euler's drift",
+      "text": "Euler's method is used on $H = 2Z$ with step $dt = 0.01$. By what factor has the norm of $\\vert+\\rangle$ grown after 1000 steps?",
+      "hint": "Each step multiplies an energy-$E$ component by $1 - iE\\,dt$.",
+      "solution": [
+        "Both energies are $\\pm2$, so each step multiplies each component by a number of size $\\sqrt{1 + 4\\times10^{-4}}$.",
+        "After 1000 steps the norm is $(1 + 4\\times10^{-4})^{500} = e^{500\\ln(1.0004)} \\approx e^{0.19996} \\approx 1.2214$."
+      ],
+      "answer": "about 1.22"
     },
     {
       "type": "heading",
@@ -224,7 +725,9 @@
       "items": [
         "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), chapter 2",
         "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapter 2",
-        "I. I. Rabi, Space quantization in a gyrating magnetic field, Physical Review 51, 652 (1937)"
+        "L. Susskind and A. Friedman, Quantum Mechanics: The Theoretical Minimum, Basic Books (2014), lecture 4",
+        "I. I. Rabi, Space quantization in a gyrating magnetic field, Physical Review 51, 652 (1937)",
+        "L. Mandelstam and I. Tamm, The uncertainty relation between energy and time in non-relativistic quantum mechanics, Journal of Physics (USSR) 9, 249 (1945)"
       ]
     }
   ]

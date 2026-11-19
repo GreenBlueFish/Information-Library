@@ -1,0 +1,403 @@
+{
+  "title": "Wavefunctions, Position and Momentum",
+  "intro": "A particle on a line is described by a wavefunction $\\psi(x)$, one amplitude for every position, the continuous version of a qubit's two amplitudes. This background lesson covers probability densities, momentum and the de Broglie relation, the position–momentum uncertainty principle, the particle in a box with real numbers, and how a grid turns it all back into matrices.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Before you start"
+    },
+    {
+      "type": "prose",
+      "text": "What you need first: States and Dirac Notation (#/quantum/foundations/states-and-dirac-notation), Measurement and the Born Rule (#/quantum/foundations/measurement) and The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation). A little calculus (what an integral and a second derivative are) helps."
+    },
+    {
+      "type": "callout",
+      "text": "Why this page is background. Everything on the Quantum Reservoir Computing shelf uses qubits (two levels each) or oscillator modes, and both are handled with matrices and ladder operators, never with wavefunctions in space. But almost every other quantum mechanics text starts here, with a particle described by a wave $\\psi(x)$, and the words you meet everywhere (wavefunction, de Broglie wavelength, particle in a box, the position–momentum uncertainty principle) come from this picture. This page connects that picture to the qubit one, so that the rest of quantum mechanics is not a closed book. You can skip it and come back."
+    },
+    {
+      "type": "prose",
+      "text": "What you will be able to do by the end of this page:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Explain what a wavefunction is, as the continuous version of a list of amplitudes, and turn $\\vert\\psi(x)\\vert^2$ into probabilities by integrating.",
+        "Normalise a wavefunction and compute $\\langle x\\rangle$.",
+        "Use the de Broglie relation $p = h/\\lambda$ and the momentum operator, and say why $[x, p] = i\\hbar$ leads to $\\Delta x\\,\\Delta p \\ge \\hbar/2$.",
+        "Solve the particle in a box from scratch and put numbers on it for an electron.",
+        "Turn the problem into a matrix on a grid and solve it with numpy, which shows that a wavefunction is a very long state vector."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From two amplitudes to infinitely many"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit's state is a list of two amplitudes, one for each possible outcome of a $Z$ measurement: $\\vert\\psi\\rangle = \\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$. A system with $N$ possible outcomes needs $N$ amplitudes. Now ask about a particle on a line, and measure its position. How many outcomes are there? As many as there are points on the line: infinitely many. So the state is a list of infinitely many amplitudes, one for each position $x$. A list indexed by a continuous label is a function, and that function is the wavefunction $\\psi(x) = \\langle x\\vert\\psi\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "The step from a list to a function is easiest to see through a grid. Cut the line into small cells of width $a$, centred at $x_1, x_2, \\dots$, and treat 'the particle is in cell $j$' as basis state $\\vert j\\rangle$. The state is then an ordinary vector $\\sum_j\\psi_j\\vert j\\rangle$, the Born rule gives $P(\\text{cell } j) = \\vert\\psi_j\\vert^2$, and the probabilities add to 1. As the cells get smaller, each cell's probability shrinks in proportion to its width. So define $\\psi(x_j)$ by $\\psi_j = \\psi(x_j)\\sqrt a$: then $\\vert\\psi(x_j)\\vert^2a$ is the probability of cell $j$, and as $a \\to 0$ the sum over cells becomes an integral."
+    },
+    {
+      "type": "math",
+      "tex": "P(a \\le x \\le b) = \\int_a^b \\vert\\psi(x)\\vert^2\\,dx, \\qquad \\int_{-\\infty}^{\\infty}\\vert\\psi(x)\\vert^2\\,dx = 1",
+      "caption": "The Born rule for position, and the normalisation condition. $\\vert\\psi(x)\\vert^2$ is a probability density: probability per unit length."
+    },
+    {
+      "type": "prose",
+      "text": "Everything carries over from the qubit case with sums replaced by integrals. The inner product of two states is $\\langle\\phi\\vert\\psi\\rangle = \\int\\bar\\phi(x)\\psi(x)\\,dx$, and the average position is $\\langle x\\rangle = \\int x\\,\\vert\\psi(x)\\vert^2\\,dx$, just as $\\langle Z\\rangle = (+1)\\vert\\alpha\\vert^2 + (-1)\\vert\\beta\\vert^2$ is a sum of each outcome times its probability."
+    },
+    {
+      "type": "callout",
+      "text": "Common confusion: $\\vert\\psi(x)\\vert^2$ is not a probability, it is a density. It has units of 1/length, and it can be larger than 1 (a particle squeezed into 0.1 nm has $\\vert\\psi\\vert^2$ around $10^{10}$ per metre). Only its integral over a region is a probability. Another: the wavefunction is not a physical wave of anything in space, like a water wave; it is the list of amplitudes for where the particle would be found."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: normalising a wavefunction"
+    },
+    {
+      "type": "prose",
+      "text": "A particle confined between $x = 0$ and $x = L$ has the trial wavefunction $\\psi(x) = A\\,x(L - x)$ inside, zero outside. Find $A$, then $\\langle x\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Normalisation requires $A^2\\int_0^Lx^2(L - x)^2\\,dx = 1$.",
+        "Step 2. Expand: $x^2(L - x)^2 = L^2x^2 - 2Lx^3 + x^4$. Integrate term by term: $L^2\\cdot\\frac{L^3}{3} - 2L\\cdot\\frac{L^4}{4} + \\frac{L^5}{5} = L^5\\left(\\frac13 - \\frac12 + \\frac15\\right) = \\frac{L^5}{30}$.",
+        "Step 3. So $A^2L^5/30 = 1$ and $A = \\sqrt{30/L^5}$. For $L = 1$: $A = \\sqrt{30} = 5.477$.",
+        "Step 4. $\\langle x\\rangle$: the density $x^2(L - x)^2$ is symmetric about $L/2$ (replace $x$ by $L - x$ and it is unchanged), so $\\langle x\\rangle = L/2$. A direct integration for $L = 1$ gives $30\\int_0^1x^3(1 - x)^2dx = 0.5$, as expected."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: probability in a region",
+      "text": "For a particle with $\\psi(x) = \\sqrt{2/L}\\sin(\\pi x/L)$ on $[0, L]$ (the box ground state, derived below), what is the probability of finding it in the first quarter, $0 \\le x \\le L/4$?",
+      "hint": "Use $\\sin^2u = (1 - \\cos2u)/2$.",
+      "solution": [
+        "$P = \\frac2L\\int_0^{L/4}\\sin^2(\\pi x/L)\\,dx$. Use $\\sin^2u = \\frac12(1 - \\cos2u)$.",
+        "$\\frac2L\\left[\\frac x2 - \\frac{L}{4\\pi}\\sin\\frac{2\\pi x}{L}\\right]_0^{L/4} = \\frac2L\\left(\\frac L8 - \\frac{L}{4\\pi}\\right) = \\frac14 - \\frac{1}{2\\pi}$.",
+        "Numerically $0.25 - 0.1592 = 0.0908$. The particle avoids the walls: a quarter of the length holds only 9% of the probability."
+      ],
+      "answer": "$\\frac14 - \\frac{1}{2\\pi} \\approx 0.0908$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Momentum and the de Broglie relation"
+    },
+    {
+      "type": "prose",
+      "text": "Position is one observable. What about momentum, mass times velocity? In 1924 Louis de Broglie proposed that every particle with momentum $p$ has a wavelength $\\lambda = h/p$, where $h = 6.626\\times10^{-34}$ J s is Planck's constant. Electrons scattered off a nickel crystal were then seen to make diffraction patterns with exactly that wavelength (Davisson and Germer, 1927). In terms of the wavenumber $k = 2\\pi/\\lambda$ (radians of phase per metre) and $\\hbar = h/2\\pi$, the relation reads"
+    },
+    {
+      "type": "math",
+      "tex": "p = \\frac{h}{\\lambda} = \\hbar k",
+      "caption": "The de Broglie relation. A shorter wavelength means a larger momentum."
+    },
+    {
+      "type": "prose",
+      "text": "A state of definite momentum is therefore a wave of definite wavelength spread over all space: the plane wave $\\psi_k(x) = e^{ikx}$. Its density $\\vert e^{ikx}\\vert^2 = 1$ is the same everywhere, so a particle with exactly known momentum could be anywhere. (A plane wave cannot be normalised, since $\\int1\\,dx$ is infinite; it is an idealisation, the limit of a very long wave packet.)"
+    },
+    {
+      "type": "prose",
+      "text": "Which operator has the plane waves as eigenfunctions? Differentiate: $\\frac{d}{dx}e^{ikx} = ike^{ikx}$, so $-i\\hbar\\frac{d}{dx}e^{ikx} = \\hbar k\\,e^{ikx} = p\\,e^{ikx}$. The momentum operator acting on a wavefunction is $\\hat p = -i\\hbar\\frac{d}{dx}$, and the position operator simply multiplies by $x$: $(\\hat x\\psi)(x) = x\\psi(x)$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: how big is the wavelength?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "An electron with 1 eV of kinetic energy. Step 1: kinetic energy $K = p^2/2m$, so $p = \\sqrt{2mK}$. Step 2: with $m = 9.109\\times10^{-31}$ kg and $K = 1.602\\times10^{-19}$ J, $p = 5.403\\times10^{-25}$ kg m/s. Step 3: $\\lambda = h/p = 1.226$ nm, about the size of a small molecule. Waves this size diffract off atoms in crystals, which is how electron diffraction works.",
+        "A baseball, 0.145 kg at 40 m/s. $p = 5.8$ kg m/s and $\\lambda = 6.626\\times10^{-34}/5.8 = 1.14\\times10^{-34}$ m, about $10^{-19}$ times the size of a proton. No experiment could ever see such a wave, which is why everyday objects show no wave behaviour."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: an electron in a microscope",
+      "text": "An electron microscope accelerates electrons to $p = 5.4\\times10^{-23}$ kg m/s. What is their wavelength?",
+      "solution": [
+        "$\\lambda = h/p = 6.626\\times10^{-34}/5.4\\times10^{-23} = 1.23\\times10^{-11}$ m.",
+        "That is 100 times the momentum of the 1 eV electron, so a hundredth of its wavelength: 0.0123 nm. Shorter wavelengths resolve smaller details, which is why electron microscopes see atoms."
+      ],
+      "answer": "about 0.0123 nm (12 pm)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Position and momentum do not commute"
+    },
+    {
+      "type": "prose",
+      "text": "For a qubit, $Z$ and $X$ do not commute, and so no state has definite values of both. Position and momentum are the continuous version of the same thing. Compute their commutator by acting on an arbitrary wavefunction $f(x)$, step by step:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\hat x\\hat pf = x\\cdot(-i\\hbar f') = -i\\hbar xf'$.",
+        "Step 2. $\\hat p\\hat xf = -i\\hbar\\frac{d}{dx}(xf) = -i\\hbar(f + xf')$ by the product rule.",
+        "Step 3. Subtract: $(\\hat x\\hat p - \\hat p\\hat x)f = -i\\hbar xf' + i\\hbar f + i\\hbar xf' = i\\hbar f$."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "[\\hat x, \\hat p] = i\\hbar",
+      "caption": "The canonical commutation relation. It holds for every wavefunction, so it is an identity between operators."
+    },
+    {
+      "type": "prose",
+      "text": "The general uncertainty relation of Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty), $\\Delta A\\,\\Delta B \\ge \\frac12\\vert\\langle[A, B]\\rangle\\vert$, then gives Heisenberg's uncertainty principle: $\\Delta x\\,\\Delta p \\ge \\hbar/2$. It is not about clumsy measurement disturbing the particle; it is a property of the state. A wave localised in a small region must be built from many wavelengths, and many wavelengths means a spread of momenta."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A Gaussian wave packet"
+    },
+    {
+      "type": "prose",
+      "text": "The state that meets the bound exactly is a Gaussian: $\\psi(x) = (2\\pi\\sigma^2)^{-1/4}\\,e^{-x^2/(4\\sigma^2)}$. Its density $\\vert\\psi\\vert^2$ is the normal distribution with standard deviation $\\sigma$, so $\\Delta x = \\sigma$. Its momentum spread works out to $\\Delta p = \\hbar/(2\\sigma)$, and the product is exactly $\\hbar/2$. Squeeze the packet ($\\sigma$ smaller) and the momentum spread grows in proportion."
+    },
+    {
+      "type": "prose",
+      "text": "The sample computes this numerically for $\\sigma = 0.7$ (units with $\\hbar = 1$): it integrates $x^2\\vert\\psi\\vert^2$ to get $\\Delta x = 0.7000$ and $\\vert d\\psi/dx\\vert^2$ to get $\\Delta p = 0.7143$ (for a real wavefunction centred at zero, $\\langle p^2\\rangle = \\hbar^2\\int\\vert\\psi'\\vert^2dx$, after an integration by parts), and prints the product $0.5000 = \\hbar/2$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a confined electron",
+      "text": "An electron is known to be within about $\\Delta x = 0.1$ nm (an atom's size). What is the least possible spread in its velocity?",
+      "solution": [
+        "$\\Delta p \\ge \\hbar/(2\\Delta x) = 1.0546\\times10^{-34}/(2\\times10^{-10}) = 5.27\\times10^{-25}$ kg m/s.",
+        "$\\Delta v = \\Delta p/m = 5.27\\times10^{-25}/9.109\\times10^{-31} = 5.8\\times10^5$ m/s, about 0.2% of the speed of light. Electrons in atoms are never still."
+      ],
+      "answer": "$\\Delta v \\ge 5.8\\times10^5$ m/s"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Schrödinger equation for a particle"
+    },
+    {
+      "type": "prose",
+      "text": "The Hamiltonian of a particle of mass $m$ moving in a potential energy $V(x)$ is kinetic plus potential energy, $H = \\frac{\\hat p^2}{2m} + V(\\hat x)$. Using $\\hat p = -i\\hbar\\,d/dx$, the kinetic part is $\\hat p^2 = -\\hbar^2\\,d^2/dx^2$, so"
+    },
+    {
+      "type": "math",
+      "tex": "H\\psi = -\\frac{\\hbar^2}{2m}\\frac{d^2\\psi}{dx^2} + V(x)\\,\\psi(x)",
+      "caption": "The Hamiltonian acting on a wavefunction. Kinetic energy measures how sharply the wavefunction curves."
+    },
+    {
+      "type": "prose",
+      "text": "The recipe of The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation) still applies: find the energy eigenstates, solve $H\\psi_n = E_n\\psi_n$ (the time-independent Schrödinger equation, now a differential equation instead of a matrix eigenvalue problem), expand the starting state in them, and attach phases $e^{-iE_nt/\\hbar}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The particle in a box, step by step"
+    },
+    {
+      "type": "prose",
+      "text": "The simplest case with a real answer: a particle trapped between two walls it cannot pass, at $x = 0$ and $x = L$. Inside, $V = 0$; outside, $V = \\infty$. It is a cartoon of an electron in a small molecule, a quantum dot or a nanowire, and it shows the two signature results of quantum mechanics, discrete energy levels and a lowest energy that is not zero."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Outside the box the wavefunction must vanish (infinite potential energy has zero probability). The wavefunction must also be continuous, so $\\psi(0) = 0$ and $\\psi(L) = 0$. These are the boundary conditions.",
+        "Step 2. Inside, $V = 0$ and the equation is $-\\frac{\\hbar^2}{2m}\\psi'' = E\\psi$, that is $\\psi'' = -k^2\\psi$ with $k = \\sqrt{2mE}/\\hbar$. The functions whose second derivative is minus a constant times themselves are sines and cosines: $\\psi(x) = A\\sin kx + B\\cos kx$.",
+        "Step 3. $\\psi(0) = 0$ gives $B = 0$, so $\\psi = A\\sin kx$.",
+        "Step 4. $\\psi(L) = 0$ gives $\\sin kL = 0$, so $kL$ must be a whole multiple of $\\pi$: $k_n = n\\pi/L$ with $n = 1, 2, 3, \\dots$ ($n = 0$ gives $\\psi = 0$, no particle; negative $n$ give the same states with a sign). Only whole numbers of half-wavelengths fit in the box, like the notes of a guitar string.",
+        "Step 5. The energies follow from $E = \\hbar^2k^2/2m$: $E_n = \\dfrac{n^2\\pi^2\\hbar^2}{2mL^2}$. They come in a discrete ladder $E_1, 4E_1, 9E_1, \\dots$; the particle cannot have any energy in between.",
+        "Step 6. Normalise: $A^2\\int_0^L\\sin^2(n\\pi x/L)\\,dx = A^2L/2 = 1$, so $A = \\sqrt{2/L}$ and $\\psi_n(x) = \\sqrt{2/L}\\,\\sin(n\\pi x/L)$."
+      ]
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/quantum/particle-in-a-box.svg",
+      "alt": "Two walls at x = 0 and x = L. Three dashed horizontal lines mark the energies E1, 4E1 and 9E1 to scale; on each line a curve shows the wavefunction: half a sine wave for n = 1 with no nodes inside, a full sine wave for n = 2 with one node in the middle, one and a half sine waves for n = 3 with two nodes.",
+      "caption": "The first three levels of a particle in a box, with energies to scale and each wavefunction drawn on its level. Level $n$ has $n - 1$ nodes (zeros) inside the box."
+    },
+    {
+      "type": "prose",
+      "text": "Why the lowest energy is not zero: $E = 0$ would mean $k = 0$, a flat wavefunction, which cannot vanish at both walls unless it vanishes everywhere. Physically, confining the particle to a width $L$ forces a momentum spread of order $\\hbar/L$ by the uncertainty principle, and that costs kinetic energy. The leftover $E_1$ is called the zero-point energy. Making the box smaller raises it as $1/L^2$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: an electron in a 1 nm box"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $E_1 = \\pi^2\\hbar^2/(2mL^2)$ with $\\hbar = 1.0546\\times10^{-34}$ J s, $m = 9.109\\times10^{-31}$ kg, $L = 10^{-9}$ m gives $E_1 = 6.025\\times10^{-20}$ J. Dividing by $1.602\\times10^{-19}$ J/eV: $E_1 = 0.376$ eV.",
+        "Step 2. $E_2 = 4E_1 = 1.504$ eV and $E_3 = 9E_1 = 3.384$ eV.",
+        "Step 3. A jump from $n = 1$ to $n = 2$ absorbs a photon of energy $E_2 - E_1 = 1.128$ eV. Its wavelength is $\\lambda = hc/\\Delta E = 1099$ nm, in the near infrared. This is the principle behind quantum dots: their colour is set by their size, because the level spacing goes as $1/L^2$.",
+        "Step 4. Where is the particle in the ground state? $P(\\text{middle half}) = \\int_{L/4}^{3L/4}\\vert\\psi_1\\vert^2dx = \\frac12 + \\frac1\\pi = 0.8183$. A classical particle bouncing between the walls would spend exactly half its time in the middle half."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "And dynamics: a superposition $(\\psi_1 + \\psi_2)/\\sqrt2$ is not stationary. By the beating formula its density sloshes from one side of the box to the other at angular frequency $(E_2 - E_1)/\\hbar$, a period of $h/(E_2 - E_1) = 3.7$ fs for the 1 nm box. It is exactly the two-level beating of The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation), now visible as motion in space."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: shrink the box",
+      "text": "The box shrinks from 1 nm to 0.1 nm. What is the new ground-state energy?",
+      "solution": [
+        "$E_1 \\propto 1/L^2$; dividing $L$ by 10 multiplies $E_1$ by 100.",
+        "$0.376\\times100 = 37.6$ eV, comparable to the energies binding electrons in atoms. That is no coincidence: an atom is roughly an electron confined to 0.1 nm."
+      ],
+      "answer": "37.6 eV"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Back to matrices: the box on a grid"
+    },
+    {
+      "type": "prose",
+      "text": "Now we close the loop with the qubit pages. Put the box back on a grid: $N$ interior points spaced $a = L/(N + 1)$ apart, with the wavefunction's values $\\psi_1, \\dots, \\psi_N$ as the components of a vector (the walls fix $\\psi = 0$ just outside). The second derivative becomes a finite difference, from the Taylor expansion of $\\psi$ at neighbouring points:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{d^2\\psi}{dx^2}\\Big\\vert_{x_j} \\approx \\frac{\\psi_{j+1} - 2\\psi_j + \\psi_{j-1}}{a^2}",
+      "caption": "The standard three-point formula; its error shrinks as a squared."
+    },
+    {
+      "type": "prose",
+      "text": "So the Hamiltonian $-\\frac{\\hbar^2}{2m}\\frac{d^2}{dx^2}$ becomes an $N\\times N$ matrix with $\\hbar^2/(ma^2)$ on the diagonal and $-\\hbar^2/(2ma^2)$ just above and below it (a tridiagonal matrix), and solving the box is a matrix eigenvalue problem, exactly like diagonalising a qubit Hamiltonian, only bigger. A particle on a grid of $N$ points is an $N$-level quantum system; a qubit is the case $N = 2$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# Physical constants (SI)\nhbar = 1.054571817e-34; h = 2 * np.pi * hbar; m_e = 9.1093837e-31; eV = 1.602176634e-19\n# 1. Particle in a box of width L: E_n = n^2 pi^2 hbar^2 / (2 m L^2)\nL = 1e-9\nE = lambda n: n**2 * np.pi**2 * hbar**2 / (2 * m_e * L**2)\nfor n in (1, 2, 3):\n    print(f\"electron in a 1 nm box: E_{n} = {E(n):.3e} J = {E(n)/eV:.3f} eV\")\ndE = E(2) - E(1)\nprint(f\"photon for the 1 -> 2 jump: {dE/eV:.3f} eV, wavelength {h * 2.99792458e8 / dE * 1e9:.0f} nm\")\n# 2. de Broglie wavelength of an electron with 1 eV of kinetic energy: lambda = h / p, p = sqrt(2 m K)\np = np.sqrt(2 * m_e * 1 * eV)\nprint(f\"1 eV electron: p = {p:.3e} kg m/s, wavelength = {h / p * 1e9:.3f} nm\")\n# 3. Probabilities from the ground-state wavefunction psi_1(x) = sqrt(2/L) sin(pi x / L)  (units L = 1)\nx = np.linspace(0, 1, 200001)\npsi1 = np.sqrt(2) * np.sin(np.pi * x)\nprint(f\"normalisation integral of |psi_1|^2: {np.trapezoid(psi1**2, x):.6f}\")\nmid = (x >= 0.25) & (x <= 0.75)\nprint(f\"P(particle in the middle half) = {np.trapezoid(psi1[mid]**2, x[mid]):.4f}  (exact 1/2 + 1/pi = {0.5 + 1/np.pi:.4f})\")\n# 4. The box on a grid: H = -(1/2) d^2/dx^2 (hbar = m = 1, L = 1) becomes a tridiagonal matrix.\nN = 200                                    # interior grid points\na = 1.0 / (N + 1)                          # grid spacing\nmain = np.full(N, 1.0 / a**2); off = np.full(N - 1, -0.5 / a**2)\nHgrid = np.diag(main) + np.diag(off, 1) + np.diag(off, -1)\nEg, Vg = np.linalg.eigh(Hgrid)\nfor n in (1, 2, 3, 10):\n    print(f\"grid E_{n} = {Eg[n-1]:.4f}   exact n^2 pi^2 / 2 = {n**2 * np.pi**2 / 2:.4f}\")\n# 5. A Gaussian packet: Delta x * Delta p = 1/2 (hbar = 1)\ns = 0.7\nxg = np.linspace(-12, 12, 4001); dxg = xg[1] - xg[0]\ng = (2 * np.pi * s**2) ** -0.25 * np.exp(-xg**2 / (4 * s**2))\ndx_ = np.sqrt(np.trapezoid(xg**2 * g**2, xg))\ndg = np.gradient(g, dxg)\ndp_ = np.sqrt(np.trapezoid(dg**2, xg))      # <p^2> = integral |d psi/dx|^2 for a real psi\nprint(f\"Gaussian, sigma = {s}: Delta x = {dx_:.4f}, Delta p = {dp_:.4f}, product = {dx_*dp_:.4f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the box energies 0.376, 1.504 and 3.384 eV and the 1.128 eV (1099 nm) photon; the 1 eV electron's wavelength 1.226 nm; the ground state's normalisation integral 1.000000 and middle-half probability 0.8183; the Gaussian's $\\Delta x = 0.7000$, $\\Delta p = 0.7143$, product 0.5000. On the grid ($\\hbar = m = L = 1$, exact $E_n = n^2\\pi^2/2$), the 200-point matrix gives $E_1 = 4.9347$ (exact 4.9348), $E_2 = 19.7376$ (19.7392), $E_3 = 44.4051$ (44.4132) and $E_{10} = 492.4764$ (493.4802). Low levels are nearly exact; higher ones, whose wavefunctions wiggle on a scale closer to the grid spacing, are less accurate, so a grid must be much finer than the wavelengths you care about."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: grid size",
+      "text": "A grid of $N$ points represents the box as an $N$-level system. How many qubits would hold the same number of amplitudes for $N = 256$?",
+      "solution": [
+        "$n$ qubits have $2^n$ amplitudes. $2^8 = 256$.",
+        "So a 256-point grid wavefunction is the same size as an 8-qubit state; quantum simulation algorithms use exactly this encoding."
+      ],
+      "answer": "8 qubits"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "The trial wavefunction $\\psi(x) = \\sqrt{30}\\,x(1 - x)$ on $[0, 1]$ (normalised above) looks like the box ground state. How close is it? Use units $\\hbar = m = 1$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Overlap with the true ground state: $\\langle\\psi_1\\vert\\psi\\rangle = \\int_0^1\\sqrt2\\sin(\\pi x)\\,\\sqrt{30}\\,x(1 - x)\\,dx$. Numerically (scipy quad) its square is 0.99856: a measurement asking 'is it in the ground state?' would say yes 99.86% of the time.",
+        "Step 2. Its average energy: $\\langle H\\rangle = \\frac12\\int_0^1\\vert\\psi'\\vert^2dx$ (integrating by parts, using $\\psi = 0$ at the walls). $\\psi' = \\sqrt{30}(1 - 2x)$, so $\\langle H\\rangle = 15\\int_0^1(1 - 2x)^2dx = 15\\cdot\\frac13 = 5.0$.",
+        "Step 3. Compare with $E_1 = \\pi^2/2 = 4.9348$. The trial energy is higher, by 1.3%. It must be: any state's average energy is a weighted average of the $E_n$ with weights $\\vert c_n\\vert^2$, and so cannot be lower than the lowest one. This is the variational principle, the basis of most ways to estimate ground states, including variational quantum algorithms."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A wavefunction $\\psi(x) = \\langle x\\vert\\psi\\rangle$ is a list of amplitudes indexed by position: the continuous version of a state vector. $\\vert\\psi(x)\\vert^2$ is a probability density; probabilities are its integrals.",
+        "De Broglie: $p = h/\\lambda = \\hbar k$. Definite-momentum states are plane waves $e^{ikx}$, and $\\hat p = -i\\hbar\\,d/dx$.",
+        "$[\\hat x, \\hat p] = i\\hbar$, so $\\Delta x\\,\\Delta p \\ge \\hbar/2$, met exactly by a Gaussian.",
+        "The particle in a box has $E_n = n^2\\pi^2\\hbar^2/(2mL^2)$ and $\\psi_n = \\sqrt{2/L}\\sin(n\\pi x/L)$: discrete levels and a non-zero lowest energy. An electron in 1 nm has $E_1 = 0.376$ eV.",
+        "On a grid, a wavefunction is a long vector and the Hamiltonian a matrix. Everything learned with qubits applies; a qubit is the two-point case.",
+        "The QRC shelf works with qubits and oscillator modes, not wavefunctions; this page is background for reading the wider literature."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The harmonic oscillator, solved with ladder operators instead of wavefunctions: The Harmonic Oscillator (#/quantum/dynamics/harmonic-oscillator).",
+        "Oscillator modes as reservoirs, where the quadratures behave like $x$ and $p$ of this page: Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs).",
+        "The general uncertainty relation behind $\\Delta x\\,\\Delta p \\ge \\hbar/2$: Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Average position",
+      "text": "For the box state $\\psi_2(x) = \\sqrt{2/L}\\sin(2\\pi x/L)$, what is $\\langle x\\rangle$, and what is the probability density at the centre $x = L/2$?",
+      "hint": "Look at the n = 2 curve in the figure.",
+      "solution": [
+        "$\\vert\\psi_2\\vert^2$ is symmetric about $L/2$ (it is $\\frac2L\\sin^2$ of an angle that runs from 0 to $2\\pi$ symmetrically), so $\\langle x\\rangle = L/2$.",
+        "At $x = L/2$: $\\sin(\\pi) = 0$, so the density is 0. The particle is never found exactly at the centre, even though its average position is there."
+      ],
+      "answer": "$\\langle x\\rangle = L/2$; density 0 at the centre"
+    },
+    {
+      "type": "problem",
+      "title": "Proton in a nucleus",
+      "text": "Model a proton ($m = 1.673\\times10^{-27}$ kg) in a nucleus as a particle in a box of width $L = 10^{-14}$ m. Estimate $E_1$ in MeV.",
+      "solution": [
+        "$E_1 = \\pi^2\\hbar^2/(2mL^2) = 9.8696\\times(1.0546\\times10^{-34})^2/(2\\times1.673\\times10^{-27}\\times10^{-28})$.",
+        "$= 1.0976\\times10^{-67}/3.346\\times10^{-55} = 3.28\\times10^{-13}$ J.",
+        "Divide by $1.602\\times10^{-13}$ J/MeV: $E_1 \\approx 2.05$ MeV, the scale of nuclear energies, a million times atomic ones."
+      ],
+      "answer": "about 2 MeV"
+    },
+    {
+      "type": "problem",
+      "title": "Two-state sloshing",
+      "text": "In a 1 nm box an electron is in $(\\psi_1 + \\psi_2)/\\sqrt2$. What is the period of the sloshing of its probability density?",
+      "solution": [
+        "The density oscillates at the Bohr frequency $(E_2 - E_1)/\\hbar$, so the period is $T = 2\\pi\\hbar/(E_2 - E_1) = h/(E_2 - E_1)$.",
+        "$E_2 - E_1 = 1.128$ eV $= 1.807\\times10^{-19}$ J, so $T = 6.626\\times10^{-34}/1.807\\times10^{-19} = 3.67\\times10^{-15}$ s."
+      ],
+      "answer": "about 3.7 fs"
+    },
+    {
+      "type": "problem",
+      "title": "Finer grid",
+      "text": "The 200-point grid gave $E_{10} = 492.48$ against the exact 493.48. The finite-difference error for level $n$ grows roughly as $(n\\pi a)^2/12$ relative to $E_n$. Estimate how many points would bring the relative error of $E_{10}$ below $10^{-4}$.",
+      "hint": "Solve the error formula for the spacing a.",
+      "solution": [
+        "Relative error $\\approx(10\\pi a)^2/12$. Set it to $10^{-4}$: $(10\\pi a)^2 = 1.2\\times10^{-3}$, so $10\\pi a = 0.0346$ and $a = 1.10\\times10^{-3}$.",
+        "$N + 1 = 1/a \\approx 907$, so about 900 points. (Check of the rule at $N = 200$: $(10\\pi/201)^2/12 = 2.03\\times10^{-3}$, and the observed relative error is $1.0038/493.48 = 2.03\\times10^{-3}$.)"
+      ],
+      "answer": "about 900 points"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapters 1 and 2",
+        "R. Shankar, Principles of Quantum Mechanics, 2nd edition, Plenum (1994), chapters 4 and 5",
+        "C. Davisson and L. H. Germer, Diffraction of electrons by a crystal of nickel, Physical Review 30, 705 (1927)",
+        "W. Heisenberg, Über den anschaulichen Inhalt der quantentheoretischen Kinematik und Mechanik, Zeitschrift für Physik 43, 172 (1927)"
+      ]
+    }
+  ]
+}

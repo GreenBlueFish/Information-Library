@@ -1,7 +1,79 @@
 {
   "title": "The Harmonic Oscillator",
-  "intro": "A single mode of light, a microwave resonator or a mechanical vibration is a quantum harmonic oscillator. Its ladder operators, number states, coherent states and quadratures are the vocabulary of continuous-variable quantum reservoirs.",
+  "intro": "A single mode of light, a microwave resonator or a mechanical vibration is a quantum harmonic oscillator. This lesson derives its evenly spaced energy levels from one commutator, then builds number states, coherent states and the truncated simulations used for continuous-variable quantum reservoirs.",
   "blocks": [
+    {
+      "type": "prose",
+      "text": "What you need first: The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation), Commutators and Compatible Observables (#/quantum/foundations/commutators) (especially $[x, p] = i$), Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty) and Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors). Wavefunctions, Position and Momentum (#/quantum/dynamics/wavefunctions) helps for one optional step."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Write the quantum Hamiltonian of an oscillator and rewrite it with ladder operators.",
+        "Derive the energy levels $E_n = \\hbar\\omega(n + \\tfrac12)$ from one commutator, without solving a differential equation.",
+        "Act with $a$, $a^\\dagger$ and $a^\\dagger a$ on number states and compute averages such as $\\langle x^2\\rangle$.",
+        "Build a coherent state, show its photon numbers are Poisson distributed, and follow its motion in time.",
+        "Simulate an oscillator on a computer by truncating it, and check whether the truncation is safe."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why the oscillator matters"
+    },
+    {
+      "type": "prose",
+      "text": "Most of this shelf is about qubits: two levels, $\\vert0\\rangle$ and $\\vert1\\rangle$. The harmonic oscillator is the opposite extreme: infinitely many levels, evenly spaced. It is not an exotic system. A single mode of light in a cavity, the microwave field in a superconducting resonator, a vibrating trapped ion, the electrical oscillation in an LC circuit: all of these are harmonic oscillators, and any system jiggling gently about a stable point behaves like one. Continuous-variable quantum reservoirs (Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs)) are networks of such oscillators, and their language (photons, $a$ and $a^\\dagger$, coherent states, quadratures) is what this page teaches."
+    },
+    {
+      "type": "prose",
+      "text": "The oscillator is also the best example of a beautiful trick in quantum mechanics: you can find all the energy levels using only algebra, from the single fact $[x, p] = i$. We will do that step by step."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The classical oscillator first"
+    },
+    {
+      "type": "prose",
+      "text": "A mass $m$ on a spring of stiffness $k$ feels a force $F = -kx$ pulling it back towards $x = 0$. Newton's law $m\\ddot{x} = -kx$ is solved by $x(t) = A\\cos(\\omega t + \\varphi)$ with angular frequency $\\omega = \\sqrt{k/m}$: the mass swings back and forth forever, with any amplitude $A$ you like. Its energy is kinetic plus potential,"
+    },
+    {
+      "type": "math",
+      "tex": "E = \\frac{p^2}{2m} + \\frac12 m\\omega^2x^2",
+      "caption": "The classical oscillator's energy, with momentum p = m dx/dt. Using k = mω² puts the stiffness in terms of the frequency."
+    },
+    {
+      "type": "prose",
+      "text": "Worked numbers. A 0.1 kg mass on a spring with $k = 10$ N/m has $\\omega = \\sqrt{10/0.1} = 10$ rad/s, a period of $2\\pi/10 = 0.628$ s. Pulled out 5 cm and released, it has energy $\\tfrac12kA^2 = \\tfrac12\\times10\\times0.05^2 = 0.0125$ J. Keep that number; we will compare it with the quantum energy step in a moment."
+    },
+    {
+      "type": "prose",
+      "text": "Two features carry over to quantum mechanics: the energy is a sum of a $p^2$ part and an $x^2$ part, and the frequency of oscillation does not depend on the amplitude. In the classical picture any energy from 0 upwards is allowed. That is what changes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The quantum Hamiltonian"
+    },
+    {
+      "type": "prose",
+      "text": "To make the oscillator quantum, replace position and momentum by operators $x$ and $p$ that obey the canonical commutator $[x, p] = i\\hbar$ (Commutators and Compatible Observables (#/quantum/foundations/commutators)). It is the one quantum ingredient; everything else on this page follows from it. As on the rest of the shelf we set $\\hbar = 1$, and we also choose units of mass and length with $m = 1$ and $\\omega = 1$, so"
+    },
+    {
+      "type": "math",
+      "tex": "H = \\frac{p^2}{2} + \\frac{x^2}{2}, \\qquad [x, p] = i",
+      "caption": "The oscillator Hamiltonian in natural units (ħ = m = ω = 1). Energies come out in units of ħω."
+    },
+    {
+      "type": "prose",
+      "text": "In these units, $x$ is measured in multiples of $\\sqrt{\\hbar/m\\omega}$, the size of the oscillator's zero-point jiggle, and energy in multiples of $\\hbar\\omega$. To get real numbers at the end, multiply energies by $\\hbar\\omega$. You could now write $p = -i\\,d/dx$ and solve a differential equation for the energy eigenfunctions (that route is on Wavefunctions, Position and Momentum (#/quantum/dynamics/wavefunctions)). The algebraic route is shorter and gives more."
+    },
     {
       "type": "heading",
       "level": 2,
@@ -9,19 +81,105 @@
     },
     {
       "type": "prose",
-      "text": "The oscillator Hamiltonian, in units where the frequency is 1, is $H = a^\\dagger a + \\tfrac12$, built from the annihilation operator $a$ and its adjoint, the creation operator $a^\\dagger$. Everything follows from one commutator:"
+      "text": "The Hamiltonian $\\tfrac12(x^2 + p^2)$ looks like $\\tfrac12\\vert x + ip\\vert^2$, which for numbers would factor as $\\tfrac12(x - ip)(x + ip)$. For operators that factoring is not quite right, because $x$ and $p$ do not commute, but it is close, and the small correction is where the quantum physics lives. Define"
     },
     {
       "type": "math",
-      "tex": "[a, a^\\dagger] = 1, \\qquad a\\vert n\\rangle = \\sqrt n\\,\\vert n-1\\rangle, \\qquad a^\\dagger\\vert n\\rangle = \\sqrt{n+1}\\,\\vert n+1\\rangle"
+      "tex": "a = \\frac{x + ip}{\\sqrt2}, \\qquad a^\\dagger = \\frac{x - ip}{\\sqrt2}",
+      "caption": "The annihilation (lowering) operator a and the creation (raising) operator a†. a is not Hermitian, so it is not an observable; it is a tool."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Their commutator"
     },
     {
       "type": "prose",
-      "text": "The number states (Fock states) $\\vert n\\rangle$, $n = 0, 1, 2, \\dots$, are eigenstates of the number operator $a^\\dagger a$ with eigenvalue $n$, and of the Hamiltonian with energies $n + \\tfrac12$: an evenly spaced ladder. $\\vert0\\rangle$ is the vacuum. In a photonic system $n$ counts photons."
+      "text": "Step 1. Expand: $[a, a^\\dagger] = \\tfrac12[x + ip,\\, x - ip] = \\tfrac12\\big([x, x] - i[x, p] + i[p, x] + [p, p]\\big)$, using that the commutator is linear in each slot."
     },
     {
-      "type": "callout",
-      "text": "Notation clash: $\\vert0\\rangle$ and $\\vert1\\rangle$ here are the vacuum and the one-photon state, not qubit states. Context always makes it clear, and the QRC continuous-variable page uses the oscillator meaning."
+      "type": "prose",
+      "text": "Step 2. $[x, x] = [p, p] = 0$, $[x, p] = i$ and $[p, x] = -i$. So $[a, a^\\dagger] = \\tfrac12\\big(0 - i\\cdot i + i\\cdot(-i) + 0\\big) = \\tfrac12(1 + 1)$."
+    },
+    {
+      "type": "math",
+      "tex": "[a, a^\\dagger] = 1",
+      "caption": "The single relation from which the whole oscillator follows."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The Hamiltonian in terms of a and a†"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Multiply: $a^\\dagger a = \\tfrac12(x - ip)(x + ip) = \\tfrac12(x^2 + ixp - ipx + p^2)$. Keep the order of $x$ and $p$; that is the whole point."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. The middle terms are $i(xp - px) = i[x, p] = i\\cdot i = -1$. So $a^\\dagger a = \\tfrac12(x^2 + p^2) - \\tfrac12$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Rearranged:"
+    },
+    {
+      "type": "math",
+      "tex": "H = a^\\dagger a + \\tfrac12 = N + \\tfrac12, \\qquad N = a^\\dagger a",
+      "caption": "N is the number operator. The extra 1/2 came from x and p not commuting: it is the zero-point energy."
+    },
+    {
+      "type": "prose",
+      "text": "So finding the energies of $H$ is the same as finding the eigenvalues of $N$. Its name will be explained shortly: it counts."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: the other order",
+      "text": "Express $aa^\\dagger$ in terms of $N$, and so write $H$ using $aa^\\dagger$ instead.",
+      "hint": "Rearrange $[a, a^\\dagger] = 1$.",
+      "solution": [
+        "From $[a, a^\\dagger] = aa^\\dagger - a^\\dagger a = 1$: $aa^\\dagger = a^\\dagger a + 1 = N + 1$.",
+        "Then $H = N + \\tfrac12 = aa^\\dagger - 1 + \\tfrac12 = aa^\\dagger - \\tfrac12$."
+      ],
+      "answer": "aa† = N + 1, so H = aa† − 1/2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The energy levels, derived"
+    },
+    {
+      "type": "prose",
+      "text": "Now we find every eigenvalue of $N$ using only $[a, a^\\dagger] = 1$. Follow the steps; each is short."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Commutators of $N$ with the ladder operators. Using the product rule for commutators, $[AB, C] = A[B, C] + [A, C]B$: $[N, a] = [a^\\dagger a, a] = a^\\dagger[a, a] + [a^\\dagger, a]a = 0 - a = -a$. Similarly $[N, a^\\dagger] = a^\\dagger[a, a^\\dagger] + [a^\\dagger, a^\\dagger]a = a^\\dagger$."
+    },
+    {
+      "type": "math",
+      "tex": "[N, a] = -a, \\qquad [N, a^\\dagger] = +a^\\dagger"
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Suppose $N\\vert\\nu\\rangle = \\nu\\vert\\nu\\rangle$ for some number $\\nu$ (we do not yet know which numbers are possible). Act with $N$ on $a\\vert\\nu\\rangle$. From Step 1, $Na = aN - a$, so $N(a\\vert\\nu\\rangle) = a N\\vert\\nu\\rangle - a\\vert\\nu\\rangle = (\\nu - 1)\\,(a\\vert\\nu\\rangle)$. So $a\\vert\\nu\\rangle$ is again an eigenvector of $N$, with eigenvalue one lower. That is why $a$ is called the lowering operator."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The same calculation with $Na^\\dagger = a^\\dagger N + a^\\dagger$ gives $N(a^\\dagger\\vert\\nu\\rangle) = (\\nu + 1)(a^\\dagger\\vert\\nu\\rangle)$: $a^\\dagger$ raises the eigenvalue by one. Starting from any eigenstate, the ladder operators walk up and down a ladder of eigenvalues $\\dots, \\nu - 2, \\nu - 1, \\nu, \\nu + 1, \\dots$ spaced by exactly 1."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. The ladder cannot go down forever. The squared length of $a\\vert\\nu\\rangle$ is $\\langle\\nu\\vert a^\\dagger a\\vert\\nu\\rangle = \\langle\\nu\\vert N\\vert\\nu\\rangle = \\nu$ (for a normalised $\\vert\\nu\\rangle$). A squared length is never negative, so every eigenvalue satisfies $\\nu \\ge 0$. But stepping down repeatedly would eventually reach negative values, which is impossible."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5. The only way out: at some point stepping down gives the zero vector, which is not an eigenvector and stops the ladder. That happens when $a\\vert\\nu\\rangle = 0$, which by Step 4 needs $\\nu = 0$. So the bottom rung has eigenvalue exactly 0, and the ladder from there is $0, 1, 2, 3, \\dots$ Call the bottom state $\\vert0\\rangle$, the vacuum, and the state $n$ rungs up $\\vert n\\rangle$."
+    },
+    {
+      "type": "math",
+      "tex": "N\\vert n\\rangle = n\\vert n\\rangle, \\qquad E_n = n + \\tfrac12 \\quad (n = 0, 1, 2, \\dots), \\qquad\\text{in ordinary units } E_n = \\hbar\\omega\\left(n + \\tfrac12\\right)",
+      "caption": "The oscillator's energy levels: an evenly spaced ladder starting at the zero-point energy ħω/2."
     },
     {
       "type": "figure",
@@ -30,44 +188,187 @@
       "caption": "The oscillator's evenly spaced ladder of number states. The creation operator a† steps up one level and the annihilation operator a steps down one."
     },
     {
+      "type": "prose",
+      "text": "Two things are new compared with the classical oscillator. The energy is quantised: it comes only in steps of $\\hbar\\omega$, and in a photonic system $n$ is literally the number of photons, each carrying $\\hbar\\omega$. And the lowest energy is not zero but $\\tfrac12\\hbar\\omega$: even in its ground state the oscillator cannot sit still at $x = 0$ with $p = 0$, because that would violate the uncertainty relation."
+    },
+    {
+      "type": "prose",
+      "text": "Worked numbers. For the 10 rad/s spring above, $\\hbar\\omega = 1.055\\times10^{-34}\\times10 = 1.05\\times10^{-33}$ J. Its classical energy of 0.0125 J is about $1.2\\times10^{31}$ quanta, so steps of one quantum are utterly invisible, which is why springs look classical. For a superconducting microwave resonator at 5 GHz, one quantum is $hf = 6.626\\times10^{-34}\\times5\\times10^9 = 3.3\\times10^{-24}$ J, which in temperature units ($E/k_B$) is 0.24 K. Cooled in a dilution refrigerator to 20 mK, the resonator's mean thermal photon number $\\bar n = 1/(e^{hf/k_BT} - 1)$ is $6\\times10^{-6}$: it sits in its ground state, and single quanta matter. At 100 mK, $\\bar n$ is already 0.10."
+    },
+    {
+      "type": "callout",
+      "text": "Notation clash: $\\vert0\\rangle$ and $\\vert1\\rangle$ here are the vacuum and the one-photon state, not qubit states. Context always makes it clear, and the QRC continuous-variable page uses the oscillator meaning."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: energies",
+      "text": "In natural units, what are the energies of $\\vert0\\rangle$, $\\vert3\\rangle$, and the gap between any two neighbouring levels? What energy (in joules) does a 5 GHz resonator lose when it drops from $\\vert3\\rangle$ to $\\vert1\\rangle$?",
+      "solution": [
+        "$E_0 = 0 + \\tfrac12 = 0.5$, $E_3 = 3.5$, neighbouring gap $1$ (that is, $\\hbar\\omega$).",
+        "$\\vert3\\rangle \\to \\vert1\\rangle$ is two steps: $2hf = 2\\times3.3\\times10^{-24} = 6.6\\times10^{-24}$ J, emitted as two photons' worth of energy."
+      ],
+      "answer": "0.5, 3.5, gap 1; 6.6×10⁻²⁴ J"
+    },
+    {
       "type": "heading",
       "level": 2,
-      "text": "Simulating an infinite-dimensional system"
+      "text": "Number states and how the ladder operators act"
     },
     {
       "type": "prose",
-      "text": "The state space is infinite, so a simulation keeps only $\\vert0\\rangle, \\dots, \\vert N-1\\rangle$. In that truncation $[a, a^\\dagger] = 1$ holds on every level except the top one, where it fails badly. The fix is to choose $N$ large enough that the top levels are never populated, and to check that numerically, as the QRC shelf's Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs) does."
+      "text": "We know $a\\vert n\\rangle$ is proportional to $\\vert n - 1\\rangle$; now we find the constant, so we can compute with these states."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Write $a\\vert n\\rangle = c\\,\\vert n - 1\\rangle$. Its squared length is $\\vert c\\vert^2$ (since $\\vert n - 1\\rangle$ is normalised), and by Step 4 above it is also $\\langle n\\vert N\\vert n\\rangle = n$. So $\\vert c\\vert = \\sqrt n$, and we choose the phase so that $c = \\sqrt n$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Similarly $a^\\dagger\\vert n\\rangle = d\\,\\vert n + 1\\rangle$ with $\\vert d\\vert^2 = \\langle n\\vert aa^\\dagger\\vert n\\rangle = \\langle n\\vert(N + 1)\\vert n\\rangle = n + 1$, so $d = \\sqrt{n + 1}$."
+    },
+    {
+      "type": "math",
+      "tex": "a\\vert n\\rangle = \\sqrt n\\,\\vert n-1\\rangle, \\qquad a^\\dagger\\vert n\\rangle = \\sqrt{n+1}\\,\\vert n+1\\rangle, \\qquad a\\vert0\\rangle = 0",
+      "caption": "How the ladder operators act on number (Fock) states."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Every number state can be built from the vacuum by raising: $\\vert1\\rangle = a^\\dagger\\vert0\\rangle$, $\\vert2\\rangle = a^\\dagger\\vert1\\rangle/\\sqrt2$, and in general $\\vert n\\rangle = (a^\\dagger)^n\\vert0\\rangle/\\sqrt{n!}$. The $\\sqrt{n!}$ collects the factors $\\sqrt1\\sqrt2\\cdots\\sqrt n$ picked up on the way."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. As matrices in the basis $\\vert0\\rangle, \\vert1\\rangle, \\vert2\\rangle, \\dots$: $a = \\sum_n \\sqrt n\\,\\vert n - 1\\rangle\\langle n\\vert$ has the numbers $\\sqrt1, \\sqrt2, \\sqrt3, \\dots$ just above the diagonal and zeros elsewhere. Kept to three levels its rows are $(0, 1, 0)$, $(0, 0, 1.414)$, $(0, 0, 0)$. Its transpose $a^\\dagger$ has them just below the diagonal, and $N = a^\\dagger a$ is diagonal with entries $0, 1, 2, \\dots$"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: position spread of a number state"
+    },
+    {
+      "type": "prose",
+      "text": "How spread out in position is the oscillator in state $\\vert n\\rangle$? We need $\\langle x\\rangle$ and $\\langle x^2\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Invert the definitions: $x = (a + a^\\dagger)/\\sqrt2$ and $p = i(a^\\dagger - a)/\\sqrt2$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. $\\langle n\\vert x\\vert n\\rangle = \\tfrac{1}{\\sqrt2}\\big(\\sqrt n\\langle n\\vert n - 1\\rangle + \\sqrt{n + 1}\\langle n\\vert n + 1\\rangle\\big) = 0$, because different number states are orthogonal. A number state is centred on $x = 0$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. $x^2 = \\tfrac12(a + a^\\dagger)^2 = \\tfrac12(a^2 + a^{\\dagger2} + aa^\\dagger + a^\\dagger a)$. The terms $a^2$ and $a^{\\dagger2}$ change $n$ by two, so their averages in $\\vert n\\rangle$ vanish. What remains: $\\langle x^2\\rangle = \\tfrac12(\\langle aa^\\dagger\\rangle + \\langle a^\\dagger a\\rangle) = \\tfrac12\\big((n + 1) + n\\big) = n + \\tfrac12$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. So the variance of position is $n + \\tfrac12$; the same steps give $\\langle p^2\\rangle = n + \\tfrac12$. For the vacuum both are $\\tfrac12$ and their product of standard deviations is $\\sigma_x\\sigma_p = \\tfrac12$, exactly the minimum allowed by the uncertainty relation $\\sigma_x\\sigma_p \\ge \\tfrac12$ (Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty)). Higher number states are more spread out, and for $\\vert1\\rangle$, $\\langle x^2\\rangle = 1.5$. Check: the energy is $\\tfrac12\\langle p^2\\rangle + \\tfrac12\\langle x^2\\rangle = n + \\tfrac12$, as it must be."
+    },
+    {
+      "type": "prose",
+      "text": "Optional, using Wavefunctions, Position and Momentum (#/quantum/dynamics/wavefunctions): in position space $p = -i\\,d/dx$, so $a = (x + d/dx)/\\sqrt2$ and the condition $a\\vert0\\rangle = 0$ becomes $\\psi_0'(x) = -x\\,\\psi_0(x)$, solved by the Gaussian $\\psi_0(x) = \\pi^{-1/4}e^{-x^2/2}$ (the constant makes $\\int\\vert\\psi_0\\vert^2dx = 1$, since $\\int e^{-x^2}dx = \\sqrt\\pi$). The ground state is a bell curve of width about 1 in natural units."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: ladder arithmetic",
+      "text": "Compute $a^\\dagger\\vert2\\rangle$, $a\\vert2\\rangle$, $a^\\dagger a\\vert2\\rangle$, and $a^2\\vert3\\rangle$.",
+      "solution": [
+        "$a^\\dagger\\vert2\\rangle = \\sqrt3\\,\\vert3\\rangle$ and $a\\vert2\\rangle = \\sqrt2\\,\\vert1\\rangle$.",
+        "$a^\\dagger a\\vert2\\rangle = a^\\dagger\\sqrt2\\vert1\\rangle = \\sqrt2\\sqrt2\\vert2\\rangle = 2\\vert2\\rangle$: the number operator counts.",
+        "$a^2\\vert3\\rangle = a\\sqrt3\\vert2\\rangle = \\sqrt3\\sqrt2\\vert1\\rangle = \\sqrt6\\,\\vert1\\rangle$."
+      ],
+      "answer": "√3|3⟩, √2|1⟩, 2|2⟩, √6|1⟩"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Quadratures and coherent states"
+      "text": "Coherent states: the quantum version of a swinging mass"
     },
     {
       "type": "prose",
-      "text": "The quadratures $x = (a + a^\\dagger)/\\sqrt2$ and $p = i(a^\\dagger - a)/\\sqrt2$ are the oscillator's position and momentum, with $[x, p] = i$ and hence $\\sigma_x\\sigma_p \\ge 1/2$. Homodyne detection measures a quadrature directly, giving a continuous outcome."
+      "text": "A number state does not oscillate at all: $\\langle x\\rangle = 0$ at every time, because an energy eigenstate only gains a phase (The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation)). So where is the swinging mass? It is in a superposition of many number states, and the most classical such superposition is the coherent state. A laser beam, or a resonator driven by a steady microwave tone, is in (very nearly) a coherent state."
     },
     {
       "type": "prose",
-      "text": "A coherent state is the closest quantum analogue of a classical oscillation: an eigenstate of the annihilation operator, $a\\vert\\alpha\\rangle = \\alpha\\vert\\alpha\\rangle$, with"
+      "text": "Definition: a coherent state $\\vert\\alpha\\rangle$ is an eigenstate of the lowering operator, $a\\vert\\alpha\\rangle = \\alpha\\vert\\alpha\\rangle$, where $\\alpha$ is any complex number. (Since $a$ is not Hermitian, its eigenvalues can be complex.) Let us find it."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Expand in number states, $\\vert\\alpha\\rangle = \\sum_n c_n\\vert n\\rangle$. Then $a\\vert\\alpha\\rangle = \\sum_n c_n\\sqrt n\\,\\vert n - 1\\rangle = \\sum_n c_{n+1}\\sqrt{n + 1}\\,\\vert n\\rangle$ (shifting the label)."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Matching the coefficient of $\\vert n\\rangle$ with $\\alpha c_n$: $c_{n+1}\\sqrt{n + 1} = \\alpha c_n$, so $c_{n+1} = \\alpha c_n/\\sqrt{n + 1}$. Applying this repeatedly: $c_1 = \\alpha c_0$, $c_2 = \\alpha^2c_0/\\sqrt{2}$, ..., $c_n = \\alpha^nc_0/\\sqrt{n!}$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Normalise: $\\sum_n\\vert c_n\\vert^2 = \\vert c_0\\vert^2\\sum_n\\vert\\alpha\\vert^{2n}/n! = \\vert c_0\\vert^2e^{\\vert\\alpha\\vert^2} = 1$, using the series $e^y = \\sum y^n/n!$. So $c_0 = e^{-\\vert\\alpha\\vert^2/2}$."
     },
     {
       "type": "math",
       "tex": "\\vert\\alpha\\rangle = e^{-\\vert\\alpha\\vert^2/2}\\sum_{n=0}^{\\infty}\\frac{\\alpha^n}{\\sqrt{n!}}\\vert n\\rangle, \\qquad P(n) = e^{-\\vert\\alpha\\vert^2}\\frac{\\vert\\alpha\\vert^{2n}}{n!}",
-      "caption": "Photon numbers in a coherent state are Poisson distributed with mean |α|²."
+      "caption": "A coherent state and its photon-number distribution, a Poisson distribution with mean |α|²."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: photon counting with alpha = 2"
     },
     {
       "type": "prose",
-      "text": "Its quadrature means follow the classical motion, and its quadrature variances are $1/2$ each, the vacuum value: it is a minimum-uncertainty state. A laser produces (approximately) coherent states, and a linear drive on a damped oscillator settles into one. Squeezed states trade noise between $x$ and $p$, keeping the product at $1/4$ while making one variance smaller than $1/2$."
-    },
-    {
-      "type": "code",
-      "lang": "python",
-      "source": "import numpy as np\nfrom math import factorial\nN = 30                                          # Fock-space truncation |0> ... |N-1>\na = np.diag(np.sqrt(np.arange(1, N)), 1); ad = a.T; num = ad @ a\ncomm = a @ ad - ad @ a\nprint(\"[a, a^dagger] = 1 on the first N-1 levels:\", np.allclose(np.diag(comm)[:-1], 1),\n      \"| last diagonal entry:\", round(np.diag(comm)[-1], 3), \"(a truncation artefact)\")\nprint(\"number operator eigenvalues 0..4:\", np.diag(num)[:5])\n# Coherent state |alpha>: Poisson photon numbers, <a> = alpha\nalpha = 1.5 + 0.5j\nc = np.array([np.exp(-abs(alpha)**2 / 2) * alpha**n / float(factorial(n)) ** 0.5 for n in range(N)])\nprint(\"norm:\", round(np.linalg.norm(c), 6), \" <a> =\", np.round(np.vdot(c, a @ c), 4),\n      \" <n> =\", round(np.vdot(c, num @ c).real, 4), \" |alpha|^2 =\", abs(alpha)**2)\nx = (a + ad) / np.sqrt(2); p = 1j * (ad - a) / np.sqrt(2)\nvar = lambda O: (np.vdot(c, O @ O @ c) - np.vdot(c, O @ c) ** 2).real\nprint(\"Var x =\", round(var(x), 4), \" Var p =\", round(var(p), 4), \" (vacuum value 1/2 each)\")\n# Energy levels of H = a^dagger a + 1/2 are evenly spaced\nprint(\"lowest energies:\", np.round(np.linalg.eigvalsh(num + 0.5 * np.eye(N))[:4], 3))"
+      "text": "Step 1. $\\vert\\alpha\\vert^2 = 4$, so $P(n) = e^{-4}4^n/n!$."
     },
     {
       "type": "prose",
-      "text": "Output of the run: with 30 levels, $[a, a^\\dagger] = 1$ on the first 29 levels and the last diagonal entry is $-29$, the truncation artefact. The number operator has eigenvalues 0 to 4 on the first five levels. The coherent state with $\\alpha = 1.5 + 0.5i$ is normalised, has $\\langle a\\rangle = \\alpha$ and $\\langle n\\rangle = 2.5 = \\vert\\alpha\\vert^2$, and quadrature variances of exactly 0.5. The lowest energies are 0.5, 1.5, 2.5, 3.5."
+      "text": "Step 2. $P(0) = e^{-4} = 0.0183$, $P(1) = 0.0733$, $P(2) = 0.1465$, $P(3) = 0.1954$, $P(4) = 0.1954$, $P(5) = 0.1563$, $P(6) = 0.1042$, $P(7) = 0.0595$. The most likely counts are 3 and 4, and there is under 2% chance of finding the oscillator empty."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The mean photon number: $\\langle n\\rangle = \\langle\\alpha\\vert a^\\dagger a\\vert\\alpha\\rangle$. Since $a\\vert\\alpha\\rangle = \\alpha\\vert\\alpha\\rangle$ and, taking the adjoint, $\\langle\\alpha\\vert a^\\dagger = \\alpha^*\\langle\\alpha\\vert$, this is $\\alpha^*\\alpha = \\vert\\alpha\\vert^2 = 4$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. The spread: $\\langle n^2\\rangle = \\langle a^\\dagger aa^\\dagger a\\rangle = \\langle a^\\dagger(a^\\dagger a + 1)a\\rangle = \\langle a^{\\dagger2}a^2\\rangle + \\langle a^\\dagger a\\rangle = \\vert\\alpha\\vert^4 + \\vert\\alpha\\vert^2$. So the variance is $\\vert\\alpha\\vert^2 = 4$, standard deviation 2, equal to the mean, the signature of a Poisson distribution."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "How a coherent state moves"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Each number state evolves by a phase: $\\vert n\\rangle \\to e^{-i(n + 1/2)t}\\vert n\\rangle$. So $c_n = e^{-\\vert\\alpha\\vert^2/2}\\alpha^n/\\sqrt{n!}$ becomes $e^{-it/2}e^{-\\vert\\alpha\\vert^2/2}(\\alpha e^{-it})^n/\\sqrt{n!}$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Apart from the overall phase $e^{-it/2}$, which has no effect, that is the coherent state with label $\\alpha e^{-it}$. A coherent state stays coherent; its label just rotates in the complex plane at the oscillator frequency."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Its average position is $\\langle x\\rangle = \\langle(a + a^\\dagger)\\rangle/\\sqrt2 = (\\alpha + \\alpha^*)/\\sqrt2 = \\sqrt2\\,\\mathrm{Re}\\,\\alpha$. With $\\alpha(t) = 2e^{-it}$: $\\langle x\\rangle(t) = 2\\sqrt2\\cos t$, a swing of amplitude 2.83 at frequency $\\omega$, exactly the classical motion. Meanwhile the variances stay at the vacuum value $\\tfrac12$ (the sample checks this), so the state is a minimum-uncertainty blob riding along the classical orbit."
+    },
+    {
+      "type": "prose",
+      "text": "For an oscillator of light, $x$ and $p$ are called the quadratures; they are what homodyne detection measures directly, giving a continuous outcome rather than a photon count. Squeezed states trade noise between them: one variance below $\\tfrac12$, the other above, with the product still at least $\\tfrac14$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: vacuum probability",
+      "text": "A coherent state has $\\alpha = 1.5 + 0.5i$. What are its mean photon number and the probability of finding no photons?",
+      "solution": [
+        "$\\vert\\alpha\\vert^2 = 1.5^2 + 0.5^2 = 2.5$, the mean photon number.",
+        "$P(0) = e^{-2.5} = 0.0821$."
+      ],
+      "answer": "2.5 photons; P(0) ≈ 0.082"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Coherent versus thermal light"
+    },
+    {
+      "type": "prose",
+      "text": "A thermal state with the same mean photon number $\\bar n$ looks completely different: $P(n) = \\bar n^n/(\\bar n + 1)^{n+1}$, a falling geometric distribution whose most likely value is always zero, with variance $\\bar n + \\bar n^2$. For $\\bar n = 4$: $P(0) = 0.2$, $P(1) = 0.16$, $P(2) = 0.128$, each one 0.8 times the one before. A coherent state is a definite oscillation with a well-defined phase; a thermal state is a random jumble with no phase at all. The widget compares the two."
     },
     {
       "type": "widget",
@@ -103,19 +404,100 @@
     },
     {
       "type": "prose",
-      "text": "Try it: the coherent state's distribution is a Poisson peak centred on $\\vert\\alpha\\vert^2$; the thermal state with the same mean photon number is a falling geometric distribution, with most weight on the vacuum and a long tail. Raise $\\vert\\alpha\\vert$ to 4 and the Poisson peak moves to 16 photons, which is when a Fock-space truncation at 20 levels starts to cut it off."
+      "text": "Try this. (1) Leave $\\vert\\alpha\\vert = 2$: the coherent (Poisson) stems peak at 3 and 4 with $P(0) = 0.018$, as in the worked example, while the thermal stems start at $P(0) = 0.2$ and fall. (2) Set $\\vert\\alpha\\vert$ to 0.5: both distributions are almost all at $n = 0$ and look alike; with very few photons the difference is hard to see. (3) Raise $\\vert\\alpha\\vert$ to 4: the Poisson peak moves to about 16 photons with a spread of about 4, and with the largest $n$ shown at 20 you can see it being cut off; set the largest $n$ shown to 40 and the whole distribution appears. Keeping too few levels is exactly the truncation problem of the next section."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Where QRC uses this"
+      "text": "Simulating an infinite ladder on a computer"
+    },
+    {
+      "type": "prose",
+      "text": "A computer cannot store infinitely many amplitudes. Simulations keep only the levels $\\vert0\\rangle, \\dots, \\vert N - 1\\rangle$ and build $a$ as an $N\\times N$ matrix with $\\sqrt1, \\dots, \\sqrt{N - 1}$ above the diagonal. This truncation is an approximation, and you must know where it fails."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. In the truncated space, compute $aa^\\dagger - a^\\dagger a$. On every level below the top it is 1, as it should be. On the top level $\\vert N - 1\\rangle$, $a^\\dagger$ would need to go to $\\vert N\\rangle$, which is missing, so $aa^\\dagger$ gives 0 there while $a^\\dagger a$ gives $N - 1$: the commutator's last diagonal entry is $-(N - 1)$, badly wrong."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. So the truncation is fine as long as the state never puts appreciable weight on the top levels. For a coherent state you can estimate the lost weight from the Poisson tail: with $\\vert\\alpha\\vert^2 = 2.5$ and $N = 10$ levels, $P(n \\ge 10) = 2.8\\times10^{-4}$; with $N = 15$, $6.9\\times10^{-8}$. With $\\vert\\alpha\\vert^2 = 16$, even 20 levels lose 19% of the state, and 30 levels still lose 0.11%."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The practical rule: run your simulation, then check the population of the top level (or top few). If it is above your tolerance, increase $N$ and run again. A dynamics that pumps energy in (a drive) needs more levels as time goes on; one with loss settles down."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom math import factorial\nN = 30                                          # Fock-space truncation |0> ... |N-1>\na = np.diag(np.sqrt(np.arange(1, N)), 1); ad = a.T; num = ad @ a\ncomm = a @ ad - ad @ a\nprint(\"[a, a^dagger] = 1 on the first N-1 levels:\", np.allclose(np.diag(comm)[:-1], 1),\n      \"| last diagonal entry:\", round(np.diag(comm)[-1], 3), \"(a truncation artefact)\")\nprint(\"number operator eigenvalues 0..4:\", np.diag(num)[:5])\n# Coherent state |alpha>: Poisson photon numbers, <a> = alpha\nalpha = 1.5 + 0.5j\nc = np.array([np.exp(-abs(alpha)**2 / 2) * alpha**n / float(factorial(n)) ** 0.5 for n in range(N)])\nprint(\"norm:\", round(np.linalg.norm(c), 6), \" <a> =\", np.round(np.vdot(c, a @ c), 4),\n      \" <n> =\", round(np.vdot(c, num @ c).real, 4), \" |alpha|^2 =\", abs(alpha)**2)\nx = (a + ad) / np.sqrt(2); p = 1j * (ad - a) / np.sqrt(2)\nvar = lambda O: (np.vdot(c, O @ O @ c) - np.vdot(c, O @ c) ** 2).real\nprint(\"Var x =\", round(var(x), 4), \" Var p =\", round(var(p), 4), \" (vacuum value 1/2 each)\")\n# Energy levels of H = a^dagger a + 1/2 are evenly spaced\nprint(\"lowest energies:\", np.round(np.linalg.eigvalsh(num + 0.5 * np.eye(N))[:4], 3))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: with 30 levels, $[a, a^\\dagger] = 1$ on the first 29 levels and the last diagonal entry is $-29$, the truncation artefact. The number operator has eigenvalues 0 to 4 on the first five levels. The coherent state with $\\alpha = 1.5 + 0.5i$ is normalised, has $\\langle a\\rangle = \\alpha$ and $\\langle n\\rangle = 2.5 = \\vert\\alpha\\vert^2$, and quadrature variances of exactly 0.5. The lowest energies are 0.5, 1.5, 2.5, 3.5."
+    },
+    {
+      "type": "prose",
+      "text": "The second sample follows a coherent state in time inside a truncated space and checks the claims of this page: the classical swing of $\\langle x\\rangle$, the constant variance, and what happens when the truncation is too small."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom math import factorial\nfrom scipy.linalg import expm\ndef ladder(N):\n    a = np.diag(np.sqrt(np.arange(1, N)), 1).astype(complex)\n    return a, a.conj().T\ndef coherent(alpha, N):\n    return np.array([np.exp(-abs(alpha)**2 / 2) * alpha**n / np.sqrt(float(factorial(n))) for n in range(N)], complex)\nN = 40\na, ad = ladder(N); x = (a + ad) / np.sqrt(2); H = ad @ a + 0.5 * np.eye(N)\n# <x^2> in number states is n + 1/2\nfor n in range(3):\n    v = np.zeros(N); v[n] = 1\n    print(f\"<{n}| x^2 |{n}> = {v @ (x @ x).real @ v:.3f}\")\n# A coherent state with alpha = 2 swings like the classical oscillator, with constant variance 1/2\npsi0 = coherent(2.0, N)\nfor t in (0.0, np.pi / 4, np.pi / 2, np.pi):\n    psi = expm(-1j * H * t) @ psi0\n    mx = np.vdot(psi, x @ psi).real; vx = np.vdot(psi, x @ x @ psi).real - mx**2\n    print(f\"t={t:5.3f}: <x> = {mx:+.4f} (classical 2*sqrt2*cos t = {2*np.sqrt(2)*np.cos(t):+.4f}), Var x = {vx:.4f}\")\n# Truncation check: weight on the top level and the error in <n> for |alpha|^2 = 16\nfor Nt in (20, 30, 40):\n    c = coherent(4.0, Nt)\n    print(f\"N={Nt}: kept norm^2 = {np.sum(abs(c)**2):.5f}, top-level population = {abs(c[-1])**2:.2e}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: $\\langle n\\vert x^2\\vert n\\rangle$ is 0.500, 1.500 and 2.500 for $n = 0, 1, 2$. The coherent state with $\\alpha = 2$ has $\\langle x\\rangle = +2.8284, +2.0000, 0.0000, -2.8284$ at $t = 0, \\pi/4, \\pi/2, \\pi$, matching $2\\sqrt2\\cos t$, and $\\mathrm{Var}\\,x = 0.5000$ at every time. For $\\vert\\alpha\\vert = 4$, 20 levels keep only 81.2% of the state (top-level population $7.0\\times10^{-2}$, a clear warning), 30 levels keep 99.89% (top level $1.1\\times10^{-3}$), and 40 levels keep all but a few parts in a million (top level $5.0\\times10^{-7}$)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: is 10 levels enough?",
+      "text": "You simulate a coherent state with $\\vert\\alpha\\vert^2 = 2.5$. Is a truncation at 10 levels safe, judging by the Poisson tail?",
+      "solution": [
+        "$P(n\\ge10)$ for a Poisson distribution of mean 2.5 is about $2.8\\times10^{-4}$.",
+        "That is small but not negligible for precise work; 15 levels bring it below $10^{-7}$. The safe rule: check the population of the top level stays below your tolerance."
+      ],
+      "answer": "Marginal (about 3×10⁻⁴ outside); use ~15 levels"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. A 5 GHz microwave resonator is driven into the coherent state $\\alpha = 3$. (a) Mean photon number and its standard deviation? (b) Energy above the ground state, in joules? (c) Probability of measuring exactly 9 photons? (d) How many Fock levels would you keep to simulate it with less than $10^{-6}$ of the state lost?"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. $\\langle n\\rangle = \\vert\\alpha\\vert^2 = 9$, standard deviation $\\sqrt9 = 3$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. The energy above the ground state is $\\langle n\\rangle hf = 9\\times3.3\\times10^{-24} = 3.0\\times10^{-23}$ J."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. $P(9) = e^{-9}9^9/9! = 0.132$: even at the mean, only about one measurement in eight gives exactly 9."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. The Poisson tail with mean 9 falls below $10^{-6}$ at $n = 27$ (computed: $P(n \\ge 27) = 9.6\\times10^{-7}$, while $P(n \\ge 26) = 2.9\\times10^{-6}$), so keep 27 levels, $\\vert0\\rangle$ to $\\vert26\\rangle$; then check the top-level population in the simulation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
     },
     {
       "type": "list",
       "items": [
-        "Gaussian networks of oscillators and the single Kerr oscillator reservoir: Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs).",
-        "Bosonic platforms (microwave resonators, optical modes) and their readout: Analog Platforms (#/qrc/hardware/analog-platforms).",
-        "Photon loss, the oscillator's dissipation, is a Lindblad term with jump operator $a$: Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics)."
+        "The oscillator Hamiltonian is $H = \\tfrac12(p^2 + x^2)$ in natural units, and $[x, p] = i$ is its only quantum ingredient.",
+        "With $a = (x + ip)/\\sqrt2$: $[a, a^\\dagger] = 1$ and $H = a^\\dagger a + \\tfrac12$.",
+        "The algebra alone forces the levels $E_n = \\hbar\\omega(n + \\tfrac12)$, $n = 0, 1, 2, \\dots$: evenly spaced, with a zero-point energy $\\hbar\\omega/2$.",
+        "$a\\vert n\\rangle = \\sqrt n\\vert n - 1\\rangle$, $a^\\dagger\\vert n\\rangle = \\sqrt{n + 1}\\vert n + 1\\rangle$; $a^\\dagger a$ counts quanta (photons).",
+        "Number states do not move; coherent states $\\vert\\alpha\\rangle$ (eigenstates of $a$) follow the classical orbit with vacuum-sized noise, and their photon numbers are Poisson with mean and variance $\\vert\\alpha\\vert^2$.",
+        "Simulations truncate to $N$ levels; the commutator fails on the top level, so always check the top-level population."
       ]
     },
     {
@@ -126,13 +508,13 @@
     {
       "type": "problem",
       "title": "Ladder arithmetic",
-      "text": "Compute $a^\\dagger\\vert2\\rangle$, $a\\vert2\\rangle$ and $a^\\dagger a\\vert2\\rangle$.",
+      "text": "Compute $(a^\\dagger)^2\\vert1\\rangle$ and $\\langle2\\vert a^\\dagger a^\\dagger a\\vert2\\rangle$.",
+      "hint": "Act one operator at a time from the right.",
       "solution": [
-        "$a^\\dagger\\vert2\\rangle = \\sqrt3\\,\\vert3\\rangle$.",
-        "$a\\vert2\\rangle = \\sqrt2\\,\\vert1\\rangle$.",
-        "$a^\\dagger a\\vert2\\rangle = a^\\dagger\\sqrt2\\vert1\\rangle = \\sqrt2\\sqrt2\\vert2\\rangle = 2\\vert2\\rangle$: the number operator counts."
+        "$a^\\dagger\\vert1\\rangle = \\sqrt2\\vert2\\rangle$, then $a^\\dagger\\sqrt2\\vert2\\rangle = \\sqrt2\\sqrt3\\vert3\\rangle = \\sqrt6\\,\\vert3\\rangle$.",
+        "$a\\vert2\\rangle = \\sqrt2\\vert1\\rangle$, $a^\\dagger a^\\dagger\\sqrt2\\vert1\\rangle = \\sqrt2\\sqrt6\\vert3\\rangle$, whose overlap with $\\langle2\\vert$ is 0."
       ],
-      "answer": "√3|3⟩, √2|1⟩, 2|2⟩"
+      "answer": "√6|3⟩; 0"
     },
     {
       "type": "problem",
@@ -146,13 +528,50 @@
     },
     {
       "type": "problem",
-      "title": "Choosing a truncation",
-      "text": "You simulate a coherent state with $\\vert\\alpha\\vert^2 = 2.5$. Is a truncation at 10 levels safe, judging by the Poisson tail?",
+      "title": "Uncertainty of a number state",
+      "text": "Compute $\\sigma_x\\sigma_p$ for $\\vert2\\rangle$. Is it a minimum-uncertainty state?",
+      "hint": "Use $\\langle x^2\\rangle = n + \\tfrac12$ from the worked example.",
       "solution": [
-        "$P(n\\ge10)$ for a Poisson distribution of mean 2.5 is about $2.8\\times10^{-4}$.",
-        "That is small but not negligible for precise work; 15 levels bring it below $10^{-7}$. The safe rule: check the population of the top level stays below your tolerance."
+        "$\\langle x\\rangle = \\langle p\\rangle = 0$, and $\\langle x^2\\rangle = \\langle p^2\\rangle = n + \\tfrac12 = 2.5$.",
+        "So $\\sigma_x = \\sigma_p = \\sqrt{2.5}$ and $\\sigma_x\\sigma_p = 2.5$, five times the minimum $\\tfrac12$. Only the vacuum (and coherent states) reach the minimum."
       ],
-      "answer": "Marginal (about 3×10⁻⁴ outside); use ~15 levels"
+      "answer": "2.5; no"
+    },
+    {
+      "type": "problem",
+      "title": "Thermal photons in a resonator",
+      "text": "A 5 GHz resonator ($hf/k_B = 0.24$ K) is at 50 mK. What is its mean thermal photon number, and what is the probability it holds at least one photon?",
+      "solution": [
+        "$\\bar n = 1/(e^{0.24/0.05} - 1) = 1/(e^{4.8} - 1) = 1/(121.5 - 1) = 0.0083$.",
+        "For a thermal state $P(0) = 1/(\\bar n + 1)$, so $P(n \\ge 1) = 1 - 1/1.0083 = \\bar n/(\\bar n + 1) = 0.0082$."
+      ],
+      "answer": "n̄ ≈ 0.0083; about 0.8%"
+    },
+    {
+      "type": "problem",
+      "title": "A quarter period later",
+      "text": "An oscillator starts in the coherent state $\\alpha = 2$ (real). What are $\\langle x\\rangle$ and $\\langle p\\rangle$ at $t = \\pi/2$ (a quarter period, natural units)?",
+      "hint": "$\\langle p\\rangle = \\sqrt2\\,\\mathrm{Im}\\,\\alpha$.",
+      "solution": [
+        "$\\alpha(t) = 2e^{-it}$, so at $t = \\pi/2$, $\\alpha = 2e^{-i\\pi/2} = -2i$.",
+        "$\\langle x\\rangle = \\sqrt2\\,\\mathrm{Re}\\,\\alpha = 0$.",
+        "$\\langle p\\rangle = \\langle i(a^\\dagger - a)\\rangle/\\sqrt2 = i(\\alpha^* - \\alpha)/\\sqrt2 = \\sqrt2\\,\\mathrm{Im}\\,\\alpha = \\sqrt2\\times(-2) = -2.83$. The mass is at the centre, moving at full speed in the negative direction, as a classical one would be."
+      ],
+      "answer": "⟨x⟩ = 0, ⟨p⟩ ≈ −2.83"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gaussian networks of oscillators and the single Kerr oscillator reservoir: Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs).",
+        "Bosonic platforms (microwave resonators, optical modes) and their readout: Analog Platforms (#/qrc/hardware/analog-platforms).",
+        "Photon loss, the oscillator's dissipation, is a Lindblad term with jump operator $a$: Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics).",
+        "The position-space wavefunctions of the oscillator and the Gaussian ground state: Wavefunctions, Position and Momentum (#/quantum/dynamics/wavefunctions)."
+      ]
     },
     {
       "type": "heading",
@@ -164,7 +583,8 @@
       "items": [
         "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), section 2.3",
         "C. Gerry and P. Knight, Introductory Quantum Optics, Cambridge University Press (2005)",
-        "R. J. Glauber, Coherent and incoherent states of the radiation field, Physical Review 131, 2766 (1963)"
+        "R. J. Glauber, Coherent and incoherent states of the radiation field, Physical Review 131, 2766 (1963)",
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), section 2.3"
       ]
     }
   ]

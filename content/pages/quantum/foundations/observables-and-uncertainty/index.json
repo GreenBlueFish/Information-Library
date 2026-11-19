@@ -1,81 +1,587 @@
 {
   "title": "Observables and Uncertainty",
-  "intro": "Observables are Hermitian operators; their expectation values are what experiments estimate and what quantum reservoirs use as features. Two observables that do not commute cannot both be sharp, and the commutator says by how much.",
+  "intro": "Observables are the operators that stand for measurable quantities: their eigenvalues are the possible results, their averages are what experiments estimate and what quantum reservoirs use as features. This page builds them from measurements, computes averages and spreads step by step, and shows why two non-commuting quantities cannot both be sharp.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Observables and their spectra"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "A measurable quantity is represented by a Hermitian operator $A = \\sum_a a\\,\\Pi_a$, where the $a$ are its (real) eigenvalues and $\\Pi_a$ the projectors onto its eigenspaces. Measuring $A$ is measuring in its eigenbasis and reporting the eigenvalue. For $Z$ the eigenbasis is $\\{\\vert0\\rangle, \\vert1\\rangle\\}$ with eigenvalues $\\pm1$; for $X$ it is $\\{\\vert+\\rangle, \\vert-\\rangle\\}$, again $\\pm1$."
+      "text": "Kets, bras and inner products from States and Dirac Notation (#/quantum/foundations/states-and-dirac-notation), eigenvalues and eigenvectors from Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors), and the Born rule from Measurement and the Born Rule (#/quantum/foundations/measurement). If $P(k) = \\vert\\langle e_k\\vert\\psi\\rangle\\vert^2$ makes sense to you, you are ready."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Expectation values"
-    },
-    {
-      "type": "prose",
-      "text": "The average of many measurements of $A$ on copies of $\\vert\\psi\\rangle$ is"
-    },
-    {
-      "type": "math",
-      "tex": "\\langle A\\rangle = \\sum_a a\\,P(a) = \\langle\\psi\\vert A\\vert\\psi\\rangle",
-      "caption": "The expectation value: a single bracket replaces the sum over outcomes."
-    },
-    {
-      "type": "prose",
-      "text": "This identity is why the features of a quantum reservoir are linear in the state: $\\langle\\psi\\vert A\\vert\\psi\\rangle$ is linear in the density matrix $\\vert\\psi\\rangle\\langle\\psi\\vert$, even though it is quadratic in the amplitudes. The variance is $\\mathrm{Var}(A) = \\langle A^2\\rangle - \\langle A\\rangle^2$; for an observable with eigenvalues $\\pm1$, $A^2 = I$ and $\\mathrm{Var}(A) = 1 - \\langle A\\rangle^2$, the per-shot variance used on Measurement and the Born Rule (#/quantum/foundations/measurement)."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Commuting and non-commuting observables"
-    },
-    {
-      "type": "prose",
-      "text": "If $[A, B] = 0$, the two share an eigenbasis: one measurement in that basis gives both values, and measuring one does not disturb the other. That is why one computational-basis shot yields every $Z_i$ and every product $Z_iZ_j$ at once. If they do not commute, measuring one randomises the other, as the $Z$, $X$, $Z$ experiment on the previous page showed."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "The uncertainty relation"
-    },
-    {
-      "type": "prose",
-      "text": "For any state and any two observables (Robertson 1929),"
-    },
-    {
-      "type": "math",
-      "tex": "\\sigma_A\\,\\sigma_B \\ge \\tfrac12\\left\\vert\\langle[A, B]\\rangle\\right\\vert",
-      "caption": "The Robertson uncertainty relation. σ is the standard deviation of each observable in the state."
-    },
-    {
-      "type": "prose",
-      "text": "For the Pauli operators $[X, Y] = 2iZ$, so $\\sigma_X\\sigma_Y \\ge \\vert\\langle Z\\rangle\\vert$: a qubit pointing along $z$ has maximally uncertain $X$ and $Y$. The relation is about preparations, not about clumsy measurements: no state at all has both $X$ and $Y$ sharp. Position and momentum, with $[x, p] = i$, give the familiar $\\sigma_x\\sigma_p \\ge 1/2$, which reappears for the quadratures of an oscillator (The Harmonic Oscillator (#/quantum/dynamics/harmonic-oscillator))."
-    },
-    {
-      "type": "code",
-      "lang": "python",
-      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\ndef ev(O, v): return np.vdot(v, O @ v).real\ndef var(O, v): return ev(O @ O, v) - ev(O, v) ** 2\ncomm = lambda A, B: A @ B - B @ A\nprint(\"[X, Y] = 2iZ:\", np.allclose(comm(X, Y), 2j * Z))\n# Robertson: sd(A) sd(B) >= |<[A,B]>| / 2, tested on random qubit states\nrng = np.random.default_rng(3)\nworst = 1e9\nfor _ in range(10000):\n    v = rng.normal(size=2) + 1j * rng.normal(size=2); v /= np.linalg.norm(v)\n    lhs = np.sqrt(var(X, v) * var(Y, v)); rhs = abs(np.vdot(v, comm(X, Y) @ v)) / 2\n    worst = min(worst, lhs - rhs)\nprint(f\"min over 10000 random states of sd(X)sd(Y) - |<[X,Y]>|/2 = {worst:.2e} (never negative)\")\n# An eigenstate of Z has zero Z variance but maximal X variance\nv0 = np.array([1, 0], complex)\nprint(\"|0>: <Z> = %.0f, Var Z = %.0f, <X> = %.0f, Var X = %.0f\" % (ev(Z, v0), var(Z, v0), ev(X, v0), var(X, v0)))"
-    },
-    {
-      "type": "prose",
-      "text": "Output of the run: $[X, Y] = 2iZ$ holds; over 10 000 random states the uncertainty product never falls below the bound (smallest margin $4.7\\times10^{-11}$, rounding error at states where the bound is tight); and $\\vert0\\rangle$ has $\\langle Z\\rangle = 1$ with zero variance but $\\langle X\\rangle = 0$ with variance 1."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Where QRC uses this"
+      "text": "What you will be able to do"
     },
     {
       "type": "list",
       "items": [
-        "The features $x_i = \\operatorname{Tr}(O_i\\rho)$ of every model on Quantum Reservoir Models (#/qrc/models) are expectation values.",
-        "Which observables can share shots is a commutation question: Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
-        "The quadrature noise of continuous-variable reservoirs is the $\\sigma_x\\sigma_p \\ge 1/2$ bound: Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs)."
+        "Write down the operator for a measurement once you know its possible results and the states that give them, and go the other way: read the possible results off an operator.",
+        "Compute the average result $\\langle A\\rangle$ of a measurement in two ways (from the outcome probabilities, and in one line as $\\langle\\psi\\vert A\\vert\\psi\\rangle$) and check they agree.",
+        "Compute the spread (variance and standard deviation) of the results, and say which states give a sharp, spread-free value.",
+        "Use the uncertainty relation to say how sharp two different quantities can be in the same state, with numbers, for the Pauli operators $X$, $Y$ and $Z$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From a measurement to an operator"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "On the previous page a measurement was described by a basis: measure in $\\{\\vert e_k\\rangle\\}$, get outcome $k$ with probability $\\vert\\langle e_k\\vert\\psi\\rangle\\vert^2$. But a real instrument does not report an abstract label $k$. A voltmeter reports volts, a Stern-Gerlach magnet reports up or down, a spin measurement reports $+\\tfrac12$ or $-\\tfrac12$. We want one object that holds both pieces of information at once: which states give a definite result, and what number that result is. That object is an operator, and quantum mechanics calls it an observable."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "Pair each possible result $a$ with the state $\\vert a\\rangle$ that gives it for certain. The states for different results must be perfectly distinguishable, so they are orthonormal. Then build the operator"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\sum_a a\\,\\vert a\\rangle\\langle a\\vert",
+      "caption": "An observable assembled from its outcomes a and the states |a⟩ that give them with certainty."
+    },
+    {
+      "type": "prose",
+      "text": "Each term $\\vert a\\rangle\\langle a\\vert$ is a projector: it keeps the part of a state along $\\vert a\\rangle$ and throws the rest away. Multiplying it by $a$ labels that part with its result. Read the formula as a list: result $a$ goes with state $\\vert a\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Now check what $A$ does to one of its own states. Apply it to $\\vert a'\\rangle$: every term gives $a\\,\\vert a\\rangle\\langle a\\vert a'\\rangle$, and $\\langle a\\vert a'\\rangle$ is 1 when $a = a'$ and 0 otherwise. So $A\\vert a'\\rangle = a'\\vert a'\\rangle$. The states that give definite results are the eigenvectors of $A$, and the results are its eigenvalues. That sentence is the whole dictionary between measurements and operators."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: building the X observable"
+    },
+    {
+      "type": "prose",
+      "text": "Measure a qubit in the $X$ basis, reporting $+1$ for $\\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$ and $-1$ for $\\vert-\\rangle = (\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$. What operator is this?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Write the recipe: $A = (+1)\\vert+\\rangle\\langle+\\vert + (-1)\\vert-\\rangle\\langle-\\vert$.",
+        "Step 2. Expand the first projector by multiplying out the brackets: $\\vert+\\rangle\\langle+\\vert = \\tfrac12(\\vert0\\rangle + \\vert1\\rangle)(\\langle0\\vert + \\langle1\\vert) = \\tfrac12(\\vert0\\rangle\\langle0\\vert + \\vert0\\rangle\\langle1\\vert + \\vert1\\rangle\\langle0\\vert + \\vert1\\rangle\\langle1\\vert)$.",
+        "Step 3. The same for the second, keeping the signs: $\\vert-\\rangle\\langle-\\vert = \\tfrac12(\\vert0\\rangle\\langle0\\vert - \\vert0\\rangle\\langle1\\vert - \\vert1\\rangle\\langle0\\vert + \\vert1\\rangle\\langle1\\vert)$.",
+        "Step 4. Subtract. The $\\vert0\\rangle\\langle0\\vert$ and $\\vert1\\rangle\\langle1\\vert$ terms cancel, the cross terms double: $A = \\vert0\\rangle\\langle1\\vert + \\vert1\\rangle\\langle0\\vert$.",
+        "Step 5. Recognise it. This operator swaps $\\vert0\\rangle$ and $\\vert1\\rangle$; as a matrix its rows are $(0, 1)$ and $(1, 0)$. It is the Pauli $X$ matrix. So measuring in the $\\pm$ basis with results $\\pm1$ is called measuring $X$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "In the same way $Z = \\vert0\\rangle\\langle0\\vert - \\vert1\\rangle\\langle1\\vert$ (results $\\pm1$ in the computational basis) and $Y = \\vert{+i}\\rangle\\langle{+i}\\vert - \\vert{-i}\\rangle\\langle{-i}\\vert$ with $\\vert{\\pm i}\\rangle = (\\vert0\\rangle \\pm i\\vert1\\rangle)/\\sqrt2$, which works out to $Y = -i\\vert0\\rangle\\langle1\\vert + i\\vert1\\rangle\\langle0\\vert$ (rows $(0, -i)$ and $(i, 0)$)."
+    },
+    {
+      "type": "prose",
+      "text": "The results do not have to be $\\pm1$. Changing the numbers changes the operator but not the eigenvectors. The observable that answers the yes/no question 'is the qubit in $\\vert1\\rangle$?' with 1 for yes and 0 for no is $N = 0\\cdot\\vert0\\rangle\\langle0\\vert + 1\\cdot\\vert1\\rangle\\langle1\\vert = \\vert1\\rangle\\langle1\\vert$. Since $I = \\vert0\\rangle\\langle0\\vert + \\vert1\\rangle\\langle1\\vert$ and $Z = \\vert0\\rangle\\langle0\\vert - \\vert1\\rangle\\langle1\\vert$, subtracting gives $N = (I - Z)/2$: relabelling the outcomes of a $Z$ measurement just shifts and scales $Z$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: an observable from its outcomes",
+      "text": "A detector reports 5 when it finds a qubit in $\\vert0\\rangle$ and 2 when it finds $\\vert1\\rangle$. Write the observable $A$ as a combination of $I$ and $Z$.",
+      "hint": "Express $\\vert0\\rangle\\langle0\\vert$ and $\\vert1\\rangle\\langle1\\vert$ in terms of $I$ and $Z$ first.",
+      "solution": [
+        "$A = 5\\vert0\\rangle\\langle0\\vert + 2\\vert1\\rangle\\langle1\\vert$.",
+        "Write $\\vert0\\rangle\\langle0\\vert = (I + Z)/2$ and $\\vert1\\rangle\\langle1\\vert = (I - Z)/2$ (add and subtract the expressions for $I$ and $Z$).",
+        "$A = \\tfrac52(I + Z) + (I - Z) = 3.5\\,I + 1.5\\,Z$. Check: on $\\vert0\\rangle$, $3.5 + 1.5 = 5$; on $\\vert1\\rangle$, $3.5 - 1.5 = 2$."
+      ],
+      "answer": "A = 3.5 I + 1.5 Z"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why observables are Hermitian"
+    },
+    {
+      "type": "prose",
+      "text": "The operator $A = \\sum_a a\\,\\vert a\\rangle\\langle a\\vert$ is built from real numbers $a$ and orthonormal vectors. Taking its conjugate transpose (the dagger) turns each $\\vert a\\rangle\\langle a\\vert$ into itself and each $a$ into its complex conjugate $\\bar a = a$. So $A^\\dagger = A$: every observable is a Hermitian matrix. The converse is the important direction, because it lets you hand someone any Hermitian matrix and say 'this is a measurement'. Two facts make that work, and both have short proofs."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Fact 1: the eigenvalues of a Hermitian matrix are real"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Suppose $A\\vert v\\rangle = \\lambda\\vert v\\rangle$ with $\\vert v\\rangle$ a unit vector. Take the inner product with $\\langle v\\vert$: $\\langle v\\vert A\\vert v\\rangle = \\lambda\\langle v\\vert v\\rangle = \\lambda$.",
+        "Step 2. Take the complex conjugate of the number $\\langle v\\vert A\\vert v\\rangle$. Conjugating an inner product swaps its sides and daggers the operator: $\\overline{\\langle v\\vert A\\vert v\\rangle} = \\langle v\\vert A^\\dagger\\vert v\\rangle$.",
+        "Step 3. Since $A^\\dagger = A$, this is $\\langle v\\vert A\\vert v\\rangle$ again. So $\\bar\\lambda = \\lambda$, which means $\\lambda$ is real."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Measured results are real numbers, so this is exactly what we need."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Fact 2: eigenvectors with different eigenvalues are orthogonal"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Take $A\\vert u\\rangle = \\mu\\vert u\\rangle$ and $A\\vert v\\rangle = \\lambda\\vert v\\rangle$ with $\\mu \\ne \\lambda$.",
+        "Step 2. Compute $\\langle u\\vert A\\vert v\\rangle$ two ways. Letting $A$ act to the right gives $\\lambda\\langle u\\vert v\\rangle$.",
+        "Step 3. Letting it act to the left: since $A = A^\\dagger$, $\\langle u\\vert A = (A\\vert u\\rangle)^\\dagger = \\mu\\langle u\\vert$ ($\\mu$ is real by Fact 1), so the same number is $\\mu\\langle u\\vert v\\rangle$.",
+        "Step 4. Subtract: $(\\lambda - \\mu)\\langle u\\vert v\\rangle = 0$, and since $\\lambda \\ne \\mu$, $\\langle u\\vert v\\rangle = 0$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Orthogonal states are perfectly distinguishable, so different results really do correspond to states that can be told apart in one shot. Together with the spectral theorem (every Hermitian matrix has a full orthonormal basis of eigenvectors, covered on Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors)), these facts say: every Hermitian matrix can be written as $\\sum_a a\\,\\Pi_a$, and that list of results and projectors is a measurement."
+    },
+    {
+      "type": "prose",
+      "text": "When several orthogonal states share the same result $a$ (the eigenvalue is degenerate), $\\Pi_a$ is the projector onto the whole set of them, and the measurement does not tell those states apart. Measuring the parity $Z_1Z_2$ of two qubits (the product of a $Z$ on qubit 1 and a $Z$ on qubit 2, which is $+1$ when the bits agree and $-1$ when they differ) is an example: $\\vert00\\rangle$ and $\\vert11\\rangle$ both give $+1$, and the measurement reports only that the two qubits agree, not which way."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading the possible results off an operator"
+    },
+    {
+      "type": "prose",
+      "text": "Often you are handed the operator first: a Hamiltonian (the energy observable) like $H = 0.3X + 0.8Z$. The possible results of measuring it are its eigenvalues, and nothing else. For a qubit there is a neat shortcut that avoids solving for eigenvalues at all."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the energy levels of a qubit"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Square the operator, keeping the order of products: $H^2 = 0.09\\,X^2 + 0.24\\,(XZ + ZX) + 0.64\\,Z^2$.",
+        "Step 2. Use two Pauli facts: $X^2 = Z^2 = I$, and $XZ = -ZX$ (they anticommute; this is shown on Commutators and Compatible Observables (#/quantum/foundations/commutators)). The middle term vanishes: $H^2 = 0.73\\,I$.",
+        "Step 3. If $H\\vert v\\rangle = \\lambda\\vert v\\rangle$ then $H^2\\vert v\\rangle = \\lambda^2\\vert v\\rangle$, so $\\lambda^2 = 0.73$ and $\\lambda = \\pm\\sqrt{0.73} = \\pm0.854$.",
+        "Step 4. A $2\\times2$ matrix has two eigenvalues, and their sum is the trace of $H$, which is 0 (Pauli matrices are traceless). So one is $+0.854$ and the other $-0.854$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The general rule for a qubit follows the same steps: $A = a_0 I + a_xX + a_yY + a_zZ$ has eigenvalues $a_0 \\pm \\sqrt{a_x^2 + a_y^2 + a_z^2}$. The $a_0 I$ part shifts both results equally; the rest splits them symmetrically by the length of the vector $(a_x, a_y, a_z)$."
+    },
+    {
+      "type": "callout",
+      "text": "A common confusion: for $H = 0.3X + 0.8Z$ it is tempting to think that measuring the energy gives 0.3 or 0.8, or some mixture of the $X$ and $Z$ results. It does not. Measuring $H$ is one measurement with its own eigenbasis, and its only possible results are $\\pm0.854$. You cannot learn $H$ by measuring $X$ and $Z$ in the same shot, though you can estimate its average from separate runs, because averages add (next section)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: results of a qubit observable",
+      "text": "What are the possible results of measuring $A = 2I + 3X + 4Z$?",
+      "hint": "Use $a_0 \\pm \\sqrt{a_x^2 + a_y^2 + a_z^2}$.",
+      "solution": [
+        "The length of $(3, 0, 4)$ is $\\sqrt{9 + 16} = 5$.",
+        "The eigenvalues are $2 \\pm 5$: that is $7$ and $-3$."
+      ],
+      "answer": "7 and −3"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The average result: expectation values"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A single measurement gives one random eigenvalue, which tells you very little. What experiments report, and what a quantum reservoir uses as its features, is the average over many runs on identically prepared copies. That average is called the expectation value $\\langle A\\rangle$. There are two ways to compute it, and seeing that they agree is the point of this section."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Way 1: from the probabilities"
+    },
+    {
+      "type": "prose",
+      "text": "An average of random results is each result times its probability, summed:"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle A\\rangle = \\sum_a a\\,P(a), \\qquad P(a) = \\vert\\langle a\\vert\\psi\\rangle\\vert^2",
+      "caption": "The expectation value as an ordinary weighted average of outcomes."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Way 2: one bracket"
+    },
+    {
+      "type": "prose",
+      "text": "Put the operator between the bra and the ket of the state:"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle A\\rangle = \\langle\\psi\\vert A\\vert\\psi\\rangle",
+      "caption": "The expectation value in one line: no eigenvalues needed."
+    },
+    {
+      "type": "prose",
+      "text": "Why are these equal? Insert $A = \\sum_a a\\,\\vert a\\rangle\\langle a\\vert$ into the bracket: $\\langle\\psi\\vert A\\vert\\psi\\rangle = \\sum_a a\\,\\langle\\psi\\vert a\\rangle\\langle a\\vert\\psi\\rangle$. The number $\\langle\\psi\\vert a\\rangle$ is the complex conjugate of $\\langle a\\vert\\psi\\rangle$, and a number times its own conjugate is its squared size. So each term is $a\\,\\vert\\langle a\\vert\\psi\\rangle\\vert^2 = a\\,P(a)$, and the bracket is Way 1. Way 2 is the practical one: you never need to find the eigenvectors."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the X average of a tilted qubit"
+    },
+    {
+      "type": "prose",
+      "text": "Take $\\vert\\psi\\rangle = \\tfrac{\\sqrt3}{2}\\vert0\\rangle + \\tfrac12\\vert1\\rangle$ (on the Bloch sphere, polar angle $60°$ and azimuth $0$). Find $\\langle X\\rangle$ both ways."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Way 1, step 1. Amplitude for $\\vert+\\rangle$: $\\langle+\\vert\\psi\\rangle = \\tfrac{1}{\\sqrt2}\\left(\\tfrac{\\sqrt3}{2} + \\tfrac12\\right) = \\tfrac{\\sqrt3 + 1}{2\\sqrt2}$.",
+        "Way 1, step 2. Square it: $P(+) = \\tfrac{(\\sqrt3 + 1)^2}{8} = \\tfrac{4 + 2\\sqrt3}{8} = 0.9330$. Then $P(-) = 1 - 0.9330 = 0.0670$.",
+        "Way 1, step 3. Average: $\\langle X\\rangle = (+1)(0.9330) + (-1)(0.0670) = 0.8660$.",
+        "Way 2, step 1. Apply $X$, which swaps the two amplitudes: $X\\vert\\psi\\rangle = \\tfrac12\\vert0\\rangle + \\tfrac{\\sqrt3}{2}\\vert1\\rangle$.",
+        "Way 2, step 2. Take the inner product with $\\vert\\psi\\rangle$ (conjugate its amplitudes, which are real here): $\\langle\\psi\\vert X\\vert\\psi\\rangle = \\tfrac{\\sqrt3}{2}\\cdot\\tfrac12 + \\tfrac12\\cdot\\tfrac{\\sqrt3}{2} = \\tfrac{\\sqrt3}{2} = 0.8660$. The same number, with much less work."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For the same state $\\langle Z\\rangle = P(0) - P(1) = \\tfrac34 - \\tfrac14 = 0.5$. These two numbers are exactly the $x$ and $z$ coordinates of the state's arrow on the Bloch sphere: $\\sin 60° = 0.866$ and $\\cos 60° = 0.5$. That is no accident; the Bloch vector of any qubit state is $(\\langle X\\rangle, \\langle Y\\rangle, \\langle Z\\rangle)$ (The Qubit and the Bloch Sphere (#/quantum/qubits/bloch-sphere))."
+    },
+    {
+      "type": "prose",
+      "text": "Two useful shortcuts for a qubit $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$, from the same steps: $\\langle Z\\rangle = \\vert\\alpha\\vert^2 - \\vert\\beta\\vert^2$, $\\langle X\\rangle = 2\\,\\mathrm{Re}(\\bar\\alpha\\beta)$ and $\\langle Y\\rangle = 2\\,\\mathrm{Im}(\\bar\\alpha\\beta)$."
+    },
+    {
+      "type": "callout",
+      "text": "An expectation value is usually not a possible result. Every single $X$ measurement on this state gives $+1$ or $-1$; the 0.866 appears only as the long-run average. In the same way a fair die averages 3.5 and never shows it."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Averages are linear"
+    },
+    {
+      "type": "prose",
+      "text": "Because $\\langle\\psi\\vert(A + B)\\vert\\psi\\rangle = \\langle\\psi\\vert A\\vert\\psi\\rangle + \\langle\\psi\\vert B\\vert\\psi\\rangle$, the average of a sum is the sum of the averages, and constants come out: $\\langle cA\\rangle = c\\langle A\\rangle$. So $\\langle 0.3X + 0.8Z\\rangle = 0.3\\langle X\\rangle + 0.8\\langle Z\\rangle$. For the tilted state above that is $0.3(0.866) + 0.8(0.5) = 0.660$. You can therefore estimate the average energy by measuring $X$ in some runs and $Z$ in others, even though no single run measures the energy."
+    },
+    {
+      "type": "prose",
+      "text": "There is a second, deeper linearity. Write $\\rho = \\vert\\psi\\rangle\\langle\\psi\\vert$ (the density matrix of the state, met properly on Mixed States (#/quantum/many-body/mixed-states)). Then $\\langle A\\rangle = \\operatorname{Tr}(A\\rho)$, which is linear in $\\rho$ even though it is quadratic in the amplitudes. Every feature of a quantum reservoir is of this form, $x_i = \\operatorname{Tr}(O_i\\rho)$, and this linearity is what makes the reservoir a well-behaved input to a linear readout (Readout and Multiplexing (#/qrc/models/readout-and-multiplexing))."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: an expectation value",
+      "text": "For $\\vert\\psi\\rangle = \\sqrt{0.2}\\,\\vert0\\rangle + \\sqrt{0.8}\\,\\vert1\\rangle$, compute $\\langle Z\\rangle$, $\\langle X\\rangle$ and the average of the detector $A = 3.5I + 1.5Z$ from the previous check.",
+      "hint": "Use the qubit shortcuts and linearity.",
+      "solution": [
+        "$\\langle Z\\rangle = 0.2 - 0.8 = -0.6$.",
+        "$\\langle X\\rangle = 2\\sqrt{0.2}\\sqrt{0.8} = 2\\sqrt{0.16} = 0.8$.",
+        "$\\langle A\\rangle = 3.5 + 1.5(-0.6) = 2.6$. Check by Way 1: $5(0.2) + 2(0.8) = 1 + 1.6 = 2.6$."
+      ],
+      "answer": "⟨Z⟩ = −0.6, ⟨X⟩ = 0.8, ⟨A⟩ = 2.6"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How spread out the results are: variance"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Two states can have the same average and very different behaviour. The state $\\vert0\\rangle$ has $\\langle Z\\rangle = 1$ and every shot gives $+1$. The state $\\vert+\\rangle$ has $\\langle Z\\rangle = 0$ and shots give $\\pm1$ like a coin. The average alone cannot tell you how sharp a quantity is, and it cannot tell you how many shots you need to estimate it. The variance can."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The definition, step by step"
+    },
+    {
+      "type": "prose",
+      "text": "As in ordinary statistics, the variance is the average squared distance of the results from their mean. Write $\\mu = \\langle A\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The definition: $\\mathrm{Var}(A) = \\sum_a (a - \\mu)^2 P(a)$.",
+        "Step 2. Expand the square: $(a - \\mu)^2 = a^2 - 2\\mu a + \\mu^2$.",
+        "Step 3. Sum each piece against $P(a)$: $\\sum_a a^2P(a) - 2\\mu\\sum_a aP(a) + \\mu^2\\sum_a P(a) = \\langle A^2\\rangle - 2\\mu^2 + \\mu^2$.",
+        "Step 4. So $\\mathrm{Var}(A) = \\langle A^2\\rangle - \\langle A\\rangle^2$. The standard deviation $\\sigma_A$ is its square root, and is in the same units as the results."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Here $\\langle A^2\\rangle = \\langle\\psi\\vert A^2\\vert\\psi\\rangle$, because $A^2 = \\sum_a a^2\\vert a\\rangle\\langle a\\vert$ has the same eigenvectors with squared eigenvalues. For any observable with results $\\pm1$ (all the Pauli matrices), $A^2 = I$, so $\\langle A^2\\rangle = 1$ and"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{Var}(A) = 1 - \\langle A\\rangle^2, \\qquad \\sigma_A = \\sqrt{1 - \\langle A\\rangle^2}",
+      "caption": "Variance of any ±1 observable: it depends only on the average."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. For the tilted state $\\tfrac{\\sqrt3}{2}\\vert0\\rangle + \\tfrac12\\vert1\\rangle$: $\\langle Z\\rangle = 0.5$, so $\\mathrm{Var}(Z) = 1 - 0.25 = 0.75$ and $\\sigma_Z = 0.866$.",
+        "Step 2. $\\langle X\\rangle = 0.866$, so $\\mathrm{Var}(X) = 1 - 0.75 = 0.25$ and $\\sigma_X = 0.5$.",
+        "Step 3. Read the result: this state is much sharper in $X$ than in $Z$. That matches the picture: its Bloch arrow at $60°$ from the $z$ axis lies closer to the $x$ axis (at $30°$ from it)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A system with more than two outcomes works the same way. A spin-1 particle has $S_z$ results $+1$, $0$, $-1$. In the state with amplitudes $\\tfrac12$, $\\tfrac{1}{\\sqrt2}$, $\\tfrac12$ on those three outcomes, the probabilities are $\\tfrac14$, $\\tfrac12$, $\\tfrac14$. The average is $\\tfrac14 - \\tfrac14 = 0$, but $\\langle S_z^2\\rangle = \\tfrac14 + 0 + \\tfrac14 = 0.5$, so $\\mathrm{Var}(S_z) = 0.5$: a zero average with a real spread."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The variance sets the number of shots"
+    },
+    {
+      "type": "prose",
+      "text": "Averaging $S$ independent shots gives an estimate whose standard error is $\\sigma_A/\\sqrt S$ (Measurement and the Born Rule (#/quantum/foundations/measurement) derives this for $\\pm1$ results; the same counting argument works for any results, with $\\sigma_A$ in place of $\\sqrt{1 - \\langle Z\\rangle^2}$). So the variance is a cost: to estimate $\\langle Z\\rangle$ of the tilted state to $\\pm0.01$ needs $S = 0.75/0.01^2 = 7500$ shots, while $\\langle X\\rangle$ needs only $0.25/0.01^2 = 2500$. In quantum reservoir computing, where every feature at every time step is such an estimate, this is often the dominant cost."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Sharp values are eigenstates"
+    },
+    {
+      "type": "prose",
+      "text": "When is the variance zero? Write $\\vert f\\rangle = (A - \\mu)\\vert\\psi\\rangle$. Then $\\langle f\\vert f\\rangle = \\langle\\psi\\vert(A - \\mu)^2\\vert\\psi\\rangle = \\langle A^2\\rangle - 2\\mu\\langle A\\rangle + \\mu^2 = \\mathrm{Var}(A)$. A vector has zero length only if it is the zero vector, so $\\mathrm{Var}(A) = 0$ exactly when $A\\vert\\psi\\rangle = \\mu\\vert\\psi\\rangle$: the state is an eigenvector of $A$. A quantity is sharp in a state if and only if the state is one of the states that give that quantity for certain. This is the precise meaning of 'having a definite value'."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a variance",
+      "text": "For $\\vert\\psi\\rangle = \\sqrt{0.2}\\,\\vert0\\rangle + \\sqrt{0.8}\\,\\vert1\\rangle$ and $A = 5\\vert0\\rangle\\langle0\\vert + 2\\vert1\\rangle\\langle1\\vert$, compute $\\mathrm{Var}(A)$ and $\\sigma_A$.",
+      "hint": "Compute $\\langle A\\rangle$ and $\\langle A^2\\rangle$ from the probabilities 0.2 and 0.8.",
+      "solution": [
+        "$\\langle A\\rangle = 5(0.2) + 2(0.8) = 2.6$.",
+        "$\\langle A^2\\rangle = 25(0.2) + 4(0.8) = 5 + 3.2 = 8.2$.",
+        "$\\mathrm{Var}(A) = 8.2 - 2.6^2 = 8.2 - 6.76 = 1.44$, so $\\sigma_A = 1.2$.",
+        "Check with $A = 3.5I + 1.5Z$: shifting by $3.5I$ does not change the spread and scaling by 1.5 multiplies $\\sigma$ by 1.5, so $\\sigma_A = 1.5\\sqrt{1 - 0.36} = 1.5(0.8) = 1.2$."
+      ],
+      "answer": "Var = 1.44, σ = 1.2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How sharp can two quantities be at once?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The last section showed a state is sharp in $A$ exactly when it is an eigenstate of $A$. Now ask about two observables. The state $\\vert0\\rangle$ is sharp in $Z$; is it also sharp in $X$? The table below says no: it has $\\sigma_X = 1$, the largest a $\\pm1$ observable can have. The eigenstates of $Z$ and the eigenstates of $X$ are different states, so no state can be an eigenstate of both, and no state can be sharp in both. The uncertainty relation turns that yes/no statement into a number."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The relation"
+    },
+    {
+      "type": "prose",
+      "text": "For any two observables $A$ and $B$ and any state (Robertson 1929),"
+    },
+    {
+      "type": "math",
+      "tex": "\\sigma_A\\,\\sigma_B \\ge \\tfrac12\\left\\vert\\langle[A, B]\\rangle\\right\\vert",
+      "caption": "The Robertson uncertainty relation; [A, B] = AB − BA is the commutator."
+    },
+    {
+      "type": "prose",
+      "text": "The commutator $[A, B] = AB - BA$ measures how much the order of applying $A$ and $B$ matters. If it is zero the right-hand side is zero and the relation allows both to be sharp. The derivation, which takes about ten lines, and what commuting means for measurements are on the next page, Commutators and Compatible Observables (#/quantum/foundations/commutators). Here we use the result."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: Z and X on several states"
+    },
+    {
+      "type": "prose",
+      "text": "For the Pauli matrices $[Z, X] = 2iY$ (shown on the next page), so the relation reads"
+    },
+    {
+      "type": "math",
+      "tex": "\\sigma_Z\\,\\sigma_X \\ge \\vert\\langle Y\\rangle\\vert",
+      "caption": "Uncertainty relation for Z and X on a qubit."
+    },
+    {
+      "type": "prose",
+      "text": "Using $\\sigma = \\sqrt{1 - \\langle\\cdot\\rangle^2}$ for each Pauli and the Bloch coordinates of each state, here is the relation evaluated on six states (angles in degrees: polar $\\theta$, azimuth $\\phi$):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\vert0\\rangle$ ($\\theta = 0$): $\\sigma_Z = 0$, $\\sigma_X = 1$, product $0$; bound $\\vert\\langle Y\\rangle\\vert = 0$. Equality: sharp $Z$ forces a fully random $X$.",
+        "$\\theta = 60, \\phi = 0$: $\\sigma_Z = 0.866$, $\\sigma_X = 0.5$, product $0.433$; bound $0$. The bound is satisfied with room to spare.",
+        "$\\vert+\\rangle$ ($\\theta = 90, \\phi = 0$): $\\sigma_Z = 1$, $\\sigma_X = 0$, product $0$; bound $0$. Sharp $X$, random $Z$.",
+        "$\\vert{+i}\\rangle$ ($\\theta = 90, \\phi = 90$): $\\sigma_Z = 1$, $\\sigma_X = 1$, product $1$; bound $\\vert\\langle Y\\rangle\\vert = 1$. Equality, and both are fully random.",
+        "$\\theta = 60, \\phi = 45$: $\\langle X\\rangle = \\langle Y\\rangle = 0.612$, $\\langle Z\\rangle = 0.5$; $\\sigma_Z = 0.866$, $\\sigma_X = 0.791$, product $0.685$; bound $0.612$.",
+        "$\\theta = 45, \\phi = 90$: $\\langle X\\rangle = 0$, $\\langle Y\\rangle = \\langle Z\\rangle = 0.707$; $\\sigma_Z = 0.707$, $\\sigma_X = 1$, product $0.707$; bound $0.707$. Equality."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Two lessons are in the table. First, the bound depends on the state: for any state with no $Y$ component it is zero, and then the relation says nothing even though $Z$ and $X$ do not commute. Second, the bound can be zero while both spreads are large (the $\\theta = 60$ row): the relation is a floor, not a formula for the product."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A proof for qubits you can do in three lines"
+    },
+    {
+      "type": "prose",
+      "text": "For a qubit in a pure state the Bloch vector has length 1: $x^2 + y^2 + z^2 = 1$ with $x = \\langle X\\rangle$ and so on. Then:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Square the left side: $\\sigma_Z^2\\sigma_X^2 = (1 - z^2)(1 - x^2) = 1 - x^2 - z^2 + x^2z^2$.",
+        "Step 2. Use the length: $1 - x^2 - z^2 = y^2$, so $\\sigma_Z^2\\sigma_X^2 = y^2 + x^2z^2$.",
+        "Step 3. Since $x^2z^2 \\ge 0$, $\\sigma_Z^2\\sigma_X^2 \\ge y^2$, which is the relation. Equality holds exactly when $x = 0$ or $z = 0$, which is what the table shows."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What the relation does and does not say"
+    },
+    {
+      "type": "prose",
+      "text": "It is a statement about preparations, not about clumsy instruments. No matter how carefully you measure, there is no state whose $Z$ and $X$ results are both sharp, because no state is an eigenvector of both. It is often described as 'measuring one disturbs the other', and that is also true (it is the subject of the next page), but the inequality itself is about the spread you would see in two separate experiments, one measuring $A$ on many copies and the other measuring $B$ on many fresh copies."
+    },
+    {
+      "type": "prose",
+      "text": "For the position $x$ and momentum $p$ of a particle (here $x$ is a position, not a Bloch coordinate) the commutator is $[x, p] = i$ (with $\\hbar = 1$), so $\\sigma_x\\sigma_p \\ge \\tfrac12$ for every state. That is Heisenberg's famous relation; the same bound reappears for the two quadratures of an oscillator mode in The Harmonic Oscillator (#/quantum/dynamics/harmonic-oscillator)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "bloch-sphere",
+        "title": "Read off ⟨X⟩, ⟨Y⟩, ⟨Z⟩ and test the uncertainty relation",
+        "params": [
+          {
+            "key": "theta",
+            "label": "Polar angle θ (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 180,
+            "step": 1,
+            "default": 60
+          },
+          {
+            "key": "phi",
+            "label": "Azimuthal angle φ (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "axis",
+            "label": "Rotate about",
+            "control": "select",
+            "options": [
+              "none",
+              "X",
+              "Y",
+              "Z"
+            ],
+            "default": "none"
+          },
+          {
+            "key": "angle",
+            "label": "Rotation angle (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 5,
+            "default": 90
+          }
+        ]
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try this: the readout shows the Bloch coordinates $(x, y, z) = (\\langle X\\rangle, \\langle Y\\rangle, \\langle Z\\rangle)$ of the state. Set the rotation axis to none. (1) Put $\\theta = 60$, $\\phi = 0$: you should read $x \\approx 0.87$, $z = 0.5$, $y = 0$, the worked example. (2) Move $\\phi$ to 90: now $y \\approx 0.87$ and $x = 0$, so $\\sigma_Z\\sigma_X = \\sqrt{0.75}\\cdot1 = 0.87$ and the bound $\\vert y\\vert$ is met with equality. (3) Put $\\theta = 90$ and sweep $\\phi$ from 0 to 90: the state moves from sharp $X$ ($\\vert+\\rangle$) to the state $\\vert{+i}\\rangle$ where $Z$ and $X$ are both fully random."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\ndef ev(O, v): return np.vdot(v, O @ v).real          # <v|O|v>\ndef var(O, v): return ev(O @ O, v) - ev(O, v) ** 2\n# The worked example: |psi> = (sqrt(3)/2)|0> + (1/2)|1>\npsi = np.array([np.sqrt(3) / 2, 0.5], complex)\n# Way 1: probabilities in the eigenbasis of X, then a weighted average\nw, V = np.linalg.eigh(X)                            # eigenvalues -1, +1 and eigenvectors\nP = np.abs(V.conj().T @ psi) ** 2\nprint(\"X eigenvalues:\", w.round(4), \" probabilities:\", P.round(4), \" sum a P(a) =\", round(float(w @ P), 4))\n# Way 2: one bracket\nprint(\"<psi|X|psi> =\", round(ev(X, psi), 4), \"  <Z> =\", round(ev(Z, psi), 4))\nprint(\"Var Z =\", round(var(Z, psi), 4), \" Var X =\", round(var(X, psi), 4))\n# A simulated experiment: 100000 shots of X\nrng = np.random.default_rng(7)\nshots = rng.choice(w, size=100000, p=P)\nprint(\"average of 100000 simulated X shots:\", round(shots.mean(), 4), \" sample variance:\", round(shots.var(), 4))\n# Robertson: sd(A) sd(B) >= |<[A,B]>| / 2, tested on random qubit states\ncomm = lambda A, B: A @ B - B @ A\nprint(\"[X, Y] = 2iZ:\", np.allclose(comm(X, Y), 2j * Z))\nrng = np.random.default_rng(3)\nworst = 1e9\nfor _ in range(10000):\n    v = rng.normal(size=2) + 1j * rng.normal(size=2); v /= np.linalg.norm(v)\n    lhs = np.sqrt(var(X, v) * var(Y, v)); rhs = abs(np.vdot(v, comm(X, Y) @ v)) / 2\n    worst = min(worst, lhs - rhs)\nprint(f\"min over 10000 random states of sd(X)sd(Y) - |<[X,Y]>|/2 = {worst:.2e} (never negative)\")\nv0 = np.array([1, 0], complex)\nprint(\"|0>: <Z> = %.0f, Var Z = %.0f, <X> = %.0f, Var X = %.0f\" % (ev(Z, v0), var(Z, v0), ev(X, v0), var(X, v0)))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the eigenvalues of $X$ are $-1, +1$ with probabilities $0.067$ and $0.933$, so Way 1 gives $0.866$, and Way 2 gives the same $0.866$ (with $\\langle Z\\rangle = 0.5$, $\\mathrm{Var}(Z) = 0.75$, $\\mathrm{Var}(X) = 0.25$). A simulated experiment of 100 000 $X$ shots averaged $0.8683$ with sample variance $0.246$: close to the exact values, and the gap of $0.002$ is about one and a half standard errors ($0.5/\\sqrt{100000} = 0.0016$), an ordinary fluctuation. $[X, Y] = 2iZ$ holds; over 10 000 random states the uncertainty product $\\sigma_X\\sigma_Y$ never falls below its bound (smallest margin $4.7\\times10^{-11}$, rounding error at states where the bound is tight); and $\\vert0\\rangle$ has $\\langle Z\\rangle = 1$ with zero variance but $\\langle X\\rangle = 0$ with variance 1."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: the uncertainty relation",
+      "text": "For the state with $\\theta = 120$, $\\phi = 270$ degrees, $\\langle X\\rangle = 0$, $\\langle Y\\rangle = -0.866$ and $\\langle Z\\rangle = -0.5$. Compute $\\sigma_Z\\sigma_X$ and the bound $\\vert\\langle Y\\rangle\\vert$. Is it equality?",
+      "hint": "Equality happens when $x = 0$ or $z = 0$.",
+      "solution": [
+        "$\\sigma_Z = \\sqrt{1 - 0.25} = 0.866$, $\\sigma_X = \\sqrt{1 - 0} = 1$.",
+        "Product $0.866$; bound $\\vert -0.866\\vert = 0.866$.",
+        "Equality, as expected from the qubit proof since $x = 0$."
+      ],
+      "answer": "0.866 ≥ 0.866, equality"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit is prepared in the state with $\\theta = 60°$, $\\phi = 45°$, that is $\\vert\\psi\\rangle = \\cos 30°\\,\\vert0\\rangle + e^{i\\,45°}\\sin 30°\\,\\vert1\\rangle$. Its energy is $H = 0.3X + 0.8Z$. Find the possible energies, the average energy, and check the $Z$-$X$ uncertainty relation."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Amplitudes: $\\alpha = \\cos 30° = 0.866$, $\\beta = e^{i\\,45°}(0.5) = 0.354 + 0.354i$.",
+        "Step 2. $\\bar\\alpha\\beta = 0.866(0.354 + 0.354i) = 0.306 + 0.306i$. So $\\langle X\\rangle = 2(0.306) = 0.612$, $\\langle Y\\rangle = 2(0.306) = 0.612$, and $\\langle Z\\rangle = 0.75 - 0.25 = 0.5$.",
+        "Step 3. Possible energies: $\\pm\\sqrt{0.3^2 + 0.8^2} = \\pm0.854$, whatever the state.",
+        "Step 4. Average energy by linearity: $\\langle H\\rangle = 0.3(0.612) + 0.8(0.5) = 0.184 + 0.400 = 0.584$. It lies between $-0.854$ and $+0.854$, as any average of those two results must.",
+        "Step 5. Spreads: $\\sigma_Z = \\sqrt{1 - 0.25} = 0.866$, $\\sigma_X = \\sqrt{1 - 0.375} = 0.791$, product $0.685$.",
+        "Step 6. Bound: $\\vert\\langle Y\\rangle\\vert = 0.612$. Since $0.685 \\ge 0.612$ the relation holds, and not with equality, because neither $x$ nor $z$ is zero. The qubit proof predicts the gap exactly: $\\sigma_Z^2\\sigma_X^2 - y^2 = x^2z^2 = 0.375 \\times 0.25 = 0.094$, and $0.685^2 - 0.612^2 = 0.469 - 0.375 = 0.094$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "An observable is a list of results and the states that give them: $A = \\sum_a a\\,\\vert a\\rangle\\langle a\\vert$. Its eigenvalues are the only possible results and its eigenvectors are the states with definite results.",
+        "Observables are Hermitian. Hermitian matrices have real eigenvalues and orthogonal eigenvectors, so every Hermitian matrix is a valid measurement.",
+        "The average result is $\\langle A\\rangle = \\sum_a aP(a) = \\langle\\psi\\vert A\\vert\\psi\\rangle$; the bracket form needs no eigenvectors and is linear in the operator.",
+        "The spread is $\\mathrm{Var}(A) = \\langle A^2\\rangle - \\langle A\\rangle^2$, equal to $1 - \\langle A\\rangle^2$ for a $\\pm1$ observable. It is zero exactly in eigenstates, and it sets how many shots an estimate needs.",
+        "The uncertainty relation $\\sigma_A\\sigma_B \\ge \\tfrac12\\vert\\langle[A, B]\\rangle\\vert$ limits how sharp two non-commuting observables can be in the same state; for a qubit, $\\sigma_Z\\sigma_X \\ge \\vert\\langle Y\\rangle\\vert$."
       ]
     },
     {
@@ -86,21 +592,24 @@
     {
       "type": "problem",
       "title": "Expectation and variance of the QRC input",
-      "text": "For $\\vert\\psi_s\\rangle = \\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt s\\,\\vert1\\rangle$, find $\\langle Z\\rangle$, $\\langle X\\rangle$ and $\\mathrm{Var}(Z)$.",
+      "text": "Quantum reservoirs often write an input $s \\in [0, 1]$ into a qubit as $\\vert\\psi_s\\rangle = \\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt s\\,\\vert1\\rangle$. Find $\\langle Z\\rangle$, $\\langle X\\rangle$ and $\\mathrm{Var}(Z)$ as functions of $s$. For which $s$ is $Z$ least sharp?",
+      "hint": "Use the qubit shortcuts with real amplitudes.",
       "solution": [
-        "$\\langle Z\\rangle = (1 - s) - s = 1 - 2s$.",
+        "$\\langle Z\\rangle = \\vert\\alpha\\vert^2 - \\vert\\beta\\vert^2 = (1 - s) - s = 1 - 2s$.",
         "$\\langle X\\rangle = 2\\,\\mathrm{Re}(\\bar\\alpha\\beta) = 2\\sqrt{s(1-s)}$.",
-        "$\\mathrm{Var}(Z) = 1 - (1-2s)^2 = 4s(1-s)$, largest at $s = 1/2$."
+        "$\\mathrm{Var}(Z) = 1 - (1-2s)^2 = 1 - 1 + 4s - 4s^2 = 4s(1-s)$.",
+        "$4s(1-s)$ is largest at $s = 1/2$, where it equals 1: the input $s = 0.5$ makes $Z$ a fair coin."
       ],
-      "answer": "1 − 2s, 2√(s(1−s)), 4s(1−s)"
+      "answer": "1 − 2s, 2√(s(1−s)), 4s(1−s); least sharp at s = 1/2"
     },
     {
       "type": "problem",
       "title": "A tight case",
       "text": "Check the uncertainty relation for $X$ and $Z$ in the state $\\vert0\\rangle$.",
+      "hint": "$Y$ swaps $\\vert0\\rangle$ into $\\vert1\\rangle$, so its average in $\\vert0\\rangle$ is zero.",
       "solution": [
-        "$[X, Z] = -2iY$, and $\\langle0\\vert Y\\vert0\\rangle = 0$, so the bound is $0$.",
-        "$\\sigma_Z = 0$ (an eigenstate) and $\\sigma_X = 1$, so the product is $0 \\ge 0$: satisfied with equality."
+        "$[X, Z] = -[Z, X] = -2iY$, and $\\langle0\\vert Y\\vert0\\rangle = 0$, so the bound is $0$.",
+        "$\\sigma_Z = 0$ ($\\vert0\\rangle$ is an eigenstate of $Z$) and $\\sigma_X = 1$, so the product is $0 \\ge 0$: satisfied with equality."
       ],
       "answer": "0 ≥ 0, equality"
     },
@@ -108,11 +617,51 @@
       "type": "problem",
       "title": "Energy of a state",
       "text": "A qubit has Hamiltonian $H = 0.3X + 0.8Z$. What is $\\langle H\\rangle$ in $\\vert0\\rangle$, and what are the possible results of measuring $H$?",
+      "hint": "Square $H$.",
       "solution": [
         "$\\langle0\\vert X\\vert0\\rangle = 0$ and $\\langle0\\vert Z\\vert0\\rangle = 1$, so $\\langle H\\rangle = 0.8$.",
         "$H^2 = (0.09 + 0.64)I$ because $XZ + ZX = 0$, so the eigenvalues are $\\pm\\sqrt{0.73} = \\pm0.854$. Those are the only possible results; 0.8 is an average, never a single outcome."
       ],
       "answer": "0.8 on average; outcomes ±0.854"
+    },
+    {
+      "type": "problem",
+      "title": "Shots for a target precision",
+      "text": "You want $\\langle X\\rangle$ and $\\langle Z\\rangle$ of the tilted state $\\tfrac{\\sqrt3}{2}\\vert0\\rangle + \\tfrac12\\vert1\\rangle$, each with standard error 0.005. How many shots does each need, and how many in total?",
+      "hint": "Variance over squared target error.",
+      "solution": [
+        "Standard error $\\sigma/\\sqrt S$, so $S = \\sigma^2/0.005^2 = \\mathrm{Var}/(2.5\\times10^{-5})$.",
+        "$Z$: $\\mathrm{Var} = 0.75$, $S = 30\\,000$.",
+        "$X$: $\\mathrm{Var} = 0.25$, $S = 10\\,000$.",
+        "$X$ and $Z$ cannot be measured in the same shot, so the total is $40\\,000$."
+      ],
+      "answer": "30 000 for Z, 10 000 for X, 40 000 in all"
+    },
+    {
+      "type": "problem",
+      "title": "Uncertainty with three outcomes",
+      "text": "A spin-1 particle has observables with three results. In a state where $S_z$ has probabilities $\\tfrac14, \\tfrac12, \\tfrac14$ for results $+1, 0, -1$, compute $\\langle S_z\\rangle$, $\\sigma_{S_z}$, and the probability that one shot lands more than one standard deviation from the mean.",
+      "hint": "Variance is $\\langle S_z^2\\rangle - \\langle S_z\\rangle^2$.",
+      "solution": [
+        "$\\langle S_z\\rangle = \\tfrac14 - \\tfrac14 = 0$.",
+        "$\\langle S_z^2\\rangle = \\tfrac14 + \\tfrac14 = \\tfrac12$, so $\\sigma = \\sqrt{0.5} = 0.707$.",
+        "Results $\\pm1$ are at distance 1 from the mean, more than $0.707$; result 0 is at distance 0. So the probability is $\\tfrac14 + \\tfrac14 = \\tfrac12$."
+      ],
+      "answer": "0, 0.707, 1/2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The features $x_i = \\operatorname{Tr}(O_i\\rho)$ of every model on Quantum Reservoir Models (#/qrc/models) are expectation values.",
+        "Which observables can share shots is a commutation question: Commutators and Compatible Observables (#/quantum/foundations/commutators) and Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
+        "The shot cost $\\mathrm{Var}/\\epsilon^2$ of each feature is the subject of Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action).",
+        "The quadrature noise of continuous-variable reservoirs is the $\\sigma_x\\sigma_p \\ge 1/2$ bound: Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs)."
+      ]
     },
     {
       "type": "heading",
@@ -124,7 +673,8 @@
       "items": [
         "H. P. Robertson, The uncertainty principle, Physical Review 34, 163 (1929)",
         "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 2.2.5",
-        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapter 3"
+        "D. J. Griffiths and D. F. Schroeter, Introduction to Quantum Mechanics, 3rd edition, Cambridge University Press (2018), chapter 3",
+        "L. Susskind and A. Friedman, Quantum Mechanics: The Theoretical Minimum, Basic Books (2014), lectures 3 and 5"
       ]
     }
   ]

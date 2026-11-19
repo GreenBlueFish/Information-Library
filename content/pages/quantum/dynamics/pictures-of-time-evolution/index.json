@@ -1,0 +1,428 @@
+{
+  "title": "Schrödinger and Heisenberg Pictures",
+  "intro": "Quantum predictions can be computed by moving the state or by moving the observables; the numbers are identical. This lesson derives the Heisenberg equation $dA/dt = i[H, A]$, uses it to solve precession and spot conserved quantities, builds the interaction picture and rotating frame behind every driven-qubit calculation, and reads the QRC feature formula in both pictures.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Before you start"
+    },
+    {
+      "type": "prose",
+      "text": "What you need first: The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation) (the propagator $U = e^{-iHt}$ and precession), and commutators from Commutators and Compatible Observables (#/quantum/foundations/commutators). The mixed-state part at the end uses Mixed States (#/quantum/many-body/mixed-states)."
+    },
+    {
+      "type": "prose",
+      "text": "What you will be able to do by the end of this page:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Compute an expectation value at time $t$ either by evolving the state or by evolving the observable, and explain why the two always agree.",
+        "Derive the Heisenberg equation of motion $dA/dt = i[H, A]$ and solve it for a precessing spin.",
+        "Recognise a conserved quantity from a single commutator, and use one to simplify a two-qubit problem.",
+        "Move to the interaction picture and the rotating frame, and derive the constant Hamiltonian behind Rabi's formula, including when the rotating-wave approximation is allowed.",
+        "Read the feature formula $x_i(t) = \\operatorname{Tr}(Z_i\\rho(t))$ of quantum reservoir computing in both pictures."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two ways to tell the same story"
+    },
+    {
+      "type": "prose",
+      "text": "On The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation) the state moved and observables stood still: $\\vert\\psi(t)\\rangle = U(t)\\vert\\psi(0)\\rangle$ while $X$, $Z$ and the rest were fixed matrices. But what an experiment records is never the state itself. It records outcomes, and their averages, the expectation values $\\langle A\\rangle(t)$. So there is freedom in how we split the bookkeeping between the state and the observable."
+    },
+    {
+      "type": "prose",
+      "text": "Here is the whole idea in one line of algebra. Write the expectation value at time $t$ and substitute $\\vert\\psi(t)\\rangle = U\\vert\\psi(0)\\rangle$ and $\\langle\\psi(t)\\vert = \\langle\\psi(0)\\vert U^\\dagger$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle A\\rangle(t) = \\langle\\psi(t)\\vert\\,A\\,\\vert\\psi(t)\\rangle = \\langle\\psi(0)\\vert\\,\\underbrace{U^\\dagger A\\,U}_{A_H(t)}\\,\\vert\\psi(0)\\rangle",
+      "caption": "Matrix multiplication is associative, so the brackets can be regrouped: move U onto the state, or onto the observable."
+    },
+    {
+      "type": "prose",
+      "text": "Grouping $U$ with the state is the Schrödinger picture: states move, operators are fixed. Grouping $U^\\dagger$ and $U$ around the observable is the Heisenberg picture: the state is frozen at its starting value and the operator moves, $A_H(t) = U^\\dagger(t)\\,A\\,U(t)$. At $t = 0$ the two pictures agree ($U(0) = I$). At every later time they give identical numbers for every measurable quantity, because they are the same product of matrices bracketed differently."
+    },
+    {
+      "type": "prose",
+      "text": "An everyday analogy, with its limit stated: filming a car driving past a fixed camera, or mounting the camera on a dolly and moving it backwards past a parked car. The footage is the same. The analogy is exact in one respect (only relative motion is recorded) and misleading in another (in quantum mechanics there is no 'real' motion underneath; neither picture is more correct, they are two bookkeeping systems for the same predictions)."
+    },
+    {
+      "type": "prose",
+      "text": "Why have two? Because each makes different things easy. The Schrödinger picture is natural for simulation: you store one vector and update it. The Heisenberg picture is natural for questions about observables: how does $\\langle X\\rangle$ depend on time, which quantities never change, how does a local operator spread through a chain of spins. It is also the one closest to classical mechanics, where positions and momenta, not states, are the things that move."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: both pictures for a precessing spin"
+    },
+    {
+      "type": "prose",
+      "text": "Take $H = hZ$ with $h = 1$, start in $\\vert+\\rangle$, and find $\\langle X\\rangle$ and $\\langle Y\\rangle$ at $t = 0.3$ both ways."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Schrödinger picture. Step 1: $U = e^{-iZt}$ multiplies $\\vert0\\rangle$ by $e^{-it}$ and $\\vert1\\rangle$ by $e^{it}$. Step 2: $\\vert\\psi(t)\\rangle = (e^{-it}\\vert0\\rangle + e^{it}\\vert1\\rangle)/\\sqrt2$, which up to a global phase has relative phase $\\phi = 2t = 0.6$. Step 3: on the Bloch sphere this is the equator at azimuth 0.6 rad, so $\\langle X\\rangle = \\cos0.6 = 0.8253$ and $\\langle Y\\rangle = \\sin0.6 = 0.5646$.",
+        "Heisenberg picture. Step 1: compute $X_H(t) = U^\\dagger XU$. In the next section we derive $X_H(t) = \\cos(2t)X - \\sin(2t)Y$. Step 2: the state is still $\\vert+\\rangle$, for which $\\langle X\\rangle = 1$ and $\\langle Y\\rangle = 0$. Step 3: $\\langle X_H\\rangle = \\cos(0.6)\\cdot1 - \\sin(0.6)\\cdot0 = 0.8253$. The same number.",
+        "The sample at the end of the page computes both, prints $+0.8253$ and $+0.5646$ for each, and checks the formula for $X_H(t)$ as a matrix identity."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which picture moves what",
+      "text": "In the Heisenberg picture, what is the state at time $t$? And what is $A_H(t)$ if $A$ commutes with $H$?",
+      "solution": [
+        "In the Heisenberg picture the state never moves: it is $\\vert\\psi(0)\\rangle$ at all times.",
+        "If $AH = HA$ then $A$ also commutes with $U = e^{-iHt}$ (a power series in $H$), so $U^\\dagger AU = U^\\dagger UA = A$."
+      ],
+      "answer": "the starting state; $A_H(t) = A$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Heisenberg equation of motion"
+    },
+    {
+      "type": "prose",
+      "text": "In the Schrödinger picture the state obeys a differential equation. What equation does a Heisenberg operator obey? We differentiate $A_H(t) = U^\\dagger AU$ with the product rule. We need the derivatives of $U$ and $U^\\dagger$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $U = e^{-iHt}$, so $dU/dt = -iHU$ (differentiate the exponential like an ordinary one; this is just the Schrödinger equation for $U$). Also $H$ commutes with $U$, since $U$ is a function of $H$, so $HU = UH$.",
+        "Step 2. Take the dagger: $dU^\\dagger/dt = (-iHU)^\\dagger = iU^\\dagger H$ (the dagger reverses order and conjugates $-i$, and $H^\\dagger = H$).",
+        "Step 3. Product rule, with $A$ itself constant: $\\dfrac{dA_H}{dt} = \\dfrac{dU^\\dagger}{dt}AU + U^\\dagger A\\dfrac{dU}{dt} = iU^\\dagger HAU - iU^\\dagger AHU$.",
+        "Step 4. Insert $UU^\\dagger = I$ between $H$ and $A$ in the first term and between $A$ and $H$ in the second: $iU^\\dagger HU\\,U^\\dagger AU - iU^\\dagger AU\\,U^\\dagger HU$.",
+        "Step 5. Since $U^\\dagger HU = H$ (because $H$ commutes with $U$), this is $i(HA_H - A_HH)$."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{d A_H}{dt} = i\\,[H, A_H], \\qquad [H, A] = HA - AH",
+      "caption": "The Heisenberg equation of motion ($\\hbar = 1$; in SI units, $dA_H/dt = \\frac{i}{\\hbar}[H, A_H]$). Taking expectation values gives Ehrenfest's form $\\frac{d}{dt}\\langle A\\rangle = i\\langle[H, A]\\rangle$, valid in either picture."
+    },
+    {
+      "type": "prose",
+      "text": "The equation says: the rate of change of an observable is $i$ times its commutator with the energy. So everything about time evolution in this picture comes down to computing commutators. For one qubit those are fixed by the Pauli multiplication rules $XY = iZ$, $YZ = iX$, $ZX = iY$ (and with the order reversed, a minus sign: $YX = -iZ$, and so on). Subtracting, $[X, Y] = 2iZ$, $[Y, Z] = 2iX$, $[Z, X] = 2iY$."
+    },
+    {
+      "type": "callout",
+      "text": "A trick to remember the signs: $X \\to Y \\to Z \\to X$ is the cyclic order. A commutator in cyclic order gives $+2i$ times the third ($[Z, X] = 2iY$); against cyclic order it gives $-2i$ ($[Z, Y] = -2iX$)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: solving for precession"
+    },
+    {
+      "type": "prose",
+      "text": "Let $H = hZ$. We find $X_H(t)$ and $Y_H(t)$ by solving the Heisenberg equations."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Write the equations. $dX_H/dt = i[hZ, X_H]$ and $dY_H/dt = i[hZ, Y_H]$.",
+        "Step 2. Compute the commutators at $t = 0$, where $X_H = X$ and $Y_H = Y$: $i[hZ, X] = ih(2iY) = -2hY$ and $i[hZ, Y] = ih(-2iX) = 2hX$. (At later times the same algebra holds for $X_H$, $Y_H$, because conjugating by $U$ preserves products: $U^\\dagger XYU = X_HY_H$.)",
+        "Step 3. So the pair obeys $dX_H/dt = -2hY_H$ and $dY_H/dt = 2hX_H$. These are the equations of a point going round a circle at angular frequency $2h$, with $X$ and $Y$ playing the roles of the two coordinates.",
+        "Step 4. The solution that starts at $X_H(0) = X$, $Y_H(0) = Y$ is $X_H(t) = \\cos(2ht)X - \\sin(2ht)Y$ and $Y_H(t) = \\cos(2ht)Y + \\sin(2ht)X$. Check by differentiating: $dX_H/dt = -2h\\sin(2ht)X - 2h\\cos(2ht)Y = -2hY_H$. Correct.",
+        "Step 5. And $Z_H(t) = Z$ for all $t$, because $[Z, Z] = 0$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Now any starting state can be handled by taking expectation values of these operator formulas. For $\\vert+\\rangle$, with $\\langle X\\rangle_0 = 1$, $\\langle Y\\rangle_0 = 0$: $\\langle X\\rangle(t) = \\cos2ht$ and $\\langle Y\\rangle(t) = \\sin2ht$, the precession found on The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation). For a state at polar angle $\\theta$, with $\\langle X\\rangle_0 = \\sin\\theta$, $\\langle Y\\rangle_0 = 0$ and $\\langle Z\\rangle_0 = \\cos\\theta$, the same formulas give a cone of half-angle $\\theta$ around $z$ with no extra work. That is the strength of the Heisenberg picture: you solve once, for operators, and then read off every state."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a spin in a field along x",
+      "text": "Let $H = hX$. Find $Z_H(t)$, then $\\langle Z\\rangle(t)$ for the start $\\vert0\\rangle$. Evaluate at $h = 0.5$, $t = 1.2$.",
+      "hint": "Compute $[X, Z]$ and $[X, Y]$ from the Pauli rules.",
+      "solution": [
+        "$dZ_H/dt = i[hX, Z] = ih(-2iY) = 2hY$ (since $[X, Z] = -[Z, X] = -2iY$).",
+        "$dY_H/dt = i[hX, Y] = ih(2iZ) = -2hZ$.",
+        "These are circle equations again: $Z_H(t) = \\cos(2ht)Z + \\sin(2ht)Y$. Check: $dZ_H/dt = -2h\\sin(2ht)Z + 2h\\cos(2ht)Y = 2hY_H$ with $Y_H = \\cos(2ht)Y - \\sin(2ht)Z$.",
+        "For $\\vert0\\rangle$: $\\langle Z\\rangle_0 = 1$, $\\langle Y\\rangle_0 = 0$, so $\\langle Z\\rangle(t) = \\cos(2ht)$. At $2ht = 1.2$: $\\cos1.2 = 0.3624$. This is Rabi oscillation on resonance: $P_1 = (1 - \\langle Z\\rangle)/2 = \\sin^2(ht)$."
+      ],
+      "answer": "$Z_H(t) = \\cos(2ht)Z + \\sin(2ht)Y$; $\\langle Z\\rangle = \\cos(2ht) = 0.3624$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Conserved quantities fall out"
+    },
+    {
+      "type": "prose",
+      "text": "The Heisenberg equation gives the cleanest possible test for whether something is conserved. If $[H, A] = 0$ then $dA_H/dt = 0$, so $A_H(t) = A$ for all time, and $\\langle A\\rangle$ never changes for any starting state. One commutator, no solving. (Conversely, if $\\langle A\\rangle$ is constant for every starting state, then $[H, A] = 0$.)"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The energy itself: $[H, H] = 0$, so $\\langle H\\rangle$ is constant. Energy conservation is the simplest case.",
+        "Precession: under $H = hZ$, $Z$ is conserved; under $H = hX$ it is not.",
+        "Any function of $H$, for example a projector onto an energy eigenspace, is conserved; this is the 'energy-basis populations never change' result from The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation).",
+        "Symmetries: a quantity is conserved exactly when the Hamiltonian is unchanged by the transformation it generates. That connection is the subject of Symmetries and Conservation (#/quantum/dynamics/symmetries-and-conservation)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: two qubits that only swap"
+    },
+    {
+      "type": "prose",
+      "text": "Take two qubits with the exchange (XY) coupling $H = J(X_1X_2 + Y_1Y_2)$, a Hamiltonian that appears in many spin reservoirs. Is the total $Z_1 + Z_2$ conserved, and what does that buy us?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. See what $H$ does to basis states. Using $X\\vert0\\rangle = \\vert1\\rangle$, $Y\\vert0\\rangle = i\\vert1\\rangle$, $Y\\vert1\\rangle = -i\\vert0\\rangle$: $X_1X_2\\vert01\\rangle = \\vert10\\rangle$ and $Y_1Y_2\\vert01\\rangle = (i)(-i)\\vert10\\rangle = \\vert10\\rangle$, so $H\\vert01\\rangle = 2J\\vert10\\rangle$. Likewise $H\\vert10\\rangle = 2J\\vert01\\rangle$.",
+        "Step 2. On $\\vert00\\rangle$: $X_1X_2\\vert00\\rangle = \\vert11\\rangle$ and $Y_1Y_2\\vert00\\rangle = (i)(i)\\vert11\\rangle = -\\vert11\\rangle$; they cancel, so $H\\vert00\\rangle = 0$, and similarly $H\\vert11\\rangle = 0$.",
+        "Step 3. So $H$ only ever moves an excitation from one qubit to the other; it never creates or destroys one. With $N$ the number of excitations (qubits in $\\vert1\\rangle$), $Z_1 + Z_2 = 2 - 2N$, so it is unchanged by $H$: $[H, Z_1 + Z_2] = 0$. The sample confirms the commutator is zero.",
+        "Step 4. Use it. Starting in $\\vert01\\rangle$, the state stays inside the two-state space spanned by $\\vert01\\rangle$ and $\\vert10\\rangle$, where $H$ acts like $2J$ times an $X$ that swaps them. So it is a qubit problem we have already solved: $\\vert\\psi(t)\\rangle = \\cos(2Jt)\\vert01\\rangle - i\\sin(2Jt)\\vert10\\rangle$, and $\\langle Z_1\\rangle = \\cos^2(2Jt)\\cdot(+1) + \\sin^2(2Jt)\\cdot(-1) = \\cos(4Jt)$, with $\\langle Z_2\\rangle = -\\langle Z_1\\rangle$.",
+        "Step 5. Numbers for $J = 0.7$: $\\langle Z_1\\rangle = \\cos(1.4) = 0.1700$ at $t = 0.5$ and $\\cos(2.8) = -0.9422$ at $t = 1$, while $\\langle Z_1 + Z_2\\rangle = 0$ throughout; the sample prints exactly these. The excitation has nearly fully hopped to qubit 1 by $t = 1$ (fully at $t = \\pi/(4J) = 1.122$)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For a reservoir this is a double-edged fact. A conserved quantity splits the state space into sectors the dynamics never connects, which reduces the number of independent directions the reservoir can explore. That is one reason the spin-network reservoir of The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) uses a transverse field and random $XX$ couplings, which conserve nothing beyond energy and a parity, rather than a pure exchange coupling."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: spot the conserved quantity",
+      "text": "Is $Z_1Z_2$ conserved under $H = J\\,X_1X_2$? Is $Z_1$?",
+      "hint": "Count how many places the two operators anticommute.",
+      "solution": [
+        "$X_1X_2$ and $Z_1Z_2$: $X_1Z_1 = -Z_1X_1$ and $X_2Z_2 = -Z_2X_2$, two sign flips, so $X_1X_2Z_1Z_2 = Z_1Z_2X_1X_2$. They commute: $Z_1Z_2$ is conserved.",
+        "$X_1X_2$ and $Z_1$: one sign flip, so they anticommute and $[H, Z_1] = 2JX_1X_2Z_1 \\ne 0$. $Z_1$ is not conserved (indeed $X_1X_2$ flips both qubits, changing $Z_1$)."
+      ],
+      "answer": "$Z_1Z_2$ yes, $Z_1$ no"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The interaction picture and the rotating frame"
+    },
+    {
+      "type": "prose",
+      "text": "There is a third picture, in between the other two, and it is the one used for nearly every driven-qubit calculation. Here is the problem it solves. A superconducting qubit has a splitting of a few gigahertz, so its phase turns billions of times per second. A drive that moves population might be a thousand times slower. If we simulate in the Schrödinger picture, we spend all our effort following the fast, boring precession; and we cannot see the slow, interesting motion for it. The interaction picture removes the known fast motion and leaves only the slow part."
+    },
+    {
+      "type": "prose",
+      "text": "The idea: split the Hamiltonian into a simple part we can solve exactly and the rest, $H(t) = H_0 + V(t)$. Then move into a frame that follows the motion due to $H_0$ alone, so in that frame only $V$ makes anything happen. Here are the steps."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Define the interaction-picture state $\\vert\\psi_I(t)\\rangle = e^{iH_0t}\\vert\\psi(t)\\rangle$: undo the $H_0$ part of the evolution.",
+        "Step 2. Differentiate with the product rule and use the Schrödinger equation $i\\,d\\vert\\psi\\rangle/dt = (H_0 + V)\\vert\\psi\\rangle$: $i\\dfrac{d}{dt}\\vert\\psi_I\\rangle = i(iH_0)e^{iH_0t}\\vert\\psi\\rangle + e^{iH_0t}(H_0 + V)\\vert\\psi\\rangle$.",
+        "Step 3. The first term is $-H_0e^{iH_0t}\\vert\\psi\\rangle$, and since $H_0$ commutes with $e^{iH_0t}$ it cancels the $H_0$ in the second term. What is left is $e^{iH_0t}V\\vert\\psi\\rangle$.",
+        "Step 4. Replace $\\vert\\psi\\rangle$ by $e^{-iH_0t}\\vert\\psi_I\\rangle$: $i\\dfrac{d}{dt}\\vert\\psi_I\\rangle = \\underbrace{e^{iH_0t}Ve^{-iH_0t}}_{V_I(t)}\\vert\\psi_I\\rangle$."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "i\\,\\frac{d}{dt}\\vert\\psi_I\\rangle = V_I(t)\\,\\vert\\psi_I\\rangle, \\qquad V_I(t) = e^{iH_0t}\\,V(t)\\,e^{-iH_0t}",
+      "caption": "The interaction picture: states move only under the perturbation $V$, and $V$ itself is carried along by $H_0$ as in the Heisenberg picture."
+    },
+    {
+      "type": "prose",
+      "text": "So the interaction picture is Heisenberg for $H_0$ and Schrödinger for $V$. If $V = 0$ the state does not move at all; the fast motion has been absorbed into the frame. When $H_0$ is a qubit's $\\frac{\\omega_0}{2}Z$, the frame is one that rotates about $z$ at the qubit's own frequency, so it is called the rotating frame."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a driven qubit"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit with splitting $\\omega_0$ is driven by a field oscillating at frequency $\\omega$ with strength $\\Omega$. In the lab, $H(t) = \\frac{\\omega_0}{2}Z + \\Omega\\cos(\\omega t)\\,X$. We derive the constant Hamiltonian behind Rabi's formula."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Split: $H_0 = \\frac{\\omega_0}{2}Z$ and $V(t) = \\Omega\\cos(\\omega t)X$.",
+        "Step 2. Carry $X$ into the frame. $e^{iH_0t}Xe^{-iH_0t}$ is the Heisenberg-picture $X$ for $H = hZ$ with $h = \\omega_0/2$, which we solved above: $\\cos(\\omega_0t)X - \\sin(\\omega_0t)Y$.",
+        "Step 3. So $V_I(t) = \\Omega\\cos(\\omega t)\\left[\\cos(\\omega_0t)X - \\sin(\\omega_0t)Y\\right]$.",
+        "Step 4. Use the product-to-sum identities $\\cos a\\cos b = \\frac12[\\cos(a - b) + \\cos(a + b)]$ and $\\cos a\\sin b = \\frac12[\\sin(b - a) + \\sin(b + a)]$. With $\\Delta = \\omega_0 - \\omega$: $V_I = \\frac\\Omega2\\left[\\cos(\\Delta t)X - \\sin(\\Delta t)Y\\right] + \\frac\\Omega2\\left[\\cos((\\omega_0 + \\omega)t)X - \\sin((\\omega_0 + \\omega)t)Y\\right]$.",
+        "Step 5. The rotating-wave approximation (RWA). The second bracket oscillates at $\\omega_0 + \\omega \\approx 2\\omega_0$, very fast. Over one of its periods the state hardly moves (it moves at rate about $\\Omega$), so its effect averages to nearly zero. Drop it. This is valid when $\\Omega$ and $\\vert\\Delta\\vert$ are both much smaller than $\\omega_0$.",
+        "Step 6. On resonance ($\\Delta = 0$) what is left is constant: $V_I = \\frac\\Omega2X$. That is $H = \\frac\\Omega2X$, so $P_1(t) = \\sin^2(\\Omega t/2)$: Rabi oscillation at the Rabi frequency $\\Omega$, and a π pulse takes $t = \\pi/\\Omega$.",
+        "Step 7. Off resonance, $V_I$ still turns slowly at $\\Delta$. One more change of frame, rotating at $\\Delta$ about $z$, makes it constant, at the price of a $z$ term of size $\\Delta/2$: the Hamiltonian $\\frac\\delta2Z + \\frac\\Omega2X$ in Rabi's formula, with $\\vert\\delta\\vert = \\vert\\Delta\\vert$ (the sign of $\\delta$ depends on convention and does not change $P_1$)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "How good is the approximation? The sample simulates the full lab-frame Hamiltonian with $\\omega_0 = 20$, $\\Omega = 1$, by stepping through time with no approximation at all. On resonance, after $t = \\pi/\\Omega$, it finds $P_1 = 0.9998$ against the RWA prediction of 1. Detuned by 1, it finds $P_1 = 0.3113$ against the RWA formula's 0.3166. The small differences are the dropped fast terms; they shrink as $\\Omega/\\omega_0$ shrinks. Real superconducting qubits have $\\Omega/\\omega_0$ of order $10^{-3}$ to $10^{-2}$, so there the approximation is excellent."
+    },
+    {
+      "type": "callout",
+      "text": "Common confusion: the interaction picture is not an approximation. Steps 1 to 4 are exact. The approximation is the RWA in step 5, a separate choice made after moving to the frame. Another: 'rotating frame' does not mean anything is spinning in space; the frame rotates about the $z$ axis of the Bloch sphere, an abstract space of states."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: frame frequency",
+      "text": "A qubit has $\\omega_0 = 2\\pi\\times5$ GHz and is driven at $\\omega = 2\\pi\\times5.001$ GHz with $\\Omega = 2\\pi\\times2$ MHz. What is the detuning, what is the largest $P_1$ reachable, and is the RWA safe?",
+      "solution": [
+        "$\\Delta = \\omega_0 - \\omega = -2\\pi\\times1$ MHz, so $\\vert\\Delta\\vert = 2\\pi\\times1$ MHz.",
+        "$P_{1,\\max} = \\Omega^2/(\\Omega^2 + \\Delta^2) = 4/(4 + 1) = 0.8$ (the $2\\pi$ factors cancel).",
+        "$\\Omega/\\omega_0 = 2\\ \\text{MHz}/5\\ \\text{GHz} = 4\\times10^{-4}$, tiny, so the dropped terms are negligible."
+      ],
+      "answer": "$\\vert\\Delta\\vert = 2\\pi\\times1$ MHz; $P_{1,\\max} = 0.8$; yes"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Mixed states and the QRC feature formula"
+    },
+    {
+      "type": "prose",
+      "text": "Everything so far used state vectors. A quantum reservoir is better described by a density matrix $\\rho$ (a mixed state, introduced on Mixed States (#/quantum/many-body/mixed-states)), because it is repeatedly disturbed by inputs and by its environment. Both pictures carry over directly."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Schrödinger picture. A pure state $\\vert\\psi\\rangle$ has $\\rho = \\vert\\psi\\rangle\\langle\\psi\\vert$, which evolves to $U\\vert\\psi\\rangle\\langle\\psi\\vert U^\\dagger$. By linearity every density matrix evolves as $\\rho(t) = U\\rho(0)U^\\dagger$. Expectation values are $\\langle A\\rangle = \\operatorname{Tr}(A\\rho(t))$.",
+        "Heisenberg picture. Substitute and use the cyclic property of the trace, $\\operatorname{Tr}(ABC) = \\operatorname{Tr}(CAB)$: $\\operatorname{Tr}(A\\,U\\rho_0U^\\dagger) = \\operatorname{Tr}(U^\\dagger AU\\,\\rho_0) = \\operatorname{Tr}(A_H(t)\\,\\rho_0)$. Same formula $A_H = U^\\dagger AU$ as before."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A quantum reservoir computer reads out features such as $x_i(t) = \\operatorname{Tr}(Z_i\\rho(t))$, the average $Z$ of qubit $i$. QRC papers almost always write this in the Schrödinger picture, for a practical reason: between time steps the reservoir does not only evolve unitarily. The input is written in by resetting a qubit, and the environment adds noise. Those are operations on the state (channels, the subject of Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels)), so it is natural to update $\\rho$ step by step, exactly as a simulation does."
+    },
+    {
+      "type": "prose",
+      "text": "The Heisenberg picture appears when people analyse what a reservoir can compute. Following $Z_i$ backwards through the dynamics, $Z_{i,H}(t) = U^\\dagger Z_iU$ becomes a combination of many Pauli strings (products like $X_1Z_2Y_3$); the more strings it spreads over, the more different features of the past input the readout can see. That operator-spreading view underlies the arguments on Expressivity and Universality (#/qrc/theory/expressivity-and-universality). Noise has a Heisenberg form too: the Lindblad equation of Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics) becomes, for operators, $dA/dt = i[H, A] + \\sum_k\\left(L_k^\\dagger AL_k - \\frac12\\{L_k^\\dagger L_k, A\\}\\right)$, where the $L_k$ are the jump operators that describe each kind of noise (defined on that page) and $\\{P, Q\\} = PQ + QP$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: cyclic trace",
+      "text": "Show that $\\operatorname{Tr}(\\rho(t)) = 1$ for all $t$ if $\\operatorname{Tr}(\\rho(0)) = 1$, using the Heisenberg form.",
+      "solution": [
+        "The trace is the expectation value of the identity: $\\operatorname{Tr}(\\rho) = \\operatorname{Tr}(I\\rho)$.",
+        "In the Heisenberg picture $I_H = U^\\dagger IU = U^\\dagger U = I$, unchanged. So $\\operatorname{Tr}(I\\rho(t)) = \\operatorname{Tr}(I\\rho_0) = 1$."
+      ],
+      "answer": "$\\operatorname{Tr}(I\\rho(t)) = \\operatorname{Tr}(U^\\dagger IU\\rho_0) = \\operatorname{Tr}(\\rho_0) = 1$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The checks in code"
+    },
+    {
+      "type": "prose",
+      "text": "The sample computes the precession example in both pictures, checks the operator formula and the Heisenberg equation by a finite difference, checks the conserved quantity of the exchange coupling, and simulates the driven qubit in the lab frame against the rotating-wave predictions."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nI2 = np.eye(2); X = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]).astype(complex)\nev = lambda psi, A: np.real(np.vdot(psi, A @ psi))\n# 1. Same numbers from both pictures: H = h Z, start in |+>, watch <X> and <Y>.\nh, t = 1.0, 0.3\nH = h * Z; U = expm(-1j * H * t)\nplus = np.array([1, 1], complex) / np.sqrt(2)\npsi_t = U @ plus                                   # Schrodinger: move the state\nX_H = U.conj().T @ X @ U                           # Heisenberg: move the operator\nY_H = U.conj().T @ Y @ U\nprint(f\"Schrodinger: <X> = {ev(psi_t, X):+.4f}, <Y> = {ev(psi_t, Y):+.4f}\")\nprint(f\"Heisenberg:  <X> = {ev(plus, X_H):+.4f}, <Y> = {ev(plus, Y_H):+.4f}\")\nprint(f\"formulas:    cos(2ht) = {np.cos(2*h*t):+.4f}, sin(2ht) = {np.sin(2*h*t):+.4f}\")\nprint(\"X_H(t) = cos(2ht) X - sin(2ht) Y ?\", np.allclose(X_H, np.cos(2*h*t) * X - np.sin(2*h*t) * Y))\n# 2. Heisenberg equation dA/dt = i[H, A], checked by a finite difference.\ndt = 1e-6\ndXdt = (expm(1j*H*(t+dt)) @ X @ expm(-1j*H*(t+dt)) - X_H) / dt\nprint(\"dX_H/dt = i[H, X_H] ?\", np.allclose(dXdt, 1j * (H @ X_H - X_H @ H), atol=1e-5))\n# 3. Conserved quantity: H = J (X1X2 + Y1Y2) commutes with Z1 + Z2.\nJ = 0.7\nH2 = J * (np.kron(X, X) + np.kron(Y, Y)); Ztot = np.kron(Z, I2) + np.kron(I2, Z)\nprint(\"[H, Z1+Z2] = 0 ?\", np.allclose(H2 @ Ztot - Ztot @ H2, 0))\npsi = np.zeros(4, complex); psi[1] = 1                       # |01>\nfor t2 in (0.0, 0.5, 1.0):\n    p = expm(-1j * H2 * t2) @ psi\n    print(f\"t = {t2}: <Z1> = {ev(p, np.kron(Z, I2)):+.4f}, <Z2> = {ev(p, np.kron(I2, Z)):+.4f}, <Z1+Z2> = {ev(p, Ztot):+.4f}\")\n# 4. Interaction picture: H = (w0/2) Z + Omega cos(w t) X, driven on resonance (w = w0).\nw0, Om = 20.0, 1.0\ndef lab_frame(T, w, steps=20000):\n    psi = np.array([1, 0], complex); dt = T / steps\n    for k in range(steps):\n        tm = (k + 0.5) * dt\n        psi = expm(-1j * dt * (w0/2 * Z + Om * np.cos(w * tm) * X)) @ psi\n    return psi\nT = np.pi / Om                                       # a pi pulse in the rotating-wave picture\np = lab_frame(T, w0)\nprint(f\"lab frame, resonant drive, t = pi/Omega: P(1) = {abs(p[1])**2:.4f} (rotating-wave prediction 1)\")\np = lab_frame(T, w0 + 1.0)\nd = 1.0; W = np.sqrt(Om**2 + d**2)\nprint(f\"lab frame, detuned by 1: P(1) = {abs(p[1])**2:.4f}, rotating-wave formula {Om**2/W**2*np.sin(W*T/2)**2:.4f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: both pictures give $\\langle X\\rangle = +0.8253$ and $\\langle Y\\rangle = +0.5646$, equal to $\\cos0.6$ and $\\sin0.6$; the formula for $X_H(t)$ and the Heisenberg equation both check out (True); $[H, Z_1 + Z_2] = 0$, with $\\langle Z_1\\rangle = +1,\\ +0.1700,\\ -0.9422$ at $t = 0, 0.5, 1$ while $\\langle Z_1 + Z_2\\rangle$ stays 0; and the lab-frame drive gives $P_1 = 0.9998$ on resonance and 0.3113 detuned (RWA: 1 and 0.3166)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit has $H = hX$ and starts in $\\vert0\\rangle$. Find $\\langle Y\\rangle(t)$ in the Heisenberg picture, then check it in the Schrödinger picture."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Heisenberg. From the check-yourself above, $dY_H/dt = -2hZ_H$ and $dZ_H/dt = 2hY_H$. The solution starting from $Y$, $Z$ is $Y_H(t) = \\cos(2ht)Y - \\sin(2ht)Z$. (Check: $dY_H/dt = -2h\\sin(2ht)Y - 2h\\cos(2ht)Z = -2hZ_H$ with $Z_H = \\cos(2ht)Z + \\sin(2ht)Y$.) For $\\vert0\\rangle$, $\\langle Y\\rangle_0 = 0$ and $\\langle Z\\rangle_0 = 1$, so $\\langle Y\\rangle(t) = -\\sin(2ht)$.",
+        "Schrödinger. $\\vert\\psi(t)\\rangle = \\cos(ht)\\vert0\\rangle - i\\sin(ht)\\vert1\\rangle$. For a state $a\\vert0\\rangle + b\\vert1\\rangle$, $\\langle Y\\rangle = 2\\,\\mathrm{Im}(\\bar ab)$. Here $\\bar ab = -i\\cos(ht)\\sin(ht)$, so $\\langle Y\\rangle = -2\\cos(ht)\\sin(ht) = -\\sin(2ht)$. The same.",
+        "Interpretation. Rotating about $x$, the Bloch vector leaves the north pole heading towards $-y$ (the right-hand rule about $+x$ takes $+z$ to $-y$), then reaches the south pole at $2ht = \\pi$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Schrödinger picture: states move, $\\vert\\psi(t)\\rangle = U\\vert\\psi_0\\rangle$. Heisenberg picture: observables move, $A_H(t) = U^\\dagger AU$. Every prediction is identical.",
+        "Heisenberg equation: $dA_H/dt = i[H, A_H]$. For a qubit, the Pauli commutators $[X, Y] = 2iZ$ (and cyclic) turn it into the equations of a circle: precession.",
+        "If $[H, A] = 0$, $A$ is conserved. Conserved quantities split the state space into sectors the dynamics never connects.",
+        "Interaction picture: split $H = H_0 + V$ and move into the frame of $H_0$; the state then moves only under $V_I = e^{iH_0t}Ve^{-iH_0t}$. This step is exact.",
+        "For a driven qubit, the rotating frame plus the rotating-wave approximation (drop terms at $\\omega_0 + \\omega$) gives the constant Hamiltonian $\\frac\\delta2Z + \\frac\\Omega2X$ behind Rabi's formula, valid when $\\Omega$ and $\\vert\\delta\\vert$ are much smaller than $\\omega_0$.",
+        "For density matrices: $\\rho(t) = U\\rho_0U^\\dagger$ and $\\operatorname{Tr}(A\\rho(t)) = \\operatorname{Tr}(A_H\\rho_0)$. QRC writes features in the Schrödinger picture; analyses of what reservoirs can compute often use the Heisenberg one."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The rotating frame and pulse design for real qubits: Driven Qubits and Rabi Oscillations (#/quantum/qubits/driven-qubits).",
+        "Conservation laws and symmetries in reservoirs and spin chains: Symmetries and Conservation (#/quantum/dynamics/symmetries-and-conservation) and Spin Models (#/quantum/many-body/spin-models).",
+        "How features are read out and why the readout is linear in $\\rho$: Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
+        "Operator spreading and what a reservoir can represent: Expressivity and Universality (#/qrc/theory/expressivity-and-universality)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Rotation about a tilted axis",
+      "text": "For $H = \\omega\\,\\sigma_n$ with unit vector $\\hat n$, the Bloch vector rotates about $\\hat n$ at angular frequency $2\\omega$. Use this to find $\\langle Z\\rangle$ for $H = \\frac12(X + Z)$, starting in $\\vert0\\rangle$, at $t = \\pi/\\sqrt2$.",
+      "hint": "A half turn about an axis reflects the vector through that axis.",
+      "solution": [
+        "$H = \\frac12(X + Z) = \\frac{1}{\\sqrt2}\\cdot\\frac{X + Z}{\\sqrt2}$, so $\\omega = 1/\\sqrt2$ and $\\hat n = (1, 0, 1)/\\sqrt2$, halfway between $x$ and $z$.",
+        "The rotation angle at time $t$ is $2\\omega t = \\sqrt2\\,t$; at $t = \\pi/\\sqrt2$ it is $\\pi$, half a turn.",
+        "Half a turn about an axis at $45^\\circ$ from $z$ takes the north pole $(0, 0, 1)$ to $(1, 0, 0)$, its mirror image across the axis. So $\\langle Z\\rangle = 0$ and the state is $\\vert+\\rangle$: this is the Hadamard gate, up to a global phase."
+      ],
+      "answer": "$\\langle Z\\rangle = 0$ (the state is $\\vert+\\rangle$; this is a Hadamard)"
+    },
+    {
+      "type": "problem",
+      "title": "Is it conserved?",
+      "text": "For three qubits with $H = J(X_1X_2 + X_2X_3) + h(Z_1 + Z_2 + Z_3)$, is the parity $P = Z_1Z_2Z_3$ conserved? Is $Z_1 + Z_2 + Z_3$?",
+      "hint": "X flips one qubit; XX flips two.",
+      "solution": [
+        "Each $X_iX_j$ anticommutes with $Z_i$ and with $Z_j$ (two flips), so it commutes with $Z_1Z_2Z_3$. Each $Z_i$ commutes with $Z_1Z_2Z_3$. So $[H, P] = 0$: parity is conserved.",
+        "$X_1X_2$ flips two qubits, changing $Z_1 + Z_2 + Z_3$ by $\\pm4$ or 0, so it does not commute with the total: $Z_1 + Z_2 + Z_3$ is not conserved."
+      ],
+      "answer": "parity yes; total Z no"
+    },
+    {
+      "type": "problem",
+      "title": "Rotating-wave check",
+      "text": "Under $H = \\frac{\\omega_0}{2}Z + \\Omega\\cos(\\omega_0t)X$ with $\\omega_0 = 20$, $\\Omega = 1$, the rotating-wave approximation predicts full transfer at $t = \\pi$. Explain why the exact simulation gives 0.9998 rather than 1, and how the gap should change if $\\Omega$ is halved (keeping the π-pulse time $\\pi/\\Omega$).",
+      "solution": [
+        "The RWA dropped the terms oscillating at $\\omega_0 + \\omega = 40$. They do not average to exactly zero, so they slightly change the rotation (the main effect is a small shift of the resonance, the Bloch–Siegert shift, of order $\\Omega^2/\\omega_0$).",
+        "Halving $\\Omega$ halves the ratio $\\Omega/\\omega_0$, so the neglected terms matter less: the transfer gets closer to 1. The error falls roughly as $(\\Omega/\\omega_0)^2$, so expect a gap about four times smaller."
+      ],
+      "answer": "the dropped fast terms; the gap shrinks (roughly fourfold)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "J. J. Sakurai and J. Napolitano, Modern Quantum Mechanics, 3rd edition, Cambridge University Press (2020), sections 2.1 to 2.2 and 5.5",
+        "R. Shankar, Principles of Quantum Mechanics, 2nd edition, Plenum (1994), chapters 4 and 18",
+        "H.-P. Breuer and F. Petruccione, The Theory of Open Quantum Systems, Oxford University Press (2002), chapter 3 (the Heisenberg-picture Lindblad equation)",
+        "F. Bloch and A. Siegert, Magnetic resonance for nonrotating fields, Physical Review 57, 522 (1940)"
+      ]
+    }
+  ]
+}
