@@ -119,6 +119,9 @@ import "./widgets/types/music-player.js";
 import "./widgets/types/bloch-sphere.js";
 import "./widgets/types/qubit-circuit.js";
 import "./widgets/types/z-surface.js";
+import "./widgets/types/s-surface.js";
+import "./widgets/types/fourier-3d.js";
+import "./widgets/types/fft-butterfly.js";
 
 /**
  * @typedef {import("./router.js").TopicNode} TopicNode

@@ -1,0 +1,325 @@
+{
+  "title": "From Series to Transform",
+  "intro": "A signal that never repeats has no fundamental to be a multiple of. But a signal that repeats very rarely has a very small one, and as the period grows the comb of harmonics closes up into a continuous curve: the Fourier transform.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A pulse that repeats less and less often"
+    },
+    {
+      "type": "prose",
+      "text": "Take a pulse of height 1 and width 0.5 s, centred on $t = 0$, and repeat it every $T$ seconds. This is the pulse train of the viewer. Its coefficients, from the integral over one period, are"
+    },
+    {
+      "type": "math",
+      "tex": "c_k = \\frac1T\\int_{-0.25}^{0.25} e^{-j2\\pi k t/T}\\,dt = \\frac{1}{T}\\cdot\\frac{\\sin(\\pi k\\cdot 0.5/T)}{\\pi k/T} = \\frac{0.5}{T}\\,\\operatorname{sinc}\\!\\left(\\frac{0.5\\,k}{T}\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "where $\\operatorname{sinc}(u) = \\sin(\\pi u)/(\\pi u)$, with $\\operatorname{sinc}(0) = 1$. The harmonics sit at $f_k = k/T$ hertz. Now multiply every coefficient by $T$:"
+    },
+    {
+      "type": "math",
+      "tex": "T\\, c_k = 0.5\\,\\operatorname{sinc}\\!\\left(0.5\\, f_k\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "The period has disappeared from the right-hand side. It only decides where along the frequency axis the samples are taken. Here are the values for several periods, at the frequencies 0.5, 1, 1.5 and 2 Hz that each period's comb contains:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$T = 2$ (harmonics every 0.5 Hz, so $k = 1, 2, 3, 4$): $T c_k = 0.4502,\\ 0.3183,\\ 0.1501,\\ 0$.",
+        "$T = 4$ (every 0.25 Hz, so $k = 2, 4, 6, 8$): the same four numbers, $0.4502,\\ 0.3183,\\ 0.1501,\\ 0$, plus new values at the odd $k$ in between.",
+        "$T = 8$ (every 0.125 Hz, so $k = 4, 8, 12, 16$): again the same four numbers, with three new values between each pair."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The values at 0 Hz are $T c_0 = 0.5$ every time. As $T$ doubles, the harmonics come twice as close, and the points $T c_k$ trace out the same curve $0.5\\operatorname{sinc}(0.5 f)$ in ever finer detail. In the limit $T \\to \\infty$ the pulse is alone, the comb is a continuous curve, and that curve is the transform of the single pulse."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "fourier-3d",
+        "title": "A pulse train as the period grows",
+        "params": [
+          {
+            "key": "signal",
+            "label": "Input signal",
+            "control": "select",
+            "options": [
+              "square wave",
+              "sawtooth wave",
+              "triangle wave",
+              "pulse train (pulse 0.5 s wide)",
+              "half-wave rectified sine",
+              "full-wave rectified sine",
+              "two tones"
+            ],
+            "default": "pulse train (pulse 0.5 s wide)"
+          },
+          {
+            "key": "harmonics",
+            "label": "Harmonics added, N",
+            "control": "range",
+            "min": 0,
+            "max": 40,
+            "step": 1,
+            "default": 40
+          },
+          {
+            "key": "period",
+            "label": "Period T (s)",
+            "control": "range",
+            "min": 0.5,
+            "max": 8,
+            "step": 0.5,
+            "default": 4
+          },
+          {
+            "key": "delay",
+            "label": "Delay (fraction of a period)",
+            "control": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "default": 0
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -90
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 10
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The 3D view is from the side, so its bars are the spectrum; the middle panel below draws the same stems at multiples of 0.25 Hz (the period is 4 s) under the dashed envelope $2\\cdot 0.5\\,|\\operatorname{sinc}(0.5f)|/T = |\\operatorname{sinc}(0.5f)|/T$, which is $2|X(f)|/T$ for the single pulse. The first stems are 0.2436, 0.2251, 0.1961, 0.1592, falling to zero at 2 Hz, where the envelope has its first null. The stem at 0 Hz, $A_0 = c_0 = 0.125$, sits at half the envelope's height, because the constant term has no mirror partner to share with. Drag Period from 4 to 2 and then 1: the stems spread apart and rise, since each is now a bigger share of the total, but they always sit on the same envelope shape with its null at 2 Hz. At Period 8 the 40 harmonics added reach only 5 Hz, so the stems beyond 5 Hz are drawn hollow (present in the signal but not yet in the sum)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The Fourier transform"
+    },
+    {
+      "type": "prose",
+      "text": "Write what the argument says in symbols. The coefficient of frequency $f_k = k/T$ is $c_k = \\frac1T\\int_{-T/2}^{T/2}x(t)e^{-j2\\pi f_k t}dt$, so $Tc_k$ is that integral without the $1/T$. For a single pulse the limits become $\\pm\\infty$ and the frequency a continuous variable:"
+    },
+    {
+      "type": "math",
+      "tex": "X(f) = \\int_{-\\infty}^{\\infty} x(t)\\, e^{-j2\\pi f t}\\,dt"
+    },
+    {
+      "type": "prose",
+      "text": "This is the Fourier transform. The inverse comes from the series. The sum $x(t) = \\sum c_k e^{j2\\pi f_k t}$ can be written $\\sum (Tc_k)\\,e^{j2\\pi f_k t}\\,\\frac1T$, and $1/T$ is the spacing $\\Delta f$ between neighbouring harmonics, so it is a Riemann sum that becomes"
+    },
+    {
+      "type": "math",
+      "tex": "x(t) = \\int_{-\\infty}^{\\infty} X(f)\\, e^{j2\\pi f t}\\,df"
+    },
+    {
+      "type": "prose",
+      "text": "A periodic signal had a list of strengths $c_k$ at isolated frequencies. A pulse has a density of strength, $X(f)$, per hertz. The transform exists, as an ordinary integral, whenever $\\int|x(t)|\\,dt$ is finite; signals that do not die away (constants, sinusoids) have transforms made of impulses, discussed below."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The rectangle and the sinc"
+    },
+    {
+      "type": "prose",
+      "text": "A pulse of height 1 and width $\\tau$ centred on zero has"
+    },
+    {
+      "type": "math",
+      "tex": "X(f) = \\int_{-\\tau/2}^{\\tau/2} e^{-j2\\pi f t}\\,dt = \\frac{e^{-j\\pi f\\tau} - e^{j\\pi f\\tau}}{-j2\\pi f} = \\frac{\\sin(\\pi f\\tau)}{\\pi f} = \\tau\\,\\operatorname{sinc}(f\\tau)"
+    },
+    {
+      "type": "prose",
+      "text": "The height at zero is $\\tau$, the area of the pulse. The first zero is at $f = 1/\\tau$: a narrow pulse has a wide transform. For $\\tau = 1$: $X(0) = 1$, $X(0.5) = 0.6366$, $X(1) = 0$, $X(1.5) = -0.2122$. For the 0.5 s pulse of the viewer, $X(f) = 0.5\\operatorname{sinc}(0.5f)$, which is the envelope: $X(0) = 0.5$, $X(1) = 0.3183$, zero at 2 Hz, and $X(3) = -0.1061$. The negative lobes are phase flips of $180^\\circ$; the transform of this even pulse is real."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A table of pairs"
+    },
+    {
+      "type": "prose",
+      "text": "These pairs are the working vocabulary. Each can be checked from the integral; the exponentials are the ones worth doing by hand."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Unit impulse: $\\delta(t) \\leftrightarrow 1$. All frequencies equally; the sifting property gives $X(f) = e^{0} = 1$.",
+        "Constant: $1 \\leftrightarrow \\delta(f)$. All of the energy at zero frequency. This is the reverse of the line above.",
+        "Rectangle: $\\operatorname{rect}(t/\\tau) \\leftrightarrow \\tau\\operatorname{sinc}(f\\tau)$, as above.",
+        "Decaying exponential: $e^{-at}u(t) \\leftrightarrow \\dfrac{1}{a + j2\\pi f}$, for $a > 0$.",
+        "Two-sided exponential: $e^{-a|t|} \\leftrightarrow \\dfrac{2a}{a^2 + 4\\pi^2f^2}$.",
+        "Gaussian: $e^{-\\pi t^2} \\leftrightarrow e^{-\\pi f^2}$. It is its own transform, the best-known function that is.",
+        "Cosine: $\\cos(2\\pi f_0 t) \\leftrightarrow \\tfrac12\\left[\\delta(f - f_0) + \\delta(f + f_0)\\right]$. Two impulses, the two counter-rotating arrows. A periodic signal's transform is a train of impulses of weights $c_k$ at $k f_0$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For the decaying exponential, integrate directly: $\\int_0^\\infty e^{-at}e^{-j2\\pi f t}dt = \\int_0^\\infty e^{-(a + j2\\pi f)t}dt = \\frac{1}{a + j2\\pi f}$. The integral converges because $e^{-at}$ shrinks the integrand to zero, and this requires $a > 0$. With $a = 1$ the magnitude at $f = 1/(2\\pi) = 0.159$ Hz is $|1/(1 + j)| = 0.7071$ and the angle is $-45^\\circ$; at $f = 1$ Hz it is $1/|1 + j6.283| = 0.1572$ at $-80.96^\\circ$. Low frequencies pass, high ones fall as $1/f$: this is a first-order low-pass filter's response."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Fourier is Laplace on the imaginary axis"
+    },
+    {
+      "type": "prose",
+      "text": "The Laplace transform of a signal, $X(s) = \\int x(t)e^{-st}dt$ for a complex $s = \\sigma + j\\omega$, is the same integral with a more general exponent. Set $s = j2\\pi f$ and it is the Fourier transform. So the Fourier transform is the Laplace surface read along the imaginary axis. The reading is only legitimate when the integral converges there, that is, when the imaginary axis lies inside the region of convergence. For $e^{-at}u(t)$ the ROC is $\\operatorname{Re} s > -a$, which holds the axis exactly when $a > 0$, matching the condition above, and $X(s) = 1/(s + a)$ at $s = j2\\pi f$ is the table entry. The The Laplace Transform (#/math/laplace-transform) topic builds this picture, and the The Z-Transform (#/math/z-transform) topic has the same relation: its Fourier transform is the unit circle of the z-plane, as on the The Unit Circle and Frequency Response (#/math/z-transform/unit-circle) page."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "s-surface",
+        "title": "The decaying exponential on the s-plane",
+        "params": [
+          {
+            "key": "signal",
+            "label": "Input signal",
+            "control": "select",
+            "options": [
+              "unit impulse δ(t)",
+              "delayed impulse δ(t−1)",
+              "unit step u(t)",
+              "decaying exponential e^(−at)u(t)",
+              "left-sided exponential −e^(−at)u(−t)",
+              "two-sided exponential e^(−a|t|)",
+              "ramped exponential t·e^(−at)u(t)",
+              "damped cosine e^(−at)cos(ω₀t)u(t)",
+              "damped sine e^(−at)sin(ω₀t)u(t)",
+              "3-second pulse u(t)−u(t−3)",
+              "notch filter (s²+ω₀²)/(s²+(ω₀/2)s+ω₀²)"
+            ],
+            "default": "decaying exponential e^(−at)u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": -1,
+            "max": 2,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "w0",
+            "label": "Frequency ω₀ (rad/s)",
+            "control": "range",
+            "min": 0,
+            "max": 2.5,
+            "step": 0.1,
+            "default": 1.5
+          },
+          {
+            "key": "omega",
+            "label": "Probe frequency ω (rad/s)",
+            "control": "range",
+            "min": 0,
+            "max": 3,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "height",
+            "label": "Height shows",
+            "control": "select",
+            "options": [
+              "decibels",
+              "magnitude"
+            ],
+            "default": "magnitude"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -35
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 10,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The slice of the surface along the vertical axis is the Fourier transform. With a = 1 and the probe at ω = 1 rad/s (that is $f = 0.159$ Hz) the readout gives $X(j\\omega) = 0.5 - 0.5j$ and $|X| = 0.707$, the value we computed. Drag Probe frequency to 0: $|X| = 1$, the largest. Now lower Decay rate a toward 0.5: the height at ω = 0 is $1/a = 2$ and the response narrows. At a = 0 the pole sits on the axis, the exponential becomes the unit step, and the integral no longer converges there: the step has a Fourier transform only with an impulse in it. From a = 0 downward the slice panel draws its curve dashed and says the jω axis is not inside the ROC; below zero the signal grows and there is no Fourier transform at all."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "A short pulse",
+      "text": "A rectangle of height 3 and width 0.2 s is centred on $t = 0$. Find $X(0)$, the frequency of the first zero, and $X(2.5)$.",
+      "solution": [
+        "$X(f) = 3\\cdot 0.2\\operatorname{sinc}(0.2 f) = 0.6\\operatorname{sinc}(0.2f)$. At $f = 0$ it is 0.6, the area. The first zero is at $f = 1/0.2 = 5$ Hz. At $f = 2.5$: $0.6\\operatorname{sinc}(0.5) = 0.6\\times 0.6366 = 0.3820$."
+      ],
+      "answer": "$0.6$; $5$ Hz; $0.3820$."
+    },
+    {
+      "type": "problem",
+      "title": "A low-pass at one frequency",
+      "text": "Find the magnitude and angle of the transform of $e^{-3t}u(t)$ at $\\omega = 3$ rad/s.",
+      "solution": [
+        "$X = 1/(3 + j\\omega)$ at $\\omega = 3$ is $1/(3 + 3j)$. The magnitude is $1/\\sqrt{18} = 0.2357$ and the angle is $-45^\\circ$. This frequency, equal to $a$, is the half-power point: the magnitude is $1/\\sqrt2$ of its DC value of $1/3$. In hertz it is $3/(2\\pi) = 0.477$ Hz."
+      ],
+      "answer": "$0.2357$ at $-45^\\circ$."
+    },
+    {
+      "type": "problem",
+      "title": "From the train to the pulse",
+      "text": "A train of 0.5 s pulses has period 2 s. Find $A_2$, then use it to find the transform of the single pulse at the same frequency.",
+      "solution": [
+        "The duty cycle is $0.5/2 = 0.25$ and $A_k = 2d\\operatorname{sinc}(kd)$, so $A_2 = 0.5\\operatorname{sinc}(0.5) = 0.5\\times 0.6366 = 0.3183$, at $f = 2/2 = 1$ Hz. Then $c_2 = A_2/2 = 0.1592$ and $Tc_2 = 2\\times 0.1592 = 0.3183$, which is the single pulse's $X(1) = 0.5\\operatorname{sinc}(0.5) = 0.3183$."
+      ],
+      "answer": "$A_2 = 0.3183$; $X(1\\ \\text{Hz}) = 0.3183$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Ronald N. Bracewell, The Fourier Transform and Its Applications, 3rd edition (McGraw-Hill, 2000), the early chapters on the transform and its pairs.",
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997). Chapter 4, The Continuous-Time Fourier Transform, which develops the transform from the series in the same way.",
+        "Brad Osgood, The Fourier Transform and its Applications, lecture notes for Stanford EE261 (free online at see.stanford.edu), the lectures on the transition from series to transform.",
+        "Next: Properties of the Transform (#/math/fourier-transform/properties)."
+      ]
+    }
+  ]
+}
