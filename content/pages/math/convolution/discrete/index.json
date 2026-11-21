@@ -1,0 +1,349 @@
+{
+  "title": "Discrete Convolution",
+  "intro": "For sampled signals the convolution integral becomes a sum of products that you can do with a pencil. This page does it three ways on one example, shows that it is the same arithmetic as multiplying polynomials and long multiplication, and meets it again in moving averages and in the sum of two dice.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From the integral to a sum"
+    },
+    {
+      "type": "prose",
+      "text": "A sampled signal is a list of numbers, $x[0], x[1], x[2], \\ldots$, one per tick of a clock. A discrete system with impulse response $h[n]$, its output when the input is a single 1 at $n = 0$ and zeros elsewhere, treats each sample the way a continuous system treats each moment. The input $x[k]$ arrived $n - k$ ticks ago, so it still contributes $x[k]\\,h[n - k]$. Adding the contributions from every tick gives the convolution sum"
+    },
+    {
+      "type": "math",
+      "tex": "y[n] = \\sum_{k=-\\infty}^{\\infty} x[k]\\, h[n - k] = (x * h)[n]"
+    },
+    {
+      "type": "prose",
+      "text": "It is the integral of Flip, Slide, Multiply, Add (#/math/convolution/flip-and-slide) with the integral sign replaced by a sum and the area under the product replaced by the total of the products. Every statement made there, flip, slide, multiply, add, holds word for word. What is new is that you can check each number."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The example, by flip and slide"
+    },
+    {
+      "type": "prose",
+      "text": "Let $x = [1, 2, 3]$, meaning $x[0] = 1$, $x[1] = 2$, $x[2] = 3$, and $h = [1, 1, 1, 1]$. To find $y[n]$, flip $h$ to get $h[-k]$, slide it to $h[n - k]$ so that its first entry sits at $k = n$, then multiply the entries that sit over each other and add. Here is each $n$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$n = 0$: the flipped $h$ has only its first entry over $x[0]$. $y[0] = 1 \\cdot 1 = 1$.",
+        "$n = 1$: it covers $x[1]$ (with $h[0]$) and $x[0]$ (with $h[1]$). $y[1] = 2 \\cdot 1 + 1 \\cdot 1 = 3$.",
+        "$n = 2$: it covers $x[0], x[1], x[2]$. $y[2] = 1 + 2 + 3 = 6$.",
+        "$n = 3$: the same three entries, now with $h[3], h[2], h[1]$. $y[3] = 1 + 2 + 3 = 6$.",
+        "$n = 4$: the flipped $h$ has slid past $x[0]$, leaving $x[1]$ and $x[2]$. $y[4] = 2 + 3 = 5$.",
+        "$n = 5$: only $x[2]$ remains. $y[5] = 3 \\cdot 1 = 3$.",
+        "$n = 6$ and beyond: no overlap, $y = 0$. Also $y[n] = 0$ for $n < 0$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So $y = [1, 3, 6, 6, 5, 3]$. It has six entries: the signal had 3, the filter 4, and $3 + 4 - 1 = 6$. In general sequences of lengths $N$ and $M$ give $N + M - 1$ numbers, because the first output happens when the two just touch and the last when they just stop touching. Another check: the entries of $y$ add up to $1 + 3 + 6 + 6 + 5 + 3 = 24$, which is $(1 + 2 + 3)(1 + 1 + 1 + 1) = 6 \\times 4$. Every product $x[k]h[m]$ lands in exactly one place, so the sum of the output is the product of the sums."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "conv-sequence",
+        "title": "Convolving 1, 2, 3 with 1, 1, 1, 1",
+        "params": [
+          {
+            "key": "x",
+            "label": "Sequence x[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "1, 2, 3"
+          },
+          {
+            "key": "h",
+            "label": "Sequence h[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "1, 1, 1, 1"
+          },
+          {
+            "key": "n",
+            "label": "Output index n",
+            "control": "range",
+            "min": 0,
+            "max": 14,
+            "step": 1,
+            "default": 3
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Start at $n = 3$ and read the readout line: it spells out the sum for $y[3]$: $x[0]\\cdot h[3] + x[1]\\cdot h[2] + x[2]\\cdot h[1] = 1\\cdot 1 + 2\\cdot 1 + 3\\cdot 1 = 6$. Press ◀ n down to $n = 0$ and then n ▶ upward, one step at a time, and check each against the list above: 1, 3, 6, 6, 5, 3, then 0. In the multiplication table at the bottom left, the highlighted anti-diagonal ($k + m = n$) holds the entries that add up for the current $n$; in the top picture the flipped $h$ slides across $x$. Also read the second half of the readout, the polynomials in $z^{-1}$, which comes up below."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The same thing as a table"
+    },
+    {
+      "type": "prose",
+      "text": "Because every output is a sum of products $x[k]\\,h[m]$ with $k + m = n$, you can write all the products once, in a table, and add along the diagonals. Rows are $x[k]$, columns are $h[m]$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Row $x[0] = 1$: $1,\\ 1,\\ 1,\\ 1$ (these belong to $n = 0, 1, 2, 3$).",
+        "Row $x[1] = 2$: $2,\\ 2,\\ 2,\\ 2$ (these belong to $n = 1, 2, 3, 4$).",
+        "Row $x[2] = 3$: $3,\\ 3,\\ 3,\\ 3$ (these belong to $n = 2, 3, 4, 5$)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Adding the entries with the same $n$: $n = 0$: 1. $n = 1$: $1 + 2 = 3$. $n = 2$: $1 + 2 + 3 = 6$. $n = 3$: $1 + 2 + 3 = 6$. $n = 4$: $2 + 3 = 5$. $n = 5$: 3. The table makes you do no sliding at all; it is the best method on paper for short sequences, and it is what the bottom-left panel of the viewer draws."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Polynomials and long multiplication"
+    },
+    {
+      "type": "prose",
+      "text": "The table is exactly the one you draw to multiply $(1 + 2x + 3x^2)(1 + x + x^2 + x^3)$: each pair of terms $a\\,x^k \\cdot b\\,x^m$ gives $ab\\,x^{k+m}$, and like powers add. So the coefficients of the product are $1, 3, 6, 6, 5, 3$, that is $1 + 3x + 6x^2 + 6x^3 + 5x^4 + 3x^5$. Convolving two sequences is multiplying the polynomials whose coefficients they are."
+    },
+    {
+      "type": "prose",
+      "text": "Whole numbers are polynomials in 10. The number 123 is $1 \\cdot 10^2 + 2 \\cdot 10 + 3$, and 1111 is $1 \\cdot 10^3 + \\cdots + 1$. Their digits convolve to $[1, 3, 6, 6, 5, 3]$, and since every entry is below 10 there is nothing to carry: $123 \\times 1111 = 136653$, the digits read straight off. When entries are 10 or more you carry, as in school multiplication. Take $456 \\times 789$. The digits convolve to $[4, 5, 6] * [7, 8, 9] = [28, 67, 118, 93, 54]$. Carry from the right: 54 writes 4 and carries 5; $93 + 5 = 98$ writes 8 and carries 9; $118 + 9 = 127$ writes 7 and carries 12; $67 + 12 = 79$ writes 9 and carries 7; $28 + 7 = 35$. Reading the written digits from the left, 3, 5, 9, 7, 8, 4: $359784 = 456 \\times 789$. School multiplication is a convolution followed by carrying. The same idea, done fast with the FFT, multiplies numbers with millions of digits; see Fast Convolution with the FFT (#/math/convolution/fast-convolution)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two filters you can read off"
+    },
+    {
+      "type": "prose",
+      "text": "A filter is a sequence $h$ that you convolve with a signal. Two tiny ones show what convolution does. The two-point average $h = [0.5, 0.5]$ gives $y[n] = 0.5\\,x[n] + 0.5\\,x[n - 1]$: each output is the mean of the present and previous input. On $x = [3, 1, 4, 1, 5]$ the output is $[1.5, 2, 2.5, 2.5, 3, 2.5]$. The ups and downs of $x$ (3, 1, 4, 1, 5) are smoothed, and the ends are half-height because at $n = 0$ there is no earlier sample (it counts as 0) and at $n = 5$ there is no later one."
+    },
+    {
+      "type": "prose",
+      "text": "The difference $h = [1, -1]$ gives $y[n] = x[n] - x[n - 1]$, the change since the last tick. On the same $x$: $[3, -2, 3, -3, 4, -5]$. A slowly changing signal gives small outputs and a rapidly alternating one gives large ones. So the averager keeps slow parts and the difference keeps fast parts: the beginning of the idea of filtering, picked up in The Convolution Theorem (#/math/convolution/convolution-theorem)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "conv-sequence",
+        "title": "Smoothing 3, 1, 4, 1, 5",
+        "params": [
+          {
+            "key": "x",
+            "label": "Sequence x[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "3, 1, 4, 1, 5"
+          },
+          {
+            "key": "h",
+            "label": "Sequence h[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "two-point average: 0.5, 0.5"
+          },
+          {
+            "key": "n",
+            "label": "Output index n",
+            "control": "range",
+            "min": 0,
+            "max": 14,
+            "step": 1,
+            "default": 1
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The input $x$ is jagged: 3, 1, 4, 1, 5. At $n = 1$ the readout shows the sum $3\\cdot 0.5 + 1\\cdot 0.5 = 2$, the mean of the first two samples. Step n ▶ and read the output stems: 1.5, 2, 2.5, 2.5, 3, 2.5, much flatter than $x$. Now change h to the difference $1, -1$ and step again: $3, -2, 3, -3, 4, -5$. The wiggle that was removed is the wiggle that is now kept."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two dice"
+    },
+    {
+      "type": "prose",
+      "text": "Roll two fair dice. The sum is $s = a + b$ and the chance of it is the sum over all ways to split it: $P(s) = \\sum_k P(a = k)\\,P(b = s - k)$. This is $y[s] = \\sum_k x[k]\\,h[s - k]$ with $x$ and $h$ both the die's distribution, $1/6$ at each of $1, \\ldots, 6$. The sum of independent numbers has a distribution that is the convolution of theirs. For the sum 7, six splits $(1,6), (2,5), \\ldots, (6,1)$ each give $\\tfrac16 \\cdot \\tfrac16 = \\tfrac1{36}$, so $P(7) = 6/36 = 1/6$. Sum 10 has three splits, $P(10) = 3/36 = 1/12$, and sum 2 has one, $P(2) = 1/36$. The full row from 2 to 12 is $1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1$ over 36: a triangle, for the same reason two pulses made one. Convolving the result with another die gives a rounder curve; the probability shelf follows this path in Sums of Random Variables (#/probability/multivariate/sums)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "conv-sequence",
+        "title": "A die convolved with a die",
+        "params": [
+          {
+            "key": "x",
+            "label": "Sequence x[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "a die: 1/6 at n = 1 … 6"
+          },
+          {
+            "key": "h",
+            "label": "Sequence h[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "a die: 1/6 at n = 1 … 6"
+          },
+          {
+            "key": "n",
+            "label": "Output index n",
+            "control": "range",
+            "min": 0,
+            "max": 14,
+            "step": 1,
+            "default": 7
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "At $n = 7$ the readout lists six products, each $1/36$, which add to 1/6, the probability of throwing 7. The output stems peak at $n = 7$ and shrink in a straight line to $n = 2$ and $n = 12$ (the sequence starts at $n = 2$ because each die starts at 1). Step to $n = 12$: one product, $1/36$. Beyond 12 the output is 0."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The link to the Z-transform"
+    },
+    {
+      "type": "prose",
+      "text": "Multiplying polynomials in $x$ is the same as multiplying polynomials in $z^{-1}$. The $z$-transform of a sequence is $X(z) = \\sum_n x[n]\\,z^{-n}$; for $x = [1, 2, 3]$ that is $1 + 2z^{-1} + 3z^{-2}$. Convolving two sequences multiplies their transforms,"
+    },
+    {
+      "type": "math",
+      "tex": "Y(z) = X(z)\\,H(z)"
+    },
+    {
+      "type": "prose",
+      "text": "This is the viewer's last line: it prints $(1 + 2z^{-1} + 3z^{-2})(1 + z^{-1} + z^{-2} + z^{-3}) = 1 + 3z^{-1} + 6z^{-2} + 6z^{-3} + 5z^{-4} + 3z^{-5}$. Multiplication is easier than a sum of products, which is why the transform is useful. The Z-Transform (#/math/z-transform) develops the transform itself, and its page Properties as Geometry (#/math/z-transform/properties) uses this property to find the zeros of a product of filters. The Convolution Theorem (#/math/convolution/convolution-theorem) gives the proof for all of the transforms."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "By flip and slide",
+      "text": "Convolve $x = [1, 2, 1]$ with $h = [1, -1]$. Say how long the answer is before you start.",
+      "solution": [
+        "The lengths are 3 and 2, so the output has $3 + 2 - 1 = 4$ entries. $y[0] = 1 \\cdot 1 = 1$. $y[1] = x[0]h[1] + x[1]h[0] = -1 + 2 = 1$. $y[2] = x[1]h[1] + x[2]h[0] = -2 + 1 = -1$. $y[3] = x[2]h[1] = -1$. The answer is $[1, 1, -1, -1]$. As a check, the entries add to 0, and $(1 + 2 + 1)(1 - 1) = 0$."
+      ],
+      "answer": "$[1, 1, -1, -1]$."
+    },
+    {
+      "type": "problem",
+      "title": "A polynomial in disguise",
+      "text": "Multiply $(1 + z^{-1})^3$ by convolving, two factors at a time.",
+      "solution": [
+        "$[1, 1] * [1, 1] = [1, 2, 1]$ ($1 + 2z^{-1} + z^{-2}$). Then $[1, 2, 1] * [1, 1]$: $y[0] = 1$, $y[1] = 2 + 1 = 3$, $y[2] = 1 + 2 = 3$, $y[3] = 1$. So $[1, 3, 3, 1]$, the third row of Pascal's triangle. Each convolution with $[1, 1]$ adds neighbours, which is how Pascal's triangle is built."
+      ],
+      "answer": "$[1, 3, 3, 1]$."
+    },
+    {
+      "type": "problem",
+      "title": "A delay and an echo",
+      "text": "Convolve $x = [1, 2, 3]$ with the echo $h = [1, 0, 0, 0.5]$, and describe the result in words.",
+      "solution": [
+        "Here $y[n] = x[n] + 0.5\\,x[n - 3]$. The output has $3 + 4 - 1 = 6$ entries: the first three are $x$ itself, $1, 2, 3$; then the echo, $0.5 \\cdot [1, 2, 3] = 0.5, 1, 1.5$, three ticks later. So $y = [1, 2, 3, 0.5, 1, 1.5]$. The impulse response simply says where copies are placed and how loud they are."
+      ],
+      "answer": "$[1, 2, 3, 0.5, 1, 1.5]$."
+    },
+    {
+      "type": "problem",
+      "title": "Three splits of ten",
+      "text": "Two dice are thrown. What is the probability that the sum is 10, and what is the probability that the sum is at most 4?",
+      "solution": [
+        "For 10: $(4,6), (5,5), (6,4)$, three splits of $1/36$, so $3/36 = 1/12$. For at most 4 add the entries for 2, 3, 4, which are $1, 2, 3$ splits: $6/36 = 1/6$. Both come from the convolution row $1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1$ over 36."
+      ],
+      "answer": "$1/12$ and $1/6$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Alan V. Oppenheim and Ronald W. Schafer, Discrete-Time Signal Processing, 3rd edition (Pearson, 2010). Chapter 2 covers the convolution sum.",
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997), chapter 2.",
+        "Steven W. Smith, The Scientist and Engineer's Guide to Digital Signal Processing (California Technical Publishing, 1997), free online at dspguide.com. Chapters 6 and 7 are on convolution."
+      ]
+    }
+  ]
+}

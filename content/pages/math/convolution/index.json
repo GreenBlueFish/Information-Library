@@ -1,0 +1,242 @@
+{
+  "title": "Convolution",
+  "intro": "Convolution is the operation that says what a linear system does to a signal: flip one signal, slide it past the other, multiply where they overlap and add up the result. This topic builds the idea in a 3D view that shows every step at once, works it on sequences and on functions, and follows it into frequency, where it turns into plain multiplication.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The idea in one picture"
+    },
+    {
+      "type": "prose",
+      "text": "A bell rings for a while after it is struck. Strike it twice, a second apart, and you hear two rings that overlap; strike it softly and the ring is quieter. If you know how the bell answers one sharp strike, its impulse response $h(t)$, you can work out how it answers any pattern of strikes $x(t)$: each moment of the input sets off its own copy of $h$, scaled by how hard that moment pushed, and the output is the sum of all the copies. That sum is the convolution of $x$ and $h$:"
+    },
+    {
+      "type": "math",
+      "tex": "y(t) = (x * h)(t) = \\int_{-\\infty}^{\\infty} x(\\tau)\\, h(t - \\tau)\\, d\\tau"
+    },
+    {
+      "type": "prose",
+      "text": "Read for one output time $t$, the integral says: flip $h$ round, slide it so its start sits at $\\tau = t$, multiply it by $x$ point by point, and take the area. For sequences the integral becomes a sum, $y[n] = \\sum_k x[k]\\, h[n-k]$, and the same four steps work with a pencil."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The viewer"
+    },
+    {
+      "type": "prose",
+      "text": "The integrand $x(\\tau)\\,h(t - \\tau)$ depends on two times at once: $\\tau$, the moment of the input, and $t$, the moment of the output. So it is a landscape over a floor with $\\tau$ across and $t$ going back into the picture. Each coloured ribbon is a slice of that landscape. With fixed-t slices, a ribbon is the product for one output time, and its area is $y(t)$, drawn on the right-hand wall at the same depth. Switch to fixed-τ slices and the same landscape reads the other way: each ribbon is a copy of $h$ started at one input moment, and the wall is their sum. Below, three flat panels show the flip and slide, the product with its area shaded, and the output traced up to the current $t$. Press Next step ▶ to walk through it in eight steps."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "Convolution in 3D",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "decaying exponential e^(−at)u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "list",
+      "items": [
+        "Input x(t) and Impulse response h(t) choose the two signals. Swap them and the output does not change: convolution does not care about the order.",
+        "Shift t moves the flipped response along the τ axis; Slide t plays it forward from t = −1 to t = 5 s. Watch the dot in the right-hand panel trace out y(t).",
+        "Decay rate a sets how fast the decaying exponential and the damped sine die away.",
+        "3D slices switches between the two readings: flip and slide (one ribbon per output time t) and echoes of h (one ribbon per input moment τ).",
+        "Drag the 3D view to turn it, or use Turn and Tilt. Turn −90° looks along the τ axis, so the output wall faces you.",
+        "Impulses δ(t) are drawn as arrows whose height is their weight (their area), since a true impulse is infinitely tall and infinitely thin."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "The default pair is a 1 s pulse into a system whose impulse response is $e^{-t}u(t)$: an RC circuit fed a 1 V pulse. The output charges as $1 - e^{-t}$ for the first second, reaching $1 - e^{-1} \\approx 0.632$ at $t = 1$, and then discharges. Press Slide t and watch the bold slice's area grow and fade."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sequences"
+    },
+    {
+      "type": "prose",
+      "text": "For sampled signals the integral is a sum, and every number can be checked by hand. The second viewer convolves two short sequences and shows the same output three ways: the flip-and-slide picture, a multiplication table where $y[n]$ is the sum along one diagonal, and the output stems. The table is exactly the table you would draw to multiply two polynomials, which is no accident."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "conv-sequence",
+        "title": "Discrete convolution, three ways",
+        "params": [
+          {
+            "key": "x",
+            "label": "Sequence x[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "1, 2, 3"
+          },
+          {
+            "key": "h",
+            "label": "Sequence h[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "1, 1, 1, 1"
+          },
+          {
+            "key": "n",
+            "label": "Output index n",
+            "control": "range",
+            "min": 0,
+            "max": 14,
+            "step": 1,
+            "default": 2
+          }
+        ]
+      }
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pages in this topic"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Flip, Slide, Multiply, Add (#/math/convolution/flip-and-slide): the convolution integral one step at a time, with two pulses worked by hand into a triangle.",
+        "Discrete Convolution (#/math/convolution/discrete): sums of products of sequences, the multiplication table, polynomial multiplication, moving averages and two dice.",
+        "Impulse Response and LTI Systems (#/math/convolution/impulse-response): why linearity and time invariance force every such system's output to be a convolution, and what causality and stability look like in $h$.",
+        "Worked Convolutions (#/math/convolution/worked-examples): pulses, exponentials, steps and Gaussian bells, with the piecewise limits done carefully.",
+        "Properties of Convolution (#/math/convolution/properties): commutative, associative and distributive laws, the impulse as identity, shifts and derivatives, and what adds (durations, means, variances) or multiplies (areas).",
+        "The Convolution Theorem (#/math/convolution/convolution-theorem): convolution in time is multiplication in frequency, for the Fourier, Laplace and Z-transforms, with the proof and what it is for.",
+        "Fast Convolution with the FFT (#/math/convolution/fast-convolution): circular against linear convolution, zero padding, the operation counts, and overlap-add for long signals.",
+        "Convolution in Practice (#/math/convolution/applications): blurring and sharpening images, sums of random numbers, echoes and reverb, moving averages, and correlation, convolution's mirror image.",
+        "A Gallery of Convolutions (#/math/convolution/gallery): every signal in the viewer, each paired with a response that shows what it does, and what each pair teaches."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "Integrals, and the idea of a function of time. Integrals (#/math/calculus/integrals) covers the integral as an area. The convolution theorem page uses the three transform topics, The Fourier Transform (#/math/fourier-transform), The Laplace Transform (#/math/laplace-transform) and The Z-Transform (#/math/z-transform); you can read the first five pages here without them. The probability shelf meets convolution from another side, as the distribution of a sum of independent random numbers, on its page Sums of Random Variables (#/probability/multivariate/sums)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997), chapter 2.",
+        "Ronald N. Bracewell, The Fourier Transform and Its Applications, 3rd edition (McGraw-Hill, 2000).",
+        "Steven W. Smith, The Scientist and Engineer's Guide to Digital Signal Processing (California Technical Publishing, 1997), free online at dspguide.com."
+      ]
+    }
+  ]
+}

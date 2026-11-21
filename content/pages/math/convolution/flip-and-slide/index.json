@@ -1,0 +1,359 @@
+{
+  "title": "Flip, Slide, Multiply, Add",
+  "intro": "Convolution is the recipe for the output of a system that remembers its input. This page builds the recipe from one question, how much of an old input is still around, and then carries it out by hand on two pulses, region by region, until it makes a triangle.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A system that remembers"
+    },
+    {
+      "type": "prose",
+      "text": "Some systems answer only the present. A resistor's voltage is its current times $R$ at every instant, and nothing earlier matters. Most systems that do anything interesting are not like that. A bell, struck, rings on for seconds. A capacitor, charged through a resistor, still holds its charge after the push has ended and lets it leak away only slowly. A concert hall keeps a clap alive for a second or two. In each of these the output now depends on the input a moment ago, and the input a longer while ago, with less and less weight."
+    },
+    {
+      "type": "prose",
+      "text": "Take the simplest case, an RC circuit: a resistor feeding a capacitor, the output being the voltage across the capacitor. If you apply a brief sharp voltage spike at time 0 and nothing else, the capacitor jumps up and then leaks away like $e^{-t/RC}$. Choose units so that $RC = 1$ s and call that leak $h(t) = e^{-t}$ for $t \\ge 0$ and $0$ before. This single curve, the response to one spike, is the impulse response. The page Impulse Response and LTI Systems (#/math/convolution/impulse-response) explains why it is enough to know the whole system. Here we take it on trust and ask: given $h$, and given an input $x(t)$ that is not a spike, what is the output $y(t)$?"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building the answer from the question"
+    },
+    {
+      "type": "prose",
+      "text": "Pick one moment $t$ at which we want the output, say $t = 3$ s. The output is made up of leftovers. Whatever was fed in at time $\\tau$ has been inside the system for $t - \\tau$ seconds, so the system now shows $h(t - \\tau)$ times how strong that input was, $x(\\tau)$. The input from 0.5 s ago contributes $x(2.5)\\,h(0.5)$ to $y(3)$; the input from 2 s ago contributes $x(1)\\,h(2)$; and so on, for every $\\tau$ before $t$. Adding up the leftovers from every moment, an integral because $\\tau$ is continuous, gives"
+    },
+    {
+      "type": "math",
+      "tex": "y(t) = \\int_{-\\infty}^{\\infty} x(\\tau)\\, h(t - \\tau)\\, d\\tau = (x * h)(t)"
+    },
+    {
+      "type": "prose",
+      "text": "This is the convolution integral. Nothing in it is a trick; it is the sentence 'add up each old input times how much of it is left'. What needs practice is turning it into pictures and arithmetic, and the picture is four verbs: flip, slide, multiply, add."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The four steps"
+    },
+    {
+      "type": "prose",
+      "text": "The viewer below walks through them with the Next step ▶ button (its first five steps are these four verbs, preceded by showing the two signals). Press it once now, and the left panel shows $x(\\tau)$ and $h(\\tau)$ on the same axis. Think of $\\tau$ as the name of the horizontal axis: it is a dummy variable, the label of 'which moment of the input', and it is integrated away. The only thing left in the answer is $t$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Flip. Reflect $h$ about $\\tau = 0$ to get $h(-\\tau)$. The reason is in the sentence above: the weight on an input is the response at the age of that input, $t - \\tau$. Newer inputs (larger $\\tau$) are younger and meet the early part of $h$, which is its strong part; older inputs meet the late, faded part. Reading $\\tau$ from left to right, that is $h$ running backwards. The flip is not a mathematical decoration; it is the age of the input made visible.",
+        "Slide. Move the flipped copy to the right by $t$, giving $h(t - \\tau)$. Its starting edge, the age-zero point, now sits at $\\tau = t$, the present. Everything to the left of that edge is the past, with its age growing as you go left.",
+        "Multiply. At every $\\tau$, multiply $x(\\tau)$ by the slid, flipped $h(t - \\tau)$. The product is zero wherever either factor is zero, so only the overlap of the two curves matters. This is the middle panel, and the bold ribbon in the 3D view.",
+        "Add. The area under the product is $y(t)$, one number for this one value of $t$. The right panel marks it as a dot. Slide to another $t$ and repeat: the dots draw out the whole output."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "Two 1-second pulses, flipped and slid",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The input and the impulse response are both 1 s pulses. Press Next step ▶ five times, then drag Shift t slowly from −1 to 3. While $t$ is below 0 the flipped pulse sits entirely to the left of $x$ and the readout says the product is non-zero nowhere with $y(t) = 0$. At $t = 0.5$ the readout gives $y = 0.500$, and the shaded area in the middle panel is a rectangle of height 1 and width 0.5. At $t = 1$ the two pulses sit exactly on top of each other and $y = 1.000$, the largest value. At $t = 1.5$ you are back to 0.500, and for $t$ above 2 the product is non-zero nowhere again. The curve in the right panel is the triangle derived next."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two pulses, worked in full"
+    },
+    {
+      "type": "prose",
+      "text": "Let $x(t) = 1$ for $0 \\le t \\le 1$ and $0$ elsewhere, and let $h$ be the same pulse. At a given $t$, the flipped, slid pulse $h(t - \\tau)$ equals 1 for $t - 1 \\le \\tau \\le t$. The input $x(\\tau)$ equals 1 for $0 \\le \\tau \\le 1$. The product is 1 where these two intervals overlap and 0 elsewhere, so $y(t)$ is the length of the overlap. The overlap runs from the larger of the two left ends, $\\max(0, t - 1)$, to the smaller of the two right ends, $\\min(1, t)$. What it is depends on where $t$ is, and there are four cases."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$t < 0$. The slid pulse occupies $[t-1, t]$, which is wholly to the left of 0. No overlap, so $y(t) = 0$.",
+        "$0 \\le t \\le 1$. The slid pulse occupies $[t - 1, t]$ and $t - 1 \\le 0$, so the overlap is $[0, t]$, of length $t$. So $y(t) = t$: at $t = 0.25$ it is 0.25 and at $t = 0.5$ it is 0.5.",
+        "$1 \\le t \\le 2$. Now $t - 1 \\ge 0$ but $t \\ge 1$, so the overlap is $[t - 1, 1]$, of length $1 - (t - 1) = 2 - t$. So $y(t) = 2 - t$: at $t = 1.5$ it is 0.5, at $t = 1.75$ it is 0.25.",
+        "$t > 2$. The slid pulse occupies $[t - 1, t]$ with $t - 1 > 1$, to the right of $x$. No overlap, so $y(t) = 0$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Written as one statement, $y(t)$ rises along a straight line from 0 at $t = 0$ to 1 at $t = 1$, then falls along a straight line to 0 at $t = 2$: a triangle two seconds wide with peak 1. Its area is $\\tfrac12 \\times 2 \\times 1 = 1$, which is the area of $x$ (1) times the area of $h$ (1). The page Properties of Convolution (#/math/convolution/properties) shows that this is not a coincidence. Notice also where the corners are: at 0, 1 and 2, which are the sums of the corners of the pulses, $0 + 0$, $0 + 1$ and $1 + 1$. The regions change exactly when an edge of the slid pulse crosses an edge of the fixed one."
+    },
+    {
+      "type": "prose",
+      "text": "The four regions are the main bookkeeping in every convolution of two pieces. When you do one by hand, draw the two intervals, write down the overlap as $[\\max(\\text{left ends}), \\min(\\text{right ends})]$ and let $t$ run from far left to far right, noting each $t$ where an end swaps places with another. Worked Convolutions (#/math/convolution/worked-examples) turns this into a checklist."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A second look: unequal pulses"
+    },
+    {
+      "type": "prose",
+      "text": "Change the input to a 2 s pulse and keep $h$ as the 1 s pulse (convolution does not care which is which; see Properties of Convolution (#/math/convolution/properties)). The overlap is now as long as the shorter pulse, 1, whenever the short pulse sits completely inside the long one. The output rises as $t$ for $0 \\le t \\le 1$, stays at 1 for $1 \\le t \\le 2$, and falls as $3 - t$ for $2 \\le t \\le 3$: a trapezoid whose total width is $1 + 2 = 3$ s and whose area is $2$, the product of the areas $1 \\times 2$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "A 2 s pulse and a 1 s pulse",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 2 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1.5
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Leave the 3D slices on fixed t. At $t = 1.5$ the readout says $y = 1.000$; drag Shift t to 0.5 and then 2.5 and see 0.500 each time, and keep dragging to 3 and beyond where $y$ is 0 again. The flat top is the stretch where the small pulse is wholly inside the big one and nothing changes as you slide. Press Next step ▶ up to step 8: the text there states that the durations add (0 to 2 and 0 to 1 give 0 to 3) and the areas multiply (2 × 1 = 2)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A pulse into the RC circuit"
+    },
+    {
+      "type": "prose",
+      "text": "With a smooth $h$ the same four steps apply, only the area is not a rectangle. Feed the 1 s pulse into the circuit whose $h(t) = e^{-t}u(t)$ (the step $u(t)$ is 0 for $t < 0$ and 1 after). The slid, flipped response is $e^{-(t - \\tau)}$ for $\\tau \\le t$ and 0 for $\\tau > t$: tall, 1, right at the present edge $\\tau = t$ and fading to the left. For $0 \\le t \\le 1$ the overlap is $[0, t]$ and"
+    },
+    {
+      "type": "math",
+      "tex": "y(t) = \\int_0^t e^{-(t - \\tau)}\\, d\\tau = 1 - e^{-t}"
+    },
+    {
+      "type": "prose",
+      "text": "which is the charging curve: $y(0.5) = 0.3935$ and $y(1) = 1 - e^{-1} = 0.6321$. After the pulse ends, the overlap is $[0, 1]$, always the whole pulse, and $y(t) = \\int_0^1 e^{-(t - \\tau)} d\\tau = e^{-t}(e - 1)$, which at $t = 2$ is $0.2325$ and at $t = 3$ is $0.0855$: the capacitor leaks away from $0.6321$ with the same time constant as before. The topic page starts on exactly this preset, and the fuller treatment is in Worked Convolutions (#/math/convolution/worked-examples)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why every part of the recipe is needed"
+    },
+    {
+      "type": "prose",
+      "text": "Without the flip, you would weight the inputs by $h(\\tau)$ rather than $h(t - \\tau)$, which gives one number for all $t$ and describes no moving system. With the flip but without the slide, you evaluate only at $t = 0$. Without the multiply you would not be weighting at all, and without the add you would have a picture and no value. The pulses hide the importance of the flip, because a pulse looks the same flipped. Try a ramp and an exponential, as in Worked Convolutions (#/math/convolution/worked-examples), where leaving out the flip changes $y(1)$ from $0.3679$ to $0.2642$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "Read the overlap",
+      "text": "A 2 s pulse ($1$ for $0 \\le t \\le 2$) is convolved with a 1 s pulse. Find $y(2.5)$ and say where $y$ is non-zero.",
+      "solution": [
+        "The slid, flipped 1 s pulse occupies $[t - 1, t] = [1.5, 2.5]$ at $t = 2.5$. The 2 s pulse occupies $[0, 2]$. The overlap is $[1.5, 2]$, of length $0.5$, and the product there is 1, so $y(2.5) = 0.5$. In general the overlap is $[\\max(0, t - 1), \\min(2, t)]$, which has positive length only for $0 < t < 3$, so $y$ is non-zero from 0 to 3."
+      ],
+      "answer": "$y(2.5) = 0.5$; non-zero for $0 < t < 3$."
+    },
+    {
+      "type": "problem",
+      "title": "Charging, discharging",
+      "text": "Use the convolution integral to find the output $y(3)$ of the circuit $h(t) = e^{-t}u(t)$ driven by the 1 s pulse.",
+      "solution": [
+        "At $t = 3$ the slid response is $e^{-(3 - \\tau)}$ for $\\tau \\le 3$, and the input is 1 for $0 \\le \\tau \\le 1$, so the whole pulse overlaps. $y(3) = \\int_0^1 e^{-(3 - \\tau)} d\\tau = e^{-3}\\,[e^{\\tau}]_0^1 = e^{-3}(e - 1) = 0.0498 \\times 1.7183 = 0.0855$. As a check, the value at $t = 1$ is $0.6321$ and the output decays by a factor $e^{-1}$ per second after that: $0.6321 \\times e^{-2} = 0.0855$."
+      ],
+      "answer": "$y(3) = e^{-3}(e - 1) \\approx 0.0855$."
+    },
+    {
+      "type": "problem",
+      "title": "Age of the input",
+      "text": "A circuit with $h(t) = e^{-t}u(t)$ receives a spike of weight 1 at $t = 0$ and a spike of weight 2 at $t = 1$. Find $y(2)$ by weighting each input by its age.",
+      "solution": [
+        "At $t = 2$ the first spike is 2 s old, so it contributes $1 \\times h(2) = e^{-2} = 0.1353$. The second is 1 s old and contributes $2 \\times h(1) = 2e^{-1} = 0.7358$. The sum is $0.8711$. This is the convolution integral with $x(\\tau) = \\delta(\\tau) + 2\\delta(\\tau - 1)$, where each spike picks out one value of $h(t - \\tau)$. The heavier, younger spike dominates; flipping $h$ is what makes it meet the larger value."
+      ],
+      "answer": "$y(2) = e^{-2} + 2e^{-1} \\approx 0.8711$."
+    },
+    {
+      "type": "problem",
+      "title": "Which step in the picture?",
+      "text": "The 3D view shows a pulse $x$ and an $h$ that is a decaying exponential. At which $t$ does the slid, flipped $h$ stop overlapping $x$ completely? Is there such a $t$?",
+      "solution": [
+        "The flipped response $h(t - \\tau)$ is non-zero for all $\\tau \\le t$, however far back, because the exponential never reaches 0. For $t > 0$ it therefore always overlaps the pulse $[0, 1]$ partly, or wholly once $t \\ge 1$. There is no $t$ after which the product is exactly 0: the output never becomes exactly 0, it only decays. It is zero only for $t < 0$, before the input begins. Compare the pulse $h$, where the output is exactly 0 beyond $t = 2$."
+      ],
+      "answer": "No: for $t > 0$ the product is never exactly zero."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997), chapter 2.",
+        "Steven W. Smith, The Scientist and Engineer's Guide to Digital Signal Processing (California Technical Publishing, 1997), free online at dspguide.com.",
+        "Ronald N. Bracewell, The Fourier Transform and Its Applications, 3rd edition (McGraw-Hill, 2000), the chapter on convolution."
+      ]
+    }
+  ]
+}

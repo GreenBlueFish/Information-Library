@@ -713,6 +713,22 @@ name in `SIGNALS`; `tests/src/widgets/ztransform.test.js` checks every closed
 form against the defining sum. The generator for the pages is
 `projects/push/ztransform-gen` in the Hive that wrote them (`lib.py` has `ZW()`).
 
+### 7.6 The convolution widgets
+
+`convolution-3d` (`src/widgets/types/convolution-3d.js`, maths in
+`src/widgets/sims/convolution.js`, example page `math/convolution`) draws the
+integrand x(τ)h(t − τ) as ribbons over a (τ, t) floor, either one ribbon per t
+(flip and slide, each ribbon's area on the output wall) or one per τ (echoes of
+h), with flat panels for the flip and slide, the product and the output below.
+Next step ▶ walks through eight steps; Slide t plays t. Its `params` keys, in
+order, are `x` and `h` (selects of names in `SIGNALS`), `a`, `t`, `slices` (one
+of `SLICES`), `azimuth` and `elevation`. Adding a signal is one `case` in
+`cSignal` (smooth part, impulses, support, kinks, area). `conv-sequence`
+convolves two preset sequences (`SEQUENCES`) and shows flip and slide, the
+multiplication table and the output; its keys are `x`, `h` and `n`. Tests:
+`tests/src/widgets/convolution.test.js` checks the integral against closed
+forms. Generator: `projects/push/convolution-gen` in the Hive that wrote them.
+
 ## 8. Optional: serving over a static server (the `file://` tip)
 
 The site is designed to open straight from disk, but page content is loaded via

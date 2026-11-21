@@ -1,0 +1,425 @@
+{
+  "title": "The Convolution Theorem",
+  "intro": "Convolving two signals in time is the same as multiplying their spectra, frequency by frequency. That one fact turns a flip-and-slide integral into a product, explains what a filter does to each frequency, and shows why complex exponentials are the natural language of linear systems.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why look for a shortcut"
+    },
+    {
+      "type": "prose",
+      "text": "Convolution is the right operation for a linear, time-invariant system, but it is laborious. To get the output at one instant you flip, slide, multiply and integrate; to get the whole output you do that for every instant. When you cascade two systems you convolve their impulse responses, and when you cascade ten you do nine convolutions. Engineers wanted something better, and the transforms supply it. The Fourier transform, the Laplace transform and the Z-transform all share one property: each turns the convolution of two signals into the ordinary product of their transforms. This page proves it for the Fourier transform, states it for the other two, and then spends its time on what it means."
+    },
+    {
+      "type": "prose",
+      "text": "We use the Fourier transform in the form $X(f) = \\int_{-\\infty}^{\\infty} x(t)\\, e^{-j2\\pi f t}\\, dt$, which says how much of the turning arrow at $f$ hertz is inside $x$. If you have not met it, read The Fourier Transform (#/math/fourier-transform) first, or at least From Series to Transform (#/math/fourier-transform/series-to-transform)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The theorem, and why it is true"
+    },
+    {
+      "type": "prose",
+      "text": "Let $y = x * h$, that is $y(t) = \\int x(\\tau)\\, h(t - \\tau)\\, d\\tau$. We want $Y(f)$. Write it out; it is a double integral, over $\\tau$ and then over $t$:"
+    },
+    {
+      "type": "math",
+      "tex": "Y(f) = \\int_{-\\infty}^{\\infty} \\left[ \\int_{-\\infty}^{\\infty} x(\\tau)\\, h(t-\\tau)\\, d\\tau \\right] e^{-j2\\pi f t}\\, dt"
+    },
+    {
+      "type": "prose",
+      "text": "The factor $e^{-j2\\pi f t}$ does not depend on $\\tau$, so we may move it inside, and then swap the order of the two integrals (this is allowed when the signals decay well enough, for instance when $\\int |x|$ and $\\int |h|$ are finite):"
+    },
+    {
+      "type": "math",
+      "tex": "Y(f) = \\int_{-\\infty}^{\\infty} x(\\tau) \\left[ \\int_{-\\infty}^{\\infty} h(t-\\tau)\\, e^{-j2\\pi f t}\\, dt \\right] d\\tau"
+    },
+    {
+      "type": "prose",
+      "text": "Now the trick is in the inner integral. For a fixed $\\tau$, substitute $s = t - \\tau$, so $t = s + \\tau$ and $dt = ds$. The exponential splits as $e^{-j2\\pi f t} = e^{-j2\\pi f s}\\, e^{-j2\\pi f \\tau}$, and the factor with $\\tau$ in it comes out of the inner integral:"
+    },
+    {
+      "type": "math",
+      "tex": "Y(f) = \\int_{-\\infty}^{\\infty} x(\\tau)\\, e^{-j2\\pi f \\tau} \\left[ \\int_{-\\infty}^{\\infty} h(s)\\, e^{-j2\\pi f s}\\, ds \\right] d\\tau"
+    },
+    {
+      "type": "prose",
+      "text": "The bracket is $H(f)$ and does not depend on $\\tau$ at all, so it comes out too. What is left is $\\int x(\\tau) e^{-j2\\pi f\\tau} d\\tau = X(f)$. Therefore"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{F}\\{x * h\\}(f) = X(f)\\, H(f)"
+    },
+    {
+      "type": "prose",
+      "text": "In words: shifting $h$ by $\\tau$ multiplies its spectrum by the pure phase $e^{-j2\\pi f\\tau}$ (the shift property on Properties of the Transform (#/math/fourier-transform/properties)), so the output, which is a sum of shifted copies of $h$ weighted by $x(\\tau)\\,d\\tau$, has spectrum $H(f)$ times a sum of weighted phases, and that sum of weighted phases is exactly the spectrum of $x$. The proof and the picture agree: convolution is a sum of shifted copies, and shifting is a phase in frequency."
+    },
+    {
+      "type": "prose",
+      "text": "Two quick checks. At $f = 0$ the theorem says $\\int y = (\\int x)(\\int h)$: the area of the output is the product of the areas. That is the 'areas multiply' rule on Properties of Convolution (#/math/convolution/properties), now seen as a special case. And since multiplication is commutative, $X H = H X$, so $x * h = h * x$ follows at once, without a substitution."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The mirror image: multiplying in time"
+    },
+    {
+      "type": "prose",
+      "text": "The Fourier transform treats time and frequency almost symmetrically, so the theorem has a twin. Multiplying two signals in time convolves their spectra in frequency:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{F}\\{x \\cdot w\\}(f) = \\int_{-\\infty}^{\\infty} X(\\nu)\\, W(f - \\nu)\\, d\\nu = (X * W)(f)"
+    },
+    {
+      "type": "prose",
+      "text": "There is no $2\\pi$ here because we use $f$ in hertz. This twin explains two things every engineer meets."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Modulation. Multiply $x(t)$ by $\\cos(2\\pi f_0 t) = \\tfrac12 e^{j2\\pi f_0 t} + \\tfrac12 e^{-j2\\pi f_0 t}$. The spectrum of the cosine is two spikes of weight $\\tfrac12$ at $\\pm f_0$, and convolving anything with a spike just moves it there. So $x(t)\\cos(2\\pi f_0 t)$ has the spectrum $\\tfrac12 X(f - f_0) + \\tfrac12 X(f + f_0)$: the original spectrum, halved in height and copied up to $f_0$ and down to $-f_0$. That is how a radio station puts speech at 1 MHz: multiply it by a 1 MHz cosine. Take a 1 s pulse, whose spectrum is $\\mathrm{sinc}(f)$ (up to a phase) with height 1 at $f = 0$ and first zeros at $\\pm 1$ Hz. Multiplied by $\\cos(2\\pi \\cdot 10\\, t)$ it becomes a pair of humps of height 0.5 centred at $\\pm 10$ Hz, with their first zeros at $9$ and $11$ Hz.",
+        "Windowing. A real measurement is finite. Looking at a signal for only 1 s means multiplying it by a 1 s pulse, so its spectrum is convolved with $\\mathrm{sinc}(f)$. A pure 3 Hz cosine, which should be two spikes of weight $\\tfrac12$, instead becomes two copies of $\\tfrac12\\,\\mathrm{sinc}(f \\mp 3)$: height $0.5$ at 3 Hz, $0.3183$ at $3.5$ Hz, exactly 0 at $2$ and $4$ Hz, and ripples (sidelobes) beyond. The first sidelobe peaks at about $0.109$, a fifth of the main lobe. This is spectral leakage, and it is convolution with the window's spectrum, nothing more mysterious."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A worked example: a pulse convolved with itself is a triangle, with spectrum sinc squared"
+    },
+    {
+      "type": "prose",
+      "text": "Let $p(t)$ be the 1 s pulse, 1 for $0 \\le t < 1$. Its spectrum is $P(f) = \\int_0^1 e^{-j2\\pi f t}dt = \\frac{1 - e^{-j2\\pi f}}{j2\\pi f} = \\mathrm{sinc}(f)\\, e^{-j\\pi f}$, where $\\mathrm{sinc}(f) = \\sin(\\pi f)/(\\pi f)$. The magnitude is $|\\mathrm{sinc}(f)|$ and the phase is the straight line $-\\pi f$, which just records that the pulse is centred at $t = \\tfrac12$ and not at 0. By the theorem the convolution $p * p$ has spectrum $P(f)^2 = \\mathrm{sinc}^2(f)\\, e^{-j2\\pi f}$."
+    },
+    {
+      "type": "prose",
+      "text": "What is $p * p$? On Flip, Slide, Multiply, Add (#/math/convolution/flip-and-slide) it is worked by hand: a triangle rising from 0 at $t = 0$ to 1 at $t = 1$ and falling back to 0 at $t = 2$. The numbers confirm the theorem. Integrating the triangle numerically against $e^{-j2\\pi f t}$ gives magnitude $1.0000$ at $f = 0$ (the area), $0.8106$ at $f = 0.25$, $0.4053$ at $f = 0.5$, $0.0000$ at $f = 1$ and $0.0450$ at $f = 1.5$, and these are exactly $\\mathrm{sinc}^2(f)$: $\\mathrm{sinc}(0.5)^2 = (0.6366)^2 = 0.4053$. The phase at $f = 0.25$ is $-90^\\circ$ and at $f = 0.5$ it is $-180^\\circ$, which is $-2\\pi f$ in degrees, the delay of 1 s."
+    },
+    {
+      "type": "prose",
+      "text": "Notice the shape. A pulse has a spectrum that falls off as $1/f$ (with sinc's ripple); a triangle is smoother, and its spectrum falls off as $1/f^2$. Squaring the spectrum is what convolving with itself does, and it is also why convolution smooths: multiplying by a transform that is below 1 away from the origin pushes high frequencies down."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "A pulse convolved with itself",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Both signals are 1 s pulses. At Shift t = 1 the flipped pulse lies exactly over the original, the product is 1 over the whole second, and the readout says y(t) = 1.000, the peak of the triangle. Drag Shift t down to 0.5: the overlap is half a second and y = 0.500. At t = 2 the pulses have just separated and y = 0. The output panel traces the whole triangle on $[0, 2]$. For the theorem's check at $f = 0$, press Next step ▶ eight times: the last step prints the areas, area of y = 1 × 1 = 1, the product of the two input areas, which is $Y(0) = X(0)H(0)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Eigenfunctions: why a sine in gives a sine out"
+    },
+    {
+      "type": "prose",
+      "text": "Feed the complex exponential $x(t) = e^{j2\\pi f_0 t}$ into a system with impulse response $h$, and convolve:"
+    },
+    {
+      "type": "math",
+      "tex": "y(t) = \\int h(\\tau)\\, e^{j2\\pi f_0 (t - \\tau)}\\, d\\tau = e^{j2\\pi f_0 t} \\int h(\\tau)\\, e^{-j2\\pi f_0 \\tau}\\, d\\tau = H(f_0)\\, e^{j2\\pi f_0 t}"
+    },
+    {
+      "type": "prose",
+      "text": "The output is the same turning arrow, multiplied by a single complex number $H(f_0)$. No other frequencies appear. Signals that a system returns unchanged except for a constant multiplier are called its eigenfunctions, and the multiplier is the eigenvalue; for every linear time-invariant system the complex exponentials are eigenfunctions and $H(f)$ is the list of eigenvalues. That list is the frequency response: it is the Fourier transform of the impulse response. This is the real meaning of the theorem. If you split the input into arrows with $X(f)$, each arrow passes through alone and is scaled by $H(f)$, and you add them back together: $Y(f) = H(f) X(f)$."
+    },
+    {
+      "type": "prose",
+      "text": "For a real cosine the rule becomes: $\\cos(2\\pi f_0 t)$ in gives $|H(f_0)|\\cos(2\\pi f_0 t + \\angle H(f_0))$ out. The system can change the amplitude and the phase of each sinusoid, and nothing else. It can never invent a frequency."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The RC circuit, in frequency"
+    },
+    {
+      "type": "prose",
+      "text": "The impulse response of an RC low-pass circuit is $h(t) = \\frac{1}{RC} e^{-t/RC} u(t)$, as derived on Impulse Response and LTI Systems (#/math/convolution/impulse-response). Its transform is a one-line integral:"
+    },
+    {
+      "type": "math",
+      "tex": "H(f) = \\int_0^\\infty \\frac{1}{RC} e^{-t/RC}\\, e^{-j2\\pi f t}\\, dt = \\frac{1}{1 + j2\\pi f RC}"
+    },
+    {
+      "type": "prose",
+      "text": "Take $RC = 1$ s. Then $|H(f)| = 1/\\sqrt{1 + (2\\pi f)^2}$ and the phase is $-\\arctan(2\\pi f)$. The corner is where $2\\pi f RC = 1$, at $f = 1/2\\pi = 0.159$ Hz: there $|H| = 0.7071$ and the phase is $-45^\\circ$. At $f = 1$ Hz the gain is $0.1572$ and the phase $-80.96^\\circ$, so a 1 Hz cosine of amplitude 1 comes out as $0.1572\\cos(2\\pi t - 80.96^\\circ)$, once the start-up transient has died away. At 10 Hz the gain is $0.0159$. This is what 'low-pass' means, read straight from the transform of $h$: slow wiggles pass, fast ones are strongly reduced. The same circuit with $RC = 1$ ms has its corner at $1/(2\\pi \\cdot 0.001) = 159.15$ Hz, and a 1 kHz tone passes with the same gain $0.1572$ and phase $-80.96^\\circ$, because only $f \\cdot RC = 1$ matters."
+    },
+    {
+      "type": "prose",
+      "text": "The start-up transient is a reminder that the eigenfunction argument assumes the input has run for ever. If the input switches on at $t = 0$, then the output is the steady-state response plus a decaying piece. With the input $e^{st}u(t)$ and $s = -0.2 + j2\\pi$ (a 1 Hz damped sine's complex form) and $RC = 1$, the convolution gives $y(t) = \\frac{e^{st} - e^{-t}}{s + 1}$ for $t \\ge 0$: the first term is $H(s)\\,e^{st}$ with $H(s) = 1/(s+1)$, $|H(s)| = 0.1579$ and phase $-82.74^\\circ$, and the second term, which carries the system's own decay rate, is the transient. Taking the imaginary part for the damped sine input, a numerical integration of the convolution agrees with this formula: $0.2367$ at $t = 0.5$, $-0.0706$ at $t = 1$, $-0.0838$ at $t = 2$ and $-0.0782$ at $t = 3$. The steady-state part alone would give $-0.1050$ at $t = 2$; the transient accounts for the difference. (The viewer ties the decay rate of the exponential and the damped sine to one slider, so it cannot show this pair with different rates.)"
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "Pulse into a low-pass: the RC circuit",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "decaying exponential e^(−at)u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Here $h(t) = e^{-t}u(t)$, the RC circuit with $RC = 1$ up to a constant. Press Slide t and look at the output panel: the sharp corners of the pulse have become a smooth charge-and-discharge curve. At t = 1 the readout shows y(t) = 0.632, which is $1 - e^{-1}$, and at t = 3 it shows 0.086, $(1 - e^{-1})e^{-2}$. The picture is the theorem at work: the corners of a pulse are high-frequency content, and the circuit removes it. Raise Decay rate a to 3 to make the response shorter (a corner at $a/2\\pi \\approx 0.48$ Hz) and the output follows the pulse more closely; lower it to 0.3 and the output is a slow, smeared bump."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The same theorem in the Laplace and Z worlds"
+    },
+    {
+      "type": "prose",
+      "text": "The Laplace transform is $X(s) = \\int x(t) e^{-st} dt$ with $s = \\sigma + j\\omega$, and the proof above never used anything about $e^{-j2\\pi f t}$ except that $e^{-s(\\tau + u)} = e^{-s\\tau}e^{-s u}$. So for any signals for which the transforms exist,"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{L}\\{x * h\\}(s) = X(s)\\, H(s)"
+    },
+    {
+      "type": "prose",
+      "text": "with one new matter to watch: the region of convergence. For right-sided signals, $X(s)$ exists in a half-plane $\\operatorname{Re} s > \\sigma_x$, and $H(s)$ in a half-plane $\\operatorname{Re} s > \\sigma_h$. The product is certain to exist only where both do, the intersection. See The Region of Convergence (#/math/laplace-transform/region-of-convergence) for what the region means. Take $x(t) = e^{-t}u(t)$ with $X(s) = 1/(s+1)$, region $\\operatorname{Re} s > -1$, and $h(t) = e^{-3t}u(t)$ with $H(s) = 1/(s+3)$, region $\\operatorname{Re} s > -3$. Then $Y(s) = \\frac{1}{(s+1)(s+3)} = \\frac12\\left[\\frac{1}{s+1} - \\frac{1}{s+3}\\right]$, whose inverse is $y(t) = \\tfrac12 (e^{-t} - e^{-3t})\\,u(t)$. At $t = 1$ that is $0.1590$, and a direct numerical convolution gives the same. The pole at $s = -1$ is $x$'s, the pole at $s = -3$ is $h$'s, and the output keeps both: poles of the product are the union of the poles of the factors."
+    },
+    {
+      "type": "prose",
+      "text": "The region can be larger than the intersection when a zero cancels a pole. Let $x(t) = e^{-t}u(t)$ again and $h(t) = \\delta(t) - e^{-2t}u(t)$, so $H(s) = 1 - \\frac{1}{s+2} = \\frac{s+1}{s+2}$. Then $Y(s) = \\frac{1}{s+1}\\cdot\\frac{s+1}{s+2} = \\frac{1}{s+2}$, which converges for $\\operatorname{Re} s > -2$, wider than the intersection $\\operatorname{Re} s > -1$. The output is $y(t) = e^{-2t}u(t)$: the system's zero removed the input's slow mode. (Convolving by hand, $e^{-t} - (e^{-t} - e^{-2t}) = e^{-2t}$; at $t = 1$ both routes give $0.1353$.) On the line $\\operatorname{Re} s = 0$, when it is inside the region, $s = j2\\pi f$ and the Laplace theorem becomes the Fourier one; The Imaginary Axis and Frequency Response (#/math/laplace-transform/imaginary-axis) shows how $H(j\\omega)$ is the frequency response, and Solving Differential Equations (#/math/laplace-transform/differential-equations) uses the product to solve equations."
+    },
+    {
+      "type": "prose",
+      "text": "The Z-transform of a sequence is $X(z) = \\sum x[n] z^{-n}$, and the same swap-the-sums proof gives"
+    },
+    {
+      "type": "math",
+      "tex": "Y(z) = X(z)\\, H(z), \\qquad y[n] = \\sum_k x[k]\\, h[n-k]"
+    },
+    {
+      "type": "prose",
+      "text": "with the region of convergence containing the intersection of the two rings. The viewer on Discrete Convolution (#/math/convolution/discrete) printed this as polynomial multiplication in $z^{-1}$. Take $x = (1, 2, 3)$ and $h = (1, 1, 1, 1)$, so $X(z) = 1 + 2z^{-1} + 3z^{-2}$ and $H(z) = 1 + z^{-1} + z^{-2} + z^{-3}$. Multiplying out gives $Y(z) = 1 + 3z^{-1} + 6z^{-2} + 6z^{-3} + 5z^{-4} + 3z^{-5}$, so $y = (1, 3, 6, 6, 5, 3)$. Two checks use the theorem at a single point. At $z = 1$, $X(1) = 6$ and $H(1) = 4$, so $Y(1) = 24$, and indeed $1 + 3 + 6 + 6 + 5 + 3 = 24$. At $z = -1$, $H(-1) = 1 - 1 + 1 - 1 = 0$, so $Y(-1)$ must be 0: $1 - 3 + 6 - 6 + 5 - 3 = 0$. Evaluating on the unit circle $z = e^{j\\omega}$ is the discrete-time Fourier transform, the subject of The Unit Circle and Frequency Response (#/math/z-transform/unit-circle)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "Convolve two wide pulses in frequency",
+      "text": "Two pulses, each 2 s wide and of height 1, are convolved. What is the magnitude of the spectrum of the result at $f = 0$, at $f = 0.25$ Hz and at $f = 0.5$ Hz?",
+      "solution": [
+        "A pulse of width 2 has spectrum $2\\,\\mathrm{sinc}(2f)$ times a phase. The convolution has the square: magnitude $\\left(2\\,\\mathrm{sinc}(2f)\\right)^2$. At $f = 0$ this is $2^2 = 4$: the area 2 times the area 2, which is the area of the output triangle (height 2, width 4, area $\\tfrac12 \\times 4 \\times 2 = 4$). At $f = 0.25$: $\\mathrm{sinc}(0.5) = 0.6366$, so $(2 \\times 0.6366)^2 = 1.6211$. At $f = 0.5$: $\\mathrm{sinc}(1) = 0$, so the magnitude is 0. The result is a triangle of height 2 and width 4, area 4, whose spectrum has its first zero at $1/2$ Hz, the reciprocal of the width of each pulse."
+      ],
+      "answer": "$4$, $1.6211$ and $0$."
+    },
+    {
+      "type": "problem",
+      "title": "Modulate a pulse",
+      "text": "A 1 s pulse is multiplied by $\\cos(2\\pi \\cdot 10\\, t)$. Describe the spectrum: where are the peaks, how tall are they, and what is the magnitude at $10.5$ Hz?",
+      "solution": [
+        "The pulse has spectrum with magnitude $|\\mathrm{sinc}(f)|$. Multiplying by the cosine gives $\\tfrac12 X(f - 10) + \\tfrac12 X(f + 10)$. So there are two humps, at $+10$ Hz and $-10$ Hz, each of height $\\tfrac12 \\times 1 = 0.5$, with first zeros at $9$ and $11$ Hz (and at $-9$, $-11$). At $f = 10.5$ the nearby term gives $\\tfrac12|\\mathrm{sinc}(0.5)| = 0.3183$; the mirror hump contributes $\\tfrac12|\\mathrm{sinc}(20.5)| \\le 0.0078$, so the total is about $0.32$ (between $0.31$ and $0.33$, depending on the relative phase)."
+      ],
+      "answer": "Peaks of height $0.5$ at $\\pm 10$ Hz; about $0.32$ at $10.5$ Hz."
+    },
+    {
+      "type": "problem",
+      "title": "An RC filter in the lab",
+      "text": "A resistor of 10 k$\\Omega$ and a capacitor of 100 nF form an RC low-pass filter. Find the corner frequency. A 1 kHz sine of amplitude 2 V is applied: what are the amplitude and the phase of the steady output?",
+      "solution": [
+        "$RC = 10{,}000 \\times 100\\times 10^{-9} = 1$ ms. The corner is $1/(2\\pi RC) = 159.15$ Hz. At 1 kHz, $2\\pi f RC = 6.2832$, so $|H| = 1/\\sqrt{1 + 39.478} = 0.1572$ and the phase is $-\\arctan(6.2832) = -80.96^\\circ$. The output amplitude is $2 \\times 0.1572 = 0.3144$ V, lagging the input by $80.96^\\circ$."
+      ],
+      "answer": "$159.15$ Hz; $0.314$ V at $-81^\\circ$."
+    },
+    {
+      "type": "problem",
+      "title": "Convolve with the Laplace transform",
+      "text": "Find $e^{-t}u(t) * e^{-3t}u(t)$ using transforms, and evaluate it at $t = 1$.",
+      "solution": [
+        "The transforms are $1/(s+1)$ and $1/(s+3)$. Their product has the partial fractions $\\frac{1}{(s+1)(s+3)} = \\frac{1/2}{s+1} - \\frac{1/2}{s+3}$ (check: $\\frac{(s+3) - (s+1)}{2(s+1)(s+3)} = \\frac{1}{(s+1)(s+3)}$). The inverse of each piece is a decaying exponential, so $y(t) = \\tfrac12(e^{-t} - e^{-3t})u(t)$. At $t = 1$: $\\tfrac12(0.36788 - 0.04979) = 0.1590$. The region of convergence is $\\operatorname{Re} s > -1$."
+      ],
+      "answer": "$\\tfrac12(e^{-t} - e^{-3t})u(t)$, which is $0.1590$ at $t = 1$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997). Chapter 3 (eigenfunctions of LTI systems), chapter 4 (the continuous-time Fourier transform and the convolution property), chapter 9 (Laplace) and chapter 10 (Z).",
+        "Ronald N. Bracewell, The Fourier Transform and Its Applications, 3rd edition (McGraw-Hill, 2000). The chapter on convolution and its theorem.",
+        "Alan V. Oppenheim and Ronald W. Schafer, Discrete-Time Signal Processing, 3rd edition (Pearson, 2010). The convolution property of the discrete-time Fourier transform and the Z-transform.",
+        "Next: Fast Convolution with the FFT (#/math/convolution/fast-convolution)."
+      ]
+    }
+  ]
+}

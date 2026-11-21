@@ -1,0 +1,481 @@
+{
+  "title": "Impulse Response and LTI Systems",
+  "intro": "Why does one curve, the response to a single spike, tell you what a system does to any input at all? Because two properties, linearity and time invariance, force the output to be a convolution. This page derives that, reads it as a pile of echoes, and then asks what causality, stability and the step response look like in $h$.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two properties"
+    },
+    {
+      "type": "prose",
+      "text": "A system takes an input signal $x(t)$ and gives an output $y(t)$. Most systems can do anything to the input, and then no short description exists. The ones this topic is about obey two rules, and these rules are exactly what is needed."
+    },
+    {
+      "type": "prose",
+      "text": "Linearity. If input $x_1$ gives output $y_1$ and $x_2$ gives $y_2$, then the input $a\\,x_1 + b\\,x_2$ gives $a\\,y_1 + b\\,y_2$ for any numbers $a$ and $b$. Double the input and the output doubles; add two inputs and the outputs add. A bell struck twice as hard rings twice as loudly, and two strikes ring as the sum of their rings. This is the property called superposition."
+    },
+    {
+      "type": "prose",
+      "text": "Time invariance. If $x(t)$ gives $y(t)$, then the delayed input $x(t - T)$ gives the delayed output $y(t - T)$. The system does not change with the clock: strike the bell at noon or at midnight and it rings the same way, only later. A system with both properties is a linear time-invariant system, an LTI system."
+    },
+    {
+      "type": "prose",
+      "text": "Not everything has them. $y = x^2$ is not linear (doubling $x$ quadruples $y$). A system $y(t) = t\\,x(t)$ is linear but not time invariant, because its gain depends on the clock. The two properties are what make the rest of this page work."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The input as a pile of spikes"
+    },
+    {
+      "type": "prose",
+      "text": "The idea is to cut any input into tiny pieces, each of which is a spike, and to use the response to one spike for all of them. The unit impulse $\\delta(t)$ is a spike at $t = 0$ that is infinitely narrow and infinitely tall, with area 1. Its useful feature is the sifting property: multiplying a function $x(\\tau)$ by $\\delta(t - \\tau)$ and integrating over $\\tau$ picks out the one value at $\\tau = t$, where the spike sits,"
+    },
+    {
+      "type": "math",
+      "tex": "\\int_{-\\infty}^{\\infty} x(\\tau)\\,\\delta(t - \\tau)\\, d\\tau = x(t)"
+    },
+    {
+      "type": "prose",
+      "text": "Read right to left, this says any signal is a continuous pile of spikes: at each moment $\\tau$ there is a spike of area $x(\\tau)\\,d\\tau$, and adding them all up rebuilds $x(t)$. The same idea for sequences is exact and finite: $x = [1, 2, 3]$ is $1\\cdot\\delta[n] + 2\\cdot\\delta[n - 1] + 3\\cdot\\delta[n - 2]$, three spikes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The derivation"
+    },
+    {
+      "type": "prose",
+      "text": "Define the impulse response $h(t)$ as the output when the input is $\\delta(t)$. Now apply the two properties, one at a time."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Time invariance. An input $\\delta(t - \\tau)$ is the spike delayed by $\\tau$, so its output is $h$ delayed by $\\tau$: $h(t - \\tau)$.",
+        "Linearity (scaling). The input $x(\\tau)\\,d\\tau\\cdot\\delta(t - \\tau)$, a spike of area $x(\\tau)\\,d\\tau$, gives $x(\\tau)\\,d\\tau\\cdot h(t - \\tau)$.",
+        "Linearity (adding). The input $x(t)$ is the sum, over all $\\tau$, of those spikes, by the sifting property. So its output is the sum of the outputs:"
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "y(t) = \\int_{-\\infty}^{\\infty} x(\\tau)\\, h(t - \\tau)\\, d\\tau = (x * h)(t)"
+    },
+    {
+      "type": "prose",
+      "text": "That is the whole result. Nothing was assumed about the circuit, the bell or the hall except the two properties. (Strictly, adding up infinitely many outputs needs the system to be well behaved, continuous in the right sense; every physical system is.) The flip is now explained twice. In Flip, Slide, Multiply, Add (#/math/convolution/flip-and-slide) it was the age of the input. Here it is $h(t - \\tau)$: the response to the spike at $\\tau$, read at time $t$."
+    },
+    {
+      "type": "prose",
+      "text": "Take the finite case with numbers. Input $x = [1, 2, 3]$, impulse response $h = [1, 1, 1, 1]$. The three spikes give three scaled, delayed copies of $h$: the spike of weight 1 at $n = 0$ gives $[1, 1, 1, 1, 0, 0]$; the spike of weight 2 at $n = 1$ gives $[0, 2, 2, 2, 2, 0]$; the spike of weight 3 at $n = 2$ gives $[0, 0, 3, 3, 3, 3]$. Add the three rows: $[1, 3, 6, 6, 5, 3]$, which is the convolution worked in Discrete Convolution (#/math/convolution/discrete). The pile of echoes and the flip-and-slide sum are one calculation arranged two ways: by rows (one echo per input) or by columns (one sum per output time)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Seeing the echoes"
+    },
+    {
+      "type": "prose",
+      "text": "The 3D viewer can show the rows. In its fixed-τ setting each ribbon is $x(\\tau)\\,h(t - \\tau)$ along $t$ for one $\\tau$: a copy of the impulse response that starts at $\\tau$, scaled by the input there. The wall on the right is their sum, which is $y(t)$. In the preset below the input is a 1 s pulse, so the copies start at every $\\tau$ between 0 and 1, all with the same height 1, and the wall shows what they add up to."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "The output as a pile of echoes",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "decaying exponential e^(−at)u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed τ: echoes of h"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -90
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 15
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The view starts looking along the $\\tau$ axis (Turn −90, Tilt 15), so the wall with $y(t)$ faces you. Every ribbon is a copy of $e^{-(t - \\tau)}$ that begins at its own $\\tau$ with height 1 and dies away. There are no ribbons outside $0 \\le \\tau < 1$: $x$ is zero there, so every copy is zero and the viewer leaves it out. Raise Tilt to 60 and turn the view with Turn: the copies stack up like a ridge, each one starting a little later than the one before it. Where they overlap, they add, so the wall climbs while new copies are still starting and falls when the last one has started, peaking at the end of the pulse: at $t = 1$ the readout says $y = 0.632$. Then switch the 3D slices to fixed t to see the same landscape cut the other way."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Causality and the limits of the integral"
+    },
+    {
+      "type": "prose",
+      "text": "A system is causal if its output at $t$ depends only on inputs up to $t$, never on the future. A causal LTI system has $h(t) = 0$ for $t < 0$: it cannot respond to a spike before the spike arrives. Every impulse response in the viewer except the Gaussian bump starts at $t = 0$ and so is causal; the bump, cut off at $-0.5$ s, is slightly non-zero before 0, so as an $h$ it is not causal. Then $h(t - \\tau)$ is zero for $\\tau > t$ and the integral stops at the present,"
+    },
+    {
+      "type": "math",
+      "tex": "y(t) = \\int_{-\\infty}^{t} x(\\tau)\\, h(t - \\tau)\\, d\\tau"
+    },
+    {
+      "type": "prose",
+      "text": "If the input also starts at 0 (a switch is thrown at $t = 0$), the lower limit rises to 0 and $y(t) = \\int_0^t x(\\tau)\\,h(t - \\tau)\\,d\\tau$ for $t \\ge 0$. These are the limits you will use most; Worked Convolutions (#/math/convolution/worked-examples) shows how they become $\\max$ and $\\min$ of interval ends. A non-causal example is $h(t) = \\delta(t + 1)$, whose output is the input one second early: $y(t) = x(t + 1)$. A real-time system cannot do this, though a program working on a recorded file can."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stability"
+    },
+    {
+      "type": "prose",
+      "text": "A system is bounded-input bounded-output stable if every input that stays below some limit gives an output that stays below some limit. For an LTI system there is a clean test:"
+    },
+    {
+      "type": "math",
+      "tex": "\\int_{-\\infty}^{\\infty} |h(t)|\\, dt < \\infty"
+    },
+    {
+      "type": "prose",
+      "text": "Why it works. Suppose $|x(t)| \\le B$ for all $t$. Then $|y(t)| = |\\int x(\\tau)h(t - \\tau)d\\tau| \\le \\int |x(\\tau)|\\,|h(t - \\tau)|\\,d\\tau \\le B \\int |h|$. The output is bounded by $B$ times the area of $|h|$, and that is finite exactly when the test says so. If the area is infinite, a bad input exists: take $x(\\tau) = \\pm 1$ with the sign chosen to match that of $h(-\\tau)$, and $y(0) = \\int |h|$ is infinite. Examples: $h = e^{-at}u(t)$ with $a > 0$ has $\\int |h| = 1/a$, stable. A perfect integrator $h = u(t)$ has infinite area: fed the bounded step $u(t)$, its output is the ramp $y(t) = t$, which grows for ever. The echo $\\delta(t) + 0.5\\,\\delta(t - 1.5)$ has total weight 1.5, stable."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "A bounded input, an unbounded output",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "unit step u(t)"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "unit step u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 4
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Both signals are steps, so $h$ is the integrator. At $t = 4$ the readout says $y = 4.000$; drag Shift t to 2 and it says 2.000. The output is the ramp $y(t) = t$, which keeps growing as far as the viewer goes (to $t = 5$) although the input never exceeds 1. The overlap of the flipped step and the fixed step is the stretch from 0 to $t$, whose length is $t$. Now change h to the decaying exponential: the output flattens out at 1."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The step response"
+    },
+    {
+      "type": "prose",
+      "text": "The response to the unit step $u(t)$, call it $s(t)$, is a more practical measurement than the response to a spike, because a step can actually be made (flip a switch). Putting $x = u$ in the convolution integral, $s(t) = \\int h(\\tau)\\,u(t - \\tau)\\,d\\tau = \\int_{-\\infty}^{t} h(\\tau)\\,d\\tau$. The step response is the running integral of the impulse response, and so $h(t) = ds/dt$: differentiate a measured step response and you have the impulse response."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The RC circuit, worked"
+    },
+    {
+      "type": "prose",
+      "text": "A resistor $R = 1$ kΩ in series with a capacitor $C = 1$ µF, output across the capacitor, has $RC = 1$ ms and"
+    },
+    {
+      "type": "math",
+      "tex": "h(t) = \\frac{1}{RC}\\, e^{-t/RC}\\, u(t)"
+    },
+    {
+      "type": "prose",
+      "text": "The factor $1/RC$ makes the area of $h$ equal to 1, so a constant input of 1 V ends up as 1 V at the output. The step response is $s(t) = 1 - e^{-t/RC}$. After one time constant (1 ms) it has reached $1 - e^{-1} = 0.632$ V, after 3 ms $0.950$ V, and after 5 ms $0.993$ V. It is within 5 percent of its final value at $3\\,RC = 3.0$ ms (more exactly, $\\ln 20 = 2.996$ ms). Now apply a 1 V pulse lasting 1 ms. It is a step up at 0 followed by a step down at 1 ms, so by linearity and time invariance $y(t) = s(t) - s(t - 1\\text{ ms})$: at 1 ms, $0.632$ V; at 2 ms, $0.632\\,e^{-1} = 0.233$ V; at 3 ms, $0.0855$ V. The circuit is causal ($h = 0$ before 0), stable ($\\int|h| = 1$) and LTI, so everything on this page applies. The viewer's preset with decay rate 1 is this circuit with time in units of $RC$, up to the factor $1/RC$ which is 1 there."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "The step response of an RC circuit",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "unit step u(t)"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "decaying exponential e^(−at)u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 3
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "At $t = 3$ the readout gives $y = 0.950$, the value $1 - e^{-3}$. Slide to $t = 1$ for $0.632$. The shaded area is the area of $e^{-(t-\\tau)}$ for $\\tau$ from 0 to $t$, which is why the step response is the running integral of $h$. Raise the decay rate $a$ to 2 and set $t = 1$: the output is $(1 - e^{-2})/2 = 0.432$. The viewer's exponential is $e^{-at}$ and not $a\\,e^{-at}$, so its area is $1/a$ and the final value is $1/a$, not 1."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "The step response",
+      "text": "A system has $h(t) = e^{-2t}u(t)$. Find its step response, and its value at $t = 1$ and as $t \\to \\infty$.",
+      "solution": [
+        "$s(t) = \\int_0^t e^{-2\\tau} d\\tau = \\frac{1 - e^{-2t}}{2}$. At $t = 1$: $(1 - 0.1353)/2 = 0.4323$. As $t \\to \\infty$: $\\tfrac12$, the area of $h$, which is the gain of the system for a constant input. Differentiating $s$ gives back $e^{-2t}$, as it should."
+      ],
+      "answer": "$s(t) = (1 - e^{-2t})/2$, $s(1) = 0.4323$, final value $0.5$."
+    },
+    {
+      "type": "problem",
+      "title": "Causal and stable?",
+      "text": "Classify each impulse response as causal or not, and stable or not: (a) $2e^{-3t}u(t)$; (b) $e^{2t}u(t)$; (c) $e^{-|t|}$.",
+      "solution": [
+        "(a) Zero for $t < 0$, so causal. $\\int_0^\\infty 2e^{-3t}dt = 2/3$, finite, so stable. (b) Causal, but $\\int_0^\\infty e^{2t}dt$ is infinite: unstable, a spike makes the output grow without limit. (c) $e^{-|t|}$ is non-zero for $t < 0$, so it is not causal; its area is $2\\int_0^\\infty e^{-t}dt = 2$, so it is stable. Causality and stability are independent properties."
+      ],
+      "answer": "(a) causal, stable; (b) causal, unstable; (c) not causal, stable."
+    },
+    {
+      "type": "problem",
+      "title": "A faster RC",
+      "text": "An RC circuit has $RC = 0.5$ s. Write $h(t)$ and find how long its step response takes to reach 90 percent.",
+      "solution": [
+        "$h(t) = \\frac{1}{0.5}e^{-t/0.5}u(t) = 2e^{-2t}u(t)$. The step response is $1 - e^{-2t}$. Setting it to 0.9: $e^{-2t} = 0.1$, so $t = \\ln 10 / 2 = 1.1513$ s. In general the time to 90 percent is $2.303\\,RC$."
+      ],
+      "answer": "$h = 2e^{-2t}u(t)$; $t_{90\\%} \\approx 1.151$ s."
+    },
+    {
+      "type": "problem",
+      "title": "Is it LTI?",
+      "text": "For each system, decide whether it is linear and whether it is time invariant: (a) $y(t) = x(t) + 0.5\\,x(t - 1.5)$; (b) $y(t) = t\\,x(t)$.",
+      "solution": [
+        "(a) Linear: the output of $a x_1 + b x_2$ is $a y_1 + b y_2$ since the rule only multiplies and adds. Time invariant: delaying $x$ by $T$ delays $y$ by $T$, as the rule does not mention $t$. So it is LTI, with $h(t) = \\delta(t) + 0.5\\,\\delta(t - 1.5)$, the echo. For a 1 s pulse input, $y(2) = 0 + 0.5 \\cdot 1 = 0.5$: the echo of the pulse is still on at $t = 2$. (b) Linear, yes. Time invariant, no: shift the input by 1 to get $x(t - 1)$ and the output is $t\\,x(t - 1)$, but shifting the output gives $(t - 1)\\,x(t - 1)$. These differ, so (b) is not LTI and has no impulse response in this sense."
+      ],
+      "answer": "(a) LTI with $h = \\delta(t) + 0.5\\delta(t - 1.5)$; (b) linear but not time invariant."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997), chapter 2.",
+        "Ronald N. Bracewell, The Fourier Transform and Its Applications, 3rd edition (McGraw-Hill, 2000).",
+        "Steven W. Smith, The Scientist and Engineer's Guide to Digital Signal Processing (California Technical Publishing, 1997), free online at dspguide.com. Chapters 5 and 6 introduce linear systems and the impulse response."
+      ]
+    }
+  ]
+}
