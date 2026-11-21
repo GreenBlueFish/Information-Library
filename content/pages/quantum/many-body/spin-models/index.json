@@ -1,15 +1,43 @@
 {
   "title": "Spin Models",
-  "intro": "Interacting qubits are described by spin Hamiltonians: sums of single-qubit fields and two-qubit couplings written in Pauli operators. The Ising, transverse-field Ising, XX and Heisenberg models are the standard ones, and the QRC reservoir is a disordered, all-to-all relative of them.",
+  "intro": "A spin model is a Hamiltonian made of single-spin fields and two-spin couplings written in Pauli operators, and because a spin-1/2 is a qubit, it is also a Hamiltonian for a register of qubits. This page builds the Ising, transverse-field Ising, XX, XXZ and Heisenberg models as matrices, solves two spins by hand, follows the transverse-field Ising ground state through its phase transition, and ends on the disordered reservoir model and the cost of simulating it.",
   "blocks": [
+    {
+      "type": "prose",
+      "text": "What you need first: Composite Systems and Tensor Products (#/quantum/many-body/composite-systems) (the Kronecker product and the basis order $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$), Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations), Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors) and Symmetries and Conservation (#/quantum/dynamics/symmetries-and-conservation)."
+    },
     {
       "type": "heading",
       "level": 2,
-      "text": "Building a spin Hamiltonian"
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Write the Hamiltonian of two or three spins as an explicit matrix, one term at a time.",
+        "Name the Ising, transverse-field Ising, XX, XXZ and Heisenberg models from their terms, and say which of them conserves what.",
+        "Find the four energies of two coupled spins by hand, for the transverse-field Ising and the XXZ couplings.",
+        "Describe the transverse-field Ising ground state at tiny and huge field, and what happens in between.",
+        "Write down the Fujii-Nakajima reservoir Hamiltonian and say what disorder does to its energy levels.",
+        "Estimate the memory and time exact diagonalisation of $n$ spins needs, and why it stops at about 14 to 16 spins."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a spin model is, and why anyone writes one down"
     },
     {
       "type": "prose",
-      "text": "A spin model is a sum of local terms. Fields act on one qubit ($h_iZ_i$, $g_iX_i$), couplings on two ($J_{ij}\\,P_iQ_j$ for Paulis $P$, $Q$). Which terms appear, on which pairs, and with what signs and randomness decides everything about the dynamics: what is conserved, how fast information spreads, whether the model can be solved exactly, and whether it makes a good reservoir."
+      "text": "A bar magnet is made of a huge number of atoms, each acting like a tiny compass needle: a spin that can point up or down. Each spin feels the magnetic field around it and feels its neighbours. Nobody can write down the quantum state of $10^{23}$ atoms, so physicists throw away everything except what each spin feels on its own and how pairs of spins push on each other. The result is a spin model: a Hamiltonian that is a sum of simple pieces, one for each spin and one for each coupled pair."
+    },
+    {
+      "type": "prose",
+      "text": "A spin-$\\tfrac12$ and a qubit are the same mathematical object: the Pauli matrices $X$, $Y$, $Z$ from Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations) are the spin along three axes, and $\\vert0\\rangle$, $\\vert1\\rangle$ are spin up and down along $z$. So every Hamiltonian for a row of spins is one for a row of qubits; superconducting chips, trapped ions and Rydberg-atom arrays are all described, to a good approximation, by spin models."
+    },
+    {
+      "type": "prose",
+      "text": "Spin models are also the simplest place where many-body behaviour appears: interacting spins become entangled, a few dozen show a sharp change of behaviour (a phase transition) when you tune a knob, and with random couplings information injected at one spin spreads quickly over the whole register, which is what a quantum reservoir needs. The reservoir Hamiltonian of Fujii and Nakajima (2017), which this page ends on, is a spin model (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir))."
     },
     {
       "type": "figure",
@@ -20,20 +48,281 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "The classical and the transverse-field Ising model"
+      "text": "Building the Hamiltonian of two spins, term by term"
     },
     {
       "type": "prose",
-      "text": "The Ising model couples neighbouring spins through $Z_iZ_{i+1}$ only. Every term is diagonal, so the eigenstates are just bit strings and nothing ever happens dynamically: it is a classical model written in quantum notation. Add a transverse field and it becomes the most-studied quantum spin model:"
+      "text": "The notation $Z_1$ hides a trap: $Z$ is $2\\times2$, but a two-qubit state has four amplitudes, so $Z_1$ must be $4\\times4$. It means 'apply $Z$ to qubit 1, do nothing to qubit 2', the Kronecker product $Z\\otimes I$. Composite Systems and Tensor Products (#/quantum/many-body/composite-systems) builds these products entry by entry; here we collect the results, with qubit 1 the left factor and the basis ordered $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$."
     },
     {
       "type": "math",
-      "tex": "H_{\\mathrm{TFIM}} = -J\\sum_i Z_iZ_{i+1} - h\\sum_i X_i",
-      "caption": "The transverse-field Ising model on a chain."
+      "tex": "Z_1 = Z\\otimes I, \\qquad Z_2 = I\\otimes Z, \\qquad X_1 = X\\otimes I, \\qquad X_2 = I\\otimes X, \\qquad Z_1Z_2 = Z\\otimes Z",
+      "caption": "Operators on one or two spins of two. I is the 2 by 2 identity."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$Z_1$ is diagonal with entries $(1, 1, -1, -1)$: $+1$ if the first digit is 0, $-1$ if it is 1. $Z_2$ is diagonal with $(1, -1, 1, -1)$: the same rule for the second digit.",
+        "$Z_1Z_2$ is the product of two diagonal matrices, so multiply entries: $(1, -1, -1, 1)$. It is $+1$ when the digits agree ($\\vert00\\rangle$, $\\vert11\\rangle$) and $-1$ when they differ, so it measures whether the two spins are parallel along $z$. Every Ising-type coupling is built from it.",
+        "$X_1$ flips the first digit ($\\vert00\\rangle\\leftrightarrow\\vert10\\rangle$, $\\vert01\\rangle\\leftrightarrow\\vert11\\rangle$); its rows are $(0,0,1,0)$, $(0,0,0,1)$, $(1,0,0,0)$, $(0,1,0,0)$. $X_2$ flips the second digit; its rows are $(0,1,0,0)$, $(1,0,0,0)$, $(0,0,0,1)$, $(0,0,1,0)$."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Rule to remember: a Pauli on one spin flips or signs only the digit of that spin. $Z$-type operators are diagonal (they read digits); $X$-type operators have exactly one 1 in every row and column (they flip digits). Every term of a spin model is a product of such operators on a few spins."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a transverse-field Ising pair"
     },
     {
       "type": "prose",
-      "text": "The two terms compete. For $h \\ll J$ the ground state is (nearly) all spins aligned in $z$, with a pair of almost degenerate ground states related by flipping every spin; for $h \\gg J$ it is all spins along $+x$, with no $z$ order. In an infinitely long chain the change happens sharply at $h = J$, a quantum phase transition (Pfeuty 1970). The model conserves the global spin-flip parity $\\prod_iX_i$, the analogue of the $Z$-parity of the QRC reservoir."
+      "text": "Take the Hamiltonian $H = -J\\,Z_1Z_2 - h\\,(X_1 + X_2)$ with coupling $J = 1$ and field $h = 0.5$. Here $-JZ_1Z_2$ rewards parallel spins and $-h(X_1+X_2)$ is a field along $x$. We build the matrix."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The coupling part is $-1\\cdot\\mathrm{diag}(1,-1,-1,1) = \\mathrm{diag}(-1, 1, 1, -1)$. Parallel states get energy $-1$, antiparallel states $+1$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. The field part is $-0.5\\,(X_1 + X_2)$. Add the two flip matrices above: $X_1 + X_2$ has the entry 1 wherever the two basis states differ in exactly one digit, so it has 1 at positions $(00, 01)$, $(00, 10)$, $(01, 11)$, $(10, 11)$ and their mirror images, and 0 elsewhere. Multiply by $-0.5$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Add. The matrix has the following rows, in the order $00, 01, 10, 11$: row 1: $(-1, -0.5, -0.5, 0)$; row 2: $(-0.5, 1, 0, -0.5)$; row 3: $(-0.5, 0, 1, -0.5)$; row 4: $(0, -0.5, -0.5, -1)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Check two things. The matrix is symmetric, as a Hermitian real matrix must be. And $\\vert00\\rangle$ and $\\vert11\\rangle$ are not connected by a single entry (the corner entries are 0), because getting from one to the other needs two flips, one on each spin. Only states that differ in one digit are connected by the field."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three spins: an 8 by 8 matrix built the same way"
+    },
+    {
+      "type": "prose",
+      "text": "Nothing new is needed for more spins; only more identity factors. For three spins, $Z_1Z_2 = Z\\otimes Z\\otimes I$, $Z_2Z_3 = I\\otimes Z\\otimes Z$ and $X_2 = I\\otimes X\\otimes I$. The basis has $2^3 = 8$ states, ordered as binary numbers: $000, 001, 010, 011, 100, 101, 110, 111$."
+    },
+    {
+      "type": "prose",
+      "text": "Take the open three-spin transverse-field Ising chain $H = -J(Z_1Z_2 + Z_2Z_3) - h(X_1 + X_2 + X_3)$ with $J = 1$, $h = 0.5$. Open means there is no bond between spins 3 and 1."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The diagonal. Each state gets $-J$ for every neighbouring pair of equal digits and $+J$ for every unequal pair. For $000$ both bonds agree: $-2$. For $001$ bond 1-2 agrees and bond 2-3 does not: $0$. For $010$ both disagree: $+2$. All eight states give the diagonal $(-2, 0, 2, 0, 0, 2, 0, -2)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. The off-diagonal entries. $-hX_k$ connects each state to the state with digit $k$ flipped, so every state is connected to exactly three others, with amplitude $-h = -0.5$. For $\\vert000\\rangle$ those are $\\vert100\\rangle$, $\\vert010\\rangle$ and $\\vert001\\rangle$, so row 1 is $(-2, -0.5, -0.5, 0, -0.5, 0, 0, 0)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Count the entries: 4 nonzero diagonal entries plus $8\\times3 = 24$ off-diagonal ones, 28 out of $64$. A matrix with few nonzero entries is called sparse. For the $n$-spin chain each row has one diagonal entry and $n$ flips, so at most $(n+1)2^n$ of the $4^n$ entries are nonzero, a fact that matters in the last section."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. The energies. Diagonalising the $8\\times8$ matrix numerically (the code below) gives $-2.4032,\\ -2.2093,\\ -0.5,\\ -0.3061,\\ 0.3061,\\ 0.5,\\ 2.2093,\\ 2.4032$. They come in plus and minus pairs (a property of this chain, not of every Hamiltonian), and the lowest two are close together: they descend from the degenerate pair $\\vert000\\rangle$, $\\vert111\\rangle$, which the field splits slightly."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nI = np.eye(2); X = np.array([[0, 1], [1, 0]]); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1, -1])\n\ndef op(o, i, n):\n    \"\"\"Pauli o on spin i (0-based) of n spins, identity on the others.\"\"\"\n    m = np.eye(1)\n    for k in range(n):\n        m = np.kron(m, o if k == i else I)\n    return m\n\n# --- two spins, term by term (basis order 00, 01, 10, 11) ---\nZ1Z2 = op(Z, 0, 2) @ op(Z, 1, 2)\nprint(\"diag of Z1 Z2      :\", np.diag(Z1Z2).astype(int))\nprint(\"X1 = X (x) I, row 1:\", op(X, 0, 2)[0].astype(int), \" row 2:\", op(X, 0, 2)[1].astype(int))\nJ, h = 1.0, 0.5\nH2 = -J * Z1Z2 - h * (op(X, 0, 2) + op(X, 1, 2))\nprint(\"H for J=1, h=0.5:\\n\", H2 + 0.0)\nprint(\"eigenvalues      :\", np.round(np.linalg.eigvalsh(H2), 4))\nprint(\"+-sqrt(J^2+4h^2), +-J:\", round(np.sqrt(J**2 + 4*h**2), 4), J)\n\n# --- XXZ on two spins: H = J (XX + YY) + D J ZZ ---\nfor D in (0.0, 0.5, 1.0, 2.0):\n    Hx = J * (op(X, 0, 2) @ op(X, 1, 2) + op(Y, 0, 2) @ op(Y, 1, 2)) + D * J * Z1Z2\n    print(f\"XXZ  D={D}: levels\", np.round(np.linalg.eigvalsh(Hx).real, 4))\n\n# --- three spins ---\nn = 3\nH3 = -J * sum(op(Z, i, n) @ op(Z, i + 1, n) for i in range(n - 1)) - h * sum(op(X, i, n) for i in range(n))\nprint(\"\\n3 spins: shape\", H3.shape, \" nonzero entries\", np.count_nonzero(H3), \"of\", H3.size)\nprint(\"diagonal (the ZZ part):\", np.diag(H3) + 0.0)\nprint(\"row for |000>:\", H3[0] + 0.0)\nprint(\"levels:\", np.round(np.linalg.eigvalsh(H3), 4))\nP = op(X, 0, n) @ op(X, 1, n) @ op(X, 2, n)\nprint(\"product of X commutes with H3:\", np.allclose(P @ H3, H3 @ P))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the matrix above, with eigenvalues $-1.4142, -1, 1, 1.4142$ (derived by hand in the next section but one); the XXZ levels used there; the three-spin diagonal, row and 28 nonzero entries of 64; the eight levels listed above; and True for the symmetry check on $X_1X_2X_3$."
+    },
+    {
+      "type": "prose",
+      "text": "Common mistake: writing $Z_1Z_2$ as the matrix product $Z\\cdot Z = I$. Operators on different spins multiply as the Kronecker product $Z\\otimes Z$. Also check the digit order: a library that numbers qubits the other way round has your $Z_1$ as its $Z_n$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The standard models"
+    },
+    {
+      "type": "prose",
+      "text": "The well-known models are defined by which terms they contain, and characterised by what they conserve: by Symmetries and Conservation (#/quantum/dynamics/symmetries-and-conservation), a conserved quantity splits the state space into sectors that the dynamics never connects. Below, $\\sigma^+ = (X + iY)/2 = \\vert0\\rangle\\langle1\\vert$ and $\\sigma^- = (X - iY)/2 = \\vert1\\rangle\\langle0\\vert$ turn a $\\vert1\\rangle$, called an excitation, into $\\vert0\\rangle$ and back."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Ising model: $H = -J\\sum_i Z_iZ_{i+1}$ (possibly plus a field $h\\sum Z_i$). Every term is diagonal, so the eigenstates are bit strings and the energies are the diagonal entries; nothing evolves except phases. It is a classical model in quantum notation, and conserves every $Z_i$.",
+        "Transverse-field Ising model (TFIM): $H = -J\\sum_i Z_iZ_{i+1} - h\\sum_i X_i$. The field along $x$ is transverse (at right angles) to the coupling axis $z$. $X_i$ does not commute with $Z_iZ_{i+1}$, so the terms compete and the model is genuinely quantum. It conserves the global flip $\\prod_i X_i$, which leaves each $Z_iZ_{i+1}$ and each $X_i$ unchanged.",
+        "XX model: $H = J\\sum_i (X_iX_{i+1} + Y_iY_{i+1})$. Multiplying out $\\sigma^+_i\\sigma^-_{i+1} + \\sigma^-_i\\sigma^+_{i+1} = \\tfrac14[(X_i + iY_i)(X_{i+1} - iY_{i+1}) + (X_i - iY_i)(X_{i+1} + iY_{i+1})] = \\tfrac12(X_iX_{i+1} + Y_iY_{i+1})$, so each term moves one excitation to a neighbouring spin. It conserves the total $\\sum Z_i$, so excitations hop but are never created: a single excitation hops like a particle on a lattice. (With unequal $X$ and $Y$ strengths it is called the XY model.)",
+        "XXZ model: $H = J\\sum_i (X_iX_{i+1} + Y_iY_{i+1} + \\Delta Z_iZ_{i+1})$. The same hopping plus an interaction $\\Delta$ between neighbouring excitations. It still conserves the total $Z$; $\\Delta$ is a knob between the XX model ($\\Delta = 0$) and the Heisenberg model ($\\Delta = 1$).",
+        "Heisenberg model: $H = J\\sum_i (X_iX_{i+1} + Y_iY_{i+1} + Z_iZ_{i+1})$, the XXZ model with $\\Delta = 1$. It has no preferred direction: rotating every spin by the same rotation leaves $H$ unchanged, so it conserves the total spin along every axis. It is the textbook model of a magnet.",
+        "Pairwise $X_iX_j$ couplings with fields: $H = \\sum_{i<j} J_{ij}X_iX_j + \\sum_i h_iZ_i$. Since $X = \\sigma^+ + \\sigma^-$, each $X_iX_j$ contains two hops and two terms that create or destroy a pair of excitations. Total $Z$ is not conserved, but the number of excitations changes only by 0 or $\\pm2$, so its parity $\\prod_i Z_i$ is. This is the reservoir model of the QRC shelf."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The energy spectrum of two spins, by hand"
+    },
+    {
+      "type": "prose",
+      "text": "Two spins are small enough to solve by hand, and the hand solution shows what a computer hides: how a symmetry splits the matrix into blocks, what the levels depend on, and what the eigenstates look like."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Transverse-field Ising pair"
+    },
+    {
+      "type": "prose",
+      "text": "Take $H = -J Z_1Z_2 - h(X_1 + X_2)$ for general $J$ and $h$. We act with $H$ on each basis state. The field flips one digit, and the coupling gives $-J$ for parallel and $+J$ for antiparallel."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The four actions are"
+    },
+    {
+      "type": "math",
+      "tex": "H\\vert00\\rangle = -J\\vert00\\rangle - h(\\vert10\\rangle + \\vert01\\rangle), \\quad H\\vert11\\rangle = -J\\vert11\\rangle - h(\\vert01\\rangle + \\vert10\\rangle)"
+    },
+    {
+      "type": "math",
+      "tex": "H\\vert01\\rangle = +J\\vert01\\rangle - h(\\vert11\\rangle + \\vert00\\rangle), \\quad H\\vert10\\rangle = +J\\vert10\\rangle - h(\\vert00\\rangle + \\vert11\\rangle)"
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. $\\vert00\\rangle$ and $\\vert11\\rangle$ send the same amplitude into $\\vert01\\rangle$ and $\\vert10\\rangle$, and vice versa, which suggests symmetric and antisymmetric sums. Define $\\vert a\\rangle = (\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$, $\\vert b\\rangle = (\\vert00\\rangle - \\vert11\\rangle)/\\sqrt2$, $\\vert s\\rangle = (\\vert01\\rangle + \\vert10\\rangle)/\\sqrt2$ and $\\vert d\\rangle = (\\vert01\\rangle - \\vert10\\rangle)/\\sqrt2$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Act on $\\vert b\\rangle$. $H\\vert b\\rangle = \\tfrac{1}{\\sqrt2}\\big[-J\\vert00\\rangle - h(\\vert10\\rangle + \\vert01\\rangle) + J\\vert11\\rangle + h(\\vert01\\rangle + \\vert10\\rangle)\\big]$. The field terms cancel exactly, leaving $-J(\\vert00\\rangle - \\vert11\\rangle)/\\sqrt2 = -J\\vert b\\rangle$. So $\\vert b\\rangle$ is an eigenstate with energy $-J$, whatever $h$ is."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. In the same way, $H\\vert d\\rangle = \\tfrac{1}{\\sqrt2}\\big[J\\vert01\\rangle - h(\\vert11\\rangle + \\vert00\\rangle) - J\\vert10\\rangle + h(\\vert00\\rangle + \\vert11\\rangle)\\big] = +J\\vert d\\rangle$: an eigenstate with energy $+J$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5. The other two states are coupled to each other. $H\\vert a\\rangle = -J\\vert a\\rangle - \\tfrac{h}{\\sqrt2}\\cdot2(\\vert01\\rangle + \\vert10\\rangle) = -J\\vert a\\rangle - 2h\\vert s\\rangle$, because $\\tfrac{2}{\\sqrt2}(\\vert01\\rangle+\\vert10\\rangle) = \\tfrac{2}{\\sqrt2}\\sqrt2\\,\\vert s\\rangle = 2\\vert s\\rangle$. Likewise $H\\vert s\\rangle = +J\\vert s\\rangle - 2h\\vert a\\rangle$. So on the pair $\\{\\vert a\\rangle, \\vert s\\rangle\\}$ the Hamiltonian is the $2\\times2$ matrix with rows $(-J, -2h)$ and $(-2h, J)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 6. The eigenvalues $\\lambda$ of that $2\\times2$ matrix solve $(-J-\\lambda)(J-\\lambda) - 4h^2 = 0$. Expanding, $(-J-\\lambda)(J-\\lambda) = -J^2 + J\\lambda - J\\lambda + \\lambda^2 = \\lambda^2 - J^2$, so $\\lambda^2 = J^2 + 4h^2$ and"
+    },
+    {
+      "type": "math",
+      "tex": "E = \\pm\\sqrt{J^2 + 4h^2}, \\qquad E = \\pm J",
+      "caption": "The four energy levels of two transverse-field Ising spins."
+    },
+    {
+      "type": "prose",
+      "text": "Step 7. Numbers for $J = 1$, $h = 0.5$: $\\sqrt{1 + 4(0.25)} = \\sqrt2 = 1.4142$, so the levels are $-1.4142, -1, +1, +1.4142$, as the run above printed. The ground state, $\\lambda = -R$ with $R = \\sqrt{J^2 + 4h^2}$, lies in the $\\{a, s\\}$ pair; the first row of the eigenvector equation, $(-J + R)\\,c_a - 2h\\,c_s = 0$, gives $c_s/c_a = (R - J)/(2h) = 0.4142$. Normalising, $c_a = 1/\\sqrt{1 + 0.4142^2} = 0.9239$ and $c_s = 0.3827$. In the digit basis the ground state is $0.653\\,\\vert00\\rangle + 0.271\\,\\vert01\\rangle + 0.271\\,\\vert10\\rangle + 0.653\\,\\vert11\\rangle$, so the two spins agree with probability $0.427 + 0.427 = 0.854$: mostly, but the field has mixed in some disagreement."
+    },
+    {
+      "type": "prose",
+      "text": "Step 8. The gap between the two lowest levels is $E_1 - E_0 = -J - (-R) = R - J$. For small $h$ this is $J\\sqrt{1 + 4h^2/J^2} - J \\approx 2h^2/J$ (using $\\sqrt{1+\\epsilon}\\approx 1 + \\epsilon/2$), and for $h = 0.1$, $J = 1$ the exact gap is $0.0198$, matching $2(0.01) = 0.02$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "XXZ pair: the same trick with a different symmetry"
+    },
+    {
+      "type": "prose",
+      "text": "For $H = J(X_1X_2 + Y_1Y_2) + \\Delta J\\,Z_1Z_2$ we need what $X_1X_2$ and $Y_1Y_2$ do to basis states. $X_1X_2$ flips both digits. $Y\\vert0\\rangle = i\\vert1\\rangle$ and $Y\\vert1\\rangle = -i\\vert0\\rangle$, so $Y_1Y_2\\vert00\\rangle = (i)(i)\\vert11\\rangle = -\\vert11\\rangle$ and $Y_1Y_2\\vert01\\rangle = (i)(-i)\\vert10\\rangle = +\\vert10\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. On $\\vert00\\rangle$ the two terms cancel: $(X_1X_2 + Y_1Y_2)\\vert00\\rangle = \\vert11\\rangle - \\vert11\\rangle = 0$. Only $\\Delta J Z_1Z_2$ acts, giving the energy $+\\Delta J$. The same holds for $\\vert11\\rangle$: two eigenstates with energy $\\Delta J$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. On $\\vert01\\rangle$ the two terms add: $(X_1X_2+Y_1Y_2)\\vert01\\rangle = 2\\vert10\\rangle$. Together with $Z_1Z_2\\vert01\\rangle = -\\vert01\\rangle$, $H\\vert01\\rangle = -\\Delta J\\vert01\\rangle + 2J\\vert10\\rangle$, and $H\\vert10\\rangle = -\\Delta J\\vert10\\rangle + 2J\\vert01\\rangle$. On $\\{\\vert01\\rangle, \\vert10\\rangle\\}$ the matrix has rows $(-\\Delta J, 2J)$ and $(2J, -\\Delta J)$, with eigenvectors $\\vert s\\rangle$ (eigenvalue $-\\Delta J + 2J$) and $\\vert d\\rangle$ (eigenvalue $-\\Delta J - 2J$)."
+    },
+    {
+      "type": "math",
+      "tex": "E = \\Delta J\\ (\\text{twice}), \\qquad E = -\\Delta J + 2J, \\qquad E = -\\Delta J - 2J",
+      "caption": "The four levels of the XXZ pair."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Check with numbers. For $\\Delta = 0.5$, $J = 1$: $0.5, 0.5, 1.5, -2.5$, which matches the sorted run output $-2.5, 0.5, 0.5, 1.5$. For $\\Delta = 0$ (pure XX): $-2, 0, 0, 2$. For $\\Delta = 2$: $2, 2, 0, -4$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. The Heisenberg case $\\Delta = 1$ gives $E = J, J, J$ and $-3J$. Three equal levels and one lone level is the signature of full rotation symmetry: $\\vert00\\rangle, \\vert11\\rangle, \\vert s\\rangle$ form the triplet (total spin 1) and $\\vert d\\rangle$ is the singlet (total spin 0), which no common rotation of both spins changes. A shortcut confirms it: $X_1X_2 + Y_1Y_2 + Z_1Z_2 = 2\\,\\mathrm{SWAP} - I$, where SWAP exchanges the two spins; SWAP is $+1$ on the three symmetric states ($2 - 1 = 1$) and $-1$ on the antisymmetric one ($-2 - 1 = -3$)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: an XXZ pair",
+      "text": "For $J = 1$ and $\\Delta = 2$, find the four energies of $H = J(X_1X_2 + Y_1Y_2) + \\Delta J Z_1Z_2$, and the oscillation frequency of an excitation hopping between the two spins.",
+      "hint": "Use the formulas above: two levels at $\\Delta J$, and two at $-\\Delta J \\pm 2J$.",
+      "solution": [
+        "$\\vert00\\rangle$ and $\\vert11\\rangle$ have energy $\\Delta J = 2$.",
+        "$\\vert s\\rangle$ has $-\\Delta J + 2J = -2 + 2 = 0$ and $\\vert d\\rangle$ has $-\\Delta J - 2J = -4$.",
+        "The hopping frequency is the difference of these two: $0 - (-4) = 4 = 4J$."
+      ],
+      "answer": "Energies 2, 2, 0, -4; frequency E_s - E_d = 4"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ground states of the transverse-field Ising chain in both limits"
+    },
+    {
+      "type": "prose",
+      "text": "The TFIM has two terms that want incompatible things. The coupling wants every neighbouring pair to agree along $z$. The field wants every spin along $+x$, an equal superposition of up and down along $z$ with no preference about $z$ at all. Which one wins decides the ground state, the state of lowest energy. Two limits are easy."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Tiny field: the ordered ground states"
+    },
+    {
+      "type": "prose",
+      "text": "For $h = 0$ the Hamiltonian is diagonal. Each bond gives $-J$ if its spins agree and $+J$ if not, so the lowest energy has all spins agreeing: $-(n-1)J$ for the $n-1$ bonds of a chain, with two ground states $\\vert00\\cdots0\\rangle$ and $\\vert11\\cdots1\\rangle$, related by flipping every spin (for three spins, the two entries $-2$ of the diagonal above)."
+    },
+    {
+      "type": "prose",
+      "text": "Now turn on a small field. The product of all $X_i$ still commutes with $H$, so every eigenstate is even or odd under the global flip: the ground state is the even combination $(\\vert0\\cdots0\\rangle + \\vert1\\cdots1\\rangle)/\\sqrt2$ plus small admixtures, a cat state, and the odd combination sits just above. For two spins, the exact ground energy $-\\sqrt{J^2+4h^2}\\approx -J - 2h^2/J$ and the odd partner stays at $-J$. For $n$ spins the splitting is of order $h^n/J^{n-1}$, because the two ordered states are connected only by $n$ flips in a row: the six-spin gap at $h = 0.3$ is $0.0013$, the four-spin one $0.0147$."
+    },
+    {
+      "type": "prose",
+      "text": "Because the ground state superposes two opposite arrangements, a single spin averages $\\langle Z_i\\rangle = 0$. The order shows in the correlation $\\langle Z_1Z_n\\rangle$: do the ends of the chain agree? In the cat state they do, so $\\langle Z_1Z_n\\rangle\\approx1$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Huge field: the paramagnet"
+    },
+    {
+      "type": "prose",
+      "text": "For $J = 0$ every spin is independent and $-hX_i$ has lowest energy $-h$ in $\\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$, where $X = +1$. The ground state is the product $\\vert+\\rangle^{\\otimes n}$ with energy $-nh$ and no correlation: $\\langle Z_1Z_n\\rangle = \\langle Z_1\\rangle\\langle Z_n\\rangle = 0$ because $\\langle+\\vert Z\\vert+\\rangle = 0$. A large finite $h$ only slightly distorts this: for two spins $-\\sqrt{J^2+4h^2}\\approx -2h - J^2/(4h)$, which for $h = 5$, $J = 1$ gives $-10.05$ (exact $-10.0499$). Flipping one spin from $+x$ to $-x$ costs $2h$, so the gap is large."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1., -1.]).astype(complex)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\ndef tfim(n, J, h):\n    \"\"\"Transverse-field Ising chain, open ends: H = -J sum Z_i Z_{i+1} - h sum X_i.\"\"\"\n    return -J * sum(op(Z, i, n) @ op(Z, i + 1, n) for i in range(n - 1)) - h * sum(op(X, i, n) for i in range(n))\nn = 8\nprint(\" h/J | ground-state <Z1 Z_n> | gap E1-E0\")\nfor h in (0.2, 0.5, 1.0, 2.0, 5.0):\n    E, V = np.linalg.eigh(tfim(n, 1.0, h)); g = V[:, 0]\n    corr = np.vdot(g, op(Z, 0, n) @ op(Z, n - 1, n) @ g).real\n    print(f\" {h:3.1f} | {corr:21.3f} | {E[1] - E[0]:.4f}\")\n# Spin-flip symmetry: the product of all X commutes with H\nP = np.eye(2**n)\nfor i in range(n): P = P @ op(X, i, n)\nH = tfim(n, 1.0, 0.7)\nprint(\"[H, X1...Xn] = 0:\", np.allclose(H @ P, P @ H))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run, for an 8-spin open chain with $J = 1$: $\\langle Z_1Z_8\\rangle$ falls from 0.960 at $h = 0.2$ through 0.743 at $h = 0.5$ and 0.119 at $h = 1$ to essentially 0 at $h = 2$ and 5. The gap is 0.0000 to four places at $h = 0.2$ (the near-degenerate ordered pair) and opens up for large $h$ (2.19 at $h = 2$, 8.14 at $h = 5$). The product of all $X_i$ commutes with $H$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The phase transition, in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Between the two limits the ground state must change from a cat state, with order along $z$ across the whole chain, to a product of $x$-pointing spins with none. Does the change happen smoothly, or all at once?"
+    },
+    {
+      "type": "prose",
+      "text": "An everyday relative: heat a piece of iron and at a particular temperature it suddenly stops being a magnet, because thermal jostling destroys the agreement between neighbouring atomic spins. That is a phase transition. In the TFIM the change happens at zero temperature: the field itself makes each spin fluctuate between up and down, a quantum effect, and when it is strong enough those fluctuations destroy the agreement. This is a quantum phase transition. Pfeuty (1970) solved the infinite chain exactly: it happens at precisely $h = J$."
+    },
+    {
+      "type": "prose",
+      "text": "The transition has two signatures in the widget. The end-to-end correlation $\\langle Z_1Z_n\\rangle$ is close to 1 in the ordered phase and close to 0 in the disordered one. And Pfeuty's solution gives the infinite chain an excitation gap of $2\\vert h - J\\vert$: it closes at $h = J$ and grows like $2(h - J)$ beyond. (Below $h = J$, $2(J - h)$ is the gap above the cat pair; the widget plots $E_1 - E_0$, the tiny splitting inside the pair, which is almost zero there.) A vanishing gap means excitations cost almost no energy, so near $h = J$ the chain responds slowly and strongly to disturbances."
     },
     {
       "type": "widget",
@@ -69,55 +358,189 @@
     },
     {
       "type": "prose",
-      "text": "Try it: each point is an exact diagonalisation of the chain. At small $h$ the end-to-end correlation is close to 1 (the spins agree across the chain) and the gap is nearly zero (two almost-degenerate ordered states). Past $h \\approx J$ the correlation falls away and the gap opens. With only 4 to 6 spins the change is smooth; it becomes a sharp transition at $h = J$ only for an infinitely long chain."
+      "text": "Try this. Leave 6 spins and largest field 3. (1) The correlation curve starts at 1 and stays above about 0.9 until $h\\approx0.3$: the ends agree. (2) The gap curve there is almost zero (about 0.001 at $h = 0.3$), the almost-degenerate ordered pair. (3) Follow both curves through the vertical line at $h = J$: the correlation is about 0.16 at $h = 1$ and below 0.03 by $h = 1.5$, while the gap has opened to about 0.48 at $h = 1$, 1.34 at $h = 1.5$ and 4.25 at $h = 3$, close to $2(h - J) = 4$. (4) Set 4 spins: the change is less sharp (at $h = 1$ the correlation is 0.23 and the gap 0.69). With so few spins the 'transition' is a smooth crossover; only a very long chain shows a sharp kink at $h = J$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: the gap formula",
+      "text": "Use the infinite-chain gap $2\\vert h - J\\vert$ with $J = 1$ to predict the gap at $h = 1.5$ and at $h = 3$, and compare with the six-spin widget values 1.34 and 4.25.",
+      "hint": "Put the numbers into the formula.",
+      "solution": [
+        "$2\\vert1.5 - 1\\vert = 1$ and $2\\vert3 - 1\\vert = 4$.",
+        "The six-spin chain gives $1.34$ and $4.25$, larger by $34\\%$ and $6\\%$: a short open chain is not the infinite chain, and the difference matters most near the transition."
+      ],
+      "answer": "1 and 4; the six-spin values are larger, by 34% and 6%"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "XX, XY and Heisenberg couplings"
+      "text": "Disorder and the Fujii-Nakajima reservoir Hamiltonian"
     },
     {
-      "type": "list",
-      "items": [
-        "XX (flip-flop) coupling $X_iX_j + Y_iY_j$: moves an excitation from one spin to the other and conserves the total $Z$. A chain of these is a hopping model for one particle at a time.",
-        "Single $X_iX_j$ coupling: contains both flip-flop terms and pair creation ($\\sigma^+\\sigma^+ + \\sigma^-\\sigma^-$), so it changes the number of excitations by 0 or 2 and conserves only the parity. This is the coupling of the Fujii–Nakajima reservoir.",
-        "Heisenberg coupling $X_iX_j + Y_iY_j + Z_iZ_j$: rotationally symmetric, conserving the total spin in every direction."
-      ]
+      "type": "prose",
+      "text": "Why does a reservoir not use the neat TFIM chain? A uniform chain has many symmetries and many exactly repeated energy levels. A reservoir wants the opposite: many different oscillation frequencies, no conserved quantity beyond what it cannot avoid, and fast mixing of a signal injected at one spin into all the others. The simplest way to get this is to make the couplings and fields random."
+    },
+    {
+      "type": "prose",
+      "text": "Fujii and Nakajima proposed random couplings between every pair of spins and a uniform field $h$ along $z$. The QRC shelf (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)) also gives each field a random offset of width $W$, following Martínez-Peña and coworkers (2021), so that the amount of disorder becomes a knob; $W = 0$ is the original model:"
+    },
+    {
+      "type": "math",
+      "tex": "H = \\sum_{i<j} J_{ij}\\,X_iX_j + \\sum_i h_i\\,Z_i, \\qquad J_{ij}\\ \\text{uniform in}\\ \\left[-\\tfrac J2, \\tfrac J2\\right], \\qquad h_i = h + \\delta_i,\\ \\ \\delta_i\\ \\text{uniform in}\\ \\left[-\\tfrac W2, \\tfrac W2\\right]",
+      "caption": "The disordered reservoir Hamiltonian: random XX couplings between every pair, a field along z on each spin with a random offset of width W."
+    },
+    {
+      "type": "prose",
+      "text": "Count the random numbers: one $J_{ij}$ for each of the $\\binom n2 = n(n-1)/2$ pairs and one $h_i$ for each spin, so $15 + 6 = 21$ for $n = 6$ and $28 + 8 = 36$ for $n = 8$. The coupling graph is the right-hand panel of the figure at the top. Unlike a chain, nothing is exactly solvable any more."
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "Exactly solvable and generic models"
+      "level": 3,
+      "text": "Worked example: a three-spin reservoir"
     },
     {
       "type": "prose",
-      "text": "Nearest-neighbour chains with only $XX$ and $YY$ couplings and $Z$ fields, the transverse-field Ising chain among them, map by the Jordan–Wigner transformation onto free fermions (Lieb, Schultz and Mattis 1961). Their dynamics can be computed classically with $2n\\times2n$ matrices instead of $2^n\\times2^n$ ones. They have many conserved quantities and are integrable. Adding longer-range couplings, randomness in the couplings, or a second field direction generally destroys this: the model becomes chaotic (ergodic), with level repulsion and fast scrambling."
+      "text": "Draw one example with $J_{12} = 0.3$, $J_{13} = -0.2$, $J_{23} = 0.4$ and fields $h_1 = 1.0$, $h_2 = 0.9$, $h_3 = 1.1$. The Hamiltonian is $H = 0.3X_1X_2 - 0.2X_1X_3 + 0.4X_2X_3 + Z_1 + 0.9Z_2 + 1.1Z_3$. It is an $8\\times8$ matrix. We look at what it does to $\\vert000\\rangle$."
     },
     {
       "type": "prose",
-      "text": "The QRC reservoir is deliberately of the second kind. Its Hamiltonian $\\sum_{i<j}J_{ij}X_iX_j + \\sum_ih_iZ_i$ has random couplings on every pair, which breaks the free-fermion mapping and leaves parity as the only exact symmetry (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)). Strong random fields push it back towards integrability by localising excitations, which is the trade-off explored on Dynamical Regimes (#/qrc/models/dynamical-regimes)."
+      "text": "Step 1. Each $X_iX_j$ flips two digits, so the terms send $\\vert000\\rangle$ to $\\vert110\\rangle$ (amplitude $0.3$), $\\vert101\\rangle$ ($-0.2$) and $\\vert011\\rangle$ ($0.4$). The fields leave it in place with energy $h_1 + h_2 + h_3 = 3.0$ (every spin has $Z = +1$)."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Flipping two digits changes the number of 1s by 0 or 2, so from $000$ we only reach states with an even number of ones: $000, 011, 101, 110$. That is the parity symmetry $\\prod_iZ_i$ (Symmetries and Conservation (#/quantum/dynamics/symmetries-and-conservation)): the space splits into an even and an odd block ($001, 010, 100, 111$) of dimension 4, and in general two blocks of $2^{n-1}$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Write the even block in the order $000, 011, 101, 110$. The diagonal holds the field energies: $000$: $1.0 + 0.9 + 1.1 = 3.0$; $011$: $1.0 - 0.9 - 1.1 = -1.0$; $101$: $-1.0 + 0.9 - 1.1 = -1.2$; $110$: $-1.0 - 0.9 + 1.1 = -0.8$. Two states differing in digits $i$ and $j$ are connected by $J_{ij}$ (for example $000\\leftrightarrow011$ and $101\\leftrightarrow110$ differ in digits 2 and 3, so $0.4$). The rows: $(3, 0.4, -0.2, 0.3)$; $(0.4, -1, 0.3, -0.2)$; $(-0.2, 0.3, -1.2, 0.4)$; $(0.3, -0.2, 0.4, -0.8)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Diagonalise numerically (a general $4\\times4$ has no short formula). The even block has energies $-1.6978, -0.8096, -0.5572, 3.0646$, which sum to its trace $3 - 1 - 1.2 - 0.8 = 0$, a check; the odd block has $-3.0821, 0.4485, 1.1271, 1.5065$. All eight levels are distinct (smallest spacing $0.25$) and give $8\\cdot7/2 = 28$ different energy differences, so up to 28 oscillation frequencies. A uniform version ($J_{ij} = 0.3$, $h_i = 1$) has two doubly degenerate levels, because identical spins can be exchanged; randomness removes such repeats."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Level spacings: how to see 'generic' in numbers"
+    },
+    {
+      "type": "prose",
+      "text": "A quick test that a Hamiltonian is generic looks at the gaps between neighbouring energy levels. Independent random levels (a Poisson process) can sit arbitrarily close. In a generic, strongly interacting Hamiltonian levels repel: two that nearly touch get pushed apart, so very small gaps are rare. One number captures this, the ratio $r_k = \\min(g_k, g_{k+1}) / \\max(g_k, g_{k+1})$ of consecutive gaps $g_k = E_{k+1} - E_k$ (levels sorted), between 0 and 1. Averaged over the spectrum, $\\langle r\\rangle = 2\\ln2 - 1\\approx0.386$ for Poisson levels and $\\approx0.53$ for the level repulsion of random-matrix theory (Oganesyan and Huse 2007; Atas et al. 2013). Do the test within one symmetry block: levels from the two parity blocks do not repel, and mixing them lowers $\\langle r\\rangle$ spuriously."
     },
     {
       "type": "code",
       "lang": "python",
-      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1., -1.]).astype(complex)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\ndef tfim(n, J, h):\n    \"\"\"Transverse-field Ising chain, open ends: H = -J sum Z_i Z_{i+1} - h sum X_i.\"\"\"\n    return -J * sum(op(Z, i, n) @ op(Z, i + 1, n) for i in range(n - 1)) - h * sum(op(X, i, n) for i in range(n))\nn = 8\nprint(\" h/J | ground-state <Z1 Z_n> | gap E1-E0\")\nfor h in (0.2, 0.5, 1.0, 2.0, 5.0):\n    E, V = np.linalg.eigh(tfim(n, 1.0, h)); g = V[:, 0]\n    corr = np.vdot(g, op(Z, 0, n) @ op(Z, n - 1, n) @ g).real\n    print(f\" {h:3.1f} | {corr:21.3f} | {E[1] - E[0]:.4f}\")\n# Spin-flip symmetry: the product of all X commutes with H\nP = np.eye(2**n)\nfor i in range(n): P = P @ op(X, i, n)\nH = tfim(n, 1.0, 0.7)\nprint(\"[H, X1...Xn] = 0:\", np.allclose(H @ P, P @ H))"
+      "source": "import numpy as np\n\nX = np.array([[0., 1.], [1., 0.]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\n\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n):\n        m = np.kron(m, o if k == i else I2)\n    return m\n\ndef reservoir(n, J, h, W, rng):\n    \"\"\"H = sum_{i<j} J_ij X_i X_j + sum_i h_i Z_i with J_ij ~ U[-J/2, J/2], h_i = h + U[-W/2, W/2].\"\"\"\n    H = np.zeros((2**n, 2**n))\n    for i in range(n):\n        for j in range(i + 1, n):\n            H += rng.uniform(-J / 2, J / 2) * op(X, i, n) @ op(X, j, n)\n        H += (h + rng.uniform(-W / 2, W / 2)) * op(Z, i, n)\n    return H\n\ndef mean_gap_ratio(E):\n    \"\"\"Average of min(d_k, d_k+1) / max(d_k, d_k+1) over neighbouring level gaps d_k.\"\"\"\n    d = np.diff(E)\n    d = d[d > 1e-9]\n    return np.mean(np.minimum(d[1:], d[:-1]) / np.maximum(d[1:], d[:-1]))\n\nn, rng = 8, np.random.default_rng(1)\nparity = np.ones(2**n)\nfor i in range(n):\n    parity *= np.diag(op(Z, i, n))\neven = np.where(parity > 0)[0]            # one parity block, dimension 2^(n-1)\nprint(\"block dimension:\", len(even), \"of\", 2**n)\nprint(\" disorder W | mean gap ratio\")\nfor W in (0.0, 5.0, 20.0):\n    vals = []\n    for _ in range(40):\n        E = np.linalg.eigvalsh(reservoir(n, 1.0, 1.0, W, rng)[np.ix_(even, even)])\n        vals.append(mean_gap_ratio(E[len(E) // 4: 3 * len(E) // 4]))   # middle half of the spectrum\n    print(f\"{W:10.1f} | {np.mean(vals):.3f}\")\nprint(\"random-matrix value about 0.53, independent levels (Poisson) 0.386\")\n"
     },
     {
       "type": "prose",
-      "text": "Output of the run, for an 8-spin open chain with $J = 1$: the end-to-end correlation $\\langle Z_1Z_8\\rangle$ in the ground state falls from 0.960 at $h = 0.2$ through 0.743 at $h = 0.5$ and 0.119 at $h = 1$ to essentially 0 at $h = 2$ and 5. The gap between the two lowest levels is tiny for small $h$ (0.0000 to four places at $h = 0.2$, the near-degenerate ordered pair) and opens up for large $h$ (2.19 at $h = 2$, 8.14 at $h = 5$). The product of all $X_i$ commutes with $H$."
+      "text": "Output of the run ($n = 8$, $J = h = 1$, 40 random draws, middle half of the even block of dimension 128): $\\langle r\\rangle = 0.527$ at $W = 0$, $0.451$ at $W = 5$ and $0.402$ at $W = 20$. Random couplings alone give nearly the random-matrix value; strong random fields push toward $0.386$, because each spin is then dominated by its own field and the levels become sums of nearly independent pieces (excitations localise). Dynamical Regimes (#/qrc/models/dynamical-regimes) maps out this trade-off; a reservoir normally wants the ergodic side or the crossover."
+    },
+    {
+      "type": "prose",
+      "text": "The only exact symmetry left is the parity $\\prod Z_i$: one bit is conserved because it cannot be avoided, and everything else mixes."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which symmetry survives",
+      "text": "For $H = \\sum J_{ij}X_iX_j + \\sum h_iZ_i$ with all $h_i \\ne 0$, is $\\prod_i X_i$ conserved? Is $\\prod_i Z_i$?",
+      "hint": "Use the fact that two Paulis on the same spin anticommute if they are different, and that Paulis on different spins commute.",
+      "solution": [
+        "$\\prod_iX_i$ commutes with each $X_iX_j$ but anticommutes with each $Z_i$ (it flips the sign of $Z_i$). So $\\prod X_i\\, H\\prod X_i = \\sum J_{ij}X_iX_j - \\sum h_iZ_i \\ne H$ when some $h_i\\neq0$.",
+        "$\\prod_iZ_i$ anticommutes with $X_i$ and with $X_j$, so it commutes with their product $X_iX_j$, and it commutes with each $Z_i$. So it commutes with $H$ and is conserved."
+      ],
+      "answer": "No for the flip, yes for the parity"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Where QRC uses this"
+      "text": "Exact diagonalisation and the cost of two to the n"
+    },
+    {
+      "type": "prose",
+      "text": "The most straightforward numerical method is exact diagonalisation: build the $2^n\\times2^n$ matrix as we did for three spins and ask a library for its eigenvalues and eigenvectors. It gives everything (levels, ground state, $e^{-iHt}$); its weakness is the size of the matrix."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The dimension is $D = 2^n$. A state vector has $D$ complex numbers at 16 bytes each (two 64-bit floats), so $16\\cdot2^n$ bytes. A dense matrix has $D^2$ entries, so $16\\cdot4^n$ bytes. Diagonalising a dense matrix takes a number of operations proportional to $D^3 = 8^n$: each extra spin multiplies the time by 8 and the memory by 4."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Memory, from the second table of the run below. A state vector is 16.4 kB for 10 spins, 17.2 GB for 30 (a large workstation) and 18 PB for 50. A dense matrix is 16.8 MB for 10 spins, 4.29 GB for 14 and 17.6 TB for 20, more than any single machine has."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import time\nimport numpy as np\n\ndef tfim(n, J=1.0, h=0.7):\n    \"\"\"Dense real-symmetric H = -J sum Z_i Z_{i+1} - h sum X_i, built directly from bit patterns.\"\"\"\n    D = 2**n\n    H = np.zeros((D, D))\n    s = np.arange(D)\n    zz = np.zeros(D)\n    for i in range(n - 1):\n        a = (s >> (n - 1 - i)) & 1\n        b = (s >> (n - 2 - i)) & 1\n        zz += np.where(a == b, 1, -1)\n    H[s, s] = -J * zz\n    for i in range(n):\n        H[s, s ^ (1 << (n - 1 - i))] += -h\n    return H\n\nprint(\" n | dimension | matrix (MB) | eigh time (s)\")\nfor n in range(6, 12):\n    H = tfim(n)\n    t = time.perf_counter()\n    np.linalg.eigvalsh(H)\n    dt = time.perf_counter() - t\n    print(f\"{n:2d} | {2**n:9d} | {H.nbytes / 1e6:11.1f} | {dt:8.3f}\")\n\ndef fmt(b):\n    for unit in (\"B\", \"kB\", \"MB\", \"GB\", \"TB\", \"PB\", \"EB\"):\n        if b < 1000:\n            return f\"{b:.3g} {unit}\"\n        b /= 1000\n    return f\"{b:.3g} ZB\"\n\nprint(\"\\n n | state vector | dense H (complex128)\")\nfor n in (10, 14, 20, 30, 40, 50):\n    D = 2**n\n    print(f\"{n:2d} | {fmt(16 * D):>12} | {fmt(16 * D * D):>16}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Time, from the first table (machine-dependent). On one core here the eigenvalues took about $0.002$ s for $n = 8$, $0.07$ s for $n = 10$ and $0.5$ s for $n = 11$; from $n = 9$ on each extra spin multiplies the time by roughly 5 to 8, approaching the cubic law's 8."
+    },
+    {
+      "type": "prose",
+      "text": "Clearly the matrix, not the state, is the problem. There are three common ways around it."
     },
     {
       "type": "list",
       "items": [
-        "The Fujii–Nakajima Hamiltonian, its parity symmetry and what each term does: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
-        "Integrable, ergodic and localised regimes and their level statistics: Dynamical Regimes (#/qrc/models/dynamical-regimes).",
-        "Why a free-fermion reservoir offers no complexity advantage: Quantum Advantage (#/qrc/theory/quantum-advantage).",
-        "Rydberg arrays realise an Ising model with a transverse drive: Analog Platforms (#/qrc/hardware/analog-platforms)."
+        "Use the symmetry blocks. A conserved parity splits the matrix into two blocks of size $D/2$, each costing $(D/2)^3 = D^3/8$, so $D^3/4$ in all: a factor 4 saved. Total $Z$ conservation gives $n+1$ blocks of sizes $\\binom nk$; for $n = 16$ the largest has $\\binom{16}{8} = 12870$ states instead of $65536$.",
+        "Do not store the matrix. A spin-model Hamiltonian is sparse: each row has one diagonal entry plus one entry per flip term, so $n + 1$ for the chain (28 of 64 entries for three spins) and $1 + n(n-1)/2$ for the all-to-all reservoir, against $2^n$ in a dense row. You can apply it to a vector by flipping bits, without ever forming it. With sparse methods you can find the lowest few levels (the Lanczos method) or evolve a state by $e^{-iHt}$ (the Krylov method) holding only a few vectors of $16\\cdot2^n$ bytes each. This pushes exact methods to roughly 30 to 40 spins on a big machine.",
+        "Exploit special structure. The uniform TFIM and XX chains map onto free fermions (Lieb, Schultz and Mattis 1961; Pfeuty 1970) and need only $2n\\times2n$ matrices, so they can be simulated for hundreds of spins; random all-to-all models have no such structure."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For the QRC shelf this matters twice. A 10-qubit reservoir is easy to simulate exactly: its density matrix has $2^{20}\\approx10^6$ entries, 16.8 MB. A 20-qubit reservoir is far beyond a dense simulation, and that gap between what a classical computer can emulate and what a device just does is the subject of Quantum Advantage (#/qrc/theory/quantum-advantage)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together: a three-spin Ising chain from end to end"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. For the open three-spin chain $H = -(Z_1Z_2 + Z_2Z_3) - 0.5(X_1 + X_2 + X_3)$, (a) bound the ground energy with two trial states, (b) check the global-flip symmetry splits the problem, (c) find the gap, and (d) say what the numbers look like for 12 spins."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Trial state $\\vert000\\rangle$. The expectation value of the diagonal is $-2$ (both bonds agree, $-J$ each); the field terms contribute nothing because $\\langle000\\vert X_i\\vert000\\rangle = 0$. So $\\langle H\\rangle = -2$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Trial state $\\vert{+}{+}{+}\\rangle$. The coupling terms average to zero ($\\langle+\\vert Z\\vert+\\rangle = 0$) and each $X_i$ contributes $-h\\cdot1 = -0.5$: $\\langle H\\rangle = -1.5$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. By the variational principle (the ground energy is the lowest expectation value any state can have) $E_0\\le-2$. The exact $E_0 = -2.4032$ is lower than both trial energies: the true ground state is neither all-up (the field adds fluctuations) nor all-$x$ (the coupling adds correlations)."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Symmetry. $P = X_1X_2X_3$ commutes with $H$ (the run above prints True); its eigenvalues are $\\pm1$, with 4 states each. By computer, the $P = +1$ sector has energies $-2.4032, -0.3061, 0.5, 2.2093$ and the $P = -1$ sector $-2.2093, -0.5, 0.3061, 2.4032$. The ground state is even and the first excited state odd: the cat pair."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5. The gap is $E_1 - E_0 = -2.2093 - (-2.4032) = 0.1939$, small compared with $J = 1$ because $h/J = 0.5$ is in the ordered regime. For two spins it is $\\sqrt2 - 1 = 0.414$; three spins need one more flip to connect $000$ with $111$, so the gap is smaller, as the $h^n/J^{n-1}$ rule says."
+    },
+    {
+      "type": "prose",
+      "text": "Step 6. Twelve spins. The dimension is $2^{12} = 4096$; a dense real matrix takes $8\\cdot4096^2$ bytes $= 134$ MB, easy for a laptop. Diagonalising it gives $E_0 = -11.892$ and $E_1 - E_0 = 0.00037$: with twelve flips between the two ordered states, the cat pair is almost exactly degenerate. The next level is $1.077$ higher, close to the infinite-chain gap $2(J - h) = 1$: a real excitation, a domain wall (one bond whose spins disagree, costing $2J$ at $h = 0$)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A spin model is a sum of one-spin fields and two-spin couplings written with Pauli operators; spins and qubits are the same objects.",
+        "To build a term, take Kronecker products with the identity on every other spin: $Z_1Z_2 = Z\\otimes Z$, $X_2 = I\\otimes X$. $Z$-type terms are diagonal, $X$-type terms flip digits; the $2^n\\times2^n$ matrix is sparse.",
+        "Ising is diagonal; transverse-field Ising conserves $\\prod X_i$; XX and XXZ conserve total $Z$; Heisenberg conserves total spin; $X_iX_j$ couplings with $Z$ fields conserve only the parity $\\prod Z_i$.",
+        "Two spins can be solved by hand: the TFIM gives $\\pm\\sqrt{J^2+4h^2}$ and $\\pm J$, the XXZ pair gives $\\Delta J$ (twice) and $-\\Delta J\\pm2J$.",
+        "The TFIM ground state is an ordered cat state for $h\\ll J$ and a product of $x$-pointing spins for $h\\gg J$; the change happens at $h = J$, where the infinite-chain gap $2\\vert h-J\\vert$ closes, and sharpens as the chain grows.",
+        "The Fujii-Nakajima reservoir has random couplings on all $n(n-1)/2$ pairs and a field on each spin (randomised with width $W$ on this shelf); it has no degeneracies, level repulsion ($\\langle r\\rangle\\approx0.53$) and only the parity symmetry.",
+        "Dense exact diagonalisation costs $16\\cdot4^n$ bytes and about $8^n$ operations, so it stops at about 14 to 16 spins; symmetry blocks and sparse methods extend that."
       ]
     },
     {
@@ -127,34 +550,54 @@
     },
     {
       "type": "problem",
-      "title": "Ground states without a field",
-      "text": "For $H = -J\\sum_i Z_iZ_{i+1}$ with $J > 0$ on 4 spins (open chain), what are the ground states and the ground energy?",
+      "title": "A diagonal term on three spins",
+      "text": "For three spins, write the diagonal of $Z_1Z_3$ in the order $000, 001, \\dots, 111$.",
+      "hint": "Only digits 1 and 3 matter.",
       "solution": [
-        "Each bond contributes $-J$ when its two spins agree and $+J$ when they differ.",
-        "All spins equal satisfies all 3 bonds: $\\vert0000\\rangle$ and $\\vert1111\\rangle$, energy $-3J$, a twofold degenerate ground state related by the global flip."
+        "$Z_1Z_3 = Z\\otimes I\\otimes Z$ is diagonal; its entry for a state is $+1$ if digits 1 and 3 agree and $-1$ if they differ; the middle digit does not matter.",
+        "$000$: agree, $+1$. $001$: differ, $-1$. $010$: $+1$. $011$: $-1$. $100$: $-1$. $101$: $+1$. $110$: $-1$. $111$: $+1$."
       ],
-      "answer": "|0000⟩ and |1111⟩, energy −3J"
+      "answer": "(1, -1, 1, -1, -1, 1, -1, 1)"
     },
     {
       "type": "problem",
-      "title": "Counting couplings",
-      "text": "How many random $J_{ij}$ does an all-to-all reservoir of 6 qubits have, and how many coupling terms does a 6-spin nearest-neighbour chain have?",
+      "title": "The size of a 16-spin simulation",
+      "text": "A 16-spin reservoir is to be simulated exactly with a dense complex Hamiltonian. How much memory does one state vector need, how much the dense matrix, and how much each parity block? Take 16 bytes per complex number.",
+      "hint": "Memory = 16 bytes times the number of entries.",
       "solution": [
-        "All-to-all: $\\binom62 = 15$.",
-        "Open chain: 5 bonds. The all-to-all model's extra couplings are what break the free-fermion structure."
+        "$D = 2^{16} = 65536$.",
+        "State vector: $16\\times65536 = 1.05\\times10^6$ bytes, about 1.05 MB.",
+        "Dense matrix: $16\\times65536^2 = 6.87\\times10^{10}$ bytes, about 68.7 GB.",
+        "Each parity block has dimension $32768$: $16\\times32768^2 = 1.72\\times10^{10}$ bytes, about 17.2 GB, a quarter of the full matrix (and two blocks cost a quarter of the diagonalisation time)."
       ],
-      "answer": "15 and 5"
+      "answer": "1.05 MB; 68.7 GB; 17.2 GB per parity block"
     },
     {
       "type": "problem",
-      "title": "Which symmetry",
-      "text": "Which of these is conserved by $\\sum J_{ij}X_iX_j + \\sum h_iZ_i$: total $Z$, the parity $\\prod Z_i$, or the global flip $\\prod X_i$?",
+      "title": "Couplings and sparsity",
+      "text": "How many random couplings $J_{ij}$ does a 6-qubit all-to-all reservoir have, and how many bonds does a 6-spin open chain have? At most how many nonzero entries can one row of each Hamiltonian ($\\sum J_{ij}X_iX_j + \\sum h_iZ_i$, and the transverse-field Ising chain) have?",
+      "hint": "Count the terms that flip digits; each sends a basis state to a different one.",
       "solution": [
-        "Total $Z$: no, $X_iX_j$ changes the excitation number by 2.",
-        "Parity $\\prod Z_i$: yes, the change is always by an even number.",
-        "Global flip $\\prod X_i$: it commutes with $X_iX_j$ but anticommutes with each $Z_i$, so not when $h \\ne 0$."
+        "All-to-all: $\\binom62 = 15$ couplings. Open chain: 5 bonds.",
+        "A row has one diagonal entry plus one entry for every term that flips digits, and different flip terms reach different states. The reservoir has 15 two-digit flips: $1 + 15 = 16$ entries per row. The chain has 6 one-digit flips ($X_i$): $1 + 6 = 7$.",
+        "Out of $2^6 = 64$ entries per row, so both are sparse: at most $1024$ and $448$ of the $4096$ entries are nonzero."
       ],
-      "answer": "Only the parity ∏Z_i"
+      "answer": "15 and 5; at most 16 and 7 per row"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The Fujii-Nakajima Hamiltonian, its parity symmetry and what each term does: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "Integrable, ergodic and localised regimes and their level statistics: Dynamical Regimes (#/qrc/models/dynamical-regimes).",
+        "Why a free-fermion reservoir offers no complexity advantage: Quantum Advantage (#/qrc/theory/quantum-advantage).",
+        "Rydberg arrays realise an Ising model with a transverse drive: Analog Platforms (#/qrc/hardware/analog-platforms).",
+        "The $2^n$ wall and how many qubits a reservoir can use before it cannot be simulated: Resource Accounting (#/qrc/hardware/resource-accounting)."
+      ]
     },
     {
       "type": "heading",
@@ -167,7 +610,10 @@
         "P. Pfeuty, The one-dimensional Ising model with a transverse field, Annals of Physics 57, 79 (1970)",
         "E. Lieb, T. Schultz and D. Mattis, Two soluble models of an antiferromagnetic chain, Annals of Physics 16, 407 (1961)",
         "S. Sachdev, Quantum Phase Transitions, 2nd edition, Cambridge University Press (2011)",
-        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Physical Review Applied 8, 024030 (2017)"
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Physical Review Applied 8, 024030 (2017)",
+        "V. Oganesyan and D. A. Huse, Localization of interacting fermions at high temperature, Physical Review B 75, 155111 (2007)",
+        "Y. Y. Atas, E. Bogomolny, O. Giraud and G. Roux, Distribution of the ratio of consecutive level spacings in random matrix ensembles, Physical Review Letters 110, 084101 (2013)",
+        "R. Martínez-Peña, G. L. Giorgi, J. Nokkala, M. C. Soriano and R. Zambrini, Dynamical phase transitions in quantum reservoir computing, Physical Review Letters 127, 100502 (2021)"
       ]
     }
   ]

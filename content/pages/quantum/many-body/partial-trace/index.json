@@ -1,0 +1,585 @@
+{
+  "title": "The Partial Trace and Reduced States",
+  "intro": "The partial trace gives the best description of one part of a larger quantum system: a reduced density matrix that reproduces every measurement made on that part alone. This page derives it from measurement statistics, computes it step by step for product, Bell and partly entangled states, and uses its purity to detect entanglement.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "The two-qubit state and the Pauli operators on one qubit of a pair from Composite Systems and Tensor Products (#/quantum/many-body/composite-systems), the product test and Bell states from Entanglement and Reduced States (#/quantum/many-body/entanglement), and averages $\\langle A\\rangle$ from Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty). The density matrix is introduced here, only as far as this page needs; the full story is on Mixed States (#/quantum/many-body/mixed-states)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Say what can and cannot be predicted about one qubit of an entangled pair, and compute those predictions from measurement statistics.",
+        "Write the density matrix $\\rho = \\vert\\psi\\rangle\\langle\\psi\\vert$ of a pure state and read probabilities and coherences off its entries.",
+        "Compute the reduced density matrix of either qubit by the partial trace, step by step, for product states, Bell states and partly entangled states.",
+        "Use the purity $\\operatorname{Tr}\\rho_A^2$ of the reduced state to tell whether a pure pair is entangled, and how much.",
+        "Implement the partial trace in numpy, and say what each reshape and axis does."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What can you predict about one qubit of a pair?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Alice and Bob share the Bell state $\\vert\\Phi^+\\rangle = (\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$, with qubit 1 in Alice's lab and qubit 2 in Bob's. Alice wants to predict what she will see when she measures her qubit. What state should she assign to it? It cannot be $\\vert0\\rangle$: then she would always see 0, and she does not. It cannot be $\\vert1\\rangle$ or $\\vert+\\rangle$ or any other single-qubit state $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$ either: the pair's state is not a product (Entanglement and Reduced States (#/quantum/many-body/entanglement)), so there is no state vector for qubit 1 alone. Yet she can certainly make predictions; she just ran the experiment in her head. What is the right object?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Everything Alice can ever do to her qubit is a measurement of an operator on qubit 1 only, of the form $A\\otimes I$ (see Composite Systems and Tensor Products (#/quantum/many-body/composite-systems)). Whatever she does, the predictions are the numbers $\\langle A\\otimes I\\rangle$. So the 'state of qubit 1' only has to contain enough to reproduce these numbers. Since every qubit observable is built from $I$, $X$, $Y$, $Z$ (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)), three numbers do the job:"
+    },
+    {
+      "type": "math",
+      "tex": "x = \\langle X\\otimes I\\rangle, \\qquad y = \\langle Y\\otimes I\\rangle, \\qquad z = \\langle Z\\otimes I\\rangle.",
+      "caption": "The three averages that fix everything qubit 1 can show on its own."
+    },
+    {
+      "type": "prose",
+      "text": "For a single qubit in a pure state these are the coordinates of the Bloch vector (The Qubit and the Bloch Sphere (#/quantum/qubits/bloch-sphere)), a vector of length 1. For a qubit that is part of an entangled pair the same three numbers still exist and still say everything about qubit 1, but the vector will turn out to be shorter than 1."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: Alice's qubit in a Bell state"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $(Z\\otimes I)\\vert\\Phi^+\\rangle = \\tfrac{1}{\\sqrt2}(\\vert00\\rangle - \\vert11\\rangle)$, because $Z$ gives $+1$ on qubit 1's $0$ and $-1$ on its $1$. The inner product with $\\vert\\Phi^+\\rangle$ is $\\tfrac12(1 - 1) = 0$. So $z = 0$.",
+        "Step 2. $(X\\otimes I)\\vert\\Phi^+\\rangle = \\tfrac{1}{\\sqrt2}(\\vert10\\rangle + \\vert01\\rangle)$, which has no overlap with $\\vert00\\rangle$ or $\\vert11\\rangle$. So $x = 0$.",
+        "Step 3. $(Y\\otimes I)\\vert\\Phi^+\\rangle = \\tfrac{1}{\\sqrt2}(i\\vert10\\rangle - i\\vert01\\rangle)$ (using $Y\\vert0\\rangle = i\\vert1\\rangle$ and $Y\\vert1\\rangle = -i\\vert0\\rangle$), again orthogonal to $\\vert\\Phi^+\\rangle$. So $y = 0$.",
+        "Step 4. The Bloch vector is $(0, 0, 0)$: the centre of the sphere, a length of 0 instead of 1. Alice's qubit is, for every purpose, a perfectly fair coin in every basis."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A qubit whose Bloch vector sits at the centre is not in any state-vector state, but it has a perfectly good description, which we build in the next two sections: the density matrix. This is the same as the maximally uncertain qubit you would get by flipping a coin and preparing $\\vert0\\rangle$ or $\\vert1\\rangle$ with probability $\\tfrac12$ each. A part of a perfectly known whole can look like a perfectly unknown thing."
+    },
+    {
+      "type": "callout",
+      "text": "Bob's lab does not change this. Whatever gate Bob applies or measurement Bob makes on his qubit, Alice's own statistics are still those of $(0, 0, 0)$, as long as she does not learn his result. The reason uses the amplitude matrix $M$ (entries $M_{ij} = \\psi_{ij}$, as on Entanglement and Reduced States (#/quantum/many-body/entanglement)) and the formula $\\rho_A = MM^\\dagger$ derived in the section on the partial trace below: a gate $U$ on qubit 2 changes $M$ into $MU^{\\top}$, and Alice's reduced state $MM^\\dagger$ becomes $MU^{\\top}\\bar UM^\\dagger = MM^\\dagger$, unchanged because $U^{\\top}\\bar U$ is the transpose of $U^\\dagger U = I$. A measurement by Bob, averaged over his unknown result, likewise leaves her numbers alone. If Bob phones her his result she can sort her data into two groups that each look pure, but that takes the phone call. No signal can pass from Bob to Alice through the entanglement alone."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a product state's numbers",
+      "text": "For the product state $\\vert a\\rangle\\otimes\\vert b\\rangle$ with $\\vert a\\rangle = 0.6\\vert0\\rangle + 0.8\\vert1\\rangle$, what are $x, y, z$ for qubit 1?",
+      "hint": "Use the shortcuts $z = \\vert\\alpha\\vert^2 - \\vert\\beta\\vert^2$, $x = 2\\mathrm{Re}(\\bar\\alpha\\beta)$, $y = 2\\mathrm{Im}(\\bar\\alpha\\beta)$.",
+      "solution": [
+        "For a product state, $\\langle A\\otimes I\\rangle = \\langle a\\vert A\\vert a\\rangle$: qubit 2 plays no role.",
+        "$z = 0.36 - 0.64 = -0.28$. $x = 2\\times0.6\\times0.8 = 0.96$. $y = 0$ because the amplitudes are real.",
+        "Length: $\\sqrt{0.96^2 + 0.28^2} = \\sqrt{0.9216 + 0.0784} = 1$: a point on the sphere, as it must be for a pure single-qubit state."
+      ],
+      "answer": "x = 0.96, y = 0, z = -0.28"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Just enough density matrix"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The three numbers $(x, y, z)$ are one description of qubit 1, but it would be better to have a single object that works like a state vector, one from which every average follows by the same formula. For a pure state vector the average is $\\langle\\psi\\vert A\\vert\\psi\\rangle$. We need an object that plays the role of $\\vert\\psi\\rangle$ and also covers the cases that no state vector can describe."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The definition"
+    },
+    {
+      "type": "prose",
+      "text": "The density matrix of a pure state $\\vert\\psi\\rangle$ is the matrix $\\rho = \\vert\\psi\\rangle\\langle\\psi\\vert$, the outer product of the ket with its bra. Entry by entry, if the amplitudes are $\\psi_i$ then"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho_{ik} = \\psi_i\\,\\bar\\psi_k.",
+      "caption": "Entry in row i, column k: the amplitude of i times the complex conjugate of the amplitude of k."
+    },
+    {
+      "type": "prose",
+      "text": "For a qubit $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$ the matrix has rows $(\\vert\\alpha\\vert^2,\\ \\alpha\\bar\\beta)$ and $(\\bar\\alpha\\beta,\\ \\vert\\beta\\vert^2)$. Take $\\vert a\\rangle = 0.6\\vert0\\rangle + 0.8\\vert1\\rangle$: the rows are $(0.36, 0.48)$ and $(0.48, 0.64)$. Here is how to read it."
+    },
+    {
+      "type": "list",
+      "items": [
+        "The diagonal entries are the probabilities of the basis outcomes: $\\rho_{00} = 0.36$ is the chance of 0 and $\\rho_{11} = 0.64$ the chance of 1. They add to the trace, $\\operatorname{Tr}\\rho = 0.36 + 0.64 = 1$ (the trace of a matrix is the sum of its diagonal entries).",
+        "The off-diagonal entries are the coherences. $\\rho_{01} = \\alpha\\bar\\beta$ records the relative phase and size linking the $\\vert0\\rangle$ and $\\vert1\\rangle$ parts. They are what makes interference possible. If they are zero the state is just a classical mixture of 0 and 1.",
+        "Averages come out as $\\langle A\\rangle = \\operatorname{Tr}(A\\rho)$. Check with $Z$: $Z\\rho$ has rows $(0.36, 0.48)$ and $(-0.48, -0.64)$ (flip the sign of row 2), trace $0.36 - 0.64 = -0.28$, matching the earlier $z$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The formula $\\langle A\\rangle = \\operatorname{Tr}(A\\rho)$ follows from writing out $\\langle\\psi\\vert A\\vert\\psi\\rangle = \\sum_{ik}\\bar\\psi_iA_{ik}\\psi_k = \\sum_{ik}A_{ik}\\rho_{ki}$, which is the sum of the diagonal entries of $A\\rho$. The reason to prefer $\\rho$ over $\\vert\\psi\\rangle$ is that $\\operatorname{Tr}(A\\rho)$ makes sense for any $\\rho$ that is a Hermitian matrix with non-negative eigenvalues and trace 1, including ones that are not of the form $\\vert\\psi\\rangle\\langle\\psi\\vert$. Those are the mixed states, studied on Mixed States (#/quantum/many-body/mixed-states). Also, the phase of the state vector, which no experiment sees, disappears from $\\rho$, since $\\vert\\psi\\rangle$ and $e^{i\\varphi}\\vert\\psi\\rangle$ give the same matrix."
+    },
+    {
+      "type": "prose",
+      "text": "For two qubits, $\\rho$ is a $4\\times4$ matrix with entries $\\rho_{(ij),(kl)} = \\psi_{ij}\\bar\\psi_{kl}$: a row for each of $00, 01, 10, 11$ and the same four columns. Example: the Bell state has $\\psi = \\tfrac{1}{\\sqrt2}(1, 0, 0, 1)$, so the four non-zero entries are $\\rho_{00,00} = \\rho_{00,11} = \\rho_{11,00} = \\rho_{11,11} = \\tfrac12$. Row 1: $(\\tfrac12, 0, 0, \\tfrac12)$; rows 2 and 3 all zero; row 4: $(\\tfrac12, 0, 0, \\tfrac12)$. The entries on the diagonal say 'probability $\\tfrac12$ for 00 and $\\tfrac12$ for 11'; the corner entries are the coherence between 00 and 11."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: reading a density matrix",
+      "text": "Write $\\rho$ for $\\vert{+}\\rangle$, and find its coherence $\\rho_{01}$.",
+      "hint": "Multiply every amplitude by every other amplitude.",
+      "solution": [
+        "$\\vert+\\rangle = (1, 1)/\\sqrt2$, so $\\rho_{ik} = \\tfrac{1}{\\sqrt2}\\cdot\\tfrac{1}{\\sqrt2} = \\tfrac12$ for all four entries.",
+        "Rows $(\\tfrac12, \\tfrac12)$ and $(\\tfrac12, \\tfrac12)$. The coherence $\\rho_{01} = \\tfrac12$ is the largest possible for a qubit, since $\\vert\\rho_{01}\\vert^2 \\le \\rho_{00}\\rho_{11}$. The diagonal $(\\tfrac12, \\tfrac12)$ alone would not tell $\\vert+\\rangle$ from a fair coin; the coherence does."
+      ],
+      "answer": "all entries 1/2; coherence 1/2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The reduced state, built from the statistics"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Now we can answer the question of Alice's qubit properly: find a $2\\times2$ matrix $\\rho_A$, the reduced density matrix, such that $\\operatorname{Tr}(A\\rho_A) = \\langle A\\otimes I\\rangle$ for every operator $A$ on qubit 1."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Deriving it"
+    },
+    {
+      "type": "prose",
+      "text": "Any $2\\times2$ matrix can be written as a combination $c_0I + c_xX + c_yY + c_zZ$. The Pauli matrices have trace zero, and $\\operatorname{Tr}(\\sigma\\sigma') = 2$ if $\\sigma = \\sigma'$ and $0$ if they differ. Try the combination $\\rho_A = \\tfrac12(I + xX + yY + zZ)$ with the three numbers measured above."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\operatorname{Tr}\\rho_A = \\tfrac12(\\operatorname{Tr}I + x\\operatorname{Tr}X + y\\operatorname{Tr}Y + z\\operatorname{Tr}Z) = \\tfrac12(2 + 0 + 0 + 0) = 1$. Good.",
+        "Step 2. $\\operatorname{Tr}(X\\rho_A) = \\tfrac12(\\operatorname{Tr}X + x\\operatorname{Tr}(XX) + y\\operatorname{Tr}(XY) + z\\operatorname{Tr}(XZ)) = \\tfrac12(0 + 2x + 0 + 0) = x$. The same works for $Y$ and $Z$.",
+        "Step 3. So $\\operatorname{Tr}(X\\rho_A) = \\langle X\\otimes I\\rangle$ and likewise for $Y$, $Z$ and $I$. Since every $A$ is a combination of these four, the formula holds for every $A$ by linearity.",
+        "Step 4. Conclusion: the reduced state of qubit 1 is $\\rho_A = \\tfrac12(I + xX + yY + zZ)$. Written out with $X$ = rows $(0,1),(1,0)$, $Y$ = rows $(0,-i),(i,0)$, $Z$ = rows $(1,0),(0,-1)$, it has rows $\\tfrac12(1 + z,\\ x - iy)$ and $\\tfrac12(x + iy,\\ 1 - z)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "This is exactly the Bloch-sphere density matrix, with the Bloch vector $(x, y, z)$ now allowed to be shorter than 1. The length of $(x, y, z)$ measures how pure the qubit is: length 1 is a pure state (a point on the sphere); length 0 is the centre, the maximally mixed state $I/2$; in between is a mixed state inside the ball."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Three worked examples"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Product state $\\vert a\\rangle\\otimes\\vert b\\rangle$ from before: $(x, y, z) = (0.96, 0, -0.28)$. Then $\\rho_A = \\tfrac12(I + 0.96X - 0.28Z)$ has rows $\\tfrac12(1 - 0.28,\\ 0.96)$ and $\\tfrac12(0.96,\\ 1 + 0.28)$, which is rows $(0.36, 0.48)$ and $(0.48, 0.64)$. That is exactly $\\vert a\\rangle\\langle a\\vert$: for a product state the reduced state is the pure state of the part.",
+        "Bell state: $(0, 0, 0)$, so $\\rho_A = \\tfrac12I$: rows $(0.5, 0)$ and $(0, 0.5)$.",
+        "Partly entangled state $\\cos\\theta\\vert00\\rangle + \\sin\\theta\\vert11\\rangle$ with $\\theta = 30°$: $x = y = 0$ (the $X$ and $Y$ flip qubit 1 only, leaving overlap zero). $z = \\cos^2\\theta - \\sin^2\\theta = 0.75 - 0.25 = 0.5$. So $\\rho_A$ has rows $(0.75, 0)$ and $(0, 0.25)$: a mixture, with Bloch vector $(0, 0, 0.5)$ of length 0.5."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a tilted pair",
+      "text": "For $\\cos20°\\vert00\\rangle + \\sin20°\\vert11\\rangle$, what is the Bloch vector of qubit 1 and what is $\\rho_A$?",
+      "hint": "$z = \\cos^2\\theta - \\sin^2\\theta = \\cos2\\theta$.",
+      "solution": [
+        "$x = y = 0$ as before. $z = \\cos^220° - \\sin^220° = \\cos40° = 0.7660$.",
+        "$\\rho_A$ has diagonal $\\tfrac12(1 \\pm 0.766) = (0.883, 0.117)$ and zero off-diagonals."
+      ],
+      "answer": "(0, 0, 0.766); diag(0.883, 0.117)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The partial trace, step by step"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The recipe above needs the three averages, which means computing three expectation values. There is a direct way to get $\\rho_A$ from the full state, with no measuring or expectation values, and it works for any number of qubits. It is called the partial trace."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Deriving the rule"
+    },
+    {
+      "type": "prose",
+      "text": "Write the pair state as $\\vert\\psi\\rangle = \\sum_{ij}\\psi_{ij}\\vert ij\\rangle$. An operator on qubit 1 only is $A\\otimes I$, with $(A\\otimes I)\\vert kj\\rangle = \\sum_iA_{ik}\\vert ij\\rangle$ ($A$ turns qubit 1's $k$ into a mix of $i$'s, qubit 2's $j$ untouched). We need $\\langle A\\otimes I\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Apply the operator: $(A\\otimes I)\\vert\\psi\\rangle = \\sum_{kj}\\psi_{kj}\\sum_iA_{ik}\\vert ij\\rangle$.",
+        "Step 2. Take the inner product with $\\langle\\psi\\vert = \\sum_{lm}\\bar\\psi_{lm}\\langle lm\\vert$. Since $\\langle lm\\vert ij\\rangle$ is 1 only if $l = i$ and $m = j$, we get $\\langle A\\otimes I\\rangle = \\sum_{ijk}\\bar\\psi_{ij}A_{ik}\\psi_{kj}$.",
+        "Step 3. Collect the part that does not involve $A$: $\\langle A\\otimes I\\rangle = \\sum_{ik}A_{ik}\\left(\\sum_j\\psi_{kj}\\bar\\psi_{ij}\\right)$.",
+        "Step 4. Compare with $\\operatorname{Tr}(A\\rho_A) = \\sum_{ik}A_{ik}(\\rho_A)_{ki}$. They match for every $A$ if $(\\rho_A)_{ki} = \\sum_j\\psi_{kj}\\bar\\psi_{ij}$. Rename $k\\to i$, $i\\to k$:"
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "(\\rho_A)_{ik} = \\sum_j\\psi_{ij}\\,\\bar\\psi_{kj} = \\sum_j\\rho_{(ij),(kj)}.",
+      "caption": "The partial trace over qubit 2: set qubit 2's row bit equal to its column bit and add."
+    },
+    {
+      "type": "prose",
+      "text": "In words: look at the full $4\\times4$ density matrix. To get the entry $(i, k)$ of $\\rho_A$, take the entries whose row is $(i, j)$ and whose column is $(k, j)$ with the same $j$ in both, and add them up over $j = 0, 1$. This is like taking the trace (sum of diagonal) but only over qubit 2's index, hence 'partial trace', written $\\rho_A = \\operatorname{Tr}_B\\vert\\psi\\rangle\\langle\\psi\\vert$ (the qubit being thrown away is the one named in the subscript; here we write $B$ for qubit 2)."
+    },
+    {
+      "type": "prose",
+      "text": "A picture that makes it easy to do by hand: cut the $4\\times4$ matrix into four $2\\times2$ blocks. The rows and columns of the blocks are labelled by qubit 1's value; inside each block the rows and columns are qubit 2's value. Then $(\\rho_A)_{ik}$ is the trace of the block in block-row $i$ and block-column $k$. To trace out qubit 1 instead, add the two diagonal blocks together: $\\rho_B = \\text{block}_{00} + \\text{block}_{11}$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Example 1: a product state"
+    },
+    {
+      "type": "prose",
+      "text": "$\\vert\\psi\\rangle = (0.48, -0.36, 0.64, -0.48)$. The $4\\times4$ matrix $\\rho_{(ij),(kl)} = \\psi_{ij}\\psi_{kl}$ has rows $(0.2304, -0.1728, 0.3072, -0.2304)$, $(-0.1728, 0.1296, -0.2304, 0.1728)$, $(0.3072, -0.2304, 0.4096, -0.3072)$ and $(-0.2304, 0.1728, -0.3072, 0.2304)$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Block (0,0) is the top-left $2\\times2$ part, rows $(0.2304, -0.1728)$ and $(-0.1728, 0.1296)$. Its trace is $0.2304 + 0.1296 = 0.36$. So $(\\rho_A)_{00} = 0.36$.",
+        "Step 2. Block (0,1) is the top-right part, rows $(0.3072, -0.2304)$ and $(-0.2304, 0.1728)$. Trace $0.3072 + 0.1728 = 0.48$. So $(\\rho_A)_{01} = 0.48$.",
+        "Step 3. Block (1,0), bottom-left, has trace $0.3072 + 0.1728 = 0.48$, and block (1,1) has trace $0.4096 + 0.2304 = 0.64$.",
+        "Step 4. $\\rho_A$ has rows $(0.36, 0.48)$ and $(0.48, 0.64)$. This is $\\vert a\\rangle\\langle a\\vert$, the density matrix of $0.6\\vert0\\rangle + 0.8\\vert1\\rangle$, the first factor. The partial trace gave back the state we put in.",
+        "Step 5. For qubit 2, add the diagonal blocks: $\\rho_B = $ rows $(0.2304 + 0.4096,\\ -0.1728 - 0.3072)$ and $(-0.1728 - 0.3072,\\ 0.1296 + 0.2304)$ = rows $(0.64, -0.48)$ and $(-0.48, 0.36)$, which is $\\vert b\\rangle\\langle b\\vert$ for $0.8\\vert0\\rangle - 0.6\\vert1\\rangle$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Example 2: a Bell state"
+    },
+    {
+      "type": "prose",
+      "text": "$\\rho = \\vert\\Phi^+\\rangle\\langle\\Phi^+\\vert$ has $\\tfrac12$ at the four corners (positions 00,00 and 00,11 and 11,00 and 11,11) and zeros elsewhere."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Block (0,0) has $\\tfrac12$ in its top-left corner and zeros elsewhere: trace $\\tfrac12$.",
+        "Step 2. Block (0,1) (top-right) has its one non-zero entry, $\\tfrac12$ at row 00, column 11, in its top-right position: the entry sits off the diagonal of the block, so the trace is $0$.",
+        "Step 3. Block (1,0) has its one entry in the bottom-left position of the block, off the diagonal: trace 0. Block (1,1) has $\\tfrac12$ at its bottom-right corner: trace $\\tfrac12$.",
+        "Step 4. $\\rho_A$ has rows $(\\tfrac12, 0)$ and $(0, \\tfrac12)$: the maximally mixed state $I/2$, as found from the statistics. The same happens for $\\rho_B$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Look at what was lost. The pair has a coherence between 00 and 11 (the corner entries). That coherence links states in which qubit 2 differs, $\\vert0\\rangle$ in one and $\\vert1\\rangle$ in the other. The partial trace asks for the part that qubit 1 can detect on its own, and since the two possibilities are distinguishable by qubit 2, no interference remains. The coherence entries $(0,1)$ and $(1,0)$ of $\\rho_A$ are sums of terms of the form $\\psi_{0j}\\bar\\psi_{1j}$, which need the same $j$ in both: for the Bell state $\\psi_{00}\\bar\\psi_{10} = 0$ and $\\psi_{01}\\bar\\psi_{11} = 0$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Example 3: a partly entangled state with coherence"
+    },
+    {
+      "type": "prose",
+      "text": "$\\vert\\psi\\rangle = \\tfrac{1}{\\sqrt3}(\\vert00\\rangle + \\vert01\\rangle + \\vert11\\rangle)$. Here $\\rho = \\tfrac13\\,\\vert v\\rangle\\langle v\\vert$ with $v = (1, 1, 0, 1)$, so $3\\rho$ has rows $(1, 1, 0, 1)$, $(1, 1, 0, 1)$, $(0, 0, 0, 0)$ and $(1, 1, 0, 1)$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Block (0,0): rows $(1, 1)$ and $(1, 1)$, trace $2$. Block (0,1): top-right, rows $(0, 1)$ and $(0, 1)$, trace $0 + 1 = 1$.",
+        "Step 2. Block (1,0): bottom-left, rows $(0, 0)$ and $(1, 1)$, trace $0 + 1 = 1$. Block (1,1): bottom-right, rows $(0, 0)$ and $(0, 1)$, trace $1$.",
+        "Step 3. Divide by 3: $\\rho_A$ has rows $(\\tfrac23, \\tfrac13)$ and $(\\tfrac13, \\tfrac13)$, that is $(0.667, 0.333)$ and $(0.333, 0.333)$. The trace is $\\tfrac23 + \\tfrac13 = 1$, good.",
+        "Step 4. Qubit 2: add blocks (0,0) and (1,1): rows $(1 + 0, 1 + 0)$ and $(1 + 0, 1 + 1)$ = rows $(1, 1)$ and $(1, 2)$, divided by 3: $(0.333, 0.333)$ and $(0.333, 0.667)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Unlike the Bell state, here $\\rho_A$ keeps a coherence $\\tfrac13$ off the diagonal, and its Bloch vector is $x = 2\\times\\tfrac13 = 0.667$, $y = 0$, $z = \\tfrac23 - \\tfrac13 = 0.333$, of length $0.745$. Still shorter than 1: mixed."
+    },
+    {
+      "type": "callout",
+      "text": "Do not trace out the wrong qubit. 'Trace over B' means B is the one thrown away, and the matrix you keep is $\\rho_A$. A common slip is to add the diagonal blocks for $\\rho_A$; that gives $\\rho_B$. Check with a product state: tracing out qubit 2 must return qubit 1's own state."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: tracing out a Bell state of the other kind",
+      "text": "Compute $\\rho_A$ for $\\vert\\Psi^+\\rangle = (\\vert01\\rangle + \\vert10\\rangle)/\\sqrt2$ using the block rule.",
+      "hint": "Locate each non-zero entry inside its block, and keep only entries on a block's diagonal.",
+      "solution": [
+        "$\\rho$ has $\\tfrac12$ at the four entries (row, column) = (01,01), (01,10), (10,01), (10,10). Cut it into blocks by the first bit.",
+        "(01,01): block (0,0), at row 1, column 1 of the block: on its diagonal, so it counts. (01,10): block (0,1), at row 1, column 0 of the block: off the diagonal, so it does not count. (10,01): block (1,0), at row 0, column 1: off the diagonal. (10,10): block (1,1), at row 0, column 0: on the diagonal.",
+        "Traces: blocks (0,0) and (1,1) give $\\tfrac12$ each and blocks (0,1) and (1,0) give $0$.",
+        "So $\\rho_A = \\operatorname{diag}(\\tfrac12, \\tfrac12) = I/2$."
+      ],
+      "answer": "I/2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Purity: how mixed is the part?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The three examples gave reduced states from pure ($\\vert a\\rangle\\langle a\\vert$) to maximally mixed ($I/2$). We want one number that says where on that scale a state is, and so how entangled the pair is."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The definition"
+    },
+    {
+      "type": "prose",
+      "text": "The purity of a density matrix is $\\operatorname{Tr}\\rho^2$, the trace of $\\rho$ times itself. For a pure state $\\rho^2 = \\vert\\psi\\rangle\\langle\\psi\\vert\\psi\\rangle\\langle\\psi\\vert = \\rho$ (since $\\langle\\psi\\vert\\psi\\rangle = 1$), so the purity is $\\operatorname{Tr}\\rho = 1$. For a qubit with Bloch vector $(x, y, z)$, the formula $\\rho = \\tfrac12(I + xX + yY + zZ)$ gives, using $\\operatorname{Tr}(\\sigma\\sigma') = 2$ for two equal Pauli matrices and $0$ for two different ones,"
+    },
+    {
+      "type": "math",
+      "tex": "\\operatorname{Tr}\\rho^2 = \\tfrac14\\left(2 + 2x^2 + 2y^2 + 2z^2\\right) = \\tfrac12\\left(1 + x^2 + y^2 + z^2\\right).",
+      "caption": "Purity of a qubit state in terms of its Bloch vector (the cross terms have zero trace)."
+    },
+    {
+      "type": "prose",
+      "text": "So the purity runs from $1$ (Bloch vector length 1) down to $\\tfrac12$ (length 0, maximally mixed). Short Bloch vector, low purity. Since $\\operatorname{Tr}\\rho_A^2$ can also be computed from the matrix directly, it gives a quick test: for a pure state of the pair, the part $A$ is pure only when the state is a product."
+    },
+    {
+      "type": "prose",
+      "text": "That gives a link to the Schmidt coefficients. The reduced state has eigenvalues $\\lambda_1^2$ and $\\lambda_2^2$, the squared Schmidt coefficients of Entanglement and Reduced States (#/quantum/many-body/entanglement), and the purity is the sum of their squares: $\\operatorname{Tr}\\rho_A^2 = \\lambda_1^4 + \\lambda_2^4$. A determinant version is handy: for a $2\\times2$ density matrix with eigenvalues $p_1, p_2$ and trace 1, $\\operatorname{Tr}\\rho^2 = p_1^2 + p_2^2 = (p_1 + p_2)^2 - 2p_1p_2 = 1 - 2\\det\\rho$. And $\\det\\rho_A = \\lambda_1^2\\lambda_2^2 = \\vert ad - bc\\vert^2$. Putting these together:"
+    },
+    {
+      "type": "math",
+      "tex": "\\operatorname{Tr}\\rho_A^2 = 1 - 2\\,\\vert ad - bc\\vert^2 = 1 - \\tfrac12C^2, \\qquad C = 2\\vert ad - bc\\vert,",
+      "caption": "Purity of one qubit of a pure pair, in terms of the product test and the concurrence."
+    },
+    {
+      "type": "prose",
+      "text": "The purity equals 1 exactly when $ad - bc = 0$, the product test. And the minimum $\\tfrac12$ occurs at $C = 1$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked examples"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Product state: $\\rho_A$ rows $(0.36, 0.48), (0.48, 0.64)$. $\\rho_A^2$ has diagonal entries $0.36^2 + 0.48^2 = 0.1296 + 0.2304 = 0.36$ and $0.48^2 + 0.64^2 = 0.2304 + 0.4096 = 0.64$. Trace $= 1.00$. Pure.",
+        "Bell state: $\\rho_A^2 = \\tfrac14I$, trace $\\tfrac12$. Minimum purity.",
+        "$\\theta = 30°$ state: $\\rho_A = \\operatorname{diag}(0.75, 0.25)$, purity $0.5625 + 0.0625 = 0.625$. Check with the formula: $ad - bc = \\cos30°\\sin30° = 0.433$, $1 - 2(0.1875) = 0.625$.",
+        "Example 3 state: $\\rho_A$ rows $(\\tfrac23, \\tfrac13), (\\tfrac13, \\tfrac13)$. Squares of entries: $\\tfrac49, \\tfrac19, \\tfrac19, \\tfrac19$ add to $\\tfrac79 = 0.778$. Check: $ad - bc = \\tfrac13$, $1 - 2\\cdot\\tfrac19 = \\tfrac79$."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "A mixed reduced state signals entanglement only if the whole pair is in a pure state. If the pair itself is noisy (say it was a product state that has been randomised), its parts are also mixed and no entanglement need be present. Telling the two apart for a noisy pair needs other tools, studied in Mixed States (#/quantum/many-body/mixed-states). Also, purity alone does not give the full 'shape' of the reduced state: the same purity can come from different Bloch vectors with the same length."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: purity from the Bloch vector",
+      "text": "A qubit has Bloch vector $(0.3, 0, 0.4)$. What is its purity? Could it be one qubit of a pure two-qubit state?",
+      "hint": "Use $\\operatorname{Tr}\\rho^2 = \\tfrac12(1 + x^2 + y^2 + z^2)$.",
+      "solution": [
+        "Squared length $0.09 + 0.16 = 0.25$, length $0.5$.",
+        "Purity $\\tfrac12(1 + 0.25) = 0.625$.",
+        "It is less than 1, so the qubit is mixed. Any such state can be one half of a suitable pure pair, with $C = \\sqrt{2(1 - 0.625)} = 0.866$, so it is the same entanglement as the $\\theta = 30°$ state above (whose Bloch vector $(0,0,0.5)$ has the same length)."
+      ],
+      "answer": "0.625; yes (mixed)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The partial trace in numpy"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "By hand the partial trace is block counting. In code we want a routine that works for any number of qubits and any subset kept. The trick is to use reshape to give the vector or matrix one axis for each qubit."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "How the reshape works"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A state vector of two qubits has 4 entries, with $\\psi_{ij}$ at position $2i + j$ (the convention of Composite Systems and Tensor Products (#/quantum/many-body/composite-systems)). Calling psi.reshape(2, 2) cuts the list into two rows of two, and entry $(i, j)$ of the result is exactly $\\psi_{ij}$: row = qubit 1's value, column = qubit 2's value. For $n$ qubits, reshape([2]*n) gives a tensor with one axis per qubit.",
+        "For a pure pair, the rule $(\\rho_A)_{ik} = \\sum_j\\psi_{ij}\\bar\\psi_{kj}$ is the matrix product $M M^\\dagger$ with $M = $ psi.reshape(2, 2): row $i$ of $M$ times row $k$ conjugated. That is the line M @ M.conj().T in the code. Likewise $\\rho_B = M^{\\top}\\bar M$, which in code is M.T @ M.conj().",
+        "For a general density matrix on $n$ qubits (it may be mixed), reshape the $2^n\\times2^n$ matrix to $2n$ axes of length 2: axes $0..n-1$ are the row bits and axes $n..2n-1$ the column bits. Tracing out qubit $q$ means setting its row bit equal to its column bit and summing: np.trace(t, axis1=q, axis2=q+n). The result has two fewer axes, so the column axes shift down by one; the code keeps a counter cur for the current number of qubits. Do the discarded qubits from the highest index down so that the lower axis numbers stay valid.",
+        "At the end, reshape back to a square matrix of size $2^k$ for the $k$ qubits kept, listed in their original order."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nnp.set_printoptions(precision=4, suppress=True)\n# Pure two-qubit state: psi[2*i + j] is the amplitude of |i j>.  Reshaping to 2x2 gives M[i, j].\ndef reduced_pair(psi):\n    M = np.asarray(psi, dtype=complex).reshape(2, 2)\n    rho_A = M @ M.conj().T          # (rho_A)[i,k] = sum_j M[i,j] conj(M[k,j])   (trace over qubit 2)\n    rho_B = M.T @ M.conj()          # (rho_B)[j,l] = sum_i M[i,j] conj(M[i,l])   (trace over qubit 1)\n    return rho_A, rho_B\n# General version: any density matrix on n qubits, keep the listed qubits (numbered from 0, leftmost first)\ndef partial_trace(rho, keep, n):\n    t = rho.reshape([2] * (2 * n))                  # axes 0..n-1 are the row bits, n..2n-1 the column bits\n    cur = n\n    for q in sorted(set(range(n)) - set(keep), reverse=True):\n        t = np.trace(t, axis1=q, axis2=q + cur)     # set row bit q equal to column bit q and add\n        cur -= 1\n    d = 2 ** len(keep)\n    return t.reshape(d, d)\npurity = lambda r: float(np.trace(r @ r).real)\nexamples = {\n    \"product (0.6,0.8)x(0.8,-0.6)\": np.kron([0.6, 0.8], [0.8, -0.6]),\n    \"Bell Phi+\": np.array([1, 0, 0, 1]) / np.sqrt(2),\n    \"cos30|00> + sin30|11>\": np.array([np.cos(np.pi / 6), 0, 0, np.sin(np.pi / 6)]),\n    \"(|00>+|01>+|11>)/sqrt3\": np.array([1, 1, 0, 1]) / np.sqrt(3),\n    \"(1,2,2,1)/sqrt10\": np.array([1, 2, 2, 1]) / np.sqrt(10),\n}\nfor name, psi in examples.items():\n    rA, rB = reduced_pair(psi)\n    rho = np.outer(psi, np.conj(psi))\n    assert np.allclose(rA, partial_trace(rho, [0], 2)) and np.allclose(rB, partial_trace(rho, [1], 2))\n    print(name); print(\"  rho_A =\", rA.real.round(4).tolist(), \" purity\", round(purity(rA), 4))\n    print(\"  rho_B =\", rB.real.round(4).tolist(), \" purity\", round(purity(rB), 4))\n# The reduced state reproduces every statistic of qubit 1 alone\nX = np.array([[0., 1], [1, 0]]); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1]); I2 = np.eye(2)\npsi = examples[\"(1,2,2,1)/sqrt10\"]; rA, _ = reduced_pair(psi)\nfor nm, P in ((\"X\", X), (\"Y\", Y), (\"Z\", Z)):\n    print(f\"<{nm} (x) I> = {round(np.vdot(psi, np.kron(P, I2) @ psi).real, 4) + 0.0:+.4f}   Tr(rho_A {nm}) = {round(np.trace(rA @ P).real, 4) + 0.0:+.4f}\")\n# Three qubits in a GHZ state: trace out one, or two\nghz = np.zeros(8); ghz[0] = ghz[7] = 1 / np.sqrt(2)\nrho3 = np.outer(ghz, ghz)\nprint(\"GHZ, keep qubits 0 and 1 (trace out qubit 2):\"); print(partial_trace(rho3, [0, 1], 3).round(3))\nprint(\"GHZ, keep qubit 0:\", partial_trace(rho3, [0], 3).round(3).tolist())\nprint(\"GHZ, keep qubits 0 and 2:\", np.diag(partial_trace(rho3, [0, 2], 3)).round(3).tolist(), \"(diagonal)\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "What the run prints: for the product state, $\\rho_A$ has rows $(0.36, 0.48), (0.48, 0.64)$ and purity 1; $\\rho_B$ is $\\vert b\\rangle\\langle b\\vert$ with rows $(0.64, -0.48), (-0.48, 0.36)$. For the Bell state both reduced states are $\\mathrm{diag}(0.5, 0.5)$ with purity 0.5. For $\\cos30°\\vert00\\rangle + \\sin30°\\vert11\\rangle$, $\\mathrm{diag}(0.75, 0.25)$ and purity 0.625. For Example 3, $\\rho_A = $ rows $(0.6667, 0.3333), (0.3333, 0.3333)$ and $\\rho_B = $ rows $(0.3333, 0.3333), (0.3333, 0.6667)$, purity 0.7778. For $(1, 2, 2, 1)/\\sqrt{10}$, $\\rho_A = $ rows $(0.5, 0.4), (0.4, 0.5)$ and purity 0.82. The assert in the loop confirms that the two functions agree. For that last state, $\\langle X\\otimes I\\rangle = \\operatorname{Tr}(\\rho_AX) = 0.8$ and the $Y$ and $Z$ averages are 0. For the three-qubit GHZ state $(\\vert000\\rangle + \\vert111\\rangle)/\\sqrt2$, tracing out the last qubit leaves $\\mathrm{diag}(0.5, 0, 0, 0.5)$ on the first two (a classical mixture of 00 and 11, no coherence) and a single qubit is $\\mathrm{diag}(0.5, 0.5)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A source produces $\\vert\\psi\\rangle = \\tfrac{1}{\\sqrt{10}}(\\vert00\\rangle + 2\\vert01\\rangle + 2\\vert10\\rangle + \\vert11\\rangle)$. Find the reduced state of qubit 1, its Bloch vector and purity, and check the purity against the concurrence from the product test."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Amplitude matrix $M = \\tfrac{1}{\\sqrt{10}}\\times$ rows $(1, 2)$ and $(2, 1)$ (real and symmetric).",
+        "Step 2. $\\rho_A = MM^\\top$: entry (0,0) is row 0 dotted with row 0: $(1 + 4)/10 = 0.5$; entry (0,1) is row 0 with row 1: $(2 + 2)/10 = 0.4$; entry (1,1): $(4 + 1)/10 = 0.5$. So $\\rho_A$ has rows $(0.5, 0.4)$ and $(0.4, 0.5)$. The trace is 1.",
+        "Step 3. Read off the Bloch vector by matching $\\rho_A$ with the rows $\\tfrac12(1 + z,\\ x - iy)$ and $\\tfrac12(x + iy,\\ 1 - z)$: $z = 0$, and $\\tfrac12x = 0.4$ gives $x = 0.8$, $y = 0$. Length $0.8$.",
+        "Step 4. Purity: $0.25 + 0.16 + 0.16 + 0.25 = 0.82$. Check with the Bloch vector: $\\tfrac12(1 + 0.64) = 0.82$. ",
+        "Step 5. Eigenvalues of $\\rho_A$: along $(1, 1)$ the matrix gives $0.5 + 0.4 = 0.9$, along $(1, -1)$ it gives $0.5 - 0.4 = 0.1$. These are the squared Schmidt coefficients: $(0.9, 0.1)$, as on Entanglement and Reduced States (#/quantum/many-body/entanglement). Purity $0.81 + 0.01 = 0.82$ again.",
+        "Step 6. Concurrence from the product test: $ad - bc = -0.3$, so $C = 0.6$, and $1 - \\tfrac12C^2 = 1 - 0.18 = 0.82$. All three routes agree. The entanglement entropy is the entropy of $(0.9, 0.1)$: $0.469$ bit.",
+        "Step 7. Interpretation: qubit 1 alone points along $+x$ with a Bloch vector of length 0.8, so an $X$ measurement of qubit 1 gives $+1$ with probability $0.9$. The state is far from maximally mixed, and qubit 2 is the same: $\\rho_B = \\rho_A$ here, because the matrix is symmetric."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Everything qubit 1 can show on its own is contained in the averages $\\langle A\\otimes I\\rangle$; they are captured by one matrix, the reduced density matrix $\\rho_A$, with $\\langle A\\otimes I\\rangle = \\operatorname{Tr}(A\\rho_A)$.",
+        "The density matrix of a pure state is $\\rho = \\vert\\psi\\rangle\\langle\\psi\\vert$, with $\\rho_{ik} = \\psi_i\\bar\\psi_k$. The diagonal holds probabilities and the off-diagonal entries are coherences.",
+        "A qubit's density matrix is $\\tfrac12(I + xX + yY + zZ)$ with Bloch vector $(x, y, z)$; a vector shorter than 1 means mixed.",
+        "The partial trace over qubit 2 is $(\\rho_A)_{ik} = \\sum_j\\rho_{(ij),(kj)}$: in block terms, the trace of each $2\\times2$ block. Tracing out qubit 1 adds the diagonal blocks instead.",
+        "For a pure pair, $\\rho_A = MM^\\dagger$ with $M$ the $2\\times2$ amplitude matrix, and its eigenvalues are the squared Schmidt coefficients.",
+        "Purity $\\operatorname{Tr}\\rho_A^2 = 1 - \\tfrac12C^2$ is 1 for product states and $\\tfrac12$ for Bell states.",
+        "A mixed part of a pure whole is the signature of entanglement; a mixed part of a mixed whole is not.",
+        "In numpy: reshape so that each qubit has its own axis, then np.trace over a row axis and its matching column axis, or use $MM^\\dagger$ for pure pairs."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Reduced state of a product",
+      "text": "For $\\vert0\\rangle\\otimes\\vert+\\rangle$ find $\\rho_A$ and $\\rho_B$.",
+      "hint": "For a product state each reduced state is the pure state of that qubit.",
+      "solution": [
+        "Amplitudes $\\psi = \\tfrac{1}{\\sqrt2}(1, 1, 0, 0)$, amplitude matrix $M = \\tfrac{1}{\\sqrt2}$ times rows $(1, 1)$ and $(0, 0)$.",
+        "$\\rho_A = MM^\\top$: entry (0,0) $= (1 + 1)/2 = 1$, the others involve the zero row: $0$. So $\\rho_A = $ rows $(1, 0)$ and $(0, 0)$, that is $\\vert0\\rangle\\langle0\\vert$.",
+        "$\\rho_B = M^\\top M$: columns of $M$ are $(1, 0)/\\sqrt2$ and $(1, 0)/\\sqrt2$, so every entry is $\\tfrac12$: rows $(\\tfrac12, \\tfrac12)$ and $(\\tfrac12, \\tfrac12)$, that is $\\vert+\\rangle\\langle+\\vert$. Purity 1 for both."
+      ],
+      "answer": "rho_A = |0><0|, rho_B = |+><+|"
+    },
+    {
+      "type": "problem",
+      "title": "Another Bell state",
+      "text": "Find $\\rho_A$ for $\\vert\\Phi^-\\rangle = (\\vert00\\rangle - \\vert11\\rangle)/\\sqrt2$, and say what changed compared with $\\vert\\Phi^+\\rangle$ in $\\rho$ and in $\\rho_A$.",
+      "hint": "Build the amplitude matrix and compute $MM^\\top$.",
+      "solution": [
+        "$M = \\tfrac{1}{\\sqrt2}$ times rows $(1, 0)$ and $(0, -1)$.",
+        "$\\rho_A = MM^\\top = \\tfrac12$ times rows $(1, 0)$ and $(0, 1) = I/2$. The same as for $\\vert\\Phi^+\\rangle$.",
+        "In the 4×4 $\\rho$, the corner coherences flip sign ($-\\tfrac12$ instead of $+\\tfrac12$), but the partial trace never uses them. The sign only matters for correlations, not for the parts."
+      ],
+      "answer": "I/2, the same as for Phi+"
+    },
+    {
+      "type": "problem",
+      "title": "Purity of a tilted pair",
+      "text": "For $\\cos20°\\vert00\\rangle + \\sin20°\\vert11\\rangle$ compute the purity of $\\rho_A$ two ways: from $\\rho_A$ and from $1 - 2(ad - bc)^2$.",
+      "hint": "This state is already in Schmidt form.",
+      "solution": [
+        "$\\rho_A = \\operatorname{diag}(\\cos^220°, \\sin^220°) = \\operatorname{diag}(0.8830, 0.1170)$.",
+        "Purity $= 0.8830^2 + 0.1170^2 = 0.7797 + 0.0137 = 0.7934$.",
+        "$ad - bc = \\cos20°\\sin20° = 0.9397\\times0.3420 = 0.3214$. $1 - 2(0.3214)^2 = 1 - 2(0.1033) = 0.7934$."
+      ],
+      "answer": "0.793 both ways"
+    },
+    {
+      "type": "problem",
+      "title": "Tracing out one of three qubits",
+      "text": "For the three-qubit GHZ state $(\\vert000\\rangle + \\vert111\\rangle)/\\sqrt2$, find the reduced state of qubits 1 and 2 and say what a measurement of $X\\otimes X$ on them gives on average.",
+      "hint": "Cross terms between different values of the traced-out qubit vanish.",
+      "solution": [
+        "$\\rho = \\tfrac12(\\vert000\\rangle\\langle000\\vert + \\vert000\\rangle\\langle111\\vert + \\vert111\\rangle\\langle000\\vert + \\vert111\\rangle\\langle111\\vert)$.",
+        "Tracing out qubit 3 keeps only terms where qubit 3's ket and bra agree: $\\vert000\\rangle\\langle000\\vert$ (qubit 3 is 0 in both) and $\\vert111\\rangle\\langle111\\vert$ (1 in both). The cross terms have 0 against 1 and vanish, because $\\langle1\\vert0\\rangle = 0$.",
+        "So $\\rho_{12} = \\tfrac12(\\vert00\\rangle\\langle00\\vert + \\vert11\\rangle\\langle11\\vert)$: the classical envelope pair of Entanglement and Reduced States (#/quantum/many-body/entanglement).",
+        "$X\\otimes X$ turns $\\vert00\\rangle$ into $\\vert11\\rangle$ and back, orthogonal to the original, so the average is $0$."
+      ],
+      "answer": "rho = (|00><00| + |11><11|)/2; <XX> = 0"
+    },
+    {
+      "type": "problem",
+      "title": "Bloch vector from the partial trace",
+      "text": "Find $\\rho_A$ and the Bloch vector of qubit 1 for $\\tfrac{1}{\\sqrt3}(\\vert00\\rangle + \\vert01\\rangle + \\vert11\\rangle)$, check its length against the purity.",
+      "hint": "Compare entries of $\\rho_A$ with $\\tfrac12(I + xX + yY + zZ)$.",
+      "solution": [
+        "From Example 3, $\\rho_A$ has rows $(\\tfrac23, \\tfrac13)$ and $(\\tfrac13, \\tfrac13)$.",
+        "Match with the rows $\\tfrac12(1 + z, x - iy)$ and $\\tfrac12(x + iy, 1 - z)$: $1 + z = \\tfrac43$, so $z = \\tfrac13$; $\\tfrac12 x = \\tfrac13$, so $x = \\tfrac23$; $y = 0$.",
+        "Length squared: $\\tfrac49 + \\tfrac19 = \\tfrac59 = 0.556$, length $0.745$.",
+        "Purity $\\tfrac12(1 + \\tfrac59) = \\tfrac79 = 0.778$, equal to $\\operatorname{Tr}\\rho_A^2$ computed from the entries."
+      ],
+      "answer": "(0.667, 0, 0.333), length 0.745; purity 0.778"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The full theory of density matrices, mixtures, and their properties: Mixed States (#/quantum/many-body/mixed-states).",
+        "Entanglement with an environment as the source of noise: the environment is traced out, and the reduced state loses its coherences: Decoherence: How Superpositions Fade (#/quantum/many-body/decoherence).",
+        "The reset of the input qubit in a quantum reservoir is a partial trace followed by a fresh input state: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) and Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "Local reduced states of a scrambled reservoir become close to maximally mixed, which is the concentration problem: Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), sections 2.4.1 to 2.4.3",
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 2",
+        "L. Susskind and A. Friedman, Quantum Mechanics: The Theoretical Minimum, Basic Books (2014)"
+      ]
+    }
+  ]
+}
