@@ -1,0 +1,602 @@
+{
+  "title": "Linear Regression and the Ridge Readout",
+  "intro": "Linear regression fits a weighted sum of measured features to a target by minimising the sum of squared errors, and ridge regression adds a price on large weights so that the fit stays stable. This is the one trained part of a reservoir computer.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "What you need first: school algebra, the idea of a derivative as a rate of change, and what a list of numbers is. Matrices are explained here from scratch. If you have not yet seen why a reservoir needs a trained readout at all, read What Is Reservoir Computing? (#/qrc/start/what-is-reservoir-computing) first, and for what a 'feature' and a 'target' are in a signal, Time Series and Prediction (#/qrc/start/time-series-and-prediction)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Fit a straight line to data by least squares, by hand, and say what the fitted numbers mean.",
+        "Write a fit with many features as a matrix equation and derive the normal equations $X^\\top X\\,w = X^\\top y$ step by step.",
+        "Recognise overfitting and unstable weights from the numbers, and say why they happen.",
+        "Derive the ridge solution $w = (X^\\top X + \\lambda I)^{-1}X^\\top y$, work it by hand on a small problem, and pick $\\lambda$ with a validation set.",
+        "Say exactly which part of a quantum reservoir computer this page is: the trained readout."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why one idea is worth a whole page"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir computer does almost nothing that looks like learning. The reservoir, whether it is a pile of random neurons or a few interacting qubits, is built once and never touched. What gets trained is a single set of numbers: the weights that turn a handful of measured values into a prediction. That training is linear regression, one of the oldest tools in statistics. If you can do it by hand on four points, you understand the learning step of every reservoir computer on this shelf, classical or quantum."
+    },
+    {
+      "type": "prose",
+      "text": "Here is the puzzle to keep in mind. Someone gives you a few pairs of numbers: a measured quantity $x$ and the value $y$ you would like to predict from it. The pairs do not lie exactly on any line, because measurements are noisy. Which line is best? And what if you have not one measured quantity but eight, and some of them are nearly copies of each other? The page answers both, in the order in which the difficulties appear."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Fitting a line by least squares"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The problem"
+    },
+    {
+      "type": "prose",
+      "text": "Take four measurements. The feature $x$ is $0, 1, 2, 3$ and the target $y$ is $1.0, 2.1, 3.2, 3.9$. We want a rule $\\hat y = a\\,x + b$ that predicts $y$ from $x$, where the slope $a$ and the intercept $b$ are the two numbers to find. The hat on $\\hat y$ always means a prediction, to keep it apart from the true value $y$. In machine-learning language the pairs are the training data, $a$ and $b$ are the weights (or parameters), and finding them is training."
+    },
+    {
+      "type": "prose",
+      "text": "The picture below shows the four points and the line we are about to find. Each point misses the line by a vertical distance, the orange segment. That miss is the residual of the point: $r_i = y_i - \\hat y_i$, the true value minus the prediction. A positive residual means the line predicted too low."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/qrc/linfit.svg",
+      "alt": "Four data points, the least-squares line y = 0.98 x + 1.08, and the vertical residuals drawn as orange segments.",
+      "caption": "The best line is the one that makes the residuals small overall. Least squares measures 'small overall' by the sum of the squared residuals."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What does best mean?"
+    },
+    {
+      "type": "prose",
+      "text": "We need one number that says how badly a line fits, so that we can search for the line that makes it smallest. Adding the residuals is useless: a miss of $+1$ and a miss of $-1$ would cancel and make a poor line look perfect. Adding their absolute values works but is awkward to differentiate. Squaring each residual fixes the sign, punishes big misses much more than small ones (a miss of 2 costs four times a miss of 1), and leads to a clean formula. So define the squared error"
+    },
+    {
+      "type": "math",
+      "tex": "E(a, b) = \\sum_{i=1}^{N} r_i^2 = \\sum_{i=1}^{N} (y_i - a x_i - b)^2",
+      "caption": "The sum runs over the $N$ training points. $E$ depends on the two weights, since the data are fixed."
+    },
+    {
+      "type": "prose",
+      "text": "Try two guesses on our data. The line $a = 1$, $b = 1$ gives residuals $1.0-1 = 0$, $2.1-2 = 0.1$, $3.2-3 = 0.2$, $3.9-4 = -0.1$, so $E = 0 + 0.01 + 0.04 + 0.01 = 0.06$. The line $a = 0.9$, $b = 1.2$ gives $E = 0.08$, which is worse. Each pair $(a, b)$ has an error, and we want the pair with the smallest one."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Finding the minimum with derivatives"
+    },
+    {
+      "type": "prose",
+      "text": "Think of $E(a, b)$ as the height of a landscape over the plane of possible $(a, b)$. Because $E$ is a sum of squares it is a smooth bowl with one lowest point. At the lowest point the bowl is flat in every direction, so both slopes (partial derivatives) are zero. A partial derivative $\\partial E/\\partial a$ means: change $a$ a little, hold $b$ fixed, and see how fast $E$ changes."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Differentiate with respect to $a$. Each term is $(y_i - a x_i - b)^2$. The chain rule gives $2(y_i - a x_i - b)$ times the derivative of the inside with respect to $a$, which is $-x_i$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\partial E}{\\partial a} = -2\\sum_{i=1}^{N} x_i\\,(y_i - a x_i - b)"
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. The same for $b$; the inside now has derivative $-1$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{\\partial E}{\\partial b} = -2\\sum_{i=1}^{N} (y_i - a x_i - b)"
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Set both to zero and divide by $-2$. Multiply out the brackets and move the terms that contain $y$ to the right:"
+    },
+    {
+      "type": "math",
+      "tex": "a\\sum x_i^2 + b\\sum x_i = \\sum x_i y_i, \\qquad a\\sum x_i + b\\,N = \\sum y_i",
+      "caption": "The normal equations for a line: two linear equations for the two unknowns $a$ and $b$."
+    },
+    {
+      "type": "prose",
+      "text": "These are called the normal equations. They are ordinary simultaneous equations; all the sums are numbers you can compute from the data."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Compute the four sums. $\\sum x = 0+1+2+3 = 6$. $\\sum x^2 = 0+1+4+9 = 14$. $\\sum y = 10.2$. $\\sum xy = 0\\cdot1.0 + 1\\cdot2.1 + 2\\cdot3.2 + 3\\cdot3.9 = 20.2$. And $N = 4$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Write the normal equations: $14\\,a + 6\\,b = 20.2$ and $6\\,a + 4\\,b = 10.2$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Solve them. Multiply the second equation by 1.5 to get $9a + 6b = 15.3$, and subtract it from the first: $5a = 4.9$, so $a = 0.98$. Put this back in the second equation: $6(0.98) + 4b = 10.2$, so $4b = 4.32$ and $b = 1.08$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Check the fit. The predictions are $1.08, 2.06, 3.04, 4.02$, so the residuals are $-0.08, 0.04, 0.16, -0.12$. They add up to zero (a property of the $b$ equation: it says exactly that the residuals sum to zero), and the error is $E = 0.0480$, far below the $0.06$ of our first guess."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5. Predict. For a new value $x = 4$ the line says $\\hat y = 0.98\\cdot4 + 1.08 = 5.00$. That is the whole of 'using' a trained model: plug the new feature into the formula."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common confusions"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The line is not the one that passes through the most points. With noisy data it may pass through none; it is the one that minimises the total squared miss.",
+        "Residuals are measured vertically (in $y$), not as the shortest distance to the line. The feature $x$ is taken as known; only the target is predicted.",
+        "A fit is only trustworthy inside the range of $x$ it has seen. The prediction at $x = 4$ is an extrapolation: nothing in the data checks it."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a line through three points",
+      "text": "Fit $\\hat y = a x + b$ to the points $(0, 1)$, $(1, 3)$, $(2, 4)$ using the normal equations.",
+      "hint": "Compute the four sums first, then solve two equations in two unknowns.",
+      "solution": [
+        "Sums: $\\sum x = 3$, $\\sum x^2 = 5$, $\\sum y = 8$, $\\sum xy = 0 + 3 + 8 = 11$, $N = 3$.",
+        "Normal equations: $5a + 3b = 11$ and $3a + 3b = 8$.",
+        "Subtract the second from the first: $2a = 3$, so $a = 1.5$. Then $3b = 8 - 4.5 = 3.5$, so $b = 1.1667$."
+      ],
+      "answer": "$a = 1.5$, $b = 1.1667$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Many features: the matrix form"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why one feature is not enough"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir hands the readout not one measured number but many: with two qubits read at four moments during each input, eight numbers per time step; a classical reservoir might hand over a hundred. The prediction is then a weighted sum of all of them. With $M$ features $x_{i1}, x_{i2}, \\dots, x_{iM}$ for sample $i$ and weights $w_1, \\dots, w_M$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\hat y_i = w_1 x_{i1} + w_2 x_{i2} + \\dots + w_M x_{iM} = \\sum_{j=1}^{M} x_{ij}\\,w_j"
+    },
+    {
+      "type": "prose",
+      "text": "The intercept $b$ of the line is not a special case. Add a feature that is always equal to 1; its weight is then the intercept. This extra constant column is the bias column, and you will meet it again below. With it, the line fit above is a two-feature fit with columns $x$ and $1$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Stacking the data into a matrix"
+    },
+    {
+      "type": "prose",
+      "text": "Write the data as a table with one row per sample and one column per feature. That table is a matrix $X$ with $N$ rows and $M$ columns; its entry in row $i$, column $j$ is $x_{ij}$. The targets form a list $y$ of $N$ numbers and the weights a list $w$ of $M$ numbers. The weighted sum for every sample at once is written $\\hat y = Xw$, meaning: for each row, multiply the row's entries by the weights entry by entry and add. That is all a matrix times a vector is. The transpose $X^\\top$ is the same table turned on its side, so its rows are the columns of $X$."
+    },
+    {
+      "type": "prose",
+      "text": "In this notation the squared error is the squared length of the vector of residuals, $E(w) = \\Vert y - Xw\\Vert^2 = \\sum_i (y_i - \\sum_j x_{ij}w_j)^2$. Here is the derivation of the minimum, written with sums so that nothing is hidden."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Pick one weight, $w_k$. Only the inner sum depends on it, and $\\partial/\\partial w_k$ of $\\sum_j x_{ij}w_j$ is $x_{ik}$. By the chain rule, as before: $\\dfrac{\\partial E}{\\partial w_k} = -2\\sum_i x_{ik}\\big(y_i - \\sum_j x_{ij}w_j\\big)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Set this to zero for every $k = 1, \\dots, M$ and rearrange: $\\sum_j \\Big(\\sum_i x_{ik}x_{ij}\\Big) w_j = \\sum_i x_{ik}y_i$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Read the brackets. The number $\\sum_i x_{ik}x_{ij}$ multiplies column $k$ of $X$ with column $j$ entry by entry and adds: it is the entry in row $k$, column $j$ of $X^\\top X$. And $\\sum_i x_{ik}y_i$ is entry $k$ of $X^\\top y$. The $M$ equations are therefore one matrix equation:"
+    },
+    {
+      "type": "math",
+      "tex": "X^\\top X\\,w = X^\\top y",
+      "caption": "The normal equations: $M$ linear equations for the $M$ weights. Solving them gives the least-squares weights."
+    },
+    {
+      "type": "prose",
+      "text": "Check against the line fit: the two columns are $x$ and $1$, so $X^\\top X$ has rows $(\\sum x^2,\\ \\sum x)$ and $(\\sum x,\\ N)$ and $X^\\top y = (\\sum xy,\\ \\sum y)$. Those are exactly the equations of the last section. Notice the sizes: $X^\\top X$ is $M\\times M$, however many samples there are. Eight features and a million samples still give an $8\\times8$ system (nine with the bias). This is why training a readout is cheap."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example with two features and a bias"
+    },
+    {
+      "type": "prose",
+      "text": "Five samples, with features $x_1 = 0, 1, 2, 3, 4$, $x_2 = 1, 0, 1, 0, 1$, a bias column of ones, and targets $y = 4.2, 2.8, 8.1, 7.2, 12.1$. The feature table $X$ has the five rows $(0, 1, 1)$, $(1, 0, 1)$, $(2, 1, 1)$, $(3, 0, 1)$, $(4, 1, 1)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Build $X^\\top X$ by multiplying columns. Column $x_1$ with itself: $0+1+4+9+16 = 30$. Column $x_1$ with $x_2$: $0+0+2+0+4 = 6$. Column $x_1$ with the ones: $10$. Column $x_2$ with itself: $3$. Column $x_2$ with the ones: $3$. The ones with themselves: $5$. So $X^\\top X$ has rows $(30, 6, 10)$, $(6, 3, 3)$, $(10, 3, 5)$. It is symmetric, as it always is."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Build $X^\\top y$: $x_1\\cdot y = 89.0$, $x_2\\cdot y = 24.4$, $1\\cdot y = 34.4$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Solve the three equations (by elimination, or with the code in the last section): $w_1 = 2.020$, $w_2 = 3.133$, $w_3 = 0.960$ (the bias). The fitted rule is $\\hat y = 2.020\\,x_1 + 3.133\\,x_2 + 0.960$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Check: the predictions for the five samples are $4.09, 2.98, 8.13, 7.02, 12.17$ against the targets $4.2, 2.8, 8.1, 7.2, 12.1$, with total squared error $0.0827$. For a new sample with $x_1 = 5$, $x_2 = 1$ the prediction is $14.19$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: sizes",
+      "text": "A reservoir has 8 measured features per time step, and you train on 800 time steps with a bias column. What are the shapes of $X$, $X^\\top X$ and $w$, and how many equations must be solved?",
+      "hint": "The number of weights equals the number of columns of $X$.",
+      "solution": [
+        "The columns are the 8 features plus the bias column: 9 columns. There is one row per time step: 800 rows, so $X$ is $800\\times9$.",
+        "$X^\\top X$ multiplies a $9\\times800$ matrix by an $800\\times9$ matrix, giving $9\\times9$.",
+        "There is one weight per column: 9, and the normal equations are 9 equations in 9 unknowns."
+      ],
+      "answer": "$X$ is $800\\times9$, $X^\\top X$ is $9\\times9$, $w$ has 9 entries; 9 equations"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When fitting goes wrong"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A model that is too flexible memorises noise"
+    },
+    {
+      "type": "prose",
+      "text": "Least squares will happily use every freedom it is given. Take six points that really lie on the line $y = 1 + 2x$ plus noise, with $x = 0, 0.2, \\dots, 1$. Fit them with five features, $x, x^2, x^3, x^4, x^5$, and a bias: six weights for six points. Six equations in six unknowns can be met exactly, so the fitted curve goes through every training point and the training error is zero (7633346114.6 times $10^{-30}$, which is rounding). Zero error sounds perfect. Here are the weights it needed: $1.6, -29.3, 199.4, -475.1, 483.2, -176.8$, from bias to the $x^5$ coefficient. Enormous numbers that nearly cancel, so that the curve can wiggle through each noisy point."
+    },
+    {
+      "type": "prose",
+      "text": "Now test it on 30 fresh points from the same noisy line. The mean squared error is 0.210 (and 0.201 on a second fresh set). The plain straight line fitted to the same six points, which has only two weights, has training error 0.160 but test error 0.118, the best of anything in this section. The wiggly fit explained the noise of the six points, not the pattern; that is overfitting. The signature is always the same: training error far below test error, and weights far larger than the target values."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Features that nearly repeat each other"
+    },
+    {
+      "type": "prose",
+      "text": "A second way to get huge weights needs no flexible curve at all: features that are nearly copies. Suppose two features are exactly equal. Then only the sum of their two weights matters to any prediction, so infinitely many weight pairs fit equally well, and the normal equations cannot single one out: the matrix $X^\\top X$ has two identical rows and cannot be solved. With features that are almost equal the system can be solved, but the answer swings wildly with tiny changes in the data, for example $+400$ on one feature and $-399$ on the other, with the pair's sum doing the real work."
+    },
+    {
+      "type": "prose",
+      "text": "This is the situation reservoir readouts are in all the time. The measured values $\\langle Z_1\\rangle$ at nearby moments are strongly correlated, and a reservoir with hundreds of units has hundreds of highly redundant columns. Both problems, too much flexibility and redundant columns, are about weights that grow without being forced to by the data. Which suggests the cure: make large weights cost something."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: spotting overfitting",
+      "text": "A fit has training error 0.001 and test error 0.5, and its weights are of size 300 while the targets are between 0 and 3. Is it overfitting? What would you try?",
+      "hint": "Compare the two errors, then compare the weights with the targets.",
+      "solution": [
+        "The training error is 500 times smaller than the test error: the model does well on what it has seen and badly on new data, the signature of overfitting.",
+        "Weights of size 300 for targets of size 3 point the same way: the large weights cancel each other to bend the curve through the training points.",
+        "Try ridge regularisation, which penalises large weights (next section), or use fewer or less redundant features."
+      ],
+      "answer": "Yes; shrink the weights (regularise)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ridge regression: paying for large weights"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "Change the question. Instead of asking for the weights with the smallest training error, ask for weights with a small training error and not-too-large weights, and put a price on size. The price is the squared length of the weight vector, $\\Vert w\\Vert^2 = w_1^2 + \\dots + w_M^2$, times a number $\\lambda \\ge 0$ (Greek lambda) that sets how much we care:"
+    },
+    {
+      "type": "math",
+      "tex": "E_\\lambda(w) = \\Vert y - Xw\\Vert^2 + \\lambda\\,\\Vert w\\Vert^2",
+      "caption": "The ridge loss. With $\\lambda = 0$ it is plain least squares; large $\\lambda$ forces the weights toward zero."
+    },
+    {
+      "type": "prose",
+      "text": "Everyday picture: you are buying the cheapest way to hit a target, and every unit of weight costs money. A weight that buys only a tiny reduction in training error is not worth its price and is shrunk. The picture fails in one respect: $\\lambda$ is not measured in money, it is a dial you tune against held-out data."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Deriving the ridge solution"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The new term differentiates like the old ones: $\\partial(\\lambda\\sum_j w_j^2)/\\partial w_k = 2\\lambda w_k$. Adding it to the earlier result, the condition for each $k$ is $-2\\sum_i x_{ik}(y_i - \\sum_j x_{ij}w_j) + 2\\lambda w_k = 0$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Divide by 2 and move the $y$ part across: $\\sum_j\\big(\\sum_i x_{ik}x_{ij}\\big)w_j + \\lambda w_k = \\sum_i x_{ik}y_i$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. As before the first bracket is $(X^\\top X)_{kj}$ and the right side is $(X^\\top y)_k$, and the extra term is $\\lambda$ times entry $k$ of $w$, which is $\\lambda I\\,w$ with $I$ the identity matrix (ones on the diagonal, zeros elsewhere). In matrix form:"
+    },
+    {
+      "type": "math",
+      "tex": "(X^\\top X + \\lambda I)\\,w = X^\\top y \\quad\\Rightarrow\\quad w = (X^\\top X + \\lambda I)^{-1} X^\\top y",
+      "caption": "The ridge solution, the one formula every reservoir readout in this library uses. In practice solve the linear system; do not form the inverse."
+    },
+    {
+      "type": "prose",
+      "text": "In words, the whole change from plain least squares is one extra number $\\lambda$ added to each diagonal entry of $X^\\top X$. That small change has a large effect, because it makes the system solvable whatever the data. To see this, take any nonzero vector $v$ and look at $v^\\top(X^\\top X + \\lambda I)v = \\Vert Xv\\Vert^2 + \\lambda\\Vert v\\Vert^2$. The first term cannot be negative and the second is strictly positive when $\\lambda > 0$, so the matrix never sends a nonzero vector to zero: it is invertible. Duplicate columns, nearly duplicate columns, more features than samples, none of these can break it."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: two identical features"
+    },
+    {
+      "type": "prose",
+      "text": "Take $x_1 = x_2 = (1, 2, 3)$ and targets $y = (2.2, 3.9, 6.1)$; no bias, to keep the matrices tiny. Then $X^\\top X$ has rows $(14, 14)$ and $(14, 14)$, and $X^\\top y = (28.3, 28.3)$. Both normal equations read $14w_1 + 14w_2 = 28.3$: one equation, two unknowns, infinitely many solutions, and no inverse."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Add $\\lambda = 1$ to the diagonal: the rows become $(15, 14)$ and $(14, 15)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Write the equations: $15w_1 + 14w_2 = 28.3$ and $14w_1 + 15w_2 = 28.3$. Subtract: $w_1 - w_2 = 0$, so $w_1 = w_2$ (the two features are identical, so there is no reason to prefer one)."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Then $29\\,w_1 = 28.3$, so $w_1 = w_2 = 0.9759$. The sum of the weights is 1.9517; with a single copy of the feature and no penalty the weight would be $28.3/14 = 2.0214$. The ridge splits the work evenly and is slightly smaller in total, the price of the penalty."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What lambda does to a single weight"
+    },
+    {
+      "type": "prose",
+      "text": "For one feature, no bias, the ridge weight is $w = \\dfrac{\\sum x_iy_i}{\\sum x_i^2 + \\lambda}$ (the $1\\times1$ version of the matrix formula). With $\\lambda = 0$ it is the least-squares weight; as $\\lambda$ grows the weight shrinks toward zero, halving when $\\lambda$ equals $\\sum x_i^2$. A feature with a large $\\sum x_i^2$ (large spread, or many samples) hardly feels a given $\\lambda$, and one with a small $\\sum x_i^2$ is shrunk strongly. So $\\lambda$ should be read against the size of $X^\\top X$, which is why the best $\\lambda$ for readouts is found by trying values on a logarithmic grid rather than guessed."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Ridge on the overfitting example"
+    },
+    {
+      "type": "prose",
+      "text": "Return to the six points and the five-power polynomial. Here is what the ridge does as $\\lambda$ rises (the bias is not penalised; see below). The validation error uses 30 fresh points that the fit never saw:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\lambda = 10^{-6}$: largest weight 168.0, training error 0.019, validation error 0.196",
+        "$\\lambda = 10^{-4}$: largest weight 23.7, training error 0.056, validation error 0.179",
+        "$\\lambda = 10^{-3}$: largest weight 6.8, training error 0.100, validation error 0.166",
+        "$\\lambda = 10^{-2}$: largest weight 2.1, training error 0.121, validation error 0.172",
+        "$\\lambda = 10^{-1}$: largest weight 1.3, training error 0.138, validation error 0.198",
+        "$\\lambda = 1$: largest weight 1.5, training error 0.168, validation error 0.259",
+        "$\\lambda = 10$: largest weight 1.8, training error 0.349, validation error 0.463"
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Two facts are visible. The weights collapse from the hundreds to order 1, as promised, and the training error rises steadily, because every increase of $\\lambda$ trades fit for smallness. The validation error does something different: it falls, reaches a minimum around $\\lambda = 10^{-3}$, and then rises again when the penalty becomes so strong that the model cannot even follow the line. Underfit on the right, overfit on the left, a sweet spot between them."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: shrinking a weight",
+      "text": "One feature with $\\sum x_i^2 = 20$ and $\\sum x_iy_i = 30$, no bias. Find the ridge weight for $\\lambda = 0$, $\\lambda = 20$ and $\\lambda = 180$.",
+      "hint": "Use the one-feature formula $w = \\sum xy/(\\sum x^2 + \\lambda)$.",
+      "solution": [
+        "$w = 30/(20 + \\lambda)$.",
+        "$\\lambda = 0$: $30/20 = 1.5$. $\\lambda = 20$: $30/40 = 0.75$. $\\lambda = 180$: $30/200 = 0.15$.",
+        "The weight halves when $\\lambda$ equals $\\sum x_i^2 = 20$."
+      ],
+      "answer": "1.5, 0.75, 0.15"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing lambda and handling the bias"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Choose lambda on data the fit has not seen"
+    },
+    {
+      "type": "prose",
+      "text": "Training error always prefers $\\lambda = 0$, so it cannot choose $\\lambda$. The honest method is to split off a validation set: fit on the training data for each $\\lambda$ on a grid, measure the error on the validation data, and keep the $\\lambda$ with the lowest validation error. Because useful values span many orders of magnitude, use a grid that is logarithmic: $10^{-8}, 10^{-7}, \\dots, 10^{0}$. For the six-point example the minimum validation error, 0.166, is at $\\lambda = 10^{-3}$. Then the weights are refitted (here they already are) and the model is scored once on a third set, the test set, which played no part in the choice: the test error is 0.143, against 0.210 for $\\lambda = 0$ (the plain straight line, which has the right shape built in, gets 0.118). The ridge on the redundant polynomial gets within reach of the right model without knowing the right model. The next page, Training, Testing and Measuring Error (#/qrc/start/training-and-testing), is about doing this split properly for time series."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The bias column"
+    },
+    {
+      "type": "prose",
+      "text": "The ridge penalty should usually not apply to the bias weight. Look at the simplest case: only the column of ones, no real feature, and ten targets all equal to 100. The unpenalised best weight is 100. With the penalty included, $w = \\sum y/(N + \\lambda) = 1000/(10 + \\lambda)$, which for $\\lambda = 10$ is 50: the penalty drags the average toward zero for no good reason. Our code above subtracts $\\lambda$ from the bias entry on the diagonal to leave it free. Many reservoir codes simply centre the targets and features (subtract their training means) so the bias is zero and the question disappears. With a very small $\\lambda$ it matters little either way."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Keep the features on comparable scales"
+    },
+    {
+      "type": "prose",
+      "text": "Because the same $\\lambda$ multiplies every weight, a feature measured in thousands needs a tiny weight and is barely penalised, while one measured in thousandths needs a huge weight and is penalised heavily. It is common to rescale every feature column to mean 0 and standard deviation 1, using training-set statistics only, before fitting. Expectation values such as $\\langle Z_i\\rangle$ already live between $-1$ and $+1$, so quantum readouts often skip this."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Solving it in code"
+    },
+    {
+      "type": "prose",
+      "text": "The sample below is the whole readout in a dozen lines. Two habits matter. First, solve the linear system with numpy.linalg.solve rather than computing the inverse matrix and multiplying: it is faster and loses less accuracy to rounding. Second, add the bias as a column of ones before building $X^\\top X$. The program fits the six-point example and prints a table like the one above."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\ndef ridge_fit(F, y, lam):\n    \"\"\"Weights w (last entry = bias) minimising |y - A w|^2 + lam |w_without_bias|^2, A = [F, 1].\"\"\"\n    A = np.c_[F, np.ones(len(F))]            # add the bias column of ones\n    G = A.T @ A + lam * np.eye(A.shape[1])   # X^T X + lambda I\n    G[-1, -1] -= lam                         # do not penalise the bias\n    return np.linalg.solve(G, A.T @ y)       # solve, never invert\n\ndef predict(F, w):\n    return np.c_[F, np.ones(len(F))] @ w\n\ndef mse(p, y):\n    return float(np.mean((p - y) ** 2))\n\n# six noisy points from the line y = 1 + 2x, fitted with a degree-5 polynomial (features x, x^2, ..., x^5)\nfeats = lambda x: np.column_stack([x ** k for k in range(1, 6)])\nxt = np.linspace(0, 1, 6)\nyt = 1 + 2 * xt + np.random.default_rng(3).normal(0, 0.3, 6)\nxv = np.random.default_rng(4).random(30); yv = 1 + 2 * xv + np.random.default_rng(14).normal(0, 0.3, 30)\nxs = np.random.default_rng(5).random(30); ys = 1 + 2 * xs + np.random.default_rng(15).normal(0, 0.3, 30)\n\nprint(\"lambda     max|w|   train    valid\")\nbest = None\nfor lam in [0, 1e-6, 1e-4, 1e-3, 1e-2, 1e-1, 1, 10]:\n    w = ridge_fit(feats(xt), yt, lam)\n    tr, va = mse(predict(feats(xt), w), yt), mse(predict(feats(xv), w), yv)\n    print(f\"{lam:<9g} {np.abs(w).max():8.1f} {tr:8.4f} {va:8.4f}\")\n    if lam > 0 and (best is None or va < best[1]): best = (lam, va, w)\nlam, va, w = best\nprint(\"chosen lambda\", lam, \"-> test error\", round(mse(predict(feats(xs), w), ys), 4))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Run it and the first column is $\\lambda$, then the largest weight, then training and validation error. The row for $\\lambda = 0$ shows the weights of size 483 and zero training error; the printed chosen $\\lambda$ and its test error agree with the numbers quoted above. Replace the six points with the rows of any reservoir's feature table and the same function is a working readout."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "This is the readout of a quantum reservoir"
+    },
+    {
+      "type": "prose",
+      "text": "Everything in a reservoir computer that is learned is the vector $w$ above. For a spin reservoir like the one in The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir), the rows of $X$ are time steps, and the columns are the measured expectation values after the input at that step: $\\langle Z_1\\rangle, \\langle Z_2\\rangle, \\dots$ at each virtual node, plus the bias column. The target $y$ is whatever the task asks for, such as the input a few steps ago. The ridge solution gives the weights in one linear solve; the prediction at a new time step is the dot product of that step's features with $w$. The reservoir itself, the Hamiltonian, the couplings and the evolution time, is never trained. The size of the linear system is the number of features, which is why you can afford to retrain the readout in seconds for every new task, and why Readout and Multiplexing (#/qrc/models/readout-and-multiplexing) spends so much effort on making the features few, informative and not redundant."
+    },
+    {
+      "type": "prose",
+      "text": "The rest of the chapter fills in the two surrounding pieces. Training, Testing and Measuring Error (#/qrc/start/training-and-testing) is about measuring whether such a readout has learned or just memorised, and A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand) builds the features by hand for two qubits and then feeds them to exactly this ridge solve."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir with a single measured feature $z$ is trained to recall the previous input. Six training steps give features $z = (0.2, -0.1, 0.4, 0.0, 0.3, -0.2)$ and targets $y = (0.5, 0.1, 0.8, 0.3, 0.7, 0.0)$. Fit $\\hat y = w\\,z + b$ by least squares, then with ridge $\\lambda = 0.5$ on $w$ only, and compare predictions at $z = 0.1$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. With only one feature and a bias, centring does the work. The means are $\\bar z = 0.1000$ and $\\bar y = 0.4000$. Subtract them from every value; the bias then becomes $b = \\bar y - w\\bar z$ and the problem reduces to one weight."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Compute the centred sums: $S_{zz} = \\sum(z - \\bar z)^2 = 0.2800$ and $S_{zy} = \\sum(z - \\bar z)(y - \\bar y) = 0.3800$. The least-squares weight is $w = S_{zy}/S_{zz} = 1.3571$, and $b = \\bar y - w\\bar z = 0.2643$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. For ridge, centring is the same as leaving the bias unpenalised. The weight becomes $w = S_{zy}/(S_{zz} + \\lambda) = 0.3800/(0.2800 + 0.5) = 0.4872$, and $b = 0.4000 - 0.4872\\cdot0.1000 = 0.3513$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Predict at $z = 0.1$: least squares gives $1.3571\\cdot0.1 + 0.2643 = 0.4000$, ridge gives $0.4000$. The ridge weight is smaller, so the prediction is pulled toward the average target $0.4000$. With only six points the penalty is strong; with 800 points $S_{zz}$ would be about 130 times larger and the same $\\lambda$ would barely register. That is the scale effect again."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A reservoir readout is linear regression: a weighted sum of measured features, with weights chosen to minimise the sum of squared residuals.",
+        "Setting the derivatives of the squared error to zero gives the normal equations $X^\\top X\\,w = X^\\top y$; their size is the number of features, not the number of samples.",
+        "A bias is a feature that is always 1; the line fit is the two-column case.",
+        "Overfitting shows as training error far below test error together with huge, cancelling weights; redundant features make the normal equations nearly unsolvable.",
+        "Ridge adds $\\lambda\\Vert w\\Vert^2$ to the loss, giving $w = (X^\\top X + \\lambda I)^{-1}X^\\top y$, which always has a solution and shrinks the weights.",
+        "Choose $\\lambda$ on a logarithmic grid by validation error, never by training error, and then score once on a test set.",
+        "Solve with a linear solver, do not invert; leave the bias unpenalised or centre the data."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Slope of the best line",
+      "text": "Fit $\\hat y = a x$ (no intercept) to $(1, 2)$, $(2, 3)$, $(3, 7)$. Then compute the ridge slope for $\\lambda = 14$.",
+      "hint": "One unknown, so the matrix is the single number $\\sum x^2$.",
+      "solution": [
+        "With one feature and no bias, the normal equation is $a\\sum x^2 = \\sum xy$.",
+        "$\\sum x^2 = 1 + 4 + 9 = 14$ and $\\sum xy = 2 + 6 + 21 = 29$.",
+        "Least squares: $a = 29/14 = 2.0714$.",
+        "Ridge: $a = 29/(14 + 14) = 1.0357$, exactly half, because $\\lambda = \\sum x^2$."
+      ],
+      "answer": "2.0714; 1.0357"
+    },
+    {
+      "type": "problem",
+      "title": "Counting equations",
+      "text": "A readout uses 12 features at each of 3 sampling instants (36 features), plus a bias, trained on 1000 time steps. (a) What are the shapes of $X$ and $X^\\top X$? (b) Why is the unregularised problem likely to be badly behaved if only 30 time steps are used?",
+      "hint": "Count columns, including the bias. A matrix cannot have rank larger than its number of rows.",
+      "solution": [
+        "(a) The columns are $36 + 1 = 37$. $X$ is $1000\\times37$ and $X^\\top X$ is $37\\times37$.",
+        "(b) With 30 rows and 37 columns there are more unknowns than equations. The rank of $X^\\top X$ is at most 30, so it has no inverse: the least-squares weights are not unique and some choice fits the 30 targets exactly (zero training error).",
+        "Ridge makes the matrix invertible (it adds $\\lambda$ to the diagonal), but the model is still very flexible, so $\\lambda$ would need to be chosen with care."
+      ],
+      "answer": "$1000\\times37$ and $37\\times37$; more unknowns than equations"
+    },
+    {
+      "type": "problem",
+      "title": "Why duplicates need ridge",
+      "text": "Two features are exactly equal to $x = (1, 2, 3)$, the target is $y = (3, 6, 9)$, no bias. (a) Why does the plain normal equation have no unique solution? (b) Solve the ridge system for $\\lambda = 1$.",
+      "hint": "After adding $\\lambda$ to the diagonal, subtract the two equations.",
+      "solution": [
+        "(a) $X^\\top X$ has all four entries equal to $\\sum x^2 = 14$, and $X^\\top y = (42, 42)$. Both equations say $14w_1 + 14w_2 = 42$, so any $w_1 + w_2 = 3$ works. The matrix has determinant $14\\cdot14 - 14\\cdot14 = 0$.",
+        "(b) Ridge: $15w_1 + 14w_2 = 42$ and $14w_1 + 15w_2 = 42$. Subtracting gives $w_1 = w_2$, and $29w_1 = 42$, so $w_1 = w_2 = 1.4483$.",
+        "The sum of the weights is $2.8966$, slightly below the unpenalised 3."
+      ],
+      "answer": "$w_1 = w_2 = 1.4483$"
+    },
+    {
+      "type": "problem",
+      "title": "A skeptical reading",
+      "text": "A student reports that a ridge readout achieved training error 0.02 and validation error 0.02 on the same 800 training rows, using $\\lambda$ chosen by minimising that validation error. They then report 0.02 as the final performance. What is wrong?",
+      "hint": "What data were used to make each choice?",
+      "solution": [
+        "The validation set was used to pick $\\lambda$, so $\\lambda$ has been tuned to it; its error is a little optimistic.",
+        "Also, if the 'validation' rows are the training rows, the number says nothing about new data.",
+        "The final figure must come from a test set that was not used for fitting or for choosing $\\lambda$."
+      ],
+      "answer": "the final score needs an untouched test set"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The ridge solve is the training step of Echo State Networks (#/qrc/foundations/echo-state-networks) and of every model on the QRC shelf, for instance The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) and Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
+        "The next page, Training, Testing and Measuring Error (#/qrc/start/training-and-testing), shows how to split time-series data, discard a washout, and score a readout.",
+        "A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand) feeds a two-qubit reservoir's expectation values through this exact formula.",
+        "Hands-on Implementation (#/qrc/theory/hands-on-implementation) is the code-level version with finite shots."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "T. Hastie, R. Tibshirani and J. Friedman, The Elements of Statistical Learning, 2nd ed., Springer (2009), chapters 3 (linear regression and ridge) and 7 (model assessment)",
+        "A. E. Hoerl and R. W. Kennard, Ridge regression: biased estimation for nonorthogonal problems, Technometrics 12, 55 (1970)",
+        "M. Lukoševičius and H. Jaeger, Reservoir computing approaches to recurrent neural network training, Computer Science Review 3, 127 (2009)",
+        "G. Strang, Introduction to Linear Algebra, Wellesley-Cambridge Press (any edition), the chapter on least squares"
+      ]
+    }
+  ]
+}
