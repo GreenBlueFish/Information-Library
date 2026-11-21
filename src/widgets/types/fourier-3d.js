@@ -72,13 +72,17 @@ export function sceneItems(sig, N, azDeg, elDeg) {
     for (let i = 0; i <= NPTS; i++) { const x = -XT + (2 * XT * i) / NPTS; pts.push(P(x, y, HS * fn(tOf(x)))); }
     return pts;
   };
+  // The wall bars are scaled so the tallest stands 1.2 signal units high.
+  let aMax = 0;
+  for (let k = 0; k <= N; k++) aMax = Math.max(aMax, sig.coeff(k).A);
+  const barScale = aMax > 0 ? 1.2 / aMax : 1;
   for (let k = 0; k <= N; k++) {
     const { A } = sig.coeff(k);
     const y = depthOf(k, N);
     const pts = curve((t) => harmonic(sig, k, t), y);
     const base = [P(XT, y, 0), P(-XT, y, 0)];
     items.push({ kind: "ribbon", k, A, pts, base, depth: (P(-XT, y, 0).depth + P(XT, y, 0).depth) / 2 });
-    const b0 = P(XWALL, y, 0), b1 = P(XWALL, y, HS * A);
+    const b0 = P(XWALL, y, 0), b1 = P(XWALL, y, HS * A * barScale);
     items.push({ kind: "bar", k, A, pts: [b0, b1], depth: b0.depth });
   }
   const sumPts = curve((t) => partialSum(sig, N, t), YSUM);
@@ -105,10 +109,10 @@ export function walkSteps(sig, N) {
     { title: "Sinusoids as building blocks", text: `Each ribbon in the 3D view is one sinusoid, a harmonic A_k cos(2πk t/T + φ_k), standing at its own frequency k·f₀ along the depth axis: k = 0 is the constant (the average), k = 1 the fundamental at ${fmt(f0)} Hz, k = 2 twice that, and so on. Fourier's claim is that every reasonable periodic signal is a sum of these.` },
     { title: "How much of each", text: `The amount of harmonic k comes from one integral over a period, c_k = (1/T)∫ x(t) e^(−j2πkt/T) dt, and A_k = 2|c_k| (A₀ = c₀). For this signal: ${sig.formula}, ${sig.rule}. The first few are ${firsts.join(", ")}.` },
     { title: "Adding them up", text: `The solid curve in front is the sum of harmonics 0 to ${N}; the dashed curve is the signal. Look from the front (Turn 0°, Tilt 10°) and the ribbons line up behind it. The root-mean-square gap between the two is ${fmt(rms, 4)}${N === 0 ? "" : `; push N up and it shrinks`}.` },
-    { title: "The spectrum", text: `Now look along the time axis (Turn −90°): time disappears, and what is left is a bar at each frequency k·f₀ as tall as A_k. That is the amplitude spectrum, the same signal described by frequency instead of by time. The middle panel draws it on a fixed axis in hertz; hollow stems are harmonics not added yet.` },
+    { title: "The spectrum", text: `Now look along the time axis (Turn −90°): time disappears, the ribbons fade, and what is left is a bar at each frequency k·f₀ as tall as A_k. That is the amplitude spectrum, the same signal described by frequency instead of by time. The middle panel draws it on a fixed axis in hertz; hollow stems are harmonics not added yet.` },
     { title: "Phase", text: `Height is not everything: each harmonic also has a phase φ_k, where its cosine peaks in the period. The right-hand panel shows φ_k in degrees. ${shifted ? `With a delay of ${fmt(sig.delay)} of a period, every phase moved by −360°·k·${fmt(sig.delay)}: a straight line in k, while every A_k stayed the same.` : "Move Delay: every phase moves by −360°·k·delay, a straight line in k, while the amplitudes do not change at all."}` },
     { title: "How well it converges", text: sig.jumps ? `This signal jumps, so its coefficients fall only as 1/k and the sum converges slowly. Near each jump the sum overshoots by about 9% of the jump however many terms are added (the Gibbs phenomenon): with N = ${Math.max(N, 1)} the peak is ${fmt(pk, 3)} against a true top of 1. The overshoot gets narrower as N grows, never lower.` : `This signal has no jumps, so its coefficients fall at least as fast as 1/k² and a handful of harmonics already draw it closely: the root-mean-square gap with N = ${N} is ${fmt(rms, 4)}.` },
-    { title: "From series to transform", text: pulse ? `The harmonics are spaced f₀ = 1/T = ${fmt(f0)} Hz apart. Raise the period T and they crowd together, while the dashed envelope (the shape of one pulse's Fourier transform, 2·|sinc(0.5f)|/T) stays the same shape. In the limit T → ∞ the pulses stop repeating, the lines merge into a continuous curve, and the Fourier series becomes the Fourier transform.` : `The harmonics are spaced f₀ = 1/T = ${fmt(f0)} Hz apart, so a longer period packs them closer. Pick the pulse train and raise the period T to watch the lines crowd together under a fixed envelope: in the limit of an infinite period the series becomes the Fourier transform of a single pulse.` },
+    { title: "From series to transform", text: pulse ? `The harmonics are spaced f₀ = 1/T = ${fmt(f0)} Hz apart. Raise the period T and they crowd together, while the dashed envelope (the shape of one pulse's Fourier transform, |sinc(0.5f)|/T) stays the same shape. In the limit T → ∞ the pulses stop repeating, the lines merge into a continuous curve, and the Fourier series becomes the Fourier transform.` : `The harmonics are spaced f₀ = 1/T = ${fmt(f0)} Hz apart, so a longer period packs them closer. Pick the pulse train and raise the period T to watch the lines crowd together under a fixed envelope: in the limit of an infinite period the series becomes the Fourier transform of a single pulse.` },
   ];
 }
 
@@ -131,7 +135,7 @@ function mountFourier3d(ctx) {
   const go = (i) => {
     stepIndex = i;
     if (i === 3) panel.update({ azimuth: 0, elevation: 10 });
-    if (i === 4) panel.update({ azimuth: -90, elevation: 10 });
+    if (i === 4) panel.update({ azimuth: -90, elevation: 5 });
     redraw();
   };
   const actions = buildActions(doc, root, [
@@ -226,8 +230,10 @@ function mountFourier3d(ctx) {
       if (it.kind === "ribbon") {
         if (it.A < 1e-9) { add(g, "path", { d: poly(it.base.map(S)), class: "zs-grid" }); continue; }
         const pts = it.pts.map(S);
-        add(g, "path", { d: `${poly(pts.concat(it.base.map(S)))} Z`, class: `fx-ribbon fx-c${it.k % 6}` });
-        add(g, "path", { d: poly(pts), class: `fx-line fx-c${it.k % 6}` });
+        // Seen edge-on (turned toward ±90°) a ribbon is only clutter in front of the bars: fade it.
+        const op = (1 - 0.85 * Math.max(0, (Math.abs(Math.sin(az)) - 0.8) / 0.2)).toFixed(2);
+        add(g, "path", { d: `${poly(pts.concat(it.base.map(S)))} Z`, class: `fx-ribbon fx-c${it.k % 6}`, opacity: op });
+        add(g, "path", { d: poly(pts), class: `fx-line fx-c${it.k % 6}`, opacity: op });
       } else if (it.kind === "bar") {
         if (it.A < 1e-9) continue;
         add(g, "path", { d: poly(it.pts.map(S)), class: `fx-bar fx-c${it.k % 6}` });
@@ -244,7 +250,7 @@ function mountFourier3d(ctx) {
     if (N > 0) lab(XWALL + 0.3, YB, -0.1, `${fmt(N / sig.T, 1)} Hz`, "start");
     lab(-XT, YSUM, 1.25 * HS, "sum of 0…N", "start");
     text(g, 12, 20, `${N + 1} harmonic${N ? "s" : ""}, k = 0 … ${N}, spaced f₀ = ${fmt(1 / sig.T)} Hz apart; each ribbon shows t from −T to T`, "sim-label", "start");
-    text(g, 12, 38, "front: the signal (dashed) and the sum · right wall: amplitude bars", "sim-label", "start");
+    text(g, 12, 38, "front: the signal (dashed) and the sum · right wall: amplitude bars, scaled to the tallest", "sim-label", "start");
     text(g, W - 12, H3 - 12, "drag to turn", "sim-label zs-hint", "end");
   }
 
