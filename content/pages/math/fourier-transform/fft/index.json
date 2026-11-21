@@ -1,0 +1,346 @@
+{
+  "title": "The Fast Fourier Transform",
+  "intro": "The DFT of $N$ samples takes about $N^2$ multiplications when computed from its definition. Splitting it into even and odd samples, again and again, brings that down to $\\tfrac{N}{2}\\log_2 N$, which is the difference between minutes and milliseconds for a million samples.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The cost of the definition"
+    },
+    {
+      "type": "prose",
+      "text": "The DFT of the Sampling and the DFT (#/math/fourier-transform/sampling-and-dft) page is $X[k] = \\sum_{n=0}^{N-1}x[n]\\,W_N^{kn}$, where $W_N = e^{-j2\\pi/N}$ is the twiddle factor, a unit arrow turned $1/N$ of a lap backwards. To find one $X[k]$ you multiply each of $N$ samples by a power of $W_N$ and add: about $N$ complex multiplications. There are $N$ values of $k$. So the whole transform costs $N^2$ complex multiplications (and about as many additions)."
+    },
+    {
+      "type": "prose",
+      "text": "For eight samples that is 64, which nobody minds. But the cost grows with the square of the length. With $N = 1024$ it is 1,048,576. With $N = 1{,}048{,}576$, a million samples, about 24 seconds of CD audio, it is $1.1\\times10^{12}$ multiplications. A machine that does a billion complex multiplications per second would need $1{,}100$ s, about 18 minutes, for one spectrum. Doubling the length quadruples the time. Real-time spectrum analysis, image processing and radio would be out of reach."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Cutting in half"
+    },
+    {
+      "type": "prose",
+      "text": "The way out is to notice that the sum over $n$ can be split by parity. Write the even samples as $x[2m]$ and the odd samples as $x[2m+1]$, with $m = 0, \\ldots, N/2 - 1$:"
+    },
+    {
+      "type": "math",
+      "tex": "X[k] = \\sum_{m=0}^{N/2-1} x[2m]\\, W_N^{2mk} + \\sum_{m=0}^{N/2-1} x[2m+1]\\, W_N^{(2m+1)k}"
+    },
+    {
+      "type": "prose",
+      "text": "Pull $W_N^{k}$ out of the second sum. Then both sums contain $W_N^{2mk}$, and $W_N^2 = e^{-j2\\pi\\cdot 2/N} = e^{-j2\\pi/(N/2)} = W_{N/2}$, a twiddle for a transform half as long. So each sum is itself a DFT, of length $N/2$:"
+    },
+    {
+      "type": "math",
+      "tex": "X[k] = E[k] + W_N^{k}\\, O[k], \\qquad E[k] = \\sum_{m} x[2m]\\,W_{N/2}^{mk},\\quad O[k] = \\sum_{m} x[2m+1]\\,W_{N/2}^{mk}"
+    },
+    {
+      "type": "prose",
+      "text": "$E$ is the DFT of the even samples and $O$ of the odd samples. That already helps: two DFTs of length $N/2$ cost $2(N/2)^2 = N^2/2$, half of before, and joining them costs one more multiplication per output. But the gain is bigger, because $E[k]$ and $O[k]$ repeat. A DFT of length $N/2$ has period $N/2$ in $k$, so $E[k + N/2] = E[k]$ and $O[k + N/2] = O[k]$. The twiddle changes sign when $k$ moves by $N/2$: $W_N^{k + N/2} = W_N^{k}\\,e^{-j\\pi} = -W_N^{k}$. Therefore"
+    },
+    {
+      "type": "math",
+      "tex": "X[k] = E[k] + W_N^{k}\\,O[k], \\qquad X[k + N/2] = E[k] - W_N^{k}\\,O[k], \\qquad k = 0, \\ldots, \\tfrac N2 - 1"
+    },
+    {
+      "type": "prose",
+      "text": "These two lines are the heart of the fast Fourier transform. One multiplication, $W_N^{k}O[k]$, serves two outputs: the sum gives the first half of the spectrum and the difference the second half. Drawn as a picture, two inputs on the left, two outputs on the right, with crossing lines, it looks like a butterfly, and so the operation is called a butterfly."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A worked split"
+    },
+    {
+      "type": "prose",
+      "text": "Use the square input $x = [1,1,1,1,0,0,0,0]$ again. The even-numbered samples $x[0], x[2], x[4], x[6]$ are $[1, 1, 0, 0]$ and the odd-numbered ones $x[1], x[3], x[5], x[7]$ are also $[1, 1, 0, 0]$. The 4-point DFT of $[1,1,0,0]$, with $W_4 = -j$, is $[2,\\ 1 - j,\\ 0,\\ 1 + j]$, so $E = O = [2,\\ 1 - j,\\ 0,\\ 1 + j]$. Now combine with $W_8 = 0.7071 - 0.7071j$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$X[0] = E[0] + W_8^0 O[0] = 2 + 2 = 4$, and $X[4] = 2 - 2 = 0$.",
+        "$X[1] = E[1] + W_8^{1}O[1] = (1 - j)(1 + 0.7071 - 0.7071j) = (1 - j)(1.7071 - 0.7071j) = 1 - 2.4142j$.",
+        "$X[5] = E[1] - W_8^{1}O[1] = (1 - j)(0.2929 + 0.7071j) = 1 + 0.4142j$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "These agree with the direct computation on the Sampling and the DFT (#/math/fourier-transform/sampling-and-dft) page. That is the whole pattern: two 4-point transforms and one pass of butterflies, in place of a separate 8-term sum for each of the 8 outputs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Splitting again and again"
+    },
+    {
+      "type": "prose",
+      "text": "The $N/2$-point DFTs $E$ and $O$ can themselves be split by parity, provided $N/2$ is even, and the halves again. If $N$ is a power of two we can keep going until each piece has a single sample, whose DFT is the sample itself. Count the multiplications. Let $M(N)$ be the number needed for $N$ points. Two half-size transforms and $N/2$ butterflies for the joining:"
+    },
+    {
+      "type": "math",
+      "tex": "M(N) = 2M(N/2) + \\frac{N}{2}, \\qquad M(1) = 0 \\quad\\Rightarrow\\quad M(N) = \\frac{N}{2}\\log_2 N"
+    },
+    {
+      "type": "prose",
+      "text": "Check small cases: $M(2) = 1$, $M(4) = 2\\cdot 1 + 2 = 4$, $M(8) = 2\\cdot 4 + 4 = 12$. The recursion has $\\log_2 N$ levels (halving $N$ down to 1), and each level does $N/2$ butterflies in total, so the total is $N/2$ times $\\log_2 N$. The count of additions is $N\\log_2 N$: two per butterfly. This is the radix-2 decimation-in-time FFT, 'decimation in time' because the split is of the time samples."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bit reversal"
+    },
+    {
+      "type": "prose",
+      "text": "Take the recursion and run it from the bottom. After all the splits, which sample ends up where? The first split sorts samples by their lowest bit (even first, then odd), the next split by the next bit, and so on. The final order is therefore the index read with its bits reversed. For $N = 8$, three bits:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$n = 0$ ($000$) goes to $000 = 0$;   $n = 1$ ($001$) goes to $100 = 4$;   $n = 2$ ($010$) goes to $010 = 2$;   $n = 3$ ($011$) goes to $110 = 6$.",
+        "$n = 4$ ($100$) goes to $001 = 1$;   $n = 5$ ($101$) goes to $101 = 5$;   $n = 6$ ($110$) goes to $011 = 3$;   $n = 7$ ($111$) goes to $111 = 7$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So the input column of the diagram reads $x[0], x[4], x[2], x[6], x[1], x[5], x[3], x[7]$. The pairs that meet at the first stage are $(x[0], x[4])$, $(x[2], x[6])$, $(x[1], x[5])$, $(x[3], x[7])$, which differ by $N/2$: those are the ones the first split pairs up. After the shuffle all the butterflies can be done in place, in the same array, and the outputs come out in natural order. For $N = 16$, index $3 = 0011_2$ goes to $1100_2 = 12$ and $5 = 0101_2$ goes to $1010_2 = 10$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stage by stage"
+    },
+    {
+      "type": "prose",
+      "text": "The widget below draws the whole 8-point FFT. The left column is the input in bit-reversed order; each of the three stages is a column of butterflies; the right column is $X[k]$. Twiddles are written on the lines: $W_8^0 = 1$, $W_8^1 = 0.7071 - 0.7071j$, $W_8^2 = -j$, $W_8^3 = -0.7071 - 0.7071j$. Start with the square input."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "fft-butterfly",
+        "title": "FFT of the square input, one stage at a time",
+        "params": [
+          {
+            "key": "input",
+            "label": "Input x[n]",
+            "control": "select",
+            "options": [
+              "impulse at n = 0",
+              "impulse at n = 1",
+              "constant 1",
+              "cosine, 1 cycle",
+              "cosine, 2 cycles",
+              "alternating +1, −1",
+              "square: four 1s, four 0s",
+              "ramp 0 … 7"
+            ],
+            "default": "square: four 1s, four 0s"
+          },
+          {
+            "key": "size",
+            "label": "Count the work for N =",
+            "control": "select",
+            "options": [
+              "8",
+              "64",
+              "1024",
+              "65536",
+              "1048576"
+            ],
+            "default": "8"
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Press Next stage ▶ four times. Shuffled input: $1, 0, 1, 0, 1, 0, 1, 0$ (that is $x[0], x[4], x[2], x[6], \\ldots$). After stage 1 every node is 1: each butterfly computed $1 + 0$ and $1 - 0$, since a pair of one-sample DFTs is just their sum and difference. After stage 2, the nodes read $2,\\ 1 - j,\\ 0,\\ 1 + j$ in each block, which is the 4-point DFT of $[1,1,0,0]$, the $E$ and $O$ from the worked split. Stage 3 combines them: $4,\\ 1 - 2.41j,\\ 0,\\ 1 - 0.41j,\\ 0,\\ 1 + 0.41j,\\ 0,\\ 1 + 2.41j$. The readout under the diagram also counts the work for the N in the second control."
+    },
+    {
+      "type": "prose",
+      "text": "The inner stages are in fact simple. Stage 1 uses only $W^0 = 1$ and so does no multiplications. Stage 2 uses $W_8^0$ and $W_8^2 = -j$, and multiplying by $-j$ just swaps real and imaginary parts and flips a sign, which is also free. Only stage 3 has true multiplications: $W_8^1$ and $W_8^3$ appear once each. Of the 12 butterfly multiplications of an 8-point FFT, 7 are by 1, 3 are by $-j$, and just 2 need real work."
+    },
+    {
+      "type": "prose",
+      "text": "Switch to ramp 0 … 7 for numbers that do not cancel. Shuffled input: $0, 4, 2, 6, 1, 5, 3, 7$. After stage 1: $4, -4, 8, -4, 6, -4, 10, -4$ (sums and differences of neighbouring pairs, for example $0 + 4 = 4$ and $0 - 4 = -4$). After stage 2: $12,\\ -4 + 4j,\\ -4,\\ -4 - 4j$ in the first block and $16,\\ -4 + 4j,\\ -4,\\ -4 - 4j$ in the second. After stage 3:"
+    },
+    {
+      "type": "math",
+      "tex": "X = [\\,28,\\ -4 + 9.657j,\\ -4 + 4j,\\ -4 + 1.657j,\\ -4,\\ -4 - 1.657j,\\ -4 - 4j,\\ -4 - 9.657j\\,]"
+    },
+    {
+      "type": "prose",
+      "text": "The first output is the sum $0 + 1 + \\cdots + 7 = 28$, and every other output has real part $-4$: a ramp is a sawtooth in disguise, whose spectrum falls like $1/k$, with $|X[1]| = 10.45$ the largest of the non-zero-frequency bins, and the magnitudes falling to 4 at the Nyquist bin $k = 4$. A last example: cosine, 1 cycle gives $X[1] = X[7] = 4$ and every other bin zero, and the diagram shows each stage assembling that, with all the other nodes cancelling to zero in stage 3. Impulse at n = 1 gives the twiddle factors themselves, $X[k] = W_8^k$, in the right column: $1, 0.71 - 0.71j, -j, \\ldots$, since a delayed impulse is a pure phase ramp."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "fft-butterfly",
+        "title": "A ramp, and the count for a million points",
+        "params": [
+          {
+            "key": "input",
+            "label": "Input x[n]",
+            "control": "select",
+            "options": [
+              "impulse at n = 0",
+              "impulse at n = 1",
+              "constant 1",
+              "cosine, 1 cycle",
+              "cosine, 2 cycles",
+              "alternating +1, −1",
+              "square: four 1s, four 0s",
+              "ramp 0 … 7"
+            ],
+            "default": "ramp 0 … 7"
+          },
+          {
+            "key": "size",
+            "label": "Count the work for N =",
+            "control": "select",
+            "options": [
+              "8",
+              "64",
+              "1024",
+              "65536",
+              "1048576"
+            ],
+            "default": "1048576"
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Show all and read the readout: for $N = 1{,}048{,}576$ it says the definition takes $N^2 = 1{,}099{,}511{,}627{,}776$ complex multiplications and the FFT $10{,}485{,}760$, about 104,858 times fewer. The output column is the ramp's spectrum above. Change the second control to 8, 64, 1024 and 65,536 to fill in the table below."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How much faster"
+    },
+    {
+      "type": "prose",
+      "text": "The count for the FFT is $(N/2)\\log_2 N$ butterfly multiplications against $N^2$ for the definition:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$N = 8$: 12 against 64 (5 times fewer).",
+        "$N = 64$: 192 against 4,096 (21 times).",
+        "$N = 1024$: 5,120 against 1,048,576 (205 times).",
+        "$N = 65{,}536$: 524,288 against 4,294,967,296 (8,192 times).",
+        "$N = 1{,}048{,}576$: 10,485,760 against 1,099,511,627,776 (104,858 times)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The advantage itself grows, as $2N/\\log_2 N$. At a billion multiplications per second, the 65,536-point transform takes 4.29 s by the definition and 0.52 ms by the FFT, and the million-point one takes 1,100 s against 0.0105 s. Real implementations are also faster than the multiplication counts suggest because they skip the trivial twiddles and are careful with memory, but the $N\\log N$ law is the thing."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Beyond powers of two"
+    },
+    {
+      "type": "prose",
+      "text": "Radix-2 needs $N = 2^m$. For other lengths there are mixed-radix FFTs that split $N = N_1N_2$ into factors (radix-4 and split-radix variants reduce the count of multiplications a little further), and Bluestein's method, which rewrites a DFT of any length, even a prime, as a convolution that a power-of-two FFT can do. The simplest fix is to pad the signal with zeros to the next power of two, which gives a spectrum sampled more finely and no more information. The inverse DFT is the same algorithm with $W_N^{-1}$ instead of $W_N$ and a division by $N$ at the end, so the two directions cost the same."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A history with a twist"
+    },
+    {
+      "type": "prose",
+      "text": "James Cooley and John Tukey published the algorithm in 1965, in a short paper in Mathematics of Computation, and the speed-up changed what computers were used for: spectra of seismic records, audio, radar and later images became everyday computations. But the idea was older. Carl Friedrich Gauss had used the same decomposition around 1805 to interpolate the orbit of an asteroid from a handful of observations, and left it in unpublished notes that appeared in print only after his death, in 1866, in Latin and in a notation hard to recognise. That is 160 years before Cooley and Tukey. It was found only in 1984, when Michael Heideman, Don Johnson and Sidney Burrus traced the history. There were other partial rediscoveries between (Danielson and Lanczos, 1942, for example), each missed because computing was too slow for it to matter."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What it is used for"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Spectra. Cut a recording into windows of, say, 1024 samples (the Sampling and the DFT (#/math/fourier-transform/sampling-and-dft) page showed why to taper them), FFT each, and show the magnitudes over time: a spectrogram. One 1024-sample frame costs 5,120 multiplications instead of a million.",
+        "Fast convolution. The convolution theorem says filtering is multiplication of spectra. To filter a long signal with a long filter, FFT both, multiply bin by bin, and inverse FFT. For two signals of length $N$ this costs about three FFTs, $O(N\\log N)$, against $N^2$ for convolving directly.",
+        "Multiplying polynomials, and so big integers. A product of polynomials is the convolution of their coefficient lists. Evaluate both at $N$ points that are $N$th roots of unity (which is what the DFT does), multiply the values pointwise, and interpolate back with the inverse transform.",
+        "Many more: image and video compression, OFDM in Wi-Fi and 4G, solving differential equations spectrally, and large-integer multiplication in number-theory software."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Here is polynomial multiplication in miniature. Multiply $(1 + 2x + 3x^2)$ by $(4 + 5x)$. The product has degree 3, so four coefficients: use $N = 4$ and pad the lists to $[1, 2, 3, 0]$ and $[4, 5, 0, 0]$. Their 4-point DFTs are the polynomials' values at $x = 1, -j, -1, j$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "first: $[6,\\ -2 - 2j,\\ 2,\\ -2 + 2j]$; second: $[9,\\ 4 - 5j,\\ -1,\\ 4 + 5j]$.",
+        "Product, bin by bin: $[54,\\ -18 + 2j,\\ -2,\\ -18 - 2j]$. (For example, at $x = 1$ the first polynomial is worth 6 and the second 9, so the product is worth 54.)",
+        "Inverse DFT: $[4,\\ 13,\\ 22,\\ 15]$, so $(1 + 2x + 3x^2)(4 + 5x) = 4 + 13x + 22x^2 + 15x^3$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For two polynomials of degree 1000 the direct way takes 1,000,000 multiplications. With FFTs of size 2048 (the next power of two above 2001) you need three of them, $3\\times\\frac{2048}{2}\\times 11 = 33{,}792$ butterfly multiplications, and 2,048 pointwise products: 35,840 in all, about 28 times fewer, and the gap widens as the polynomials grow."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "Count the work",
+      "text": "How many complex multiplications does the radix-2 FFT use for $N = 4096$, and how does that compare with the definition?",
+      "solution": [
+        "$\\log_2 4096 = 12$, so $(N/2)\\log_2 N = 2048\\times 12 = 24{,}576$. The definition needs $4096^2 = 16{,}777{,}216$. The ratio is $16{,}777{,}216/24{,}576 = 682.7$."
+      ],
+      "answer": "24,576 against 16,777,216: about 683 times fewer."
+    },
+    {
+      "type": "problem",
+      "title": "A four-point FFT by hand",
+      "text": "Run the radix-2 FFT on $x = [1, 2, 3, 4]$.",
+      "solution": [
+        "Bit-reversal for two bits swaps $x[1]$ and $x[2]$: the input order is $[1, 3, 2, 4]$. Stage 1 (twiddle 1): $(1, 3) \\to (4, -2)$ and $(2, 4) \\to (6, -2)$, giving $[4, -2, 6, -2]$. Stage 2 uses $W_4^0 = 1$ and $W_4^1 = -j$. Top block pair, $j = 0$: $4 + 6 = 10$ and $4 - 6 = -2$. Bottom, $j = 1$: $-2 + (-j)(-2) = -2 + 2j$ and $-2 - (-j)(-2) = -2 - 2j$. Result: $[10,\\ -2 + 2j,\\ -2,\\ -2 - 2j]$, matching the DFT computed by definition on the previous page."
+      ],
+      "answer": "$[10,\\ -2 + 2j,\\ -2,\\ -2 - 2j]$."
+    },
+    {
+      "type": "problem",
+      "title": "Bit reversal",
+      "text": "List the bit-reversed order for $N = 16$ in the first six places (indices 0 to 5 of the shuffled array hold which input sample?).",
+      "solution": [
+        "The sample at shuffled position $i$ is $x[\\text{rev}(i)]$ with four bits. $0000 \\to 0$; $0001 \\to 1000 = 8$; $0010 \\to 0100 = 4$; $0011 \\to 1100 = 12$; $0100 \\to 0010 = 2$; $0101 \\to 1010 = 10$. So the array starts $x[0], x[8], x[4], x[12], x[2], x[10]$."
+      ],
+      "answer": "$x[0], x[8], x[4], x[12], x[2], x[10]$."
+    },
+    {
+      "type": "problem",
+      "title": "Is it worth it?",
+      "text": "A transform of 65,536 points takes 4.29 s by the definition on a machine doing $10^9$ complex multiplications per second. How long does the FFT take?",
+      "solution": [
+        "The FFT does $32{,}768\\times 16 = 524{,}288$ multiplications, which at $10^9$ per second is $0.52$ ms. That is about 8,000 times faster, so a transform that would be a pause on the screen is done in a fraction of one video frame."
+      ],
+      "answer": "About 0.52 ms."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "James W. Cooley and John W. Tukey, An Algorithm for the Machine Calculation of Complex Fourier Series, Mathematics of Computation 19 (1965), 297–301.",
+        "Michael T. Heideman, Don H. Johnson and C. Sidney Burrus, Gauss and the history of the fast Fourier transform, IEEE ASSP Magazine 1 (4), October 1984, 14–21.",
+        "Alan V. Oppenheim and Ronald W. Schafer, Discrete-Time Signal Processing, 3rd edition (Pearson, 2010), chapter 9, Computation of the Discrete Fourier Transform.",
+        "Thomas H. Cormen, Charles E. Leiserson, Ronald L. Rivest and Clifford Stein, Introduction to Algorithms, 3rd edition (MIT Press, 2009), the chapter Polynomials and the FFT.",
+        "Next: A Gallery of Waves (#/math/fourier-transform/gallery)."
+      ]
+    }
+  ]
+}

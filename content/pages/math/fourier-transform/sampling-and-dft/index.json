@@ -1,0 +1,273 @@
+{
+  "title": "Sampling and the DFT",
+  "intro": "A computer holds a signal as a list of samples and a spectrum as a list of numbers. Sampling costs something, as frequencies above half the sampling rate fold back as impostors. The discrete Fourier transform is the finite list that remains, and it is the thing the FFT computes.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sampling"
+    },
+    {
+      "type": "prose",
+      "text": "To store a signal $x(t)$ we measure it every $T_s$ seconds and keep the numbers $x[n] = x(nT_s)$. The sampling rate is $f_s = 1/T_s$. Between the samples nothing is recorded, so many different signals fit the same list. The question is which of them the list can be trusted to describe."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Aliasing"
+    },
+    {
+      "type": "prose",
+      "text": "Sample a 7 Hz cosine at $f_s = 10$ Hz. At $t = n/10$ the values of $\\cos(2\\pi\\cdot 7\\,t)$ are"
+    },
+    {
+      "type": "math",
+      "tex": "1,\\ -0.309,\\ -0.809,\\ 0.809,\\ 0.309,\\ -1,\\ 0.309,\\ 0.809,\\ -0.809,\\ -0.309,\\ \\ldots"
+    },
+    {
+      "type": "prose",
+      "text": "A 3 Hz cosine sampled at the same instants gives exactly the same ten numbers. The reason is in the exponent: $\\cos(2\\pi\\cdot 7\\cdot n/10) = \\cos(2\\pi\\cdot 0.7\\,n)$, and $0.7 = 1 - 0.3$, so each step turns by $0.7$ of a cycle, which looks the same as turning back $0.3$ of a cycle, and cosine does not tell the two directions apart. Whole cycles between samples are invisible. In general, frequencies $f$ and $f + m f_s$ (and $-f + m f_s$) give identical samples for every whole number $m$. They are aliases of one another, and once the samples are taken nothing can tell which one it was."
+    },
+    {
+      "type": "prose",
+      "text": "So a sampled signal can be unambiguous only if we know in advance which of these frequencies could be present. The standard choice is to keep everything between $0$ and $f_s/2$. A tone above $f_s/2$ is folded back to $|f - m f_s|$ for whichever $m$ lands it in that band. Examples:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "7 Hz at $f_s = 10$ Hz: $|7 - 10| = 3$ Hz, as shown.",
+        "900 Hz at $f_s = 1000$ Hz: $|900 - 1000| = 100$ Hz.",
+        "1300 Hz at $f_s = 1000$ Hz: $|1300 - 1000| = 300$ Hz.",
+        "30 kHz at $f_s = 44.1$ kHz (CD audio): $44.1 - 30 = 14.1$ kHz, a tone nobody played, in the middle of the audible band."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The remedy is a condition. If the signal contains no frequency above $f_{\\max}$, sampling at $f_s > 2f_{\\max}$ keeps every frequency inside $0$ to $f_s/2$ and nothing folds. This is the Nyquist-Shannon sampling theorem, and $2f_{\\max}$ is the Nyquist rate. Audio with content up to 20 kHz needs more than 40 kHz, which is why CDs use 44.1 kHz: the extra 4.1 kHz leaves room for the anti-aliasing filter to roll off. Where the signal cannot be trusted to stay below $f_s/2$, an analogue low-pass filter is placed before the sampler."
+    },
+    {
+      "type": "prose",
+      "text": "In spectrum terms, sampling copies the spectrum $X(f)$ again and again, centred on every multiple of $f_s$, and adds the copies. If $X$ is wider than $f_s$ the copies overlap and their sum is a blur no one can untangle. The shift rule of the Properties of the Transform (#/math/fourier-transform/properties) page explains the copies: sampling multiplies by a train of impulses, and a train of impulses has a train of impulses as its transform."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The DTFT and the unit circle"
+    },
+    {
+      "type": "prose",
+      "text": "The transform of the sample list itself is called the discrete-time Fourier transform (DTFT):"
+    },
+    {
+      "type": "math",
+      "tex": "X(e^{j\\omega}) = \\sum_{n=-\\infty}^{\\infty} x[n]\\, e^{-j\\omega n}, \\qquad \\omega = 2\\pi f/f_s"
+    },
+    {
+      "type": "prose",
+      "text": "The frequency $\\omega$ is in radians per sample, and since $e^{-j\\omega n}$ does not change when $\\omega$ grows by $2\\pi$, the DTFT repeats every $2\\pi$: that is the aliasing, seen as a periodic function. The 7 Hz cosine has $\\omega = 1.4\\pi$, which is the same as $-0.6\\pi$ (subtract $2\\pi$), and a cosine cannot tell $-0.6\\pi$ from the 3 Hz cosine's $+0.6\\pi$. This is exactly the z-transform of the The Z-Transform (#/math/z-transform) topic evaluated on the unit circle, $z = e^{j\\omega}$, which is how the The Unit Circle and Frequency Response (#/math/z-transform/unit-circle) page defines the frequency response. Going round the circle once is going once through the repeating pattern."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The DFT"
+    },
+    {
+      "type": "prose",
+      "text": "A computer can hold only a finite list. Keep $N$ samples $x[0], \\ldots, x[N-1]$ and look at the DTFT only at the $N$ equally spaced frequencies $\\omega_k = 2\\pi k/N$, that is, $N$ points spaced round the unit circle. The result is the discrete Fourier transform:"
+    },
+    {
+      "type": "math",
+      "tex": "X[k] = \\sum_{n=0}^{N-1} x[n]\\, e^{-j2\\pi k n/N}, \\qquad x[n] = \\frac{1}{N}\\sum_{k=0}^{N-1} X[k]\\, e^{j2\\pi k n/N}"
+    },
+    {
+      "type": "prose",
+      "text": "$N$ numbers in, $N$ numbers out, and the pair is exactly invertible. Bin $k$ corresponds to the frequency $k f_s/N$: with $f_s = 1000$ Hz and $N = 8$ the bins are 125 Hz apart. Bins above $N/2$ stand for negative frequencies, $k$ and $k - N$ being the same thing, as the circle closes. There is a Parseval relation here too: $\\sum|x[n]|^2 = \\frac1N\\sum|X[k]|^2$. The DFT is the series coefficient formula with the integral replaced by a sum, so it treats the $N$ samples as one period of a repeating signal."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "An 8-point example"
+    },
+    {
+      "type": "prose",
+      "text": "Take the eight samples $x = [1, 1, 1, 1, 0, 0, 0, 0]$, the square input of the FFT widget. Let $W = e^{-j2\\pi/8} = 0.7071 - 0.7071j$, so that $X[k] = \\sum_n x[n]W^{kn}$. Only $n = 0 \\ldots 3$ contribute. For $k = 0$: $X[0] = 1 + 1 + 1 + 1 = 4$. For $k = 1$, the terms are $W^0, W^1, W^2, W^3$:"
+    },
+    {
+      "type": "math",
+      "tex": "X[1] = 1 + (0.7071 - 0.7071j) + (-j) + (-0.7071 - 0.7071j) = 1 - 2.4142j"
+    },
+    {
+      "type": "prose",
+      "text": "The real parts $1 + 0.7071 + 0 - 0.7071$ add to 1 and the imaginary parts $-0.7071 - 1 - 0.7071$ to $-2.4142$. Doing every $k$ the same way gives"
+    },
+    {
+      "type": "math",
+      "tex": "X = [\\,4,\\ \\ 1 - 2.4142j,\\ \\ 0,\\ \\ 1 - 0.4142j,\\ \\ 0,\\ \\ 1 + 0.4142j,\\ \\ 0,\\ \\ 1 + 2.4142j\\,]"
+    },
+    {
+      "type": "prose",
+      "text": "Magnitudes: $4,\\ 2.6131,\\ 0,\\ 1.0824,\\ 0,\\ 1.0824,\\ 0,\\ 2.6131$. Phases of the non-zero ones: $0^\\circ,\\ -67.5^\\circ,\\ -22.5^\\circ,\\ +22.5^\\circ,\\ +67.5^\\circ$. The bin at $k = 0$ is the sum of all the samples, 4. The outputs for $k = 5, 6, 7$ are the conjugates of $k = 3, 2, 1$, as they must be for a real input. All the even bins vanish except $k = 0$, because the four 1s followed by four 0s is a square wave with half the points up, so it has only odd harmonics besides its mean. Parseval holds: $\\sum|x|^2 = 4$ and $\\frac18\\sum|X|^2 = \\frac18(16 + 2\\times 6.828 + 2\\times 1.172) = 4$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "fft-butterfly",
+        "title": "The 8-point DFT of the square input",
+        "params": [
+          {
+            "key": "input",
+            "label": "Input x[n]",
+            "control": "select",
+            "options": [
+              "impulse at n = 0",
+              "impulse at n = 1",
+              "constant 1",
+              "cosine, 1 cycle",
+              "cosine, 2 cycles",
+              "alternating +1, −1",
+              "square: four 1s, four 0s",
+              "ramp 0 … 7"
+            ],
+            "default": "square: four 1s, four 0s"
+          },
+          {
+            "key": "size",
+            "label": "Count the work for N =",
+            "control": "select",
+            "options": [
+              "8",
+              "64",
+              "1024",
+              "65536",
+              "1048576"
+            ],
+            "default": "8"
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Press Show all. The right-hand column of the diagram holds $X[0] \\ldots X[7]$: 4, then 1 − 2.41j, 0, 1 − 0.41j, 0, 1 + 0.41j, 0, 1 + 2.41j, as above. The bar panel under the diagram shows the magnitudes $|X[k]|$: a tall bar at $k = 0$, bars at 1 and 7 of height 2.61 and at 3 and 5 of 1.08, and nothing at the even positions. The mirror symmetry about $k = 4$ is the conjugate symmetry."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When the sinusoid does not fit"
+    },
+    {
+      "type": "prose",
+      "text": "The DFT silently assumes the $N$ samples repeat forever. If a sinusoid completes a whole number of cycles in the window, that repetition is seamless and the sinusoid lands in exactly one pair of bins. If it does not, the repeated window has a jump at each seam, and a jump has a spectrum that spreads. This is spectral leakage."
+    },
+    {
+      "type": "prose",
+      "text": "With $N = 8$, a cosine of 2 cycles in the window gives $|X| = 4$ at $k = 2$ and $k = 6$ and zero elsewhere. A cosine of 2.5 cycles, which no bin sits on, gives the magnitudes $1.000,\\ 1.192,\\ 2.798,\\ 2.398,\\ 1.000,\\ 2.398,\\ 2.798,\\ 1.192$: no bin is zero, and the biggest, 2.798, is far below 4. With $N = 32$ and 4.5 cycles, scaling the amplitudes so a cosine of amplitude 1 shows as 1 when it fits, the bins $k = 0 \\ldots 10$ read $0.063,\\ 0.072,\\ 0.104,\\ 0.187,\\ 0.611,\\ 0.662,\\ 0.238,\\ 0.153,\\ 0.117,\\ 0.097,\\ 0.084$. The peak is 0.662 where it should be 1, and the tails fall off slowly: bin 10 is still 0.084, only $17.9$ dB below the peak."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Windows"
+    },
+    {
+      "type": "prose",
+      "text": "The remedy is to taper the samples smoothly to zero at both ends, so the repeated window has no jump. The Hann window is $w[n] = 0.5 - 0.5\\cos(2\\pi n/N)$, a raised cosine, 0 at the ends and 1 in the middle. Multiplying the samples by it before the DFT, the 4.5-cycle example becomes $0.000,\\ 0.003,\\ 0.012,\\ 0.085,\\ 0.425,\\ 0.424,\\ 0.085,\\ 0.012,\\ 0.004,\\ 0.002,\\ 0.001$ for $k = 0 \\ldots 10$. Now bin 10 is $0.001$, $52.5$ dB below the peak: the far leakage has shrunk from 0.084 to 0.001, about 84 times smaller, because a smooth window has a spectrum that falls quickly (the lesson of the Convergence and the Gibbs Phenomenon (#/math/fourier-transform/convergence) page again). The price is a wider main lobe: a tone that fits exactly shows as three bins, $0.25,\\ 0.5,\\ 0.25$ at $k = 3, 4, 5$, instead of one, and the centre bin reads 0.5 instead of 1 because the window's average is 0.5. Window functions are a trade between narrow peaks and low leakage; rectangular, Hann, Hamming and Blackman give different trades."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "fft-butterfly",
+        "title": "A cosine that fits the window",
+        "params": [
+          {
+            "key": "input",
+            "label": "Input x[n]",
+            "control": "select",
+            "options": [
+              "impulse at n = 0",
+              "impulse at n = 1",
+              "constant 1",
+              "cosine, 1 cycle",
+              "cosine, 2 cycles",
+              "alternating +1, −1",
+              "square: four 1s, four 0s",
+              "ramp 0 … 7"
+            ],
+            "default": "cosine, 2 cycles"
+          },
+          {
+            "key": "size",
+            "label": "Count the work for N =",
+            "control": "select",
+            "options": [
+              "8",
+              "64",
+              "1024",
+              "65536",
+              "1048576"
+            ],
+            "default": "8"
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "This widget offers only whole numbers of cycles, so it shows the leak-free case. With Show all, $X[2]$ and $X[6]$ read 4 and every other output is 0. Compare with 2.5 cycles above, where every bin is nonzero: the difference between a clean line and leakage is just whether the window holds a whole number of cycles."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "Alias",
+      "text": "A system samples at 1000 Hz. A 1300 Hz tone is present. Where does it show up?",
+      "solution": [
+        "$1300 = 1000 + 300$, so the sample values are identical to those of a 300 Hz tone. It appears as 300 Hz, below $f_s/2 = 500$ Hz."
+      ],
+      "answer": "At 300 Hz."
+    },
+    {
+      "type": "problem",
+      "title": "Bin spacing",
+      "text": "A 1024-point DFT is taken of audio sampled at 8000 Hz. What is the bin spacing? Does a 1000 Hz tone fit the window? A 1010 Hz tone?",
+      "solution": [
+        "Spacing $f_s/N = 8000/1024 = 7.8125$ Hz. The 1000 Hz tone is at $1000/7.8125 = 128$ bins, a whole number, so it fits and lands in one bin. A 1010 Hz tone is at $129.28$ bins, between bins 129 and 130, so it leaks."
+      ],
+      "answer": "7.8125 Hz; yes, bin 128; no, 129.28 bins."
+    },
+    {
+      "type": "problem",
+      "title": "A four-point DFT",
+      "text": "Compute the DFT of $x = [1, 2, 3, 4]$.",
+      "solution": [
+        "With $N = 4$, $W = e^{-j\\pi/2} = -j$, so $X[k] = \\sum x[n](-j)^{kn}$. $X[0] = 1 + 2 + 3 + 4 = 10$. $X[1] = 1 + 2(-j) + 3(-1) + 4(j) = -2 + 2j$. $X[2] = 1 - 2 + 3 - 4 = -2$. $X[3] = 1 + 2j - 3 - 4j = -2 - 2j$. Check by Parseval: $\\sum|x|^2 = 30$ and $\\frac14(100 + 8 + 4 + 8) = 30$."
+      ],
+      "answer": "$[10,\\ -2 + 2j,\\ -2,\\ -2 - 2j]$."
+    },
+    {
+      "type": "problem",
+      "title": "Minimum sampling rate",
+      "text": "A sensor signal contains frequencies up to 15 kHz. What is the lowest sampling rate that avoids aliasing, and what would a 20 kHz component do if it were still present at 30 kHz sampling?",
+      "solution": [
+        "The Nyquist rate is $2\\times 15 = 30$ kHz, and in practice you sample somewhat above it. A 20 kHz component at $f_s = 30$ kHz is above $f_s/2 = 15$ kHz and folds to $|20 - 30| = 10$ kHz, where it lands on top of genuine content."
+      ],
+      "answer": "More than 30 kHz; the 20 kHz tone appears at 10 kHz."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Alan V. Oppenheim and Ronald W. Schafer, Discrete-Time Signal Processing, 3rd edition (Pearson, 2010), chapters 4 (sampling), 8 (the DFT) and the sections on windows in chapter 10.",
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997). Chapter 7, Sampling.",
+        "Fredric J. Harris, On the use of windows for harmonic analysis with the discrete Fourier transform, Proceedings of the IEEE 66 (1978), 51–83.",
+        "Next: The Fast Fourier Transform (#/math/fourier-transform/fft)."
+      ]
+    }
+  ]
+}

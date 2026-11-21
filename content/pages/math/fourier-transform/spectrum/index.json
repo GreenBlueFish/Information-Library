@@ -1,0 +1,241 @@
+{
+  "title": "Reading a Spectrum",
+  "intro": "A spectrum plots, against frequency, how big each sinusoid is and where it starts. It is the same signal as the waveform, laid out so that questions about frequency become questions you can read off a picture.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two plots from one list"
+    },
+    {
+      "type": "prose",
+      "text": "A Fourier series is a list of complex numbers $c_k$, one for each frequency $k f_0$. A complex number has two parts, so a spectrum is really two plots, drawn on the same horizontal axis of frequency:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The amplitude spectrum shows $|c_k|$ (or $A_k$) against $f$. It says how much of each frequency is there. For the square wave of period 1 s it is a comb of stems at 1, 3, 5, ... Hz of height $4/\\pi = 1.273$, $0.424$, $0.255$, ...",
+        "The phase spectrum shows $\\varphi_k = \\angle c_k$ against $f$. It says where each sinusoid is in its cycle at $t = 0$. For the same square wave every stem has phase $-90^\\circ$: each harmonic starts as a sine."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "People often show only the amplitude spectrum, because for many purposes (what pitch is that, how much hum is on this line) it is the part that matters. But without the phases you cannot rebuild the wave. Scramble the phases of the square wave's harmonics and the sound of it barely changes, but its shape stops being a square."
+    },
+    {
+      "type": "prose",
+      "text": "Phase is only meaningful where the amplitude is not zero. For the square wave the even harmonics have $A_k = 0$, so there is nothing to start anywhere, and the viewer simply leaves them out of the readout."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One-sided and two-sided"
+    },
+    {
+      "type": "prose",
+      "text": "There are two ways to draw the same spectrum, and mixing them up is a classic source of factors of 2."
+    },
+    {
+      "type": "list",
+      "items": [
+        "One-sided: frequencies $k f_0 \\ge 0$ only, with heights $A_0, A_1, A_2, \\ldots$ where $A_k = 2|c_k|$ for $k \\ge 1$. The height is the amplitude of the cosine you would see on an oscilloscope. This is what the viewer draws.",
+        "Two-sided: both signs of frequency, with heights $|c_k|$ at $\\pm k f_0$. Each stem is half the one-sided height, because the amplitude is shared between the counter-rotating arrows. The picture is mirror-symmetric about $f = 0$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Take $3\\cos(2\\pi\\cdot 5\\,t + 60^\\circ)$ from the Sinusoids and Complex Exponentials (#/math/fourier-transform/sinusoids) page. One-sided: a single stem of height 3 at 5 Hz, with phase $60^\\circ$. Two-sided: stems of height 1.5 at $+5$ and $-5$ Hz, with phases $+60^\\circ$ and $-60^\\circ$. The two spectra carry the same information; the two-sided one just keeps both arrows."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Delay changes phase, never amplitude"
+    },
+    {
+      "type": "prose",
+      "text": "Slide a signal later by $t_0$ seconds, $y(t) = x(t - t_0)$. Each arrow $c_k e^{jk\\omega_0 t}$ becomes $c_k e^{jk\\omega_0(t - t_0)} = \\left(c_k e^{-jk\\omega_0 t_0}\\right)e^{jk\\omega_0 t}$. So the amplitude $|c_k|$ is unchanged and the phase becomes $\\varphi_k - 2\\pi (k f_0)\\, t_0$. The extra phase is proportional to frequency, a straight line against $f$ whose slope is $-2\\pi t_0$. This is called linear phase, and it is the signature of a pure delay: higher harmonics must be shifted by more degrees to move by the same time, because they complete more cycles in it."
+    },
+    {
+      "type": "prose",
+      "text": "Delay the square wave by a quarter period, $t_0 = T/4$, so the fraction is 0.25. The phase of harmonic $k$ drops by $90^\\circ \\times k$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\varphi_k = -90^\\circ - 90^\\circ k \\quad\\Rightarrow\\quad \\varphi_1 = -180^\\circ,\\ \\ \\varphi_3 = -360^\\circ \\equiv 0^\\circ,\\ \\ \\varphi_5 = -540^\\circ \\equiv 180^\\circ"
+    },
+    {
+      "type": "prose",
+      "text": "The phases of three consecutive harmonics are $180^\\circ, 0^\\circ, 180^\\circ$, flipping sign each time, and the shape that results is the original square wave moved by a quarter period: now symmetric about $t = 0$, built of cosines instead of sines. Angles are taken modulo $360^\\circ$, and the viewer reports them in the range $-180^\\circ$ to $180^\\circ$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "fourier-3d",
+        "title": "A delayed square wave",
+        "params": [
+          {
+            "key": "signal",
+            "label": "Input signal",
+            "control": "select",
+            "options": [
+              "square wave",
+              "sawtooth wave",
+              "triangle wave",
+              "pulse train (pulse 0.5 s wide)",
+              "half-wave rectified sine",
+              "full-wave rectified sine",
+              "two tones"
+            ],
+            "default": "square wave"
+          },
+          {
+            "key": "harmonics",
+            "label": "Harmonics added, N",
+            "control": "range",
+            "min": 0,
+            "max": 40,
+            "step": 1,
+            "default": 7
+          },
+          {
+            "key": "period",
+            "label": "Period T (s)",
+            "control": "range",
+            "min": 0.5,
+            "max": 8,
+            "step": 0.5,
+            "default": 1
+          },
+          {
+            "key": "delay",
+            "label": "Delay (fraction of a period)",
+            "control": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.05,
+            "default": 0.25
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -90
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 10
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The view starts from the side, so you see the amplitude bars on the right wall as a spectrum: 1.273, 0.424, 0.255, 0.182 at 1, 3, 5 and 7 Hz. Read the phase panel at the bottom and the readout: phases are 180°, 0°, 180° at k = 1, 3, 5. Now drag Delay back to 0 and the phases change to −90° at every harmonic, while the bars do not move at all. Try Delay = 0.5: the phase shift is $-180^\\circ k$, which is $180^\\circ$ for odd $k$, so every harmonic flips and the wave becomes its own negative."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Parseval: the same energy, counted either way"
+    },
+    {
+      "type": "prose",
+      "text": "The average power of a signal is $\\frac1T\\int_0^T x(t)^2\\,dt$, the mean of the squared value. Parseval's theorem says the same number comes out of adding the squares of the spectrum:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac1T\\int_0^T x(t)^2\\,dt = \\sum_{k=-\\infty}^{\\infty}|c_k|^2 = A_0^2 + \\sum_{k=1}^{\\infty}\\frac{A_k^2}{2}"
+    },
+    {
+      "type": "prose",
+      "text": "The reason is orthogonality again. Squaring the series produces products of every pair of harmonics; averaging over a period kills every cross term, leaving only the squares. And $A_k^2/2$ is just the power of a single cosine of amplitude $A_k$: its average of $\\cos^2$ is a half."
+    },
+    {
+      "type": "prose",
+      "text": "The square wave takes only the values $\\pm1$, so its power is exactly 1. Each harmonic contributes $A_k^2/2 = 8/(\\pi^2 k^2)$, which is 0.8106 for $k = 1$. Adding more harmonics:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Fundamental only: 0.8106, or 81.1% of the power.",
+        "Up to $k = 3$: $0.8106 + 0.0901 = 0.9006$.",
+        "Up to $k = 5$: 0.9331. Up to $k = 7$: 0.9496. Up to $k = 9$: 0.9596.",
+        "Up to $k = 39$: 0.98987. Up to $k = 99$: 0.99595."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The partial sums creep up to 1 but never quite arrive. The total is $\\frac{8}{\\pi^2}\\sum_{k\\ \\text{odd}} \\frac{1}{k^2}$, and the sum of reciprocal squares of the odd numbers is $\\pi^2/8$, so the series does add to exactly $\\frac{8}{\\pi^2}\\cdot\\frac{\\pi^2}{8} = 1$. The power still missing after $N$ harmonics is the square of the RMS gap that the viewer prints. After $k = 39$ the missing power is $1 - 0.98987 = 0.01013$, and its square root is $0.1006$, which is the RMS gap the viewer shows for the square wave at N = 39."
+    },
+    {
+      "type": "prose",
+      "text": "The triangle wave behaves very differently. Its power is $\\frac13$, and the fundamental alone has $A_1^2/2 = 0.3285$, which is 98.6% of it. This is the practical meaning of a spectrum that falls fast: a handful of harmonics holds nearly all the energy."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading a spectrum"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Peaks tell you which frequencies are present: pitch of a note, hum at 50 or 60 Hz, a carrier.",
+        "Spacing of peaks tells you the period: a comb spaced $f_0$ apart belongs to a signal that repeats every $1/f_0$.",
+        "How fast the stems fall tells you how smooth the signal is, the subject of the Convergence and the Gibbs Phenomenon (#/math/fourier-transform/convergence) page.",
+        "Stems at every multiple of $f_0$, with none missing, means no symmetry; missing even harmonics mean the wave repeats upside-down after half a period, as the square and triangle waves do."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "One-sided to two-sided",
+      "text": "A signal is $3\\cos(2\\pi\\cdot 5t + 60^\\circ)$. Give its two-sided spectrum and check Parseval.",
+      "solution": [
+        "Two-sided: $c_{5} = 1.5e^{j60^\\circ}$ at $+5$ Hz and $c_{-5} = 1.5e^{-j60^\\circ}$ at $-5$ Hz. Parseval: $\\sum|c_k|^2 = 1.5^2 + 1.5^2 = 4.5$. In the time domain the average of $9\\cos^2$ is $9/2 = 4.5$. The one-sided form agrees: $A^2/2 = 9/2$."
+      ],
+      "answer": "Two stems of height 1.5 with phases $\\pm60^\\circ$; power 4.5."
+    },
+    {
+      "type": "problem",
+      "title": "Delay the two tones",
+      "text": "The signal $\\cos(\\omega_0 t) + 0.5\\cos(3\\omega_0 t + 60^\\circ)$ is delayed by 0.1 of a period. What are the new phases?",
+      "solution": [
+        "A delay of fraction $d$ of a period subtracts $360^\\circ k d$ from harmonic $k$. For $d = 0.1$: $k = 1$ loses $36^\\circ$, so the phase is $0 - 36 = -36^\\circ$; $k = 3$ loses $108^\\circ$, so $60 - 108 = -48^\\circ$. Amplitudes stay 1 and 0.5. You can check this in the first viewer on the sinusoids page."
+      ],
+      "answer": "$-36^\\circ$ and $-48^\\circ$."
+    },
+    {
+      "type": "problem",
+      "title": "How much power in the fundamental?",
+      "text": "What fraction of the triangle wave's power is in its first harmonic, and in the first two nonzero harmonics?",
+      "solution": [
+        "Power of the triangle: the average of $x^2$ for $x = 1 - 4|t|$ is $\\frac13$. First harmonic: $A_1 = 8/\\pi^2 = 0.8106$, power $A_1^2/2 = 0.3285$; the fraction is $0.3285/0.3333 = 98.6\\%$. Adding $k = 3$ ($A_3 = 0.0901$, power 0.00406) gives $0.3326$, or $99.8\\%$."
+      ],
+      "answer": "98.6% and 99.8%."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997). Chapter 3, sections on Parseval's relation and on the properties of the Fourier series.",
+        "Julius O. Smith III, Mathematics of the Discrete Fourier Transform (W3K Publishing, 2007; free online at ccrma.stanford.edu/~jos/mdft), on the DFT spectrum and Parseval's theorem.",
+        "Next: Convergence and the Gibbs Phenomenon (#/math/fourier-transform/convergence)."
+      ]
+    }
+  ]
+}
