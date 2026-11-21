@@ -118,6 +118,7 @@ import "./widgets/types/vga-scanline.js";
 import "./widgets/types/music-player.js";
 import "./widgets/types/bloch-sphere.js";
 import "./widgets/types/qubit-circuit.js";
+import "./widgets/types/z-surface.js";
 
 /**
  * @typedef {import("./router.js").TopicNode} TopicNode

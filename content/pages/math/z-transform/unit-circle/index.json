@@ -1,0 +1,272 @@
+{
+  "title": "The Unit Circle and Frequency Response",
+  "intro": "On the unit circle, $z = e^{j\\omega}$, and the z-transform becomes the Fourier transform. The frequency response is the height of the surface along that circle, and it can be read with a ruler from the pole-zero plot.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The slice along |z| = 1"
+    },
+    {
+      "type": "prose",
+      "text": "Put $\\rho = 1$, so $z = e^{j\\omega}$. The definition becomes"
+    },
+    {
+      "type": "math",
+      "tex": "X(e^{j\\omega}) = \\sum_{n=-\\infty}^{\\infty} x[n]\\, e^{-j\\omega n}"
+    },
+    {
+      "type": "prose",
+      "text": "which is the discrete-time Fourier transform (DTFT). Geometrically, the DTFT is the z-transform surface sliced along the unit circle, and the red ring in the viewer traces it. As $\\omega$ runs from 0 to $180°$ ($\\pi$ radians) the probe walks from $z = 1$ along the top half of the circle to $z = -1$. $\\omega = 0$ is a constant signal and $\\omega = 180°$ the fastest a sampled signal can alternate, $+1, -1, +1, \\ldots$. The bottom half mirrors the top for a real signal, since $X(e^{-j\\omega})$ is the complex conjugate of $X(e^{j\\omega})$."
+    },
+    {
+      "type": "prose",
+      "text": "The slice only means something if the unit circle lies in the ROC. When it does not, the sum $\\sum x[n] e^{-j\\omega n}$ diverges and the signal has no DTFT. The viewer then draws the response dashed and says so. The unit step sits on the edge: its ROC is $|z| > 1$, the circle is its boundary, and its Fourier transform exists only as a limit with impulses in it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading the response with a ruler"
+    },
+    {
+      "type": "prose",
+      "text": "For a rational $X(z)$, the magnitude at any point is the gain times the product of distances to the zeros over the product of distances to the poles. On the unit circle that gives a recipe for sketching a frequency response without any algebra:"
+    },
+    {
+      "type": "math",
+      "tex": "\\left|X(e^{j\\omega})\\right| = |g|\\, \\frac{\\prod_k \\left|e^{j\\omega} - q_k\\right|}{\\prod_k \\left|e^{j\\omega} - p_k\\right|}"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Walk the probe round the circle.",
+        "The response dips where the probe passes near a zero. It is exactly zero where a zero sits on the circle.",
+        "The response peaks where the probe passes near a pole, and the closer the pole is to the circle, the higher and narrower the peak.",
+        "Poles and zeros at the origin are always at distance 1 and leave the magnitude unchanged."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The phase follows the same picture with angles instead of lengths: $\\angle X(e^{j\\omega})$ is $\\angle g$ plus the sum of the angles of the arrows from each zero to the probe, minus the sum of the angles of the arrows from each pole. Each pole or zero at the origin adds or removes $\\omega$, a linear phase, which is a pure delay or advance."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A notch filter"
+    },
+    {
+      "type": "prose",
+      "text": "The three-tap filter $h[n] = \\delta[n] - 2\\cos\\theta\\, \\delta[n-1] + \\delta[n-2]$ has"
+    },
+    {
+      "type": "math",
+      "tex": "H(z) = 1 - 2\\cos\\theta\\, z^{-1} + z^{-2} = \\frac{(z - e^{j\\theta})(z - e^{-j\\theta})}{z^2}"
+    },
+    {
+      "type": "prose",
+      "text": "Two zeros sit on the unit circle at angles $\\pm\\theta$, and the double pole at the origin leaves the magnitude alone. So $|H(e^{j\\omega})|$ is just the product of the two zero distances. At $\\omega = \\theta$ the probe lands on a zero and the response is exactly 0: the filter removes that one frequency. With $\\theta = 60°$ the distances at $\\omega = 0$ are both 1, so $|H| = 1$; at $\\omega = 180°$ both are $\\sqrt{3}$, so $|H| = 3$. Below, the probe starts on the zero: watch the response panel touch bottom and the surface's red ring dive into the pit."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "z-surface",
+        "title": "A notch: zeros on the circle",
+        "params": [
+          {
+            "key": "signal",
+            "label": "Input signal",
+            "control": "select",
+            "options": [
+              "unit impulse δ[n]",
+              "delayed impulse δ[n−2]",
+              "unit step u[n]",
+              "decaying exponential rⁿu[n]",
+              "left-sided exponential −rⁿu[−n−1]",
+              "two-sided exponential r^|n|",
+              "ramped exponential n·rⁿu[n]",
+              "damped cosine rⁿcos(θn)u[n]",
+              "damped sine rⁿsin(θn)u[n]",
+              "8-sample pulse u[n]−u[n−8]",
+              "notch filter δ[n]−2cosθ·δ[n−1]+δ[n−2]"
+            ],
+            "default": "notch filter δ[n]−2cosθ·δ[n−1]+δ[n−2]"
+          },
+          {
+            "key": "r",
+            "label": "Radius r",
+            "control": "range",
+            "min": 0.1,
+            "max": 1.2,
+            "step": 0.05,
+            "default": 0.8
+          },
+          {
+            "key": "theta",
+            "label": "Angle θ (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 180,
+            "step": 5,
+            "default": 60
+          },
+          {
+            "key": "omega",
+            "label": "Probe frequency ω (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 180,
+            "step": 1,
+            "default": 60
+          },
+          {
+            "key": "height",
+            "label": "Height shows",
+            "control": "select",
+            "options": [
+              "decibels",
+              "magnitude"
+            ],
+            "default": "decibels"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -20
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 10,
+            "max": 85,
+            "step": 5,
+            "default": 35
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Set Angle θ to the frequency of an unwanted hum and this filter removes it. At a 1 kHz sample rate, 50 Hz hum sits at $\\omega = 360° \\times 50/1000 = 18°$, so θ near $18°$ notches it out. The cost is that nearby frequencies are cut too; adding poles just inside the circle at the same angle narrows the notch."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A resonator: a pole near the circle"
+    },
+    {
+      "type": "prose",
+      "text": "The damped sine $r^n \\sin(\\theta n) u[n]$ has poles at $r e^{\\pm j\\theta}$ and a zero at the origin. With $r = 0.95$ the poles sit just inside the circle, and as the probe passes $\\omega = \\theta$ the distance to the nearer pole drops to $1 - r = 0.05$. The response leaps to about 9.74 (19.8 dB) at $\\omega = 45°$, against about 1.2 at $\\omega = 0$ and 0.21 at $\\omega = 180°$. Switch Height shows to magnitude to see how narrow that peak really is."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "z-surface",
+        "title": "A resonator: poles near the circle",
+        "params": [
+          {
+            "key": "signal",
+            "label": "Input signal",
+            "control": "select",
+            "options": [
+              "unit impulse δ[n]",
+              "delayed impulse δ[n−2]",
+              "unit step u[n]",
+              "decaying exponential rⁿu[n]",
+              "left-sided exponential −rⁿu[−n−1]",
+              "two-sided exponential r^|n|",
+              "ramped exponential n·rⁿu[n]",
+              "damped cosine rⁿcos(θn)u[n]",
+              "damped sine rⁿsin(θn)u[n]",
+              "8-sample pulse u[n]−u[n−8]",
+              "notch filter δ[n]−2cosθ·δ[n−1]+δ[n−2]"
+            ],
+            "default": "damped sine rⁿsin(θn)u[n]"
+          },
+          {
+            "key": "r",
+            "label": "Radius r",
+            "control": "range",
+            "min": 0.1,
+            "max": 1.2,
+            "step": 0.05,
+            "default": 0.95
+          },
+          {
+            "key": "theta",
+            "label": "Angle θ (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 180,
+            "step": 5,
+            "default": 45
+          },
+          {
+            "key": "omega",
+            "label": "Probe frequency ω (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 180,
+            "step": 1,
+            "default": 45
+          },
+          {
+            "key": "height",
+            "label": "Height shows",
+            "control": "select",
+            "options": [
+              "decibels",
+              "magnitude"
+            ],
+            "default": "decibels"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -55
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 10,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Push Radius r past 1 and the poles cross the circle: the ROC $|z| > r$ no longer contains the unit circle, the response is drawn dashed, and the signal grows without bound instead of ringing down."
+    },
+    {
+      "type": "problem",
+      "title": "A two-tap average",
+      "text": "$H(z) = \\tfrac{1}{2}(1 + z^{-1})$. Find $|H(e^{j\\omega})|$ at $\\omega = 0$, $90°$ and $180°$ with distances.",
+      "solution": [
+        "$H(z) = \\tfrac{1}{2}(z + 1)/z$: a zero at $-1$ and a pole at $0$, gain $\\tfrac{1}{2}$.",
+        "At $\\omega = 0$, $z = 1$: distance 2 to the zero, 1 to the pole, $|H| = 1$. At $90°$, $z = j$: distance $\\sqrt{2}$, so $|H| = \\sqrt{2}/2 \\approx 0.707$ (−3 dB). At $180°$, $z = -1$ sits on the zero, $|H| = 0$."
+      ],
+      "answer": "$1$, $0.707$, $0$: a low-pass filter."
+    },
+    {
+      "type": "problem",
+      "title": "Where is the peak?",
+      "text": "A causal filter has poles at $0.9 e^{\\pm j 120°}$ and two zeros at the origin. Near which frequency does its response peak, and is it stable?",
+      "solution": [
+        "The peak is near $\\omega = 120°$, where the probe passes closest to the pole $0.9 e^{j120°}$; the zeros at the origin do not change the magnitude. Both poles have $|p| = 0.9 < 1$, so the causal filter is stable."
+      ],
+      "answer": "Near $\\omega = 120°$; stable."
+    }
+  ]
+}

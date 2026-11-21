@@ -696,6 +696,23 @@ checks the page's keys and options.
 
 ---
 
+### 7.5 The z-transform surface widget
+
+`z-surface` (`src/widgets/types/z-surface.js`, maths in
+`src/widgets/sims/ztransform.js`, example page `math/z-transform`) draws
+|X(z)| as a 3D surface over the complex plane (drag to turn it), faded outside
+the region of convergence, with the unit circle traced on it; below it, the
+pole-zero plot with the ROC and the vectors to a probe point on the unit circle,
+the samples x[n], and the response on the unit circle. Next step ▶ walks
+through the chosen signal in eight steps; Sweep ω moves the probe. Its
+`params` keys, in order, are `signal` (a select whose options must be names in
+the exported `SIGNALS`), `r`, `theta`, `omega`, `height` (`"decibels"` or
+`"magnitude"`), `azimuth` and `elevation`; it takes no `config`. Adding a signal
+is one `case` in `buildSignal` (samples, zeros, poles, gain, ROC, text) and its
+name in `SIGNALS`; `tests/src/widgets/ztransform.test.js` checks every closed
+form against the defining sum. The generator for the pages is
+`projects/push/ztransform-gen` in the Hive that wrote them (`lib.py` has `ZW()`).
+
 ## 8. Optional: serving over a static server (the `file://` tip)
 
 The site is designed to open straight from disk, but page content is loaded via
