@@ -1,0 +1,188 @@
+{
+  "title": "Inverting the Transform",
+  "intro": "Getting x[n] back from X(z) needs both the formula and the ring it is valid on. Partial fractions split the surface into one-pole pieces; the contour integral reads the answer off a circle inside the ring.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Partial fractions: one pole at a time"
+    },
+    {
+      "type": "prose",
+      "text": "A rational $X(z)$ with distinct poles splits into simple pieces, each with one pole:"
+    },
+    {
+      "type": "math",
+      "tex": "X(z) = \\sum_k \\frac{A_k}{1 - p_k z^{-1}}, \\qquad A_k = \\left. \\left(1 - p_k z^{-1}\\right) X(z) \\right|_{z = p_k}"
+    },
+    {
+      "type": "prose",
+      "text": "(plus a polynomial in $z^{-1}$ if the numerator's degree is not lower than the denominator's). Each piece is one exponential, and the ROC decides which kind: if the ROC lies outside $p_k$, the piece is the right-sided $A_k p_k^n u[n]$; if inside, the left-sided $-A_k p_k^n u[-n-1]$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A worked example: three answers"
+    },
+    {
+      "type": "math",
+      "tex": "X(z) = \\frac{1}{\\left(1 - 0.5 z^{-1}\\right)\\left(1 - 0.25 z^{-1}\\right)} = \\frac{2}{1 - 0.5 z^{-1}} - \\frac{1}{1 - 0.25 z^{-1}}"
+    },
+    {
+      "type": "prose",
+      "text": "The coefficients: $A_1 = 1/(1 - 0.25/0.5) = 2$ and $A_2 = 1/(1 - 0.5/0.25) = -1$. The poles at 0.25 and 0.5 allow three ROCs, and each gives a different signal:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$|z| > 0.5$, outside both poles: $x[n] = \\left(2 \\cdot 0.5^n - 0.25^n\\right) u[n]$. Causal and stable.",
+        "$0.25 < |z| < 0.5$, between them: $x[n] = -2 \\cdot 0.5^n u[-n-1] - 0.25^n u[n]$. Two-sided and unstable (the unit circle is outside the ring).",
+        "$|z| < 0.25$, inside both: $x[n] = \\left(-2 \\cdot 0.5^n + 0.25^n\\right) u[-n-1]$. Left-sided and unstable."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The same surface, three signals: each answer corresponds to a different ring of it being the real one."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Long division"
+    },
+    {
+      "type": "prose",
+      "text": "For a causal signal, dividing the numerator by the denominator as power series in $z^{-1}$ gives the samples one by one: the coefficient of $z^{-n}$ is $x[n]$. For $1/(1 - 0.5z^{-1})$ the division gives $1 + 0.5z^{-1} + 0.25z^{-2} + \\cdots$, so $x[n] = 0.5^n$. It gives no closed form, but it is a quick check of the first few samples and works for any rational $X(z)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The contour integral: reading the answer off a circle"
+    },
+    {
+      "type": "prose",
+      "text": "The general inverse comes from Cauchy's integral theorem. For any circle $\\Gamma$ that lies in the ROC and goes once round the origin anticlockwise,"
+    },
+    {
+      "type": "math",
+      "tex": "x[n] = \\frac{1}{2\\pi j} \\oint_{\\Gamma} X(z)\\, z^{n-1}\\, dz"
+    },
+    {
+      "type": "prose",
+      "text": "Geometrically, pick any ring of the surface that is real, walk round it, and average $X(z) z^n$ along the way. If the unit circle is in the ROC and $\\Gamma$ is taken to be it, $z = e^{j\\omega}$ and $dz = j e^{j\\omega} d\\omega$, and the integral becomes the inverse DTFT:"
+    },
+    {
+      "type": "math",
+      "tex": "x[n] = \\frac{1}{2\\pi} \\int_{-\\pi}^{\\pi} X(e^{j\\omega})\\, e^{j\\omega n}\\, d\\omega"
+    },
+    {
+      "type": "prose",
+      "text": "Because $X(z) z^{n-1}$ is analytic between the poles, the integral does not change as the circle is moved within the ring. It changes only when the circle is dragged across a pole, which is the contour-integral view of why each ROC gives a different signal. The residue theorem then evaluates it as the sum of the residues of $X(z) z^{n-1}$ at the poles inside $\\Gamma$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "z-surface",
+        "title": "A ring with two poles",
+        "params": [
+          {
+            "key": "signal",
+            "label": "Input signal",
+            "control": "select",
+            "options": [
+              "unit impulse δ[n]",
+              "delayed impulse δ[n−2]",
+              "unit step u[n]",
+              "decaying exponential rⁿu[n]",
+              "left-sided exponential −rⁿu[−n−1]",
+              "two-sided exponential r^|n|",
+              "ramped exponential n·rⁿu[n]",
+              "damped cosine rⁿcos(θn)u[n]",
+              "damped sine rⁿsin(θn)u[n]",
+              "8-sample pulse u[n]−u[n−8]",
+              "notch filter δ[n]−2cosθ·δ[n−1]+δ[n−2]"
+            ],
+            "default": "two-sided exponential r^|n|"
+          },
+          {
+            "key": "r",
+            "label": "Radius r",
+            "control": "range",
+            "min": 0.1,
+            "max": 1.2,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "theta",
+            "label": "Angle θ (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 180,
+            "step": 5,
+            "default": 45
+          },
+          {
+            "key": "omega",
+            "label": "Probe frequency ω (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 180,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "height",
+            "label": "Height shows",
+            "control": "select",
+            "options": [
+              "decibels",
+              "magnitude"
+            ],
+            "default": "decibels"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -30
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 10,
+            "max": 85,
+            "step": 5,
+            "default": 55
+          }
+        ]
+      }
+    },
+    {
+      "type": "prose",
+      "text": "In the viewer the two-sided exponential has poles at $r$ and $1/r$ and the ring between them. A circle anywhere in that ring gives back $r^{|n|}$; the pole at $r$ inside the circle produces the right-sided half, and the pole at $1/r$ outside it produces the left-sided half."
+    },
+    {
+      "type": "problem",
+      "title": "Pick the ROC",
+      "text": "$X(z) = \\dfrac{1}{1 - 0.9 z^{-1}}$. Give $x[n]$ for the stable choice of ROC.",
+      "solution": [
+        "The only pole is at 0.9. The stable ROC must contain the unit circle, so it is $|z| > 0.9$, and $x[n] = 0.9^n u[n]$."
+      ],
+      "answer": "$0.9^n u[n]$."
+    },
+    {
+      "type": "problem",
+      "title": "Partial fractions",
+      "text": "Find the causal $x[n]$ with $X(z) = \\dfrac{3}{(1 - z^{-1})(1 + 0.5 z^{-1})}$.",
+      "solution": [
+        "Poles at $1$ and $-0.5$. $A_1 = 3/(1 + 0.5) = 2$ and $A_2 = 3/(1 - 1/(-0.5)) = 3/3 = 1$.",
+        "Causal means $|z| > 1$, so both pieces are right-sided: $x[n] = (2 + (-0.5)^n)\\, u[n]$. Check: $x[0] = 3 = \\lim_{z \\to \\infty} X(z)$."
+      ],
+      "answer": "$x[n] = \\left(2 + (-0.5)^n\\right) u[n]$."
+    }
+  ]
+}
