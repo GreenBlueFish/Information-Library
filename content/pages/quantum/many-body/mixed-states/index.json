@@ -1,33 +1,260 @@
 {
   "title": "Mixed States",
-  "intro": "A density matrix describes a system whose state is uncertain, either because it was prepared at random or because it is entangled with something you are not looking at. Quantum reservoirs are always in mixed states, so this is the bridge to the QRC shelf's open-systems pages.",
+  "intro": "A density matrix describes a system whose state is uncertain, either because it was prepared at random or because it is entangled with something you are not looking at. This page separates ignorance from superposition, builds the density matrix from an ensemble, and works out its properties, purity and Bloch-ball picture with numbers.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "From ensembles to the density matrix"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "Suppose a device prepares $\\vert\\psi_j\\rangle$ with probability $p_j$. Every prediction is an average over $j$, and because expectation values are $\\langle\\psi\\vert A\\vert\\psi\\rangle = \\operatorname{Tr}(A\\vert\\psi\\rangle\\langle\\psi\\vert)$, the average depends only on"
-    },
-    {
-      "type": "math",
-      "tex": "\\rho = \\sum_j p_j\\,\\vert\\psi_j\\rangle\\langle\\psi_j\\vert, \\qquad \\langle A\\rangle = \\operatorname{Tr}(A\\rho)",
-      "caption": "The density matrix: Hermitian, positive semidefinite, trace 1."
-    },
-    {
-      "type": "prose",
-      "text": "Two consequences are worth stating plainly. First, different recipes can give the same $\\rho$, and then no experiment whatever can tell them apart: a 50/50 mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$ is the same physical state as a 50/50 mixture of $\\vert+\\rangle$ and $\\vert-\\rangle$, namely $I/2$. Second, a mixture is not a superposition: $\\vert+\\rangle\\langle+\\vert$ and $I/2$ have the same $Z$ statistics but different $X$ statistics, because only the superposition has off-diagonal elements (coherences)."
+      "text": "Kets, the Born rule and expectation values from Measurement and the Born Rule (#/quantum/foundations/measurement) and Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty), the Bloch sphere from The Qubit and the Bloch Sphere (#/quantum/qubits/bloch-sphere), and the idea of half of an entangled pair from Entanglement and Reduced States (#/quantum/many-body/entanglement). The trace of a matrix is the sum of its diagonal entries; that is all the linear algebra added here."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "The second route: ignoring part of a system"
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Tell a mixture from a superposition by an experiment, and compute what each gives for any measurement.",
+        "Build the density matrix of any ensemble of states, and check by hand that it has trace 1, is Hermitian and has no negative eigenvalues.",
+        "Compute $\\langle A\\rangle = \\operatorname{Tr}(A\\rho)$, the purity $\\operatorname{Tr}\\rho^2$ and the Bloch vector of a qubit state, pure or mixed.",
+        "Explain why different ensembles can give exactly the same $\\rho$, and why that makes $\\rho$, not the ensemble, the physical state."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ignorance is not superposition"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "The other way to get a mixed state needs no randomness in the preparation at all. As Entanglement and Reduced States (#/quantum/many-body/entanglement) showed, half of an entangled pure state is described by its reduced density matrix, which is mixed. Physically this is the more important route: a qubit coupled to an environment becomes entangled with it, and the qubit alone becomes mixed. Every source of noise on hardware works like this, and so does the input reset in a quantum reservoir, which discards a qubit that has become entangled with the rest."
+      "text": "Every state so far has been a ket: a definite vector, known exactly. Real preparations are never that clean. A laser drifts, a qubit sits next to a noisy wire, a source is built to emit different states at random. If someone hands you a qubit and says 'it is $\\vert0\\rangle$ or $\\vert1\\rangle$, with equal chance, I don't know which', is that the same as the superposition $\\vert+\\rangle = (\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$? Both give a fair coin if you measure $Z$. We need to know whether anything tells them apart."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "They are different things, and the difference is physical. In a superposition the qubit is in one definite state; $\\vert+\\rangle$ happens to have no definite $Z$ value. In a mixture the qubit is in one definite state too, but you do not know which: your description is a list of possible states with probabilities, and the probabilities measure your ignorance, as with a coin flipped under a cup. In a mixture every run is secretly a pure-state run of one of the listed states. The difference shows up when you measure something other than $Z$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: measure X"
+    },
+    {
+      "type": "prose",
+      "text": "Story A: the source always prepares $\\vert+\\rangle$. Story B: it flips a fair coin and prepares $\\vert0\\rangle$ on heads, $\\vert1\\rangle$ on tails. We measure $X$, whose outcomes $\\pm1$ are the states $\\vert\\pm\\rangle$. Use the Born rule, $P(+) = \\vert\\langle+\\vert\\psi\\rangle\\vert^2$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1 (story A). The state is $\\vert+\\rangle$ itself, so $P(+) = \\vert\\langle+\\vert+\\rangle\\vert^2 = 1$. Every run gives $+1$.",
+        "Step 2 (story B, heads). The state is $\\vert0\\rangle$: $\\langle+\\vert0\\rangle = 1/\\sqrt2$, so $P(+\\,\\vert\\,\\text{heads}) = 1/2$.",
+        "Step 3 (story B, tails). The state is $\\vert1\\rangle$: $\\langle+\\vert1\\rangle = 1/\\sqrt2$, so $P(+\\,\\vert\\,\\text{tails}) = 1/2$.",
+        "Step 4. Combine, weighting each case by its probability of occurring (the law of total probability): $P(+) = \\tfrac12\\cdot\\tfrac12 + \\tfrac12\\cdot\\tfrac12 = \\tfrac12$.",
+        "Step 5. So story A gives $+1$ every time ($\\langle X\\rangle = 1$), and story B gives a fair coin ($\\langle X\\rangle = 0$). Ten runs are enough to tell them apart: ten $+1$'s have probability $2^{-10}$ under story B."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The rule for a mixture is therefore: compute probabilities for each member state as usual, then average the probabilities with the weights $p_j$. In a superposition, amplitudes are added before squaring, so the two paths interfere. In a mixture, probabilities are added after squaring, so nothing interferes. This is why $\\vert+\\rangle$ is predictable in the $X$ basis and the mixture is not: the cross terms between $\\vert0\\rangle$ and $\\vert1\\rangle$ that give $X$ its definite value are absent from the mixture."
+    },
+    {
+      "type": "callout",
+      "text": "A common mistake is to think that a mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$ 'is' $\\vert+\\rangle$ because $\\vert+\\rangle$ is 'half $\\vert0\\rangle$ and half $\\vert1\\rangle$'. The $\\tfrac1{\\sqrt2}$'s are amplitudes, not probabilities, and the plus sign between them is what a coin flip lacks. Another: a mixture is not 'a state that is partly something'. It is a pure state you do not know."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a mixed source",
+      "text": "A source emits $\\vert0\\rangle$ with probability $\\tfrac12$ and $\\vert+\\rangle$ with probability $\\tfrac12$. What is the probability that a $Z$ measurement gives $+1$?",
+      "hint": "Compute the probability for each member state, then average with the source's weights.",
+      "solution": [
+        "For $\\vert0\\rangle$: $P(Z = +1) = 1$. For $\\vert+\\rangle$: $P(Z = +1) = \\vert\\langle0\\vert+\\rangle\\vert^2 = \\tfrac12$.",
+        "Average: $\\tfrac12\\cdot1 + \\tfrac12\\cdot\\tfrac12 = 0.75$."
+      ],
+      "answer": "0.75"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The density matrix"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Writing a mixture as a list of $(p_j, \\vert\\psi_j\\rangle)$ pairs works, but it is clumsy, and as we will see it is redundant: different lists can describe exactly the same physics. We want one object that carries everything that can be predicted, and nothing more. A prediction here is an average of an observable, so we ask what that average depends on."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Building it"
+    },
+    {
+      "type": "prose",
+      "text": "An ensemble prepares $\\vert\\psi_j\\rangle$ with probability $p_j$. The average of an observable $A$ is the weighted average of the member averages:"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle A\\rangle = \\sum_j p_j\\,\\langle\\psi_j\\vert A\\vert\\psi_j\\rangle",
+      "caption": "Expectation value over an ensemble."
+    },
+    {
+      "type": "prose",
+      "text": "The trace of a matrix is the sum of its diagonal entries, $\\operatorname{Tr} M = \\sum_k\\langle k\\vert M\\vert k\\rangle$. A small identity turns the bracket into a trace:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Start from the trace of the operator $A\\,\\vert\\psi\\rangle\\langle\\psi\\vert$ (a product of $A$ with an outer product), using a basis $\\{\\vert k\\rangle\\}$: $\\operatorname{Tr}(A\\vert\\psi\\rangle\\langle\\psi\\vert) = \\sum_k\\langle k\\vert A\\vert\\psi\\rangle\\langle\\psi\\vert k\\rangle$.",
+        "Step 2. The two ends are numbers, so they can be swapped: $\\langle k\\vert A\\vert\\psi\\rangle\\,\\langle\\psi\\vert k\\rangle = \\langle\\psi\\vert k\\rangle\\,\\langle k\\vert A\\vert\\psi\\rangle$.",
+        "Step 3. Sum over $k$ and use $\\sum_k\\vert k\\rangle\\langle k\\vert = I$: $\\sum_k\\langle\\psi\\vert k\\rangle\\langle k\\vert A\\vert\\psi\\rangle = \\langle\\psi\\vert A\\vert\\psi\\rangle$.",
+        "Step 4. So $\\langle\\psi\\vert A\\vert\\psi\\rangle = \\operatorname{Tr}(A\\vert\\psi\\rangle\\langle\\psi\\vert)$, and for the ensemble, because the trace is linear, $\\langle A\\rangle = \\sum_jp_j\\operatorname{Tr}(A\\vert\\psi_j\\rangle\\langle\\psi_j\\vert) = \\operatorname{Tr}(A\\rho)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The operator that appears is the density matrix:"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho = \\sum_j p_j\\,\\vert\\psi_j\\rangle\\langle\\psi_j\\vert, \\qquad \\langle A\\rangle = \\operatorname{Tr}(A\\rho)",
+      "caption": "The density matrix of an ensemble, and the expectation value in terms of it."
+    },
+    {
+      "type": "prose",
+      "text": "A state that is just a ket $\\vert\\psi\\rangle$ has $\\rho = \\vert\\psi\\rangle\\langle\\psi\\vert$ (one member with probability 1); it is called pure. Anything else is mixed. All predictions come from $\\rho$: the probability of a measurement outcome with projector $\\Pi$ is $\\operatorname{Tr}(\\Pi\\rho)$, since $\\Pi$ is the observable that is $1$ on that outcome and $0$ otherwise. The ensemble that produced $\\rho$ is not needed."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What the entries mean"
+    },
+    {
+      "type": "prose",
+      "text": "For one qubit $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$, expand the outer product. $\\vert\\psi\\rangle\\langle\\psi\\vert = (\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle)(\\bar\\alpha\\langle0\\vert + \\bar\\beta\\langle1\\vert) = \\vert\\alpha\\vert^2\\vert0\\rangle\\langle0\\vert + \\alpha\\bar\\beta\\,\\vert0\\rangle\\langle1\\vert + \\bar\\alpha\\beta\\,\\vert1\\rangle\\langle0\\vert + \\vert\\beta\\vert^2\\vert1\\rangle\\langle1\\vert$. As a matrix, row 1 is $(\\vert\\alpha\\vert^2,\\ \\alpha\\bar\\beta)$ and row 2 is $(\\bar\\alpha\\beta,\\ \\vert\\beta\\vert^2)$. The entry $\\rho_{jk}$ multiplies $\\vert j\\rangle\\langle k\\vert$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "The diagonal entries $\\rho_{00}$, $\\rho_{11}$ are the probabilities of finding $0$ and $1$ in a $Z$ measurement. They are called populations.",
+        "The off-diagonal entries $\\rho_{01}$ and $\\rho_{10} = \\bar\\rho_{01}$ are the coherences. They measure the interference between $\\vert0\\rangle$ and $\\vert1\\rangle$, and set $\\langle X\\rangle$ and $\\langle Y\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For example $\\vert0\\rangle\\langle0\\vert$ has rows $(1, 0)$ and $(0, 0)$. $\\vert+\\rangle\\langle+\\vert$ has rows $(\\tfrac12, \\tfrac12)$ and $(\\tfrac12, \\tfrac12)$: equal populations and a full-size coherence. The fair mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$ is $\\tfrac12\\vert0\\rangle\\langle0\\vert + \\tfrac12\\vert1\\rangle\\langle1\\vert$, rows $(\\tfrac12, 0)$ and $(0, \\tfrac12)$: the same populations and no coherence. That is the entire difference found in the last section, now visible at a glance. For $X$: since $X = \\vert0\\rangle\\langle1\\vert + \\vert1\\rangle\\langle0\\vert$, $\\operatorname{Tr}(X\\rho) = \\rho_{10} + \\rho_{01}$, which is why a coherence is exactly what $\\langle X\\rangle$ reads out; likewise $\\langle Z\\rangle = \\rho_{00} - \\rho_{11}$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a noisy source"
+    },
+    {
+      "type": "prose",
+      "text": "A source emits $\\vert+\\rangle$ with probability $0.6$ and $\\vert1\\rangle$ with probability $0.4$. Find $\\rho$, $\\langle X\\rangle$ and $\\langle Z\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $0.6\\,\\vert+\\rangle\\langle+\\vert$ has rows $(0.3, 0.3)$ and $(0.3, 0.3)$.",
+        "Step 2. $0.4\\,\\vert1\\rangle\\langle1\\vert$ has rows $(0, 0)$ and $(0, 0.4)$.",
+        "Step 3. Add: $\\rho$ has rows $(0.3, 0.3)$ and $(0.3, 0.7)$. The trace is $0.3 + 0.7 = 1$, as it must be.",
+        "Step 4. $\\langle X\\rangle = \\rho_{01} + \\rho_{10} = 0.6$ and $\\langle Z\\rangle = \\rho_{00} - \\rho_{11} = 0.3 - 0.7 = -0.4$.",
+        "Step 5. Check against the ensemble: $\\vert+\\rangle$ has $\\langle X\\rangle = 1$, $\\langle Z\\rangle = 0$ and $\\vert1\\rangle$ has $\\langle X\\rangle = 0$, $\\langle Z\\rangle = -1$. Averaging: $\\langle X\\rangle = 0.6\\cdot1 + 0.4\\cdot0 = 0.6$ and $\\langle Z\\rangle = 0.6\\cdot0 + 0.4\\cdot(-1) = -0.4$. Both agree."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: build a density matrix",
+      "text": "A source emits $\\vert0\\rangle$ with probability $0.25$ and $\\vert-\\rangle = (\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$ with probability $0.75$. Find $\\rho$ and $\\langle X\\rangle$.",
+      "hint": "Outer product of $\\vert-\\rangle$ with itself has a minus sign on the off-diagonal.",
+      "solution": [
+        "$0.25\\,\\vert0\\rangle\\langle0\\vert$ has rows $(0.25, 0)$, $(0, 0)$.",
+        "$\\vert-\\rangle\\langle-\\vert$ has rows $(\\tfrac12, -\\tfrac12)$ and $(-\\tfrac12, \\tfrac12)$; times $0.75$: $(0.375, -0.375)$ and $(-0.375, 0.375)$.",
+        "Sum: rows $(0.625, -0.375)$ and $(-0.375, 0.375)$. Trace $1$.",
+        "$\\langle X\\rangle = \\rho_{01} + \\rho_{10} = -0.75$. Check: $0.25\\cdot0 + 0.75\\cdot(-1) = -0.75$."
+      ],
+      "answer": "rows (0.625, −0.375) and (−0.375, 0.375); ⟨X⟩ = −0.75"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What makes a matrix a state"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Not every matrix is the density matrix of something. We need tests that tell a valid $\\rho$ from an invalid one, both to catch mistakes (numerical simulations occasionally produce an invalid $\\rho$) and because the tests carry physical meaning."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The three properties"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Hermitian, $\\rho^\\dagger = \\rho$. Each $\\vert\\psi_j\\rangle\\langle\\psi_j\\vert$ is Hermitian, the weights $p_j$ are real, and a real combination of Hermitian matrices is Hermitian. This makes every $\\langle A\\rangle = \\operatorname{Tr}(A\\rho)$ real.",
+        "Trace one, $\\operatorname{Tr}\\rho = 1$. $\\operatorname{Tr}(\\vert\\psi_j\\rangle\\langle\\psi_j\\vert) = \\langle\\psi_j\\vert\\psi_j\\rangle = 1$, so $\\operatorname{Tr}\\rho = \\sum_jp_j = 1$. It says the probabilities of all outcomes add to 1.",
+        "Positive: $\\langle\\phi\\vert\\rho\\vert\\phi\\rangle\\ge0$ for every vector $\\vert\\phi\\rangle$. Indeed $\\langle\\phi\\vert\\rho\\vert\\phi\\rangle = \\sum_jp_j\\vert\\langle\\phi\\vert\\psi_j\\rangle\\vert^2$, a sum of non-negative terms. It says no probability is negative. Equivalent: all eigenvalues of $\\rho$ are $\\ge0$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Conversely, any matrix with these three properties is the density matrix of some ensemble. The proof uses the spectral theorem: a Hermitian $\\rho$ has orthonormal eigenvectors $\\vert e_k\\rangle$ and real eigenvalues $\\lambda_k$ and can be written $\\rho = \\sum_k\\lambda_k\\vert e_k\\rangle\\langle e_k\\vert$. Positivity makes each $\\lambda_k\\ge0$ and trace one makes $\\sum\\lambda_k = 1$. So the eigenvalues are probabilities and the eigenvectors are states: $\\rho$ is the ensemble that prepares $\\vert e_k\\rangle$ with probability $\\lambda_k$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: valid or not"
+    },
+    {
+      "type": "prose",
+      "text": "For a $2\\times2$ real symmetric matrix with trace $1$ the eigenvalues are $\\lambda = \\tfrac12\\left(1\\pm\\sqrt{1 - 4\\det\\rho}\\right)$ (from $\\lambda^2 - \\lambda + \\det\\rho = 0$), so the matrix is positive exactly when $\\det\\rho\\ge0$, that is $\\rho_{00}\\rho_{11}\\ge\\vert\\rho_{01}\\vert^2$: the coherence can never exceed the geometric mean of the populations. Test three matrices."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Rows $(0.8, 0.3)$ and $(0.3, 0.2)$. Trace $1$; $\\det = 0.16 - 0.09 = 0.07\\ge0$; eigenvalues $\\tfrac12(1\\pm\\sqrt{0.72}) = 0.9243$ and $0.0757$. Valid. It is almost pure.",
+        "Rows $(0.5, 0.5)$ and $(0.5, 0.5)$. Trace $1$; $\\det = 0.25 - 0.25 = 0$; eigenvalues $1$ and $0$. Valid, and pure: it is $\\vert+\\rangle\\langle+\\vert$. A determinant of exactly zero is the signature of a pure qubit state.",
+        "Rows $(0.5, 0.7)$ and $(0.7, 0.5)$. Trace $1$ and Hermitian, but $\\det = 0.25 - 0.49 = -0.24 < 0$: eigenvalues $\\tfrac12(1\\pm\\sqrt{1.96}) = 1.2$ and $-0.2$. Not a state. See what goes wrong: take the vector $\\vert-\\rangle = (1, -1)/\\sqrt2$. Then $\\langle-\\vert\\rho\\vert-\\rangle = \\tfrac12(0.5 - 0.7 - 0.7 + 0.5) = -0.2$, so this $\\rho$ would predict a probability of $-0.2$ for finding the qubit in $\\vert-\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The program in Check it in code, below, confirms these eigenvalues numerically."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: valid or not",
+      "text": "Is the matrix with rows $(0.6, 0.5)$ and $(0.5, 0.4)$ a density matrix?",
+      "hint": "Check the determinant, which for a trace-1 real symmetric $2\\times2$ matrix must be $\\ge0$.",
+      "solution": [
+        "Hermitian: it is real symmetric. Trace: $0.6 + 0.4 = 1$.",
+        "Determinant: $0.6\\cdot0.4 - 0.5^2 = 0.24 - 0.25 = -0.01 < 0$.",
+        "So an eigenvalue is negative: $\\tfrac12(1\\pm\\sqrt{1.04}) = 1.0099$ and $-0.0099$. The coherence $0.5$ exceeds the geometric mean of the populations, $\\sqrt{0.24} = 0.4899$, so this is not a state."
+      ],
+      "answer": "No: its determinant is negative"
     },
     {
       "type": "heading",
@@ -35,8 +262,62 @@
       "text": "Purity and the Bloch ball"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "The purity $\\operatorname{Tr}\\rho^2$ is 1 for pure states and smaller for mixed ones, down to $1/d$ for the maximally mixed state $I/d$. For a qubit, $\\rho = \\tfrac12(I + \\vec r\\cdot\\vec\\sigma)$ with $\\vert\\vec r\\vert\\le1$: pure states on the surface of the Bloch sphere, mixed states inside, $I/2$ at the centre, and purity $(1 + \\vert\\vec r\\vert^2)/2$. Mixing shortens the Bloch vector; that geometric picture of forgetting is used throughout the QRC shelf."
+      "text": "A pure state and a heavily mixed one are both just matrices. We want a single number that says how mixed a state is, and for a qubit a picture, because for pure qubit states the picture is the Bloch sphere and a mixed state must fit into it somewhere."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Purity"
+    },
+    {
+      "type": "prose",
+      "text": "Write $\\rho = \\sum_k\\lambda_k\\vert e_k\\rangle\\langle e_k\\vert$ in its eigenbasis. Then $\\rho^2 = \\sum_k\\lambda_k^2\\vert e_k\\rangle\\langle e_k\\vert$ (the cross terms vanish because the $\\vert e_k\\rangle$ are orthonormal) and the purity is"
+    },
+    {
+      "type": "math",
+      "tex": "\\operatorname{Tr}\\rho^2 = \\sum_k\\lambda_k^2",
+      "caption": "Purity: the sum of the squared eigenvalues."
+    },
+    {
+      "type": "prose",
+      "text": "The eigenvalues are probabilities adding to 1. If one of them is 1 and the rest are 0, the purity is 1: the state is pure. If they are all equal, $\\lambda_k = 1/d$ for a $d$-dimensional system, the purity is $d\\cdot\\tfrac1{d^2} = 1/d$, the smallest possible value (the equal split minimises a sum of squares at fixed sum). This state, $I/d$, is the maximally mixed state: complete ignorance. So $1/d\\le\\operatorname{Tr}\\rho^2\\le1$, with $1$ only for pure states."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A qubit state as a point in a ball"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit density matrix has rows $(\\rho_{00}, \\rho_{01})$ and $(\\bar\\rho_{01}, \\rho_{11})$ with $\\rho_{00} + \\rho_{11} = 1$: three real numbers. Define $x = \\operatorname{Tr}(X\\rho) = 2\\,\\mathrm{Re}\\,\\rho_{01}$, $y = \\operatorname{Tr}(Y\\rho) = -2\\,\\mathrm{Im}\\,\\rho_{01}$ and $z = \\operatorname{Tr}(Z\\rho) = \\rho_{00} - \\rho_{11}$. Solving for the entries gives $\\rho_{00} = (1 + z)/2$, $\\rho_{11} = (1 - z)/2$ and $\\rho_{01} = (x - iy)/2$, which is the same as"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho = \\tfrac12\\left(I + xX + yY + zZ\\right) = \\tfrac12\\left(I + r\\cdot\\sigma\\right)",
+      "caption": "Every qubit state in terms of its Bloch vector r = (x, y, z) = (⟨X⟩, ⟨Y⟩, ⟨Z⟩)."
+    },
+    {
+      "type": "prose",
+      "text": "Write $r = (x, y, z)$ for the Bloch vector and $\\sigma = (X, Y, Z)$ for the triple of Pauli matrices; then $r\\cdot\\sigma$ means $xX + yY + zZ$. For a pure state, $(x, y, z)$ is the point on the Bloch sphere (The Qubit and the Bloch Sphere (#/quantum/qubits/bloch-sphere)). Now find what restricts $r$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The Pauli matrices anticommute and square to $I$, so $(xX + yY + zZ)^2 = (x^2 + y^2 + z^2)I$: all cross terms such as $xy(XY + YX)$ vanish.",
+        "Step 2. So $r\\cdot\\sigma$ squares to $\\vert r\\vert^2I$, which means its eigenvalues are $\\pm\\vert r\\vert$. Then $\\rho$ has eigenvalues $\\tfrac12(1\\pm\\vert r\\vert)$.",
+        "Step 3. Positivity requires $\\tfrac12(1 - \\vert r\\vert)\\ge0$, i.e. $\\vert r\\vert\\le1$: the state is a point in the unit ball.",
+        "Step 4. The purity is $\\left(\\tfrac{1 + \\vert r\\vert}{2}\\right)^2 + \\left(\\tfrac{1 - \\vert r\\vert}{2}\\right)^2 = \\tfrac12\\left(1 + \\vert r\\vert^2\\right)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So pure states ($\\vert r\\vert = 1$) are exactly the surface of the Bloch sphere, mixed states fill the inside (the Bloch ball), and the maximally mixed $I/2$ is the centre with purity $\\tfrac12$."
     },
     {
       "type": "figure",
@@ -46,38 +327,221 @@
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "What evolution and measurement look like now"
+      "level": 3,
+      "text": "Mixing averages the Bloch vectors"
+    },
+    {
+      "type": "prose",
+      "text": "Since $r$ is made of expectation values and expectation values are averages, the Bloch vector of an ensemble is the average of the members' vectors: $r = \\sum_jp_jr_j$. Mixing therefore pulls a state from the surface toward the interior: the vector shortens. This is the geometric picture of losing information, used constantly in the QRC pages."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. Mix $\\vert0\\rangle$ (Bloch vector $(0, 0, 1)$) and $\\vert+\\rangle$ (Bloch vector $(1, 0, 0)$) with probability $\\tfrac12$ each."
     },
     {
       "type": "list",
       "items": [
-        "Unitary evolution: $\\rho \\to U\\rho U^\\dagger$. Purity is unchanged.",
-        "Measurement with the outcome kept: $\\rho \\to \\Pi_k\\rho\\Pi_k/p_k$ with $p_k = \\operatorname{Tr}(\\Pi_k\\rho)$.",
-        "Measurement with the outcome thrown away: $\\rho \\to \\sum_k \\Pi_k\\rho\\Pi_k$, which erases the coherences between outcomes.",
-        "Any physically allowed change, including contact with an environment, is a quantum channel. That general framework, with Kraus operators and the Lindblad equation, is where the QRC shelf takes over: Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels)."
+        "Step 1. The Bloch vector is the average: $r = (\\tfrac12, 0, \\tfrac12)$.",
+        "Step 2. Its length is $\\sqrt{0.25 + 0.25} = 0.7071$: inside the ball, so the state is mixed.",
+        "Step 3. Purity: $\\tfrac12(1 + 0.5) = 0.75$. Check from the matrix: $\\rho = \\tfrac12\\vert0\\rangle\\langle0\\vert + \\tfrac12\\vert+\\rangle\\langle+\\vert$ has rows $(0.75, 0.25)$ and $(0.25, 0.25)$; $\\operatorname{Tr}\\rho^2 = 0.5625 + 0.0625 + 0.0625 + 0.0625 = 0.75$, the same.",
+        "Step 4. Eigenvalues $\\tfrac12(1\\pm0.7071) = 0.8536$ and $0.1464$: the same state can be written as an ensemble of two orthogonal pure states with those probabilities."
       ]
     },
     {
-      "type": "code",
-      "lang": "python",
-      "source": "import numpy as np\nZ = np.diag([1., -1.]); X = np.array([[0., 1], [1, 0]])\nket = lambda v: np.outer(v, np.conj(v))\nzero, one = np.array([1., 0]), np.array([0., 1])\nplus, minus = np.array([1., 1]) / np.sqrt(2), np.array([1., -1]) / np.sqrt(2)\n# Two different recipes, one density matrix: no measurement can tell them apart\nrho_a = 0.5 * ket(zero) + 0.5 * ket(one)\nrho_b = 0.5 * ket(plus) + 0.5 * ket(minus)\nprint(\"50/50 of |0>,|1> equals 50/50 of |+>,|->:\", np.allclose(rho_a, rho_b))\n# A superposition is not a mixture: same Z statistics, different X statistics\nfor name, r in ((\"|+><+|\", ket(plus)), (\"mixture I/2\", rho_a)):\n    print(f\"{name:12s} <Z> = {np.trace(Z @ r):+.2f}  <X> = {np.trace(X @ r):+.2f}  purity {np.trace(r @ r):.2f}\")\n# Ignoring half of an entangled pair leaves the other half mixed\nbell = np.array([1, 0, 0, 1]) / np.sqrt(2)\nrho = ket(bell); rhoA = rho.reshape(2, 2, 2, 2).trace(axis1=1, axis2=3)\nprint(\"half of a Bell pair:\", np.round(rhoA, 3).tolist())\n# A noisy preparation: |0> with prob 0.9, |1> with 0.1\nr = 0.9 * ket(zero) + 0.1 * ket(one)\nprint(\"90/10 mixture: <Z> =\", round(np.trace(Z @ r), 2), \" purity =\", round(np.trace(r @ r), 2), \" Bloch length =\", round(abs(np.trace(Z @ r)), 2))"
+      "type": "prose",
+      "text": "The program in Check it in code, below, computes this and the other examples."
     },
     {
-      "type": "prose",
-      "text": "Output of the run: the two 50/50 recipes give the identical matrix. $\\vert+\\rangle\\langle+\\vert$ has $\\langle Z\\rangle = 0$, $\\langle X\\rangle = 1$, purity 1, while $I/2$ has $\\langle Z\\rangle = \\langle X\\rangle = 0$ and purity 0.5. Half of a Bell pair is $\\mathrm{diag}(0.5, 0.5)$. A 90/10 mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$ has $\\langle Z\\rangle = 0.8$, purity 0.82 and a Bloch vector of length 0.8."
+      "type": "problem",
+      "title": "Check yourself: purity of a source",
+      "text": "Find the Bloch vector, the length, and the purity of the state with rows $(0.625, -0.375)$ and $(-0.375, 0.375)$ from the earlier check.",
+      "hint": "Use $x = \\operatorname{Tr}(X\\rho) = 2\\rho_{01}$ and $z = \\rho_{00} - \\rho_{11}$.",
+      "solution": [
+        "$x = 2\\rho_{01} = -0.75$, $y = 0$ (real entries), $z = 0.625 - 0.375 = 0.25$.",
+        "Length $\\sqrt{0.5625 + 0.0625} = \\sqrt{0.625} = 0.7906$.",
+        "Purity $\\tfrac12(1 + 0.625) = 0.8125$. Check: $0.625^2 + 0.375^2 + 2(0.375^2) = 0.3906 + 0.1406 + 0.2813 = 0.8125$."
+      ],
+      "answer": "r = (−0.75, 0, 0.25); length 0.7906; purity 0.8125"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Where QRC uses this"
+      "text": "The same state from different ensembles"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The density matrix was built to hold only what is predictable. A test of whether it succeeded: do two ensembles that look different to us but give the same $\\rho$ lead to indistinguishable behaviour? They do, by construction, since all predictions come from $\\rho$. The consequences are worth seeing in examples."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Examples"
     },
     {
       "type": "list",
       "items": [
-        "The reservoir state is a density matrix from the first step, starting at $I/D$: every sample on the QRC shelf.",
-        "Channels, the Pauli transfer matrix and the standard noise channels: Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
-        "Why a unitary reservoir started at $I/D$ never responds to its input: Dissipation as a Resource (#/qrc/models/dissipation-as-resource)."
+        "$I/2$ from $\\{\\vert0\\rangle, \\vert1\\rangle\\}$ at $\\tfrac12$ each: rows $(\\tfrac12, 0)$ and $(0, \\tfrac12)$.",
+        "$I/2$ from $\\{\\vert+\\rangle, \\vert-\\rangle\\}$: $\\tfrac12\\cdot$ rows $(\\tfrac12, \\tfrac12), (\\tfrac12, \\tfrac12)$ plus $\\tfrac12\\cdot$ rows $(\\tfrac12, -\\tfrac12), (-\\tfrac12, \\tfrac12)$ gives rows $(\\tfrac12, 0)$ and $(0, \\tfrac12)$ again: the coherences cancel.",
+        "$I/2$ from $\\{\\vert{+i}\\rangle, \\vert{-i}\\rangle\\}$, or from any pair of opposite points on the Bloch sphere, or from three states $120°$ apart on a great circle (a trine: their three Bloch vectors point to the corners of a triangle and sum to zero), each at probability $\\tfrac13$.",
+        "The $\\mathrm{diag}(0.75, 0.25)$ state from $\\vert0\\rangle$ with probability $0.75$ and $\\vert1\\rangle$ with $0.25$, but also from the two states $\\vert a\\rangle = \\sqrt{0.75}\\vert0\\rangle + \\sqrt{0.25}\\vert1\\rangle$ and $\\vert b\\rangle = \\sqrt{0.75}\\vert0\\rangle - \\sqrt{0.25}\\vert1\\rangle$ at probability $\\tfrac12$ each: the coherences $\\pm\\sqrt{0.75\\cdot0.25} = \\pm0.433$ cancel and the populations are $0.75$ and $0.25$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "In the Bloch picture, an ensemble for a given $r$ is any set of surface points whose weighted average is $r$. For an interior point there are endlessly many such sets: any chord of the sphere through the point, with the right weights, will do. All of them are the same physical state."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why this matters"
+    },
+    {
+      "type": "prose",
+      "text": "The ensemble is not part of the physics; only $\\rho$ is. A statement like 'the qubit is really $\\vert0\\rangle$ or $\\vert1\\rangle$ and we don't know which' cannot be tested if $\\{\\vert+\\rangle, \\vert-\\rangle\\}$ would be equally true. This is what protects relativity in the Bell setting (Bell Inequalities and Nonlocality (#/quantum/many-body/bell-inequalities)): when Alice measures her half of a Bell pair in the $Z$ basis, Bob's half is left in $\\vert0\\rangle$ or $\\vert1\\rangle$ with probability $\\tfrac12$ each, and if she measures $X$ it is left in $\\vert\\pm\\rangle$ at $\\tfrac12$ each. Those are different ensembles with the same $\\rho = I/2$, so Bob, who sees only $\\rho$, cannot tell which measurement Alice made."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: two ensembles",
+      "text": "Show that the equal mixture of $\\vert{+i}\\rangle = (\\vert0\\rangle + i\\vert1\\rangle)/\\sqrt2$ and $\\vert{-i}\\rangle = (\\vert0\\rangle - i\\vert1\\rangle)/\\sqrt2$ is $I/2$.",
+      "hint": "Use $\\rho_{01} = \\alpha\\bar\\beta$ for $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$.",
+      "solution": [
+        "$\\vert{+i}\\rangle\\langle{+i}\\vert$ has rows $(\\tfrac12, -\\tfrac i2)$ and $(\\tfrac i2, \\tfrac12)$ (the entry $\\rho_{01} = \\alpha\\bar\\beta = \\tfrac12\\cdot(-i) = -\\tfrac i2$, since the conjugate of $i$ is $-i$).",
+        "$\\vert{-i}\\rangle\\langle{-i}\\vert$ has rows $(\\tfrac12, +\\tfrac i2)$ and $(-\\tfrac i2, \\tfrac12)$.",
+        "Average: rows $(\\tfrac12, 0)$ and $(0, \\tfrac12)$, which is $I/2$."
+      ],
+      "answer": "Both have rows (1/2, ∓i/2), (±i/2, 1/2); the coherences cancel, leaving I/2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The other way mixed states arise"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "So far a mixed state meant ignorance about a preparation. There is a second, more important source in which nobody is ignorant of anything. Take the Bell state $(\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$: the two qubits together are in a perfectly definite pure state. Yet if you look at qubit 1 alone, the outcomes of $Z$, of $X$ and of $Y$ are each a fair coin. Qubit 1 alone behaves like $I/2$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "The description of one part of a larger system is its reduced state, obtained by the partial trace, which sums over the other part's basis states. The page The Partial Trace and Reduced States (#/quantum/many-body/partial-trace) works this out step by step; for the Bell state each qubit has $\\rho = I/2$, purity $\\tfrac12$, while the pair has purity $1$. The final lines of the program below show this numerically. Mathematically the result is a density matrix like any other, with all the properties above; it makes the same predictions about measurements on qubit 1 as the ensemble $\\{\\vert0\\rangle, \\vert1\\rangle\\}$ would. But no such ensemble was ever prepared: the mixedness comes from entanglement with something that is ignored, not from a coin flip."
+    },
+    {
+      "type": "prose",
+      "text": "This is the way mixed states mostly arise in practice. A qubit that interacts with its surroundings becomes entangled with them, and since nobody can follow every atom of the surroundings, the qubit alone is described by a reduced state that is mixed. Every noise process in a quantum computer is of this kind, and Decoherence: How Superpositions Fade (#/quantum/many-body/decoherence) works one out in full. The same mechanism is behind the reset step of a quantum reservoir, which discards a qubit that has become entangled with the rest."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How states change: evolution and measurement"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A density matrix is only useful if we can update it. The rules follow by applying the pure-state rules to each member of the ensemble and re-averaging."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The rules"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Unitary evolution. Each member $\\vert\\psi_j\\rangle\\to U\\vert\\psi_j\\rangle$, so each $\\vert\\psi_j\\rangle\\langle\\psi_j\\vert\\to U\\vert\\psi_j\\rangle\\langle\\psi_j\\vert U^\\dagger$ and $\\rho\\to U\\rho U^\\dagger$. The purity is unchanged: $\\operatorname{Tr}(U\\rho U^\\dagger U\\rho U^\\dagger) = \\operatorname{Tr}(U\\rho^2U^\\dagger) = \\operatorname{Tr}\\rho^2$ (the trace is unchanged when $U^\\dagger$ is moved around to the front and meets $U$). A unitary rotates the Bloch vector and keeps its length.",
+        "Measurement, outcome $k$ kept. Outcome $k$, with projector $\\Pi_k$, occurs with probability $p_k = \\operatorname{Tr}(\\Pi_k\\rho)$ and the state becomes $\\rho_k = \\Pi_k\\rho\\,\\Pi_k/p_k$.",
+        "Measurement, outcomes not recorded. The state is $\\sum_kp_k\\rho_k = \\sum_k\\Pi_k\\rho\\,\\Pi_k$. For a $Z$ measurement this deletes the off-diagonal entries of $\\rho$ and keeps the diagonal: the coherences are erased. On the Bloch ball it projects the vector onto the $z$ axis."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Example: $\\vert+\\rangle\\langle+\\vert$ (rows $(\\tfrac12, \\tfrac12), (\\tfrac12, \\tfrac12)$) measured in $Z$ with the result discarded becomes rows $(\\tfrac12, 0), (0, \\tfrac12)$, which is $I/2$, the mixture of the last sections. A measurement you do not look at turns a superposition into a mixture. Hold on to this: the next page shows an environment doing the same thing."
+    },
+    {
+      "type": "prose",
+      "text": "General physical changes, including contact with an environment, are quantum channels $\\rho\\to\\sum_kK_k\\rho K_k^\\dagger$, with Kraus operators $K_k$; they are developed on Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels). Unitary evolution is the case of a single $K = U$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: the bookkeeping",
+      "text": "A qubit with Bloch vector $(0.6, 0, 0.8)$ is measured in $Z$ and the result is discarded. What is the Bloch vector afterwards, and what is its purity?",
+      "hint": "Erasing the off-diagonal entries removes $x$ and $y$.",
+      "solution": [
+        "The discarded $Z$ measurement deletes the coherences, i.e. $x$ and $y$, and keeps $z$: the new vector is $(0, 0, 0.8)$.",
+        "Purity: $\\tfrac12(1 + 0.64) = 0.82$. Before the measurement the length was $1$ (pure, purity $1$), so purity fell from $1$ to $0.82$."
+      ],
+      "answer": "(0, 0, 0.8); purity 0.82"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Check it in code"
+    },
+    {
+      "type": "prose",
+      "text": "This program builds ensembles, confirms the identities used on this page, and tests the properties and the Bloch-vector formulas on the examples."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nZ = np.diag([1., -1.]); X = np.array([[0., 1], [1, 0]]); Y = np.array([[0, -1j], [1j, 0]]); I = np.eye(2)\nket = lambda v: np.outer(v, np.conj(v))\nzero, one = np.array([1., 0]), np.array([0., 1])\nplus, minus = np.array([1., 1]) / np.sqrt(2), np.array([1., -1]) / np.sqrt(2)\npurity = lambda r: np.trace(r @ r).real\ndef ensemble(probs, states): return sum(p * ket(s) for p, s in zip(probs, states))\ndef bloch(r): return np.round([np.trace(P @ r).real for P in (X, Y, Z)], 4)\n\n# Two different recipes, one density matrix: no measurement can tell them apart\nrho_a = ensemble([0.5, 0.5], [zero, one])\nrho_b = ensemble([0.5, 0.5], [plus, minus])\nprint(\"50/50 of |0>,|1> equals 50/50 of |+>,|->:\", np.allclose(rho_a, rho_b))\n# ... and so does a trine of three states 120 degrees apart (Hilbert-space angle 60 degrees)\ntrine = [np.array([np.cos(k * np.pi / 3), np.sin(k * np.pi / 3)]) for k in range(3)]\nprint(\"equal mixture of three trine states is also I/2:\", np.allclose(ensemble([1/3] * 3, trine), I / 2))\n\n# A superposition is not a mixture: same Z statistics, different X statistics\nfor name, r in ((\"|+><+|\", ket(plus)), (\"mixture I/2\", rho_a)):\n    print(f\"{name:12s} <Z> = {np.trace(Z @ r).real:+.2f}  <X> = {np.trace(X @ r).real:+.2f}  purity {purity(r):.2f}\")\nprint(\"P(X = +1) for the mixture, from the rule Tr(Pi rho):\", round(np.trace(ket(plus) @ rho_a).real, 4))\n\n# Properties of a density matrix, checked\ndef check(name, r):\n    w = np.linalg.eigvalsh(r)\n    print(f\"{name:22s} Hermitian {np.allclose(r, r.conj().T)}  trace {np.trace(r).real:.2f}  eigenvalues {np.round(w, 4)}  purity {purity(r):.4f}\")\npsi = np.array([np.sqrt(3) / 2, 0.5])\ncheck(\"tilted pure state\", ket(psi))\ncheck(\"90/10 mixture\", ensemble([0.9, 0.1], [zero, one]))\ncheck(\"0.6|+> + 0.4|1>\", ensemble([0.6, 0.4], [plus, one]))\ncheck(\"rows (.8,.3),(.3,.2)\", np.array([[0.8, 0.3], [0.3, 0.2]]))\ncheck(\"NOT a state\", np.array([[0.5, 0.7], [0.7, 0.5]]))\nprint(\"tilted pure state matrix:\", np.round(ket(psi), 4).tolist(), \" <X> =\", round(np.trace(X @ ket(psi)).real, 4))\n\n# Bloch vector of mixtures: the probability-weighted average of the Bloch vectors\nr = ensemble([0.5, 0.5], [zero, plus])\nprint(\"50/50 of |0> and |+>: Bloch vector\", bloch(r), \" length\", round(np.linalg.norm(bloch(r)), 4), \" purity\", round(purity(r), 4),\n      \" eigenvalues\", np.round(np.linalg.eigvalsh(r), 4))\n\n# The same rho from different ensembles: diag(0.75, 0.25)\na_, b_ = np.array([np.sqrt(0.75), np.sqrt(0.25)]), np.array([np.sqrt(0.75), -np.sqrt(0.25)])\nprint(\"diag(0.75, 0.25) = 0.5|a><a| + 0.5|b><b|:\", np.allclose(ensemble([0.5, 0.5], [a_, b_]), np.diag([0.75, 0.25])))\n\n# Ignoring half of an entangled pair leaves the other half mixed\nbell = np.array([1, 0, 0, 1]) / np.sqrt(2)\nrhoA = ket(bell).reshape(2, 2, 2, 2).trace(axis1=1, axis2=3)\nprint(\"half of a Bell pair:\", np.round(rhoA, 3).tolist(), \" purity of the pair\", round(purity(ket(bell)), 2), \" of one half\", round(purity(rhoA), 2))\n\n# A measurement with the result discarded: sum_k Pi_k rho Pi_k\nP0, P1 = ket(zero), ket(one)\nprint(\"|+><+| measured in Z, result discarded:\", np.round(P0 @ ket(plus) @ P0 + P1 @ ket(plus) @ P1, 4).tolist())\n\n# Putting it together: a noisy source, then a Hadamard, then a discarded Z measurement\nHd = np.array([[1, 1], [1, -1]]) / np.sqrt(2)\nsrc = ensemble([0.6, 0.4], [plus, one])\nout = Hd @ src @ Hd.conj().T\nprint(\"source rho:\", np.round(src, 4).tolist(), \" Bloch\", bloch(src), \" purity\", round(purity(src), 4))\nprint(\"after H_d: \", np.round(out, 4).tolist(), \" Bloch\", bloch(out), \" purity\", round(purity(out), 4))\ndephased = P0 @ out @ P0 + P1 @ out @ P1\nprint(\"after a discarded Z measurement:\", np.round(dephased, 4).tolist(), \" purity\", round(purity(dephased), 4))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: the two $50/50$ recipes, and the trine, all give the identical matrix $I/2$. $\\vert+\\rangle\\langle+\\vert$ has $\\langle Z\\rangle = 0$, $\\langle X\\rangle = +1$, purity $1$, while the mixture has $\\langle Z\\rangle = \\langle X\\rangle = 0$, purity $0.5$ and $P(X = +1) = 0.5$. The valid matrices have eigenvalues $\\ge0$ (the almost-pure one with rows $(0.8, 0.3), (0.3, 0.2)$ has $0.0757$ and $0.9243$), while the invalid one has eigenvalues $-0.2$ and $1.2$ and an impossible purity of $1.48$. The $50/50$ mixture of $\\vert0\\rangle$ and $\\vert+\\rangle$ has Bloch vector $(0.5, 0, 0.5)$, length $0.7071$ and purity $0.75$. Half of a Bell pair is $\\mathrm{diag}(0.5, 0.5)$, purity $0.5$, from a pair of purity $1$. The discarded $Z$ measurement turns $\\vert+\\rangle\\langle+\\vert$ into $I/2$. The noisy source has Bloch vector $(0.6, 0, -0.4)$ and purity $0.76$; after the Hadamard the vector is $(-0.4, 0, 0.6)$ with the purity still $0.76$; and a discarded $Z$ measurement leaves $\\mathrm{diag}(0.8, 0.2)$ with purity $0.68$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A device is meant to prepare $\\vert+\\rangle$ but with probability $0.4$ it prepares $\\vert1\\rangle$ instead (the noisy source from above). A Hadamard gate is applied, and then $Z$ is measured, the result being recorded as a bit. Predict the bit statistics and describe the state at each stage."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The source state, computed above, has rows $(0.3, 0.3)$ and $(0.3, 0.7)$: Bloch vector $(0.6, 0, -0.4)$, length $\\sqrt{0.36 + 0.16} = 0.7211$, purity $\\tfrac12(1 + 0.52) = 0.76$. Its eigenvalues are $\\tfrac12(1\\pm0.7211) = 0.8606$ and $0.1394$.",
+        "Step 2. The Hadamard gate $H_d$ swaps $X$ and $Z$ and sends $Y\\to-Y$, so the Bloch vector $(x, y, z)\\to(z, -y, x)$. The new vector is $(-0.4, 0, 0.6)$. As a matrix, $\\rho' = H_d\\rho H_d^\\dagger$ has rows $(0.8, -0.2)$ and $(-0.2, 0.2)$. Check the trace: $1$. Purity unchanged: $0.64 + 0.04 + 0.04 + 0.04 = 0.76$.",
+        "Step 3. Measuring $Z$: $P(0) = \\rho'_{00} = 0.8$ and $P(1) = 0.2$. Compare with the ideal case in which the source is perfect: $H_d\\vert+\\rangle = \\vert0\\rangle$, so the bit would be $0$ every time. The $40\\%$ of runs that prepared $\\vert1\\rangle$ give $H_d\\vert1\\rangle = \\vert-\\rangle$ and a fair coin: $P(1) = 0.4\\cdot\\tfrac12 = 0.2$, in agreement.",
+        "Step 4. If the bit is recorded but not looked at, the state is $\\sum_k\\Pi_k\\rho'\\Pi_k$: rows $(0.8, 0)$ and $(0, 0.2)$, Bloch vector $(0, 0, 0.6)$, purity $0.68$. The measurement has deleted the coherence $-0.2$ and lowered the purity from $0.76$ to $0.68$.",
+        "Step 5. Summary of the purity along the way: $1$ for a perfect source, $0.76$ for the noisy one, unchanged by the gate, lowered to $0.68$ by the unrecorded measurement. Gates cannot restore purity; only noise and measurement change it."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A mixture is a pure state you do not know; a superposition is one definite state. Mixture probabilities add after squaring, so nothing interferes. Measuring $X$ separates $\\vert+\\rangle$ from the fair mixture of $\\vert0\\rangle$ and $\\vert1\\rangle$.",
+        "The density matrix $\\rho = \\sum_jp_j\\vert\\psi_j\\rangle\\langle\\psi_j\\vert$ holds everything predictable: $\\langle A\\rangle = \\operatorname{Tr}(A\\rho)$.",
+        "Diagonal entries are populations, off-diagonal entries are coherences. Coherences set $\\langle X\\rangle$ and $\\langle Y\\rangle$.",
+        "A valid $\\rho$ is Hermitian with trace $1$ and no negative eigenvalues (for a real qubit matrix, $\\det\\ge0$).",
+        "Purity $\\operatorname{Tr}\\rho^2$ runs from $1/d$ (maximally mixed) to $1$ (pure). A qubit is $\\tfrac12(I + r\\cdot\\sigma)$ with $\\vert r\\vert\\le1$ and purity $\\tfrac12(1 + \\vert r\\vert^2)$.",
+        "Different ensembles can give the same $\\rho$; then no experiment distinguishes them, which keeps Bell pairs from signalling.",
+        "Mixed states also arise with no randomness: half of an entangled pair is mixed (The Partial Trace and Reduced States (#/quantum/many-body/partial-trace)).",
+        "Unitaries rotate the Bloch vector, leaving its length; measurement with the result discarded deletes coherences; noise channels shrink the vector."
       ]
     },
     {
@@ -87,34 +551,79 @@
     },
     {
       "type": "problem",
-      "title": "A biased preparation",
-      "text": "A source emits $\\vert0\\rangle$ with probability 0.75 and $\\vert1\\rangle$ with 0.25. Give $\\rho$, $\\langle Z\\rangle$, the purity and the Bloch vector.",
+      "title": "Reading a state",
+      "text": "A qubit has $\\rho$ with rows $(0.7, 0.2)$ and $(0.2, 0.3)$. Is it valid? Find $\\langle Z\\rangle$, $\\langle X\\rangle$, the Bloch vector, the purity, and $\\langle A\\rangle$ for $A = Z + 0.5X$.",
+      "hint": "Read $\\langle X\\rangle$ from the off-diagonal entries and $\\langle Z\\rangle$ from the diagonal.",
       "solution": [
-        "$\\rho = \\mathrm{diag}(0.75, 0.25)$.",
-        "$\\langle Z\\rangle = 0.75 - 0.25 = 0.5$; purity $0.75^2 + 0.25^2 = 0.625$.",
-        "Bloch vector $(0, 0, 0.5)$; check: $(1 + 0.25)/2 = 0.625$."
+        "Hermitian, trace $1$, $\\det = 0.21 - 0.04 = 0.17\\ge0$: valid (eigenvalues $0.7828$ and $0.2172$).",
+        "$\\langle Z\\rangle = 0.7 - 0.3 = 0.4$ and $\\langle X\\rangle = 2(0.2) = 0.4$; $\\langle Y\\rangle = 0$ (real entries). Bloch vector $(0.4, 0, 0.4)$.",
+        "Length$^2 = 0.32$, so purity $\\tfrac12(1 + 0.32) = 0.66$. Check: $0.49 + 0.09 + 2(0.04) = 0.66$.",
+        "By linearity $\\langle A\\rangle = \\langle Z\\rangle + 0.5\\langle X\\rangle = 0.4 + 0.2 = 0.6$."
       ],
-      "answer": "diag(0.75, 0.25); ⟨Z⟩ = 0.5; purity 0.625; r = (0, 0, 0.5)"
+      "answer": "valid; ⟨Z⟩ = 0.4, ⟨X⟩ = 0.4; r = (0.4, 0, 0.4); purity 0.66; ⟨A⟩ = 0.6"
     },
     {
       "type": "problem",
-      "title": "Pure or mixed",
-      "text": "A qubit has Bloch vector $(0.6, 0, 0.8)$. Is it pure? What about $(0.3, 0, 0.4)$?",
+      "title": "A phase-error source",
+      "text": "A source meant to emit $\\vert+\\rangle$ emits $\\vert-\\rangle$ with probability $0.1$ (a phase flip). Find $\\rho$, the Bloch vector, the purity, and the probability that an $X$ measurement gives $-1$.",
+      "hint": "Weight the two outer products and add them entry by entry.",
       "solution": [
-        "$\\vert(0.6, 0, 0.8)\\vert = 1$: pure, on the sphere.",
-        "$\\vert(0.3, 0, 0.4)\\vert = 0.5$: mixed, with purity $(1 + 0.25)/2 = 0.625$."
+        "$\\rho = 0.9\\vert+\\rangle\\langle+\\vert + 0.1\\vert-\\rangle\\langle-\\vert$: the diagonal is $0.9\\cdot\\tfrac12 + 0.1\\cdot\\tfrac12 = 0.5$ and the off-diagonal is $0.9\\cdot\\tfrac12 - 0.1\\cdot\\tfrac12 = 0.4$. Rows $(0.5, 0.4)$ and $(0.4, 0.5)$.",
+        "Bloch vector: $x = 2(0.4) = 0.8$, $y = 0$, $z = 0$. Length $0.8$, purity $\\tfrac12(1 + 0.64) = 0.82$.",
+        "$P(X = -1) = \\tfrac12(1 - \\langle X\\rangle) = 0.1$, as it should be (only the phase-flipped runs give $-1$).",
+        "Notice the pattern: populations unchanged, coherence shrunk from $0.5$ to $0.4$, by the factor $1 - 2(0.1) = 0.8$. This is dephasing, taken up on Decoherence: How Superpositions Fade (#/quantum/many-body/decoherence)."
       ],
-      "answer": "Pure; mixed (purity 0.625)"
+      "answer": "rows (0.5, 0.4), (0.4, 0.5); r = (0.8, 0, 0); purity 0.82; P = 0.1"
     },
     {
       "type": "problem",
       "title": "Minimum purity",
       "text": "What is the smallest possible purity of a 3-qubit state, and which state has it?",
+      "hint": "Equal eigenvalues minimise the sum of squares.",
       "solution": [
-        "$d = 2^3 = 8$, and the minimum purity is $1/d$.",
-        "$1/8 = 0.125$, reached only by $I/8$: the maximally mixed state, where every QRC simulation on the site starts."
+        "The dimension is $d = 2^3 = 8$, and the smallest purity is $1/d$.",
+        "$1/8 = 0.125$, reached only by $I/8$: the maximally mixed state, a common starting state for the reservoir simulations on the QRC shelf."
       ],
       "answer": "1/8, for I/8"
+    },
+    {
+      "type": "problem",
+      "title": "Measurement on the Bloch ball",
+      "text": "A state has Bloch vector $(0.3, -0.4, 0.5)$. After a $Z$ measurement with the result discarded, then an $X$ measurement with the result discarded, what is the Bloch vector? What is the purity before and after?",
+      "hint": "Each discarded measurement along an axis keeps only that axis's component.",
+      "solution": [
+        "Discarding a $Z$ measurement keeps only $z$: $(0, 0, 0.5)$.",
+        "Then discarding an $X$ measurement keeps only the $x$ component: $(0, 0, 0)$. The state is $I/2$.",
+        "Purity before: $\\tfrac12(1 + 0.09 + 0.16 + 0.25) = 0.75$. After: $\\tfrac12$. Here the order does not matter: in the other order the $X$ measurement leaves $(0.3, 0, 0)$ and the $Z$ measurement then leaves $(0, 0, 0)$. Each measurement keeps only its own axis, and the two axes share nothing."
+      ],
+      "answer": "(0, 0, 0); purity 0.75 → 0.5"
+    },
+    {
+      "type": "problem",
+      "title": "Why the ensemble is invisible",
+      "text": "A source flips a fair coin and emits $\\vert{+i}\\rangle$ or $\\vert{-i}\\rangle$. Another does the same with $\\vert0\\rangle$ and $\\vert1\\rangle$. A third emits one of the three trine states. Which of them can you tell apart by any measurement?",
+      "hint": "Compute each $\\rho$ or the average Bloch vector.",
+      "solution": [
+        "$\\vert{\\pm i}\\rangle$ at $\\tfrac12$ each: shown in the check 'two ensembles' above, $\\rho = I/2$.",
+        "$\\vert0\\rangle$, $\\vert1\\rangle$ at $\\tfrac12$ each: $\\rho = I/2$.",
+        "The trine at $\\tfrac13$ each: the three Bloch vectors sum to zero, so $r = 0$ and $\\rho = I/2$ (the program above confirms it).",
+        "All three give $\\rho = I/2$, and every prediction depends on $\\rho$ alone, so no measurement can tell them apart."
+      ],
+      "answer": "none; all three are I/2"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A quantum reservoir's state is a density matrix from the first step (often starting at the maximally mixed $I/D$, with $D$ the dimension); channels, the Pauli transfer matrix and standard noise models are on Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "How an environment turns superpositions into mixtures, with numbers: Decoherence: How Superpositions Fade (#/quantum/many-body/decoherence).",
+        "Why a mixed state can still be entangled with something else, and why Bell experiments need pure-enough states: Bell Inequalities and Nonlocality (#/quantum/many-body/bell-inequalities).",
+        "Why a unitary reservoir started at $I/D$ never responds to its input: Dissipation as a Resource (#/qrc/models/dissipation-as-resource)."
+      ]
     },
     {
       "type": "heading",

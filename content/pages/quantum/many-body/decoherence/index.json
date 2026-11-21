@@ -1,0 +1,674 @@
+{
+  "title": "Decoherence: How Superpositions Fade",
+  "intro": "A qubit that interacts with anything else becomes entangled with it, and its coherence leaks away: the off-diagonal entries of its density matrix shrink while the populations stay. This page works that out for one environment qubit and for many, writes the result as the dephasing and amplitude-damping channels with T1 and T2, and connects it to measurement and to the Lindblad equation.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "Density matrices, populations and coherences, and the Bloch ball from Mixed States (#/quantum/many-body/mixed-states); the partial trace from The Partial Trace and Reduced States (#/quantum/many-body/partial-trace); and tensor products from Composite Systems and Tensor Products (#/quantum/many-body/composite-systems). No new mathematics is used: only inner products of kets and the trace."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Couple a qubit to an environment qubit, trace the environment out, and read off how much of the qubit's coherence survives.",
+        "Show that many weakly coupled environment qubits give an exponential decay of coherence, and compute the decay time from the coupling.",
+        "Write the dephasing (T2) and amplitude damping (T1) channels with Kraus operators, apply them to a density matrix, and relate their parameters to $T_1$, $T_2$ and the time elapsed.",
+        "Explain how measurement is decoherence by a special environment, and say what that does and does not explain."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The puzzle: unitary dynamics that destroys superpositions"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The Schrödinger equation is reversible: $\\vert\\psi(t)\\rangle = U(t)\\vert\\psi(0)\\rangle$ never loses information and never turns a superposition into a mixture (The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation)). Yet a real qubit left alone does lose its superposition, in microseconds to seconds depending on the hardware, and we never see cats in superpositions of alive and dead. Where does the irreversibility come from?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "No qubit is truly alone. It sits next to wires, stray fields, other atoms, photons, vibrations: the environment. The qubit and its environment together do obey the Schrödinger equation, and the pair stays in a pure state. But their interaction entangles them, and then the qubit alone, described by its reduced state (The Partial Trace and Reduced States (#/quantum/many-body/partial-trace)), is mixed. The coherences, which carry the information that makes a state a superposition, leak into correlations with the environment. We cannot follow the environment, so the superposition is gone for all practical purposes. That process is called decoherence. Everyday picture: a drop of ink in a glass of water. The ink molecules are all still there and the motion is reversible in principle, but the information about where each started is spread across too many molecules to recover."
+    },
+    {
+      "type": "prose",
+      "text": "The next sections work this out for the smallest possible environment, one qubit, then for many, and then package the result as channels."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One environment qubit"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "To see decoherence happen, with every step visible, use the simplest model: the qubit of interest, called the system $S$, and a single environment qubit $E$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The model"
+    },
+    {
+      "type": "prose",
+      "text": "Start the system in $a\\vert0\\rangle + b\\vert1\\rangle$ and the environment in $\\vert0\\rangle_E$. The interaction is a controlled rotation: if the system is $\\vert0\\rangle$ nothing happens to the environment; if the system is $\\vert1\\rangle$ the environment qubit is rotated by an angle $\\theta$, turning $\\vert0\\rangle_E$ into"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert e_1\\rangle = \\cos\\tfrac\\theta2\\,\\vert0\\rangle_E + \\sin\\tfrac\\theta2\\,\\vert1\\rangle_E",
+      "caption": "The environment state attached to system state |1⟩; the state attached to |0⟩ is |e₀⟩ = |0⟩_E."
+    },
+    {
+      "type": "prose",
+      "text": "(Physically: the system's value shifts the environment slightly, as a compass needle is deflected by a nearby magnet that is on or off.) Write $c = \\cos(\\theta/2)$ and $s = \\sin(\\theta/2)$. After the interaction, by linearity, each term of the superposition carries its own environment state:"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\Psi\\rangle = a\\,\\vert0\\rangle_S\\vert e_0\\rangle_E + b\\,\\vert1\\rangle_S\\vert e_1\\rangle_E",
+      "caption": "The joint state: entangled unless |e₀⟩ and |e₁⟩ are the same."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Tracing out the environment"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Form the joint density matrix and multiply out the four terms: $\\vert\\Psi\\rangle\\langle\\Psi\\vert = \\vert a\\vert^2\\,\\vert0\\rangle\\langle0\\vert\\otimes\\vert e_0\\rangle\\langle e_0\\vert + a\\bar b\\,\\vert0\\rangle\\langle1\\vert\\otimes\\vert e_0\\rangle\\langle e_1\\vert + \\bar ab\\,\\vert1\\rangle\\langle0\\vert\\otimes\\vert e_1\\rangle\\langle e_0\\vert + \\vert b\\vert^2\\,\\vert1\\rangle\\langle1\\vert\\otimes\\vert e_1\\rangle\\langle e_1\\vert$.",
+        "Step 2. The partial trace over $E$ leaves the $S$ operators alone and takes the trace of the $E$ operators. The trace of an outer product is an inner product: $\\operatorname{Tr}(\\vert e_i\\rangle\\langle e_j\\vert) = \\langle e_j\\vert e_i\\rangle$.",
+        "Step 3. So the two diagonal terms get $\\langle e_0\\vert e_0\\rangle = \\langle e_1\\vert e_1\\rangle = 1$, and the off-diagonal terms get $\\langle e_1\\vert e_0\\rangle = \\cos\\tfrac\\theta2 = c$ and $\\langle e_0\\vert e_1\\rangle = c$.",
+        "Step 4. The reduced state of the system has rows $(\\vert a\\vert^2,\\ a\\bar b\\,c)$ and $(\\bar ab\\,c,\\ \\vert b\\vert^2)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "In words: the populations are untouched, and the coherence is multiplied by the overlap $\\langle e_0\\vert e_1\\rangle = \\cos(\\theta/2)$ of the two environment states. Without interaction, $\\theta = 0$, the overlap is $1$ and the coherence is intact. If the environment states are orthogonal, the overlap is $0$ and the coherence is gone."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "Take the system in $\\vert+\\rangle$, so $a = b = 1/\\sqrt2$ and the initial coherence is $\\rho_{01} = \\tfrac12$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. No coupling, $\\theta = 0$: $c = 1$. $\\rho_{01} = 0.5$; the Bloch vector $(1, 0, 0)$ has length $1$ and the purity is $1$. Nothing happened.",
+        "Step 2. Medium coupling, $\\theta = \\pi/2$: $c = \\cos45° = 0.7071$. $\\rho_{01} = 0.5\\times0.7071 = 0.3536$. The Bloch vector shortens to $(0.7071, 0, 0)$ and the purity is $\\tfrac12(1 + 0.5) = 0.75$.",
+        "Step 3. Full coupling, $\\theta = \\pi$: the environment is flipped, $\\vert e_1\\rangle = \\vert1\\rangle_E$, and $c = \\cos90° = 0$. $\\rho_{01} = 0$: the state is $I/2$, purity $\\tfrac12$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The system alone has gone from pure to mixed, though the full state $\\vert\\Psi\\rangle$ is pure throughout and nothing was thrown away except our attention to $E$. For $\\theta = \\pi$ the joint state is $(\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$, a Bell state: the environment qubit holds a perfect record of the system's $Z$ value."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What the overlap means"
+    },
+    {
+      "type": "prose",
+      "text": "The overlap $\\langle e_0\\vert e_1\\rangle$ measures how well the environment can tell the two branches apart. If $\\vert e_0\\rangle = \\vert e_1\\rangle$, the environment has learned nothing and the interference between $\\vert0\\rangle$ and $\\vert1\\rangle$ is intact. If they are orthogonal, the environment could in principle be measured to find out which branch the system is in, and where which-branch information exists, interference cannot be recovered by looking at the system alone, whether or not anyone ever looks at the environment. It is the existence of the information, not an observer, that destroys the coherence."
+    },
+    {
+      "type": "callout",
+      "text": "Common confusions. (1) Decoherence is not the environment disturbing the qubit's populations: here $\\rho_{00}$ and $\\rho_{11}$ never change, because the interaction commutes with $Z$. (2) It is not noise added by hand: the model is completely deterministic and unitary. (3) The basis matters: the interaction here singles out $\\vert0\\rangle$ and $\\vert1\\rangle$ because they are the states that the environment responds to. States that are coherent superpositions of those are fragile; the $Z$ basis states are the robust ones."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: one environment qubit",
+      "text": "A system in $\\sqrt{0.8}\\,\\vert0\\rangle + \\sqrt{0.2}\\,\\vert1\\rangle$ interacts with an environment qubit through a controlled rotation by $\\theta = 2\\pi/3$. Find $\\rho_S$ and its purity.",
+      "hint": "Multiply the original coherence by $c$.",
+      "solution": [
+        "$c = \\cos(\\pi/3) = 0.5$.",
+        "The populations stay $0.8$ and $0.2$. The initial coherence is $ab = \\sqrt{0.8\\cdot0.2} = 0.4$; times $c$ it is $\\rho_{01} = 0.2$.",
+        "So $\\rho_S$ has rows $(0.8, 0.2)$ and $(0.2, 0.2)$; the trace is $1$ and the determinant $0.16 - 0.04 = 0.12\\ge0$.",
+        "Purity: $0.64 + 0.04 + 2(0.04) = 0.76$."
+      ],
+      "answer": "rows (0.8, 0.2) and (0.2, 0.2); purity 0.76"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Many environment qubits: exponential decay"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A real environment is not one qubit but a huge number of them, each coupled weakly to the system: nuclear spins around a defect, photons in a cavity, charge fluctuators near a superconducting circuit. How does the coherence shrink as more of them join in?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The calculation"
+    },
+    {
+      "type": "prose",
+      "text": "Give each of $N$ environment qubits its own rotation angle $\\theta_k$, applied when the system is $\\vert1\\rangle$. The two environment states attached to the system's two branches are then products: $\\vert E_0\\rangle$, with every environment qubit in $\\vert0\\rangle$, and $\\vert E_1\\rangle$, with environment qubit $k$ in its own rotated state $\\vert e_1^{(k)}\\rangle$. The tracing-out steps of the last section did not depend on how big the environment was, only on the overlap $\\langle E_0\\vert E_1\\rangle$, so the coherence is multiplied by this overlap. The inner product of two product states is the product of the inner products, qubit by qubit:"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle E_0\\vert E_1\\rangle = \\prod_{k=1}^N\\cos\\tfrac{\\theta_k}{2}",
+      "caption": "The overlap of the environment's two branches. If all the couplings are equal, it is c^N."
+    },
+    {
+      "type": "prose",
+      "text": "Each factor is at most $1$, so more environment qubits only ever shrink the coherence, and they do so multiplicatively. With equal couplings, $\\cos(\\theta/2) = c < 1$, the coherence is $\\rho_{01}(N) = \\rho_{01}(0)\\,c^N = \\rho_{01}(0)\\,e^{-N\\ln(1/c)}$: an exponential decay in the number of environment qubits that have interacted."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "Each environment qubit nudges the environment only a little: $c = 0.9$, which is $\\theta = 2\\arccos0.9 = 0.9021$ rad, about $52°$. System in $\\vert+\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. One environment qubit: coherence factor $0.9$. Two: $0.9^2 = 0.81$. Four: $0.9^4 = 0.6561$. Ten: $0.9^{10} = 0.3487$.",
+        "Step 2. Fifty: $0.9^{50} = 0.00515$. One hundred: $0.9^{100} = 2.7\\times10^{-5}$. After a hundred weak interactions the coherence is gone for every practical purpose.",
+        "Step 3. Time dependence. If one new environment qubit interacts with the system in each time step $\\Delta t$, then $N = t/\\Delta t$ and the coherence is $e^{-t/\\tau}$ with $\\tau = \\Delta t/\\ln(1/c) = \\Delta t/0.1054 = 9.49\\,\\Delta t$. This decay time is the dephasing time.",
+        "Step 4. Compare coupling strengths. For a weak coupling (small $\\theta$), $c = \\cos(\\theta/2)\\approx1 - \\theta^2/8$ and $\\ln(1/c)\\approx\\theta^2/8$. So the decay rate grows as the square of the coupling angle: halve the coupling and the decoherence is four times slower. (Check at $\\theta = 0.9021$: $\\theta^2/8 = 0.1017$, against the exact $0.1054$.)"
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Two lessons. First, exponential decay is not put in; it comes from multiplying many factors below one. Second, big environments decohere fast: for a system with $N\\approx10^{23}$ environment particles even tiny couplings give an astronomically small $c^N$, which is why a cat does not stay in a superposition. The model is a simplified version of the central-spin or spin-bath model, and finite environments can show revivals (the coherence returns when the environment states happen to realign), which vanish as the environment grows."
+    },
+    {
+      "type": "prose",
+      "text": "The program below simulates the model exactly, with the full state vector of one system qubit and $N$ environment qubits. Run it to see $\\rho_{01}$ for $\\theta = 0$, $\\pi/2$, $\\pi$ and to compare the exact decay with $c^N$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom functools import reduce\n\nX = np.array([[0., 1], [1, 0]]); Z = np.diag([1., -1.]); I = np.eye(2)\nket = lambda v: np.outer(v, np.conj(v))\ndef bloch_len(r): return np.sqrt(sum(np.trace(P @ r).real ** 2 for P in (X, np.array([[0, -1j], [1j, 0]]), Z)))\n\ndef reduced_system(psi, n_env):\n    \"\"\"Trace out the last n_env qubits of a pure state on 1 + n_env qubits.\"\"\"\n    m = psi.reshape(2, 2 ** n_env)\n    return m @ m.conj().T\n\ndef Rot(theta):\n    c, s = np.cos(theta / 2), np.sin(theta / 2)\n    return np.array([[c, -s], [s, c]])               # rotates |0> to c|0> + s|1>\n\ndef controlled_rotation(thetas):\n    \"\"\"System qubit first; if the system is |1>, environment qubit k is rotated by thetas[k]; if |0>, nothing happens.\"\"\"\n    n = len(thetas); dim = 2 ** (1 + n)\n    U = np.zeros((dim, dim))\n    P0, P1 = np.diag([1., 0]), np.diag([0., 1])\n    U += reduce(np.kron, [P0] + [I] * n)\n    U += reduce(np.kron, [P1] + [Rot(th) for th in thetas])\n    return U\n\n# 1) one environment qubit, system in |+>, several rotation angles\nplus = np.array([1., 1]) / np.sqrt(2)\nfor th in (0, np.pi / 2, np.pi):\n    psi = controlled_rotation([th]) @ np.kron(plus, [1., 0])\n    r = reduced_system(psi, 1)\n    print(f\"theta = {th:.4f}: rho_01 = {r[0, 1]:.4f} (cos(theta/2)/2 = {np.cos(th / 2) / 2:.4f})  Bloch length {bloch_len(r):.4f}  purity {np.trace(r @ r):.4f}\")\n\n# 2) many environment qubits, each rotated by theta with cos(theta/2) = 0.9\nc = 0.9; th = 2 * np.arccos(c)\nprint(\"per-qubit overlap c =\", c, \" theta =\", round(th, 4))\nfor N in (1, 2, 4, 6, 8, 10):\n    psi = controlled_rotation([th] * N) @ np.kron(plus, np.eye(2 ** N)[0])\n    r = reduced_system(psi, N)\n    print(f\"N = {N:2d}: 2|rho_01| = {2 * abs(r[0, 1]):.4f}   c^N = {c ** N:.4f}\")\nprint(\"c^N for N = 50 and 100:\", f\"{c ** 50:.5f}\", f\"{c ** 100:.2e}\")\n\n# 3) Kraus form of the same channel, from K_k = <k|U|0>_env\nK0 = np.diag([1., c]); K1 = np.diag([0., np.sqrt(1 - c ** 2)])\nprint(\"K0^T K0 + K1^T K1 = I:\", np.allclose(K0.T @ K0 + K1.T @ K1, I))\nrho = ket(plus)\nout = K0 @ rho @ K0.T + K1 @ rho @ K1.T\nprint(\"one-qubit environment channel on |+><+|:\", np.round(out, 4).tolist())\n# dephasing channel (1-p) rho + p Z rho Z with 1 - 2p = c\np = (1 - c) / 2\nprint(\"p =\", round(p, 4), \" dephasing channel gives:\", np.round((1 - p) * rho + p * Z @ rho @ Z, 4).tolist())\n\n# 4) amplitude damping: K0 = |0><0| + sqrt(1-g)|1><1|, K1 = sqrt(g)|0><1|\ng = 0.19\nA0 = np.array([[1, 0], [0, np.sqrt(1 - g)]]); A1 = np.array([[0, np.sqrt(g)], [0, 0]])\nprint(\"amplitude damping Kraus complete:\", np.allclose(A0.T @ A0 + A1.T @ A1, I))\nout = A0 @ rho @ A0.T + A1 @ rho @ A1.T\nprint(\"amplitude damping g = 0.19 on |+><+|:\", np.round(out, 4).tolist(), \" <Z> =\", round(np.trace(Z @ out), 4))\nout1 = A0 @ ket([0., 1]) @ A0.T + A1 @ ket([0., 1]) @ A1.T\nprint(\"amplitude damping g = 0.19 on |1><1|:\", np.round(out1, 4).tolist())\n\n# 5) T1 and T2 numbers (microseconds)\nT1, T2, t = 100.0, 60.0, 30.0\nTphi = 1 / (1 / T2 - 1 / (2 * T1))\nprint(f\"T1 = {T1}, T2 = {T2}: Tphi = {Tphi:.1f};  after t = {t}: gamma = {1 - np.exp(-t / T1):.4f}, coherence factor {np.exp(-t / T2):.4f}, population left {np.exp(-t / T1):.4f}\")\nprint(f\"gate budget: a 50 ns gate against T2 = 60 us gives {60e-6 / 50e-9:.0f} gates per T2; error per gate ~ {50e-9 / 60e-6:.2e}\")\n\n\n# 6) the whole story for one idling qubit: |+>, T1 = 100 us, T2 = 60 us, idle for 30 us\nTphi_ = 1 / (1 / T2 - 1 / (2 * T1)); t = 30.0\ngam = 1 - np.exp(-t / T1)                       # amplitude damping parameter\npz = (1 - np.exp(-t / Tphi_)) / 2               # dephasing flip probability that supplies the rest of T2\nAd0 = np.array([[1, 0], [0, np.sqrt(1 - gam)]]); Ad1 = np.array([[0, np.sqrt(gam)], [0, 0]])\nafter_damp = Ad0 @ rho @ Ad0.T + Ad1 @ rho @ Ad1.T\nfinal = (1 - pz) * after_damp + pz * Z @ after_damp @ Z\nr_ = [np.trace(P @ final).real for P in (X, Z)]\nprint(\"idle 30 us: rho =\", np.round(final, 4).tolist(), \" <X> =\", round(r_[0], 4), \" <Z> =\", round(r_[1], 4),\n      \" purity =\", round(np.trace(final @ final), 4), \" expected coherence 0.5*exp(-t/T2) =\", round(0.5 * np.exp(-t / T2), 4))\n\n# 7) measurement as decoherence: pointer environment states with overlap c = 0.2 or 0 (a perfect record)\na_, b_ = np.sqrt(0.3), np.sqrt(0.7)\nfor cc in (0.2, 0.0):\n    rs = np.array([[a_ ** 2, a_ * b_ * cc], [a_ * b_ * cc, b_ ** 2]])\n    print(f\"overlap {cc}: rho_S = {np.round(rs, 4).tolist()}, purity {np.trace(rs @ rs):.4f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: for $\\theta = 0$, $\\pi/2$, $\\pi$ the coherence is $0.5$, $0.3536$, $0$, equal to $\\cos(\\theta/2)/2$, with purity $1$, $0.75$, $0.5$. With $c = 0.9$ the exact coherence after $N = 1, 2, 4, 6, 8, 10$ environment qubits is $0.9, 0.81, 0.6561, 0.5314, 0.4305, 0.3487$ (twice $\\vert\\rho_{01}\\vert$, so as a fraction of its initial value), the same as $c^N$. The numbers in the next sections come from the later lines of the same run."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: how many environment qubits",
+      "text": "Each environment qubit has overlap $c = 0.95$. How many are needed to bring the coherence below $1\\%$ of its starting value?",
+      "hint": "Take logarithms of $c^N < 0.01$ and remember that $\\ln c$ is negative.",
+      "solution": [
+        "We need $0.95^N < 0.01$, so $N\\ln0.95 < \\ln0.01$.",
+        "$\\ln0.95 = -0.05129$ and $\\ln0.01 = -4.6052$; dividing (the inequality flips with the negative $\\ln0.95$): $N > 4.6052/0.05129 = 89.8$.",
+        "So $N = 90$ ($0.95^{90} = 0.0099$)."
+      ],
+      "answer": "90"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Dephasing as a channel"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Tracking the environment is impractical, and we do not need to: what matters is the map from the system's state before to its state after. Such a map, from density matrices to density matrices, is a quantum channel. A good way to write one is with Kraus operators $K_k$, as $\\rho\\to\\sum_kK_k\\rho K_k^\\dagger$, with $\\sum_kK_k^\\dagger K_k = I$ so that the trace stays 1 (this is developed in Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels))."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Reading the Kraus operators off the model"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose the system and environment interact by a unitary $U$ and the environment starts in $\\vert0\\rangle_E$. After tracing out, $\\rho_S' = \\sum_k\\langle k\\vert_EU\\,(\\rho_S\\otimes\\vert0\\rangle\\langle0\\vert_E)\\,U^\\dagger\\vert k\\rangle_E$, which is the Kraus form with $K_k = \\langle k\\vert_EU\\vert0\\rangle_E$ (an operator on $S$ alone: the environment's $k$-th state is read out). For the controlled rotation, $U = \\vert0\\rangle\\langle0\\vert\\otimes I + \\vert1\\rangle\\langle1\\vert\\otimes R(\\theta)$, so"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$K_0 = \\langle0\\vert_EU\\vert0\\rangle_E = \\vert0\\rangle\\langle0\\vert + c\\,\\vert1\\rangle\\langle1\\vert$ (rows $(1, 0)$ and $(0, c)$),",
+        "$K_1 = \\langle1\\vert_EU\\vert0\\rangle_E = s\\,\\vert1\\rangle\\langle1\\vert$ (rows $(0, 0)$ and $(0, s)$)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Check the completeness: $K_0^\\dagger K_0 + K_1^\\dagger K_1 = \\vert0\\rangle\\langle0\\vert + (c^2 + s^2)\\vert1\\rangle\\langle1\\vert = I$. Apply to a general $\\rho$: $K_0\\rho K_0^\\dagger$ has rows $(\\rho_{00}, c\\rho_{01})$ and $(c\\rho_{10}, c^2\\rho_{11})$, and $K_1\\rho K_1^\\dagger$ adds $s^2\\rho_{11}$ to the bottom-right entry. The sum has rows $(\\rho_{00}, c\\rho_{01})$ and $(c\\rho_{10}, (c^2 + s^2)\\rho_{11}) = (c\\rho_{10}, \\rho_{11})$: populations unchanged, coherences times $c$, as found directly."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The same channel as a random phase flip"
+    },
+    {
+      "type": "prose",
+      "text": "There is a more intuitive way to write the same map. The phase-flip (dephasing) channel applies $Z$ to the qubit with probability $p$ and does nothing with probability $1 - p$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho\\to(1 - p)\\,\\rho + p\\,Z\\rho Z",
+      "caption": "The dephasing channel; Kraus operators √(1−p) I and √p Z."
+    },
+    {
+      "type": "prose",
+      "text": "Conjugating by $Z$ leaves the diagonal alone and changes the sign of the off-diagonals ($Z\\vert0\\rangle\\langle1\\vert Z = -\\vert0\\rangle\\langle1\\vert$). So $\\rho_{01}\\to(1 - p)\\rho_{01} - p\\rho_{01} = (1 - 2p)\\rho_{01}$. The two descriptions agree when $1 - 2p = c$, that is $p = (1 - c)/2$. Both are valid Kraus decompositions of the same channel: the environment could be read in different ways without changing what the system sees. Picture it as random phase kicks: with probability $p$ the qubit's phase is flipped, and averaging over many runs smears the Bloch vector's $x$ and $y$ components while leaving $z$. On the Bloch ball, the channel squeezes the ball toward the $z$ axis, into an ellipsoid with the $x$ and $y$ radii multiplied by $c$."
+    },
+    {
+      "type": "prose",
+      "text": "Numbers: for $c = 0.9$, $p = 0.05$. On $\\vert+\\rangle$, rows $(0.5, 0.5), (0.5, 0.5)$: the first Kraus form gives rows $(0.5, 0.45)$ and $(0.45, 0.5)$, and so does $0.95\\vert+\\rangle\\langle+\\vert + 0.05\\,Z\\vert+\\rangle\\langle+\\vert Z$. The program confirms both."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: the dephasing channel",
+      "text": "Apply the dephasing channel with $p = 0.2$ to $\\vert+\\rangle\\langle+\\vert$. Give the output matrix and its purity.",
+      "hint": "The off-diagonals are multiplied by $1 - 2p$.",
+      "solution": [
+        "The coherence factor is $1 - 2p = 0.6$, so $\\rho_{01} = 0.5\\times0.6 = 0.3$; populations stay $0.5$.",
+        "Bloch vector $(0.6, 0, 0)$, purity $\\tfrac12(1 + 0.36) = 0.68$. Check: $0.25 + 0.25 + 2(0.09) = 0.68$."
+      ],
+      "answer": "rows (0.5, 0.3) and (0.3, 0.5); purity 0.68"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Energy loss: amplitude damping"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Dephasing does not change the populations. But qubits also lose energy: an excited atom emits a photon and falls to its ground state, a superconducting circuit leaks a microwave photon into its line. This changes populations and is not symmetric between $\\vert0\\rangle$ and $\\vert1\\rangle$. The model needs a different interaction."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The model"
+    },
+    {
+      "type": "prose",
+      "text": "Let $\\vert1\\rangle$ be the excited state and $\\vert0\\rangle$ the ground state, and the environment (the electromagnetic field) start empty, $\\vert0\\rangle_E$. The interaction lets the excitation of the system move into the environment with probability $\\gamma$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\vert0\\rangle_S\\vert0\\rangle_E\\to\\vert0\\rangle_S\\vert0\\rangle_E$ (nothing to give away),",
+        "$\\vert1\\rangle_S\\vert0\\rangle_E\\to\\sqrt{1 - \\gamma}\\,\\vert1\\rangle_S\\vert0\\rangle_E + \\sqrt\\gamma\\,\\vert0\\rangle_S\\vert1\\rangle_E$ (a photon is emitted with probability $\\gamma$)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The Kraus operators are $K_k = \\langle k\\vert_EU\\vert0\\rangle_E$ as before:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$K_0 = \\vert0\\rangle\\langle0\\vert + \\sqrt{1 - \\gamma}\\,\\vert1\\rangle\\langle1\\vert$ (rows $(1, 0)$ and $(0, \\sqrt{1-\\gamma})$): no photon was emitted.",
+        "$K_1 = \\sqrt\\gamma\\,\\vert0\\rangle\\langle1\\vert$ (rows $(0, \\sqrt\\gamma)$ and $(0, 0)$): a photon was emitted, the qubit dropped from $\\vert1\\rangle$ to $\\vert0\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Completeness: $K_0^\\dagger K_0 + K_1^\\dagger K_1 = \\vert0\\rangle\\langle0\\vert + (1 - \\gamma)\\vert1\\rangle\\langle1\\vert + \\gamma\\vert1\\rangle\\langle1\\vert = I$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Effect on a state"
+    },
+    {
+      "type": "prose",
+      "text": "$K_0\\rho K_0^\\dagger$ has rows $(\\rho_{00}, \\sqrt{1-\\gamma}\\,\\rho_{01})$ and $(\\sqrt{1-\\gamma}\\,\\rho_{10}, (1 - \\gamma)\\rho_{11})$. $K_1\\rho K_1^\\dagger = \\gamma\\rho_{11}\\vert0\\rangle\\langle0\\vert$ adds $\\gamma\\rho_{11}$ to the top-left entry. In total:"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho_{11}\\to(1 - \\gamma)\\rho_{11}, \\qquad \\rho_{00}\\to\\rho_{00} + \\gamma\\rho_{11}, \\qquad \\rho_{01}\\to\\sqrt{1 - \\gamma}\\,\\rho_{01}",
+      "caption": "Amplitude damping with parameter γ."
+    },
+    {
+      "type": "prose",
+      "text": "Population drains from $\\vert1\\rangle$ into $\\vert0\\rangle$; coherences shrink by $\\sqrt{1 - \\gamma}$, half as fast in the exponent as the population does, because a coherence is a product of amplitudes and the amplitudes shrink as $\\sqrt{1-\\gamma}$ while the probability shrinks as $1 - \\gamma$. The ground state $\\vert0\\rangle$ is the fixed point, and every state ends up there. On the Bloch ball, the whole ball is squeezed and shifted toward the north pole $\\vert0\\rangle$."
+    },
+    {
+      "type": "prose",
+      "text": "Numbers: $\\gamma = 0.19$ on $\\vert+\\rangle$ ($\\rho_{11} = 0.5$). The new populations are $\\rho_{11} = 0.5\\times0.81 = 0.405$ and $\\rho_{00} = 0.5 + 0.19\\times0.5 = 0.595$; the coherence is $0.5\\times\\sqrt{0.81} = 0.45$. So $\\rho$ has rows $(0.595, 0.45)$ and $(0.45, 0.405)$ and $\\langle Z\\rangle = 0.19$. Starting from $\\vert1\\rangle$ gives $\\rho = \\mathrm{diag}(0.19, 0.81)$: 19% of the population has decayed."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "T1 and T2"
+    },
+    {
+      "type": "prose",
+      "text": "In time $t$ with a steady decay rate, the population surviving is $e^{-t/T_1}$, so $\\gamma = 1 - e^{-t/T_1}$ and $1 - \\gamma = e^{-t/T_1}$. The coherence factor from this alone is $\\sqrt{1-\\gamma} = e^{-t/(2T_1)}$. Add pure dephasing, with its own factor $e^{-t/T_\\varphi}$ (the factor $1 - 2p$ of the dephasing channel). Then the total coherence factor is $e^{-t/T_2}$ with"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac1{T_2} = \\frac1{2T_1} + \\frac1{T_\\varphi}",
+      "caption": "T1: energy relaxation time; T2: coherence time; Tφ: pure dephasing time. Always T2 ≤ 2 T1."
+    },
+    {
+      "type": "prose",
+      "text": "The inequality $T_2\\le2T_1$ is there because energy loss on its own already costs coherence at rate $1/(2T_1)$, and dephasing only adds to it. Worked numbers for a qubit with $T_1 = 100\\,\\mu$s and $T_2 = 60\\,\\mu$s, starting in $\\vert+\\rangle$ and idling for $t = 30\\,\\mu$s:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Pure dephasing time: $1/T_\\varphi = 1/60 - 1/200 = 0.01167\\ \\mu\\mathrm{s}^{-1}$, so $T_\\varphi = 85.7\\,\\mu$s.",
+        "Step 2. Amplitude damping: $\\gamma = 1 - e^{-0.3} = 0.2592$; the excited population is $0.5\\,e^{-0.3} = 0.3704$ and the ground population $0.6296$.",
+        "Step 3. Coherence factor: from damping alone $e^{-30/200} = 0.8607$; from dephasing $e^{-30/85.7} = 0.7047$; the product is $0.6065 = e^{-30/60}$, as it should be. So $\\rho_{01} = 0.5\\times0.6065 = 0.3033$.",
+        "Step 4. The state has rows $(0.6296, 0.3033)$ and $(0.3033, 0.3704)$: $\\langle X\\rangle = 0.6065$, $\\langle Z\\rangle = 0.2592$, Bloch length $0.6596$, purity $0.7175$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The last lines of the program above compute exactly this by applying the amplitude damping channel followed by a dephasing channel, and find the same matrix, purity $0.7175$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: amplitude damping",
+      "text": "Apply amplitude damping with $\\gamma = 0.36$ to $\\vert+\\rangle\\langle+\\vert$. Give the output and its purity.",
+      "hint": "Apply the three update rules to $\\rho_{11} = \\rho_{00} = \\rho_{01} = 0.5$.",
+      "solution": [
+        "$1 - \\gamma = 0.64$, $\\sqrt{0.64} = 0.8$.",
+        "$\\rho_{11} = 0.5\\times0.64 = 0.32$; $\\rho_{00} = 0.5 + 0.36\\times0.5 = 0.68$; $\\rho_{01} = 0.5\\times0.8 = 0.4$.",
+        "Purity: $0.68^2 + 0.32^2 + 2(0.4^2) = 0.4624 + 0.1024 + 0.32 = 0.8848$."
+      ],
+      "answer": "rows (0.68, 0.4) and (0.4, 0.32); purity 0.8848"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Measurement as decoherence"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "On Measurement and the Born Rule (#/quantum/foundations/measurement) a measurement was an extra rule: probabilities and a jump of the state. The decoherence model suggests where that rule might come from, because a measuring device is just an environment designed to hold a record."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea and the numbers"
+    },
+    {
+      "type": "prose",
+      "text": "Let the 'device' be a pointer qubit that is flipped when the system is $\\vert1\\rangle$: the case $\\theta = \\pi$ of our model, in which $\\vert e_0\\rangle$ and $\\vert e_1\\rangle$ are orthogonal, $c = 0$. The joint state is $a\\vert0\\rangle\\vert P_0\\rangle + b\\vert1\\rangle\\vert P_1\\rangle$, and the system's reduced state is $\\mathrm{diag}(\\vert a\\vert^2, \\vert b\\vert^2)$. The Born probabilities appear as an ordinary mixture, with no interference left between $\\vert0\\rangle$ and $\\vert1\\rangle$. For $\\vert a\\vert^2 = 0.3$ and $\\vert b\\vert^2 = 0.7$: if the device's states overlap by $c = 0.2$ (a poor device) the coherence is $\\sqrt{0.21}\\times0.2 = 0.0917$ and the purity $0.5968$; if the record is perfect, $c = 0$ the state is $\\mathrm{diag}(0.3, 0.7)$ with purity $0.58$ (the last lines of the program above)."
+    },
+    {
+      "type": "prose",
+      "text": "A realistic measuring device is made of an enormous number of particles, each of which picks up a little of the record, so the overlap of the two device states, a product of many factors below one as in the many-qubit calculation above, is practically zero at once. The basis in which the coherences vanish is picked by the interaction: here $Z$, since the device couples to $Z$. These robust states are called pointer states, and the process, which also selects which states survive, is sometimes called einselection."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What this does and does not explain"
+    },
+    {
+      "type": "prose",
+      "text": "Decoherence explains why interference disappears and why a particular basis (the pointer basis) is preferred. It does not by itself explain why one outcome is seen: the joint state is still the pure entangled $a\\vert0\\rangle\\vert P_0\\rangle + b\\vert1\\rangle\\vert P_1\\rangle$, a superposition of two records. Whether this leaves a 'measurement problem' is a question about interpretations of quantum mechanics (see Schlosshauer's review below), and standard quantum mechanics simply adds the Born rule. The decoherence result that is not in dispute is the practical one: for every real experiment, the part of the system you can access behaves as if it had been measured."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why coherence times matter"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Everything a quantum computer or a quantum reservoir does is a sequence of operations that must act on coherent states. The coherence time sets how long a computation can last."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Budgets and rules of thumb"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gate budget. A $50$ ns gate on a qubit with $T_2 = 60\\,\\mu$s fits $60\\times10^{-6}/50\\times10^{-9} = 1200$ gates in one $T_2$. Each gate costs a coherence factor $e^{-t_{\\text{gate}}/T_2}\\approx1 - t_{\\text{gate}}/T_2 = 1 - 8.3\\times10^{-4}$. So, roughly, the quantity that matters is the ratio $t_{\\text{gate}}/T_2$, not $T_2$ alone: faster gates are as good as longer coherence.",
+        "The decay is exponential: it is a steady loss per unit time, not a cliff. Half the coherence is gone after $T_2\\ln2 = 0.69\\,T_2$.",
+        "$T_1$ and $T_2$ differ by orders of magnitude across platforms. Roughly: superconducting qubits typically have tens to hundreds of microseconds (the best recent devices approach a millisecond), while the internal states of trapped ions and nuclear spins can keep their coherence for seconds or much longer, though their gates are also much slower. The times depend on both the qubit and its surroundings, and much engineering goes into lengthening them (Krantz et al. below review this for superconducting qubits).",
+        "In quantum reservoir computing decoherence is not purely a nuisance. A reservoir needs fading memory: the effect of an old input must wash out. The dissipation provided by the environment can supply exactly this, if its rate is matched to the task (Dissipation as a Resource (#/qrc/models/dissipation-as-resource))."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Explore: one qubit under T1 and T2"
+    },
+    {
+      "type": "prose",
+      "text": "The channels above, applied continuously over time, give the exponential curves in the plot below. Continuous-time decay with a steady rate is what the Lindblad equation describes (Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics)): the dephasing channel corresponds to a jump operator proportional to $Z$ and amplitude damping to $\\sigma^- = \\vert0\\rangle\\langle1\\vert$. The step-by-step Kraus picture of this page and the differential-equation picture there are the same physics, written for a small step and for an infinitesimal one."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "A qubit under T1 and T2",
+        "params": [
+          {
+            "key": "T1",
+            "label": "T1 (relaxation time)",
+            "control": "range",
+            "min": 5,
+            "max": 200,
+            "step": 5,
+            "default": 50
+          },
+          {
+            "key": "T2",
+            "label": "T2 (coherence time, capped at 2·T1)",
+            "control": "range",
+            "min": 5,
+            "max": 400,
+            "step": 5,
+            "default": 40
+          },
+          {
+            "key": "theta",
+            "label": "initial polar angle θ (degrees; 90 = |+⟩, 180 = |1⟩)",
+            "control": "range",
+            "min": 0,
+            "max": 180,
+            "step": 5,
+            "default": 90
+          },
+          {
+            "key": "tmax",
+            "label": "time shown",
+            "control": "range",
+            "min": 20,
+            "max": 600,
+            "step": 20,
+            "default": 200
+          }
+        ],
+        "config": {
+          "sim": "lindblad-decay",
+          "xLabel": "time (same units as T1, T2)",
+          "yLabel": "value"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try this. (1) Leave the polar angle at $90°$ (the state $\\vert+\\rangle$) and set $T_2$ to $2T_1$, for example $T_1 = 50$ and $T_2 = 100$: there is no pure dephasing, and the coherence curve decays at half the rate of the population curve. (2) Now lower $T_2$ to $20$ with $T_1 = 50$: the coherence collapses much faster than the population while the $\\langle Z\\rangle$ and $\\rho_{11}$ curves are exactly as in (1), since they depend on $T_1$ only; this is pure dephasing. (3) Raise $T_2$ to $400$ with $T_1 = 50$: the plot caps it at $2T_1 = 100$, the limit derived above. (4) Set the angle to $180°$ ($\\vert1\\rangle$): the coherence curve is flat at zero, since a basis state has no coherence to lose, while the population still decays at $T_1$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: T2 from T1 and Tφ",
+      "text": "A qubit has $T_1 = 80\\,\\mu$s and pure dephasing time $T_\\varphi = 120\\,\\mu$s. What is $T_2$, and what fraction of the initial coherence and of the excited population remain after $50\\,\\mu$s?",
+      "hint": "Add the rates $1/(2T_1)$ and $1/T_\\varphi$, then invert.",
+      "solution": [
+        "$1/T_2 = 1/(2\\cdot80) + 1/120 = 0.00625 + 0.008333 = 0.014583$, so $T_2 = 68.57\\,\\mu$s.",
+        "Coherence: $e^{-50/68.57} = e^{-0.7292} = 0.4823$.",
+        "Population: $e^{-50/80} = e^{-0.625} = 0.5353$."
+      ],
+      "answer": "T2 = 68.6 µs; coherence 0.482; population 0.535"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit in $\\vert+\\rangle$ is built from a device whose environment couples to $Z$ with $c = 0.9$ per environment qubit, and in addition loses energy with $T_1 = 100\\,\\mu$s. Describe what happens to its Bloch vector and purity as time passes, and find when the Bloch vector first drops below length $0.5$, assuming one environment qubit per $1\\,\\mu$s and nothing else."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The coupling gives a coherence factor $c^N = 0.9^t$ ($t$ in $\\mu$s), so the Bloch vector's $x$ component is $0.9^t$ and the decay time is $\\tau = 1/\\ln(1/0.9) = 9.49\\,\\mu$s, as computed before.",
+        "Step 2. The energy loss gives $\\langle Z\\rangle = 1 - 2\\rho_{11} = 1 - e^{-t/100}$ and multiplies the coherence by a further $e^{-t/200}$. The total $x$ component is $0.9^t\\,e^{-t/200} = e^{-t(0.10536 + 0.005)} = e^{-0.11036\\,t}$.",
+        "Step 3. The length of the Bloch vector is $\\sqrt{x^2 + z^2}$. At $t = 5$: $x = e^{-0.5518} = 0.5759$, $z = 1 - e^{-0.05} = 0.0488$, length $0.578$.",
+        "Step 4. At $t = 6$: $x = e^{-0.6622} = 0.5157$, $z = 1 - e^{-0.06} = 0.0582$, length $0.519$. At $t = 7$: $x = e^{-0.7725} = 0.4618$, $z = 0.0676$, length $0.467$. So the length drops below $0.5$ between $6$ and $7\\,\\mu$s, at about $6.35\\,\\mu$s (solving numerically).",
+        "Step 5. Purity at $t = 7$: $\\tfrac12(1 + 0.467^2) = 0.609$. The state has gone, in a few microseconds, from a point on the sphere to a point well inside the ball, drifting toward the axis (from dephasing) and then up the axis toward $\\vert0\\rangle$ (from damping). In the long run only the damping remains, and the state ends at $\\vert0\\rangle$ with purity $1$ again: decoherence by dephasing lowers purity, while damping at zero temperature ultimately purifies."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A system that interacts with an environment becomes entangled with it; the system's reduced state is then mixed, even though the whole stays pure and evolves unitarily.",
+        "With one environment qubit, the coherence is multiplied by $\\langle e_0\\vert e_1\\rangle = \\cos(\\theta/2)$; populations are unchanged. The overlap measures how much which-branch information the environment holds.",
+        "With $N$ environment qubits the overlaps multiply, so the coherence decays as $c^N$: exponentially in the number of interactions, and in time at a rate proportional to the square of a weak coupling.",
+        "Dephasing is the channel $\\rho\\to(1 - p)\\rho + pZ\\rho Z$ (coherences times $1 - 2p$); amplitude damping has $K_0 = \\vert0\\rangle\\langle0\\vert + \\sqrt{1-\\gamma}\\vert1\\rangle\\langle1\\vert$, $K_1 = \\sqrt\\gamma\\vert0\\rangle\\langle1\\vert$.",
+        "$\\gamma = 1 - e^{-t/T_1}$ and $1/T_2 = 1/(2T_1) + 1/T_\\varphi$, so $T_2\\le2T_1$.",
+        "Measurement is the extreme case of $c = 0$: the environment holds a perfect record and the Born probabilities appear as a mixture; it explains the disappearance of interference, not why one outcome occurs.",
+        "What matters for hardware is the number of operations that fit in a coherence time, $T_2/t_{\\text{gate}}$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A weaker interaction",
+      "text": "A system in $\\vert+\\rangle$ interacts with one environment qubit through a controlled rotation by $\\theta = \\pi/3$. Find $c$, $\\rho_S$, the Bloch vector and the purity.",
+      "hint": "Multiply the initial coherence by $\\cos(\\theta/2)$.",
+      "solution": [
+        "$c = \\cos(\\pi/6) = 0.8660$.",
+        "$\\rho_{01} = 0.5\\times0.8660 = 0.4330$, populations $0.5$: rows $(0.5, 0.4330)$ and $(0.4330, 0.5)$.",
+        "Bloch vector $(0.8660, 0, 0)$; purity $\\tfrac12(1 + 0.75) = 0.875$. Check: $0.25 + 0.25 + 2(0.1875) = 0.875$."
+      ],
+      "answer": "c = 0.8660; rows (0.5, 0.4330), (0.4330, 0.5); r = (0.866, 0, 0); purity 0.875"
+    },
+    {
+      "type": "problem",
+      "title": "How long does a spin bath take?",
+      "text": "Each environment qubit gives $c = 0.99$, and one environment qubit interacts per nanosecond. What is the decay time of the coherence, and after how long is $1\\%$ left?",
+      "hint": "Use $\\tau = \\Delta t/\\ln(1/c)$ and $t = \\tau\\ln100$.",
+      "solution": [
+        "The coherence is $c^N = e^{-N\\ln(1/c)}$ with $N = t/(1\\,\\mathrm{ns})$ and $\\ln(1/0.99) = 0.010050$. The decay time is $\\tau = 1/0.010050 = 99.5$ ns.",
+        "For $1\\%$ left, $e^{-t/\\tau} = 0.01$, so $t = \\tau\\ln100 = 99.5\\times4.605 = 458$ ns.",
+        "Check with the weak-coupling rule: $\\theta = 2\\arccos0.99 = 0.2831$ rad, and $\\theta^2/8 = 0.01002$, close to the exact $0.01005$."
+      ],
+      "answer": "τ = 99.5 ns; 1% left after 458 ns"
+    },
+    {
+      "type": "problem",
+      "title": "Damping and dephasing together",
+      "text": "A qubit starts in $\\vert+\\rangle$. A channel applies amplitude damping with $\\gamma = 0.19$, and then dephasing with $p = 0.05$. Give the final $\\rho$. Does the order matter?",
+      "hint": "Apply the update rules in turn; dephasing never touches the populations.",
+      "solution": [
+        "Amplitude damping first gives rows $(0.595, 0.45)$ and $(0.45, 0.405)$ (the worked numbers above).",
+        "Dephasing multiplies the coherence by $1 - 2p = 0.9$ and leaves the populations alone: $0.45\\times0.9 = 0.405$. So $\\rho$ has rows $(0.595, 0.405)$ and $(0.405, 0.405)$. The determinant is $0.595\\times0.405 - 0.405^2 = 0.077\\ge0$, so it is a valid state.",
+        "Other order: dephasing first gives coherence $0.45$ and populations $0.5$, $0.5$; then amplitude damping gives populations $0.595$ and $0.405$ and coherence $0.45\\times\\sqrt{0.81} = 0.405$. The same matrix: for these two channels the order does not matter, because one only rescales the coherence and the other rescales it too, and the populations are unaffected by dephasing."
+      ],
+      "answer": "rows (0.595, 0.405), (0.405, 0.405); the order does not matter"
+    },
+    {
+      "type": "problem",
+      "title": "Reading the overlap from the purity",
+      "text": "A system $\\sqrt{0.3}\\vert0\\rangle + \\sqrt{0.7}\\vert1\\rangle$ interacts with an environment whose two states have overlap $c$. For which $c$ is the system's purity $0.5968$, and what is the smallest purity that any $c$ can give?",
+      "hint": "Purity is the sum of squares of all four entries.",
+      "solution": [
+        "The reduced state has rows $(0.3, \\sqrt{0.21}\\,c)$ and $(\\sqrt{0.21}\\,c, 0.7)$. Its purity is $0.3^2 + 0.7^2 + 2(0.21)c^2 = 0.58 + 0.42\\,c^2$.",
+        "Setting this to $0.5968$ gives $c^2 = 0.0168/0.42 = 0.04$, so $c = 0.2$ (the poor device of the text).",
+        "The smallest purity is at $c = 0$: $0.58$, the value for a perfect record. It is not $0.5$ because the populations $0.3$ and $0.7$ already make the state partly distinguishable; only $c$ is controllable here."
+      ],
+      "answer": "c = 0.2; the minimum is 0.58 at c = 0"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The general theory of channels, Kraus operators and the standard noise models: Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "Continuous-time decay, the Liouvillian gap and memory time of a reservoir: Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics).",
+        "Why a controlled amount of dissipation helps a reservoir: Dissipation as a Resource (#/qrc/models/dissipation-as-resource).",
+        "Noise destroys Bell violations before it destroys entanglement: Bell Inequalities and Nonlocality (#/quantum/many-body/bell-inequalities).",
+        "Many-qubit models, where each spin acts as the environment of the others: Spin Models (#/quantum/many-body/spin-models)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), chapter 8",
+        "W. H. Zurek, Decoherence, einselection, and the quantum origins of the classical, Reviews of Modern Physics 75, 715 (2003)",
+        "W. H. Zurek, Decoherence and the transition from quantum to classical, Physics Today 44(10), 36 (1991)",
+        "M. Schlosshauer, Decoherence, the measurement problem, and interpretations of quantum mechanics, Reviews of Modern Physics 76, 1267 (2005)",
+        "P. Krantz, M. Kjaergaard, F. Yan, T. P. Orlando, S. Gustavsson and W. D. Oliver, A quantum engineer's guide to superconducting qubits, Applied Physics Reviews 6, 021318 (2019)",
+        "H.-P. Breuer and F. Petruccione, The Theory of Open Quantum Systems, Oxford University Press (2002)",
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 3"
+      ]
+    }
+  ]
+}

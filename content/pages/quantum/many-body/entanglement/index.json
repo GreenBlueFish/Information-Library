@@ -1,23 +1,225 @@
 {
   "title": "Entanglement and Reduced States",
-  "intro": "A two-qubit state that is not a product is entangled: its parts have no state of their own. The partial trace gives each part the best description it can have, a density matrix, and the Schmidt decomposition measures how entangled the whole is.",
+  "intro": "A two-qubit state that is not a product is entangled: its parts have no state of their own, even though the pair does. This page shows how to test for it, how a circuit makes it, how to decompose it into its Schmidt form and how to measure how much of it there is.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Bell states"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "The four Bell states are the standard maximally entangled pairs:"
+      "text": "The tensor product, the product-state idea and the basis order from Composite Systems and Tensor Products (#/quantum/many-body/composite-systems), and the idea of a gate from Gates and Circuits (#/quantum/qubits/gates-and-circuits) (the Hadamard $H_d$ and the CNOT). Square roots and logarithms to base 2 are all the arithmetic you need."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Say precisely what entanglement is, and show with numbers how it differs from ordinary classical correlation.",
+        "Test any pure two-qubit state for being a product with the $ad - bc$ test, and when it passes, write down the two factors.",
+        "Build the four Bell states from a Hadamard and a CNOT, step by step.",
+        "Find the Schmidt decomposition of a two-qubit state and read off its Schmidt coefficients.",
+        "Compute the entanglement entropy of a pure two-qubit state, and explain why local operations cannot change it."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What entanglement is, and what it is not"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Two coins that always land the same way are correlated. Is that already entanglement? Two sealed envelopes each hold a card, and the cards were chosen to match, both red or both black, each case with chance one half. Open one and you know the colour of the other. Nobody would call that spooky: the colours were fixed when the envelopes were sealed, and opening only reveals them. The question is what, if anything, a quantum pair has that the envelopes do not."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Product, correlated, entangled"
+    },
+    {
+      "type": "prose",
+      "text": "Recall from Composite Systems and Tensor Products (#/quantum/many-body/composite-systems) that a state of two qubits is a product state if it equals $\\vert a\\rangle\\otimes\\vert b\\rangle$ for some single-qubit states: each qubit has a state of its own and the two are independent. A pure state that is not a product is called entangled. For such a state the pair has a state vector but neither qubit does."
+    },
+    {
+      "type": "prose",
+      "text": "The envelope pair is described differently. Its two possible situations, 'both 0' and 'both 1', are a statistical mixture: the pair is in $\\vert00\\rangle$ with probability $\\tfrac12$ and in $\\vert11\\rangle$ with probability $\\tfrac12$, and which one is a matter of ignorance. That is a classical correlation. It is not a pure quantum state at all, and the proper tool for it is the density matrix, introduced on The Partial Trace and Reduced States (#/quantum/many-body/partial-trace) and developed in Mixed States (#/quantum/many-body/mixed-states). The Bell state $\\vert\\Phi^+\\rangle = (\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$ gives the same results as the envelopes when both qubits are measured in the $Z$ basis. So how can we tell them apart?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The difference shows up in other bases"
+    },
+    {
+      "type": "prose",
+      "text": "Measure both qubits in the $X$ basis instead. Compare the average of the product $X\\otimes X$ (it is $+1$ when the two $X$ results agree and $-1$ when they differ) in the two situations. The sample code computes all of these; here is the reasoning."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $Z\\otimes Z$ is diagonal with entries $(1, -1, -1, 1)$ on $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$. Both situations put all their weight on $\\vert00\\rangle$ and $\\vert11\\rangle$, so both give $\\langle Z\\otimes Z\\rangle = +1$: perfect agreement in the $Z$ basis.",
+        "Step 2. $X\\otimes X$ flips both bits: $\\vert00\\rangle\\leftrightarrow\\vert11\\rangle$ and $\\vert01\\rangle\\leftrightarrow\\vert10\\rangle$.",
+        "Step 3. For the envelope pair, which is $\\vert00\\rangle$ or $\\vert11\\rangle$ with probability $\\tfrac12$ each, $X\\otimes X$ sends each possible state to the other one, which is orthogonal to it. The average is $\\tfrac12\\cdot0 + \\tfrac12\\cdot0 = 0$. In the $X$ basis the envelope results are uncorrelated.",
+        "Step 4. For the Bell state, $(X\\otimes X)\\vert\\Phi^+\\rangle = \\tfrac{1}{\\sqrt2}(\\vert11\\rangle + \\vert00\\rangle) = \\vert\\Phi^+\\rangle$ itself, so $\\langle X\\otimes X\\rangle = +1$: perfect agreement in the $X$ basis as well.",
+        "Step 5. A similar calculation with $Y\\otimes Y$ (using $Y\\vert0\\rangle = i\\vert1\\rangle$ and $Y\\vert1\\rangle = -i\\vert0\\rangle$) gives $-1$ for the Bell state and $0$ for the envelopes: the $Y$ results are perfectly opposite."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So the whole point is this. A classical pair can be correlated in one agreed basis, because the answers were fixed in advance in that basis. The Bell pair is perfectly correlated in several bases at once, and the correlations between its parts cannot be assigned to values fixed in advance: after all, the $Z$ value and the $X$ value of one qubit cannot both be definite. Making that precise, with an experiment that a hidden pre-agreed list of answers cannot reproduce, is the content of Bell Inequalities and Nonlocality (#/quantum/many-body/bell-inequalities)."
+    },
+    {
+      "type": "callout",
+      "text": "Entanglement is not 'the qubits influence each other'. Measuring one qubit of a Bell pair does not change the statistics of the other: whatever you do to qubit 1, qubit 2 alone still gives fair coin flips (the proof is on The Partial Trace and Reduced States (#/quantum/many-body/partial-trace)). Nor is it just correlation: correlations alone are cheap. It is correlation that persists across incompatible measurements, and a state that cannot be written as a product of states of the parts."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which pair is it",
+      "text": "A pair gives the same result in the $Z$ basis every time and the same result in the $X$ basis every time. Could it be the classical envelope pair?",
+      "hint": "Compare $\\langle X\\otimes X\\rangle$ for the two.",
+      "solution": [
+        "The envelope pair has $\\langle X\\otimes X\\rangle = 0$, as computed in Step 3: its $X$ results agree only half the time.",
+        "Perfect agreement in both bases means $\\langle Z\\otimes Z\\rangle = \\langle X\\otimes X\\rangle = +1$. The only pure two-qubit state with both averages equal to $+1$ is $\\vert\\Phi^+\\rangle$."
+      ],
+      "answer": "No"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Is a pure two-qubit state a product?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Given four amplitudes, is the state a product? 'Look at it and see' does not work: $\\tfrac12(1, 1, 1, -1)$ has no zero amplitude, and $\\tfrac{1}{\\sqrt{50}}(1, 2, 3, 6)$ is a product that does not look like one. We want a calculation that always gives a definite yes or no."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The test"
+    },
+    {
+      "type": "prose",
+      "text": "Name the amplitudes $c_{00} = a$, $c_{01} = b$, $c_{10} = c$, $c_{11} = d$, so $\\vert\\psi\\rangle = a\\vert00\\rangle + b\\vert01\\rangle + c\\vert10\\rangle + d\\vert11\\rangle$. The claim is that the state is a product exactly when $ad - bc = 0$. The proof goes in two directions."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Product implies zero. If $\\vert\\psi\\rangle = (a_0\\vert0\\rangle + a_1\\vert1\\rangle)\\otimes(b_0\\vert0\\rangle + b_1\\vert1\\rangle)$, then $a = a_0b_0$, $b = a_0b_1$, $c = a_1b_0$, $d = a_1b_1$, so $ad = a_0b_0a_1b_1 = bc$.",
+        "Zero implies product. Suppose $ad = bc$ and the first row is not all zero, say $a \\ne 0$ (otherwise swap the roles of the rows or columns). Then $c = (c/a)\\,a$ and $d = bc/a = (c/a)\\,b$, so the second row $(c, d)$ equals $(c/a)$ times the first row $(a, b)$. Group the terms by qubit 1's value: $\\vert\\psi\\rangle = \\vert0\\rangle\\otimes(a\\vert0\\rangle + b\\vert1\\rangle) + \\vert1\\rangle\\otimes(c\\vert0\\rangle + d\\vert1\\rangle)$. With $\\vert r\\rangle = a\\vert0\\rangle + b\\vert1\\rangle$ the second bracket is $\\tfrac{c}{a}\\vert r\\rangle$, so $\\vert\\psi\\rangle = \\left(\\vert0\\rangle + \\tfrac{c}{a}\\vert1\\rangle\\right)\\otimes\\vert r\\rangle$, a product. Normalise each factor to finish."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The number $ad - bc$ is the determinant of the $2\\times2$ matrix of amplitudes (rows: qubit 1 value; columns: qubit 2 value). For a normalised state, $\\vert ad - bc\\vert$ lies between $0$ and $\\tfrac12$. The quantity"
     },
     {
       "type": "math",
-      "tex": "\\vert\\Phi^\\pm\\rangle = \\frac{\\vert00\\rangle \\pm \\vert11\\rangle}{\\sqrt2}, \\qquad \\vert\\Psi^\\pm\\rangle = \\frac{\\vert01\\rangle \\pm \\vert10\\rangle}{\\sqrt2}"
+      "tex": "C = 2\\,\\vert ad - bc\\vert",
+      "caption": "The concurrence of a pure two-qubit state: 0 for product states, 1 for maximally entangled states."
     },
     {
       "type": "prose",
-      "text": "Measure both qubits of $\\vert\\Phi^+\\rangle$ in the computational basis and the outcomes are random but always equal; measure both in the $X$ basis and they are again random and equal. Each qubit alone looks like a fair coin in every basis. All the information is in the correlations: $\\langle Z\\otimes Z\\rangle = \\langle X\\otimes X\\rangle = 1$ while $\\langle Z\\otimes I\\rangle = \\langle X\\otimes I\\rangle = 0$."
+      "text": "(called the concurrence) therefore runs from 0 (product) to 1 (Bell-like) and gives a size to the yes or no. The reason for the factor of 2 and the upper bound $\\tfrac12$ comes out of the Schmidt decomposition below."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked examples"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Example 1. $\\tfrac{1}{\\sqrt{50}}(1, 2, 3, 6)$: $ad - bc = \\tfrac{1}{50}(1\\cdot6 - 2\\cdot3) = 0$. A product. The second row $(3, 6)$ is $3\\times$ the first $(1, 2)$, so the factors are $\\vert0\\rangle + 3\\vert1\\rangle$ for qubit 1 and $\\vert0\\rangle + 2\\vert1\\rangle$ for qubit 2. Check: $(1, 3)\\otimes(1, 2) = (1, 2, 3, 6)$. Normalise: $\\vert\\phi_1\\rangle = (1, 3)/\\sqrt{10}$ and $\\vert\\phi_2\\rangle = (1, 2)/\\sqrt5$, and $\\sqrt{10}\\sqrt5 = \\sqrt{50}$, as it should.",
+        "Example 2. $\\vert\\Phi^+\\rangle$: $ad - bc = \\tfrac12(1\\cdot1 - 0) = \\tfrac12$, concurrence 1. Entangled as much as possible.",
+        "Example 3. $\\tfrac{1}{\\sqrt3}(\\vert00\\rangle + \\vert01\\rangle + \\vert11\\rangle)$, amplitudes $(1, 1, 0, 1)/\\sqrt3$: $ad - bc = \\tfrac13(1\\cdot1 - 1\\cdot0) = \\tfrac13$, concurrence $\\tfrac23 = 0.667$. Entangled, but not maximally.",
+        "Example 4. $\\tfrac{1}{\\sqrt{10}}(1, 2, 2, 1)$: $ad - bc = \\tfrac{1}{10}(1 - 4) = -\\tfrac{3}{10}$. The sign does not matter, only the size: concurrence $0.6$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Example 4 shows why you must compute rather than guess: the amplitudes are all non-zero and nicely symmetric, which suggests product, and the state is entangled. The sample code runs this test on all four examples."
+    },
+    {
+      "type": "callout",
+      "text": "The test is for a pure state of exactly two qubits. It says nothing for three or more qubits, or for noisy (mixed) states, where 'product' needs other tools. For a pair that is part of a bigger system, you must first decide what the pair's state is: that is the partial trace of The Partial Trace and Reduced States (#/quantum/many-body/partial-trace)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: find the factors",
+      "text": "Show that $\\tfrac12(1, -1, 1, -1)$ is a product and find its two factors.",
+      "hint": "Compute $ad$ and $bc$ separately, then compare the two rows.",
+      "solution": [
+        "Amplitudes $a = \\tfrac12, b = -\\tfrac12, c = \\tfrac12, d = -\\tfrac12$: $ad = \\tfrac12\\cdot(-\\tfrac12) = -\\tfrac14$ and $bc = (-\\tfrac12)\\cdot\\tfrac12 = -\\tfrac14$, so $ad - bc = 0$.",
+        "Both rows are $(1, -1)/2$, so qubit 1's factor has equal parts $\\vert0\\rangle$ and $\\vert1\\rangle$: $\\vert+\\rangle$.",
+        "Qubit 2's factor is the row $(1, -1)/\\sqrt2$, that is $\\vert-\\rangle$. So the state is $\\vert+\\rangle\\otimes\\vert-\\rangle$."
+      ],
+      "answer": "Yes: |+> (x) |->"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Bell states and the circuit that makes them"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Where do entangled states come from? Nature makes them when two systems interact. In a circuit, they come from a gate that acts on both qubits at once. Local gates (one qubit at a time) cannot create entanglement from a product state, so some two-qubit gate is essential."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The four Bell states"
+    },
+    {
+      "type": "prose",
+      "text": "The standard maximally entangled pairs are"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\Phi^\\pm\\rangle = \\frac{\\vert00\\rangle \\pm \\vert11\\rangle}{\\sqrt2}, \\qquad \\vert\\Psi^\\pm\\rangle = \\frac{\\vert01\\rangle \\pm \\vert10\\rangle}{\\sqrt2}.",
+      "caption": "The four Bell states. Each has concurrence 1."
+    },
+    {
+      "type": "prose",
+      "text": "Each is an equal-weight combination of two basis states, with the other two absent. They are orthogonal to each other and together form a basis of the two-qubit space, the Bell basis."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The circuit"
+    },
+    {
+      "type": "prose",
+      "text": "Apply a Hadamard gate $H_d$ to qubit 1, then a CNOT with qubit 1 as the control and qubit 2 as the target. The Hadamard turns $\\vert0\\rangle$ into $(\\vert0\\rangle + \\vert1\\rangle)/\\sqrt2$ and $\\vert1\\rangle$ into $(\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$. The CNOT flips qubit 2 when qubit 1 is $\\vert1\\rangle$: it sends $\\vert00\\rangle\\to\\vert00\\rangle$, $\\vert01\\rangle\\to\\vert01\\rangle$, $\\vert10\\rangle\\to\\vert11\\rangle$, $\\vert11\\rangle\\to\\vert10\\rangle$, that is, it swaps positions 2 and 3 of the vector. Start from $\\vert00\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $H_d$ on qubit 1: $\\vert00\\rangle \\to \\tfrac{1}{\\sqrt2}(\\vert0\\rangle + \\vert1\\rangle)\\otimes\\vert0\\rangle = \\tfrac{1}{\\sqrt2}(\\vert00\\rangle + \\vert10\\rangle)$. Still a product state.",
+        "Step 2. CNOT: $\\vert00\\rangle$ stays, $\\vert10\\rangle \\to \\vert11\\rangle$. The state becomes $\\tfrac{1}{\\sqrt2}(\\vert00\\rangle + \\vert11\\rangle) = \\vert\\Phi^+\\rangle$.",
+        "Step 3. Test it: $ad - bc = \\tfrac12 \\ne 0$. The CNOT turned a product into an entangled state: the Hadamard made qubit 1 a superposition, and the CNOT copied that choice into qubit 2 without collapsing it."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Starting from the other three basis states gives the other three Bell states. $\\vert01\\rangle \\to \\tfrac{1}{\\sqrt2}(\\vert01\\rangle + \\vert11\\rangle) \\to \\tfrac{1}{\\sqrt2}(\\vert01\\rangle + \\vert10\\rangle) = \\vert\\Psi^+\\rangle$. $\\vert10\\rangle \\to \\tfrac{1}{\\sqrt2}(\\vert00\\rangle - \\vert10\\rangle) \\to \\tfrac{1}{\\sqrt2}(\\vert00\\rangle - \\vert11\\rangle) = \\vert\\Phi^-\\rangle$. $\\vert11\\rangle \\to \\tfrac{1}{\\sqrt2}(\\vert01\\rangle - \\vert11\\rangle) \\to \\tfrac{1}{\\sqrt2}(\\vert01\\rangle - \\vert10\\rangle) = \\vert\\Psi^-\\rangle$. The sample code prints all four."
     },
     {
       "type": "widget",
@@ -220,7 +422,23 @@
     },
     {
       "type": "prose",
-      "text": "Try it: the readout gives the entanglement entropy of qubit 1's reduced state. The default circuit makes a Bell state, 1 bit. Single-qubit gates applied after the CNOT (any gate in steps 3 to 5, on either qubit) never change the entropy: local operations cannot create or destroy entanglement. A second CNOT in step 3 undoes the first and brings the entropy back to 0. Replace the H with Rx(π/2) and the state is still maximally entangled, with complex amplitudes."
+      "text": "Try this. The readout shows the entanglement entropy of qubit 1's reduced state, defined below. (1) With the default circuit (H on qubit 1, then the control dot on qubit 1 with the target on qubit 2) the entropy is 1 bit: a Bell state. (2) Add any single-qubit gate in steps 3 to 5, on either qubit: the entropy stays 1 bit, since local gates cannot change entanglement. (3) Put a second CNOT in step 3, the same control and target as the first: it undoes the first, the state is a product again and the entropy returns to 0. (4) Replace the H with Rx(pi/2): the amplitudes become complex but the state is still maximally entangled."
+    },
+    {
+      "type": "prose",
+      "text": "The measurement statistics of $\\vert\\Phi^+\\rangle$ were computed above: perfect agreement in $Z$ and in $X$ ($\\langle Z\\otimes Z\\rangle = \\langle X\\otimes X\\rangle = 1$), perfect disagreement in $Y$ ($\\langle Y\\otimes Y\\rangle = -1$), and $\\langle Z\\otimes I\\rangle = \\langle X\\otimes I\\rangle = 0$: each qubit alone is a fair coin in every basis. All the information is in the correlations."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a Bell state by hand",
+      "text": "Start the circuit from $\\vert11\\rangle$, with the CNOT after the Hadamard, and say which Bell state results.",
+      "hint": "Apply the Hadamard first, then flip qubit 2 wherever qubit 1 is 1.",
+      "solution": [
+        "$H_d$ on qubit 1: $\\vert1\\rangle\\to(\\vert0\\rangle - \\vert1\\rangle)/\\sqrt2$, so $\\vert11\\rangle\\to\\tfrac{1}{\\sqrt2}(\\vert01\\rangle - \\vert11\\rangle)$.",
+        "CNOT: $\\vert01\\rangle$ is unchanged (control is 0); $\\vert11\\rangle\\to\\vert10\\rangle$.",
+        "Result: $\\tfrac{1}{\\sqrt2}(\\vert01\\rangle - \\vert10\\rangle) = \\vert\\Psi^-\\rangle$."
+      ],
+      "answer": "Psi minus = (|01> - |10>)/sqrt2"
     },
     {
       "type": "heading",
@@ -228,75 +446,285 @@
       "text": "The Schmidt decomposition"
     },
     {
-      "type": "prose",
-      "text": "Any pure state of two systems $A$ and $B$ can be written with a single sum, using orthonormal bases chosen for each side:"
-    },
-    {
-      "type": "math",
-      "tex": "\\vert\\psi\\rangle_{AB} = \\sum_k \\lambda_k\\,\\vert a_k\\rangle\\otimes\\vert b_k\\rangle, \\qquad \\lambda_k \\ge 0,\\ \\sum_k\\lambda_k^2 = 1",
-      "caption": "Schmidt decomposition. The λ_k are the singular values of the amplitude matrix c_ij."
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "The number of non-zero $\\lambda_k$ is the Schmidt rank. Rank 1 means a product state; anything more is entangled. Computing it is just a singular value decomposition of the amplitude matrix, the same tool as the product-state test on the previous page."
+      "text": "Entangled states differ in how entangled they are: $\\vert\\Phi^+\\rangle$ versus Example 3's $(1, 1, 0, 1)/\\sqrt3$. We want a canonical form that makes this visible, and that shows what an entangled state 'is made of'."
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "The partial trace and reduced states"
+      "level": 3,
+      "text": "The statement"
     },
     {
       "type": "prose",
-      "text": "What should we say about qubit $A$ alone when the pair is entangled? No state vector works. The right object is the reduced density matrix, obtained by the partial trace over $B$:"
+      "text": "Any pure state of two systems can be written with a single sum, using a well chosen orthonormal basis for each side:"
     },
     {
       "type": "math",
-      "tex": "\\rho_A = \\operatorname{Tr}_B\\,\\vert\\psi\\rangle\\langle\\psi\\vert = \\sum_k \\lambda_k^2\\,\\vert a_k\\rangle\\langle a_k\\vert",
-      "caption": "The reduced state of A. It reproduces every measurement made on A alone."
+      "tex": "\\vert\\psi\\rangle = \\sum_k \\lambda_k\\,\\vert a_k\\rangle\\otimes\\vert b_k\\rangle, \\qquad \\lambda_k \\ge 0,\\ \\ \\sum_k\\lambda_k^2 = 1.",
+      "caption": "Schmidt decomposition. The a_k are orthonormal states of qubit 1, the b_k of qubit 2, and the λ_k are the Schmidt coefficients."
     },
     {
       "type": "prose",
-      "text": "For a Bell state $\\rho_A = I/2$: maximally mixed, a perfect coin in every basis. Entanglement with something you do not look at makes a part look noisy, even though the whole is a pure state. That is the mechanism behind decoherence, and behind the reset step of a quantum reservoir, which traces out the input qubit (Mixed States (#/quantum/many-body/mixed-states))."
+      "text": "The ordinary expansion $\\sum_{ij}c_{ij}\\vert ij\\rangle$ has four terms and uses the fixed basis $\\vert0\\rangle, \\vert1\\rangle$; the Schmidt form has at most two terms (for two qubits) and each qubit gets its own tailor-made basis. The number of non-zero $\\lambda_k$ is the Schmidt rank: rank 1 is a product, rank 2 is entangled. And $\\lambda_k^2$ are probabilities, because they sum to 1."
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "Entanglement entropy"
+      "level": 3,
+      "text": "Where it comes from"
     },
     {
       "type": "prose",
-      "text": "For a pure state of the pair, a single number measures how entangled it is: the von Neumann entropy of either half,"
-    },
-    {
-      "type": "math",
-      "tex": "S(\\rho_A) = -\\operatorname{Tr}\\rho_A\\log_2\\rho_A = -\\sum_k \\lambda_k^2\\log_2\\lambda_k^2",
-      "caption": "Zero for a product state, one bit for a Bell pair of qubits."
-    },
-    {
-      "type": "prose",
-      "text": "In a many-qubit reservoir, the entanglement between a few qubits and the rest grows as information spreads. Strong scrambling makes local reduced states close to maximally mixed, which is the root of the concentration problem on the QRC shelf: local observables stop depending on the input."
-    },
-    {
-      "type": "code",
-      "lang": "python",
-      "source": "import numpy as np\ndef reduced_first(psi):                       # rho_A = Tr_B |psi><psi| for two qubits\n    M = psi.reshape(2, 2); return M @ M.conj().T\ndef entropy(rho):\n    p = np.linalg.eigvalsh(rho); p = p[p > 1e-12]; return float(-(p * np.log2(p)).sum()) + 0.0\nbell = np.array([1, 0, 0, 1]) / np.sqrt(2)\nrA = reduced_first(bell)\nprint(\"Bell state: rho_A =\", np.round(rA.real, 3).tolist(), \" purity\", round(np.trace(rA @ rA).real, 3), \" entropy\", round(entropy(rA), 3), \"bit\")\nfor th in (0, np.pi / 8, np.pi / 4):\n    psi = np.array([np.cos(th), 0, 0, np.sin(th)])\n    s = np.linalg.svd(psi.reshape(2, 2), compute_uv=False)        # Schmidt coefficients\n    print(f\"cos({th:.3f})|00> + sin({th:.3f})|11>: Schmidt coefficients {np.round(s, 3)}, entropy {entropy(reduced_first(psi)):.3f} bit\")\n# Local measurements on half a Bell pair see a fair coin, whatever basis\nZ = np.diag([1., -1]); X = np.array([[0, 1], [1, 0]])\nfor name, P in ((\"Z\", Z), (\"X\", X)):\n    print(f\"<{name} (x) I> = {round(bell @ np.kron(P, np.eye(2)) @ bell, 12) + 0.0:+.3f},  <{name} (x) {name}> = {bell @ np.kron(P, P) @ bell:+.3f}\")"
-    },
-    {
-      "type": "prose",
-      "text": "Output of the run: the Bell state's reduced state is $\\mathrm{diag}(0.5, 0.5)$ with purity 0.5 and entropy 1 bit. For $\\cos\\theta\\vert00\\rangle + \\sin\\theta\\vert11\\rangle$ the Schmidt coefficients are $(1, 0)$, $(0.924, 0.383)$ and $(0.707, 0.707)$ at $\\theta = 0$, $\\pi/8$, $\\pi/4$, with entropies 0, 0.601 and 1 bit. Local expectations of half a Bell pair vanish while the correlators $\\langle Z\\otimes Z\\rangle$ and $\\langle X\\otimes X\\rangle$ are 1."
+      "text": "Arrange the amplitudes as the $2\\times2$ matrix $M$ with $M_{ij} = c_{ij}$ (the amplitude matrix). Linear algebra has a standard factorisation of any matrix, the singular value decomposition (SVD): it writes $M$ as a sum of terms $s_k\\,u_kv_k^{\\top}$, each a column vector $u_k$ (indexed by qubit 1's value) times a row vector $v_k^{\\top}$ (indexed by qubit 2's value), with non-negative numbers $s_k$ (the singular values) and orthonormal sets $\\{u_k\\}$ and $\\{v_k\\}$. Reading each term $u_kv_k^{\\top}$ back as a product state gives $\\vert a_k\\rangle\\otimes\\vert b_k\\rangle$, and $s_k$ becomes $\\lambda_k$. So the Schmidt coefficients are the singular values of the amplitude matrix. In practice, for a $2\\times2$ matrix, you find them from the eigenvalues of $MM^\\dagger$, which are $\\lambda_k^2$."
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "Where QRC uses this"
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "Take $\\vert\\psi\\rangle = \\tfrac{1}{\\sqrt3}(\\vert00\\rangle + \\vert01\\rangle + \\vert11\\rangle)$, the amplitude matrix with rows $(1, 1)$ and $(0, 1)$, times $\\tfrac{1}{\\sqrt3}$. It is real, so $M^\\dagger = M^{\\top}$."
     },
     {
       "type": "list",
       "items": [
-        "The reset of the input qubit is a partial trace: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) and Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
-        "Correlator features $\\langle Z_iZ_j\\rangle$ read information that local features miss: Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
-        "Estimating entanglement of input states with a reservoir: Quantum Data Tasks (#/qrc/models/quantum-data-tasks).",
-        "Scrambling and the concentration of local observables: Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+        "Step 1. Form $MM^\\top$: row 1 dotted with row 1 is $1 + 1 = 2$; row 1 with row 2 is $0 + 1 = 1$; row 2 with row 2 is $1$. So $MM^\\top$ has rows $(2, 1)$ and $(1, 1)$, all divided by 3.",
+        "Step 2. Eigenvalues of the matrix with rows $(2, 1)$, $(1, 1)$: the characteristic equation is $\\mu^2 - 3\\mu + 1 = 0$ (trace 3, determinant $2 - 1 = 1$), so $\\mu = (3\\pm\\sqrt5)/2 = 2.618$ and $0.382$.",
+        "Step 3. Divide by 3: $\\lambda_1^2 = 0.8727$ and $\\lambda_2^2 = 0.1273$. They sum to 1. Square roots: $\\lambda_1 = 0.9342$ and $\\lambda_2 = 0.3568$.",
+        "Step 4. The qubit-1 basis vectors are the eigenvectors of the matrix. For $\\mu = 2.618$: $(2 - 2.618)x + y = 0$ gives $y = 0.618x$, normalised to $\\vert a_1\\rangle = (0.8507, 0.5257)$. The other is perpendicular: $\\vert a_2\\rangle = (-0.5257, 0.8507)$.",
+        "Step 5. The qubit-2 vectors follow from $\\vert b_k\\rangle = M^\\top\\vert a_k\\rangle/\\lambda_k$ (as given by the SVD): $\\vert b_1\\rangle = (0.5257, 0.8507)$ and $\\vert b_2\\rangle = (-0.8507, 0.5257)$. The sample code finds them with numpy's SVD.",
+        "Step 6. So $\\vert\\psi\\rangle = 0.9342\\,\\vert a_1\\rangle\\vert b_1\\rangle + 0.3568\\,\\vert a_2\\rangle\\vert b_2\\rangle$. Check the first amplitude, $c_{00}$: $0.9342\\times0.8507\\times0.5257 + 0.3568\\times(-0.5257)\\times(-0.8507) = 0.4178 + 0.1596 = 0.5774 = 1/\\sqrt3$. Correct.",
+        "Step 7. Cross-check: $\\lambda_1\\lambda_2 = 0.9342\\times0.3568 = 0.3333 = \\vert ad - bc\\vert$. In general $\\vert ad - bc\\vert = \\vert\\det M\\vert = \\lambda_1\\lambda_2$, so the concurrence is $C = 2\\lambda_1\\lambda_2$. It is largest when $\\lambda_1 = \\lambda_2 = 1/\\sqrt2$, giving $C = 1$ and explaining the bound $\\tfrac12$ above."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The two coefficients 0.9342 and 0.3568 are the weights of the two terms; a Bell state would have $0.7071$ and $0.7071$, a product state $1$ and $0$. How unequal they are measures the entanglement. Note what the form says: the two parts are correlated pairwise. If qubit 1 is measured in the basis $\\vert a_k\\rangle$ and the result is $k$, then qubit 2 is certainly in $\\vert b_k\\rangle$; the probability of result $k$ is $\\lambda_k^2$."
+    },
+    {
+      "type": "callout",
+      "text": "The Schmidt vectors depend on the state. For $\\vert\\Phi^+\\rangle$ the bases are the $\\vert0\\rangle, \\vert1\\rangle$ pair on both sides, and for $\\vert\\Psi^-\\rangle$ also (with a sign). Both qubits can use the same basis here, but in general the basis for qubit 1 and the basis for qubit 2 differ, as above."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a Schmidt decomposition",
+      "text": "Find the Schmidt decomposition of $\\tfrac{1}{\\sqrt{10}}(1, 2, 2, 1)$.",
+      "hint": "For a symmetric matrix try its eigenvectors. Here they are $(1, 1)$ and $(1, -1)$.",
+      "solution": [
+        "Amplitude matrix $\\tfrac{1}{\\sqrt{10}}\\times$ rows $(1, 2)$, $(2, 1)$: symmetric. Try the vectors $\\vert\\pm\\rangle = (1, \\pm1)/\\sqrt2$.",
+        "Apply the matrix with rows $(1,2),(2,1)$ to $(1, 1)$: it gives $(3, 3) = 3(1, 1)$. To $(1, -1)$: it gives $(-1, 1) = -1\\times(1, -1)$. Eigenvalues $3$ and $-1$.",
+        "So the singular values are $3/\\sqrt{10} = 0.9487$ and $1/\\sqrt{10} = 0.3162$ (the minus sign is absorbed into one basis vector).",
+        "The state is $\\tfrac{3}{\\sqrt{10}}\\vert{+}{+}\\rangle - \\tfrac{1}{\\sqrt{10}}\\vert{-}{-}\\rangle$. Check by expanding $\\vert{+}{+}\\rangle = \\tfrac12(1,1,1,1)$ and $\\vert{-}{-}\\rangle = \\tfrac12(1,-1,-1,1)$: $\\tfrac{1}{2\\sqrt{10}}(3 - 1, 3 + 1, 3 + 1, 3 - 1) = \\tfrac{1}{\\sqrt{10}}(1, 2, 2, 1)$."
+      ],
+      "answer": "(3|++> - |-->)/sqrt10: coefficients 3/sqrt10 = 0.9487 and 1/sqrt10 = 0.3162"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Measuring entanglement: the entropy"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The Schmidt coefficients are two numbers, and we want one number for 'how entangled'. A good answer should be 0 for a product state, largest for a Bell state, and unchanged by anything done to one qubit alone."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The definition"
+    },
+    {
+      "type": "prose",
+      "text": "The squared Schmidt coefficients $p_k = \\lambda_k^2$ are probabilities. The Shannon entropy of that list is the entanglement entropy of the state:"
+    },
+    {
+      "type": "math",
+      "tex": "S = -\\sum_k p_k\\log_2 p_k, \\qquad p_k = \\lambda_k^2.",
+      "caption": "Entanglement entropy of a pure two-party state, in bits."
+    },
+    {
+      "type": "prose",
+      "text": "It is the entropy of a coin that lands heads with probability $p_1$ and tails with $p_2$: zero if the outcome is certain ($p = (1, 0)$) and 1 bit for a fair coin. In the language of The Partial Trace and Reduced States (#/quantum/many-body/partial-trace), $p_k$ are the eigenvalues of either qubit's reduced density matrix, and $S$ computed from those eigenvalues is called the von Neumann entropy of that matrix; here we only need the list $p_k$. One bit is called an ebit of entanglement, the amount in a Bell pair. Two qubits can carry at most 1 ebit; a pair of $d$-level systems at most $\\log_2 d$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a family of states"
+    },
+    {
+      "type": "prose",
+      "text": "Take $\\vert\\psi(\\theta)\\rangle = \\cos\\theta\\,\\vert00\\rangle + \\sin\\theta\\,\\vert11\\rangle$. This is already in Schmidt form, with $\\lambda = (\\cos\\theta, \\sin\\theta)$, $p = (\\cos^2\\theta, \\sin^2\\theta)$, and concurrence $C = 2\\cos\\theta\\sin\\theta = \\sin2\\theta$. Take $\\theta = 20°$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\cos20° = 0.9397$ and $\\sin20° = 0.3420$.",
+        "Step 2. Probabilities $p = (0.8830, 0.1170)$.",
+        "Step 3. $-p_1\\log_2p_1 = -0.8830\\times\\log_2 0.8830 = 0.8830\\times0.1795 = 0.1585$; $-p_2\\log_2p_2 = 0.1170\\times3.0957 = 0.3621$. (The base-2 logarithms are $\\log_20.8830 = -0.1795$ and $\\log_20.1170 = -3.0957$.)",
+        "Step 4. $S = 0.1585 + 0.3621 = 0.521$ bit. And the concurrence is $\\sin40° = 0.643$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The table below comes from the same calculation (the sample code prints it):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\theta = 0°$: $p = (1, 0)$, $S = 0$, $C = 0$: a product, $\\vert00\\rangle$.",
+        "$\\theta = 10°$: $p = (0.970, 0.030)$, $S = 0.195$, $C = 0.342$.",
+        "$\\theta = 20°$: $p = (0.883, 0.117)$, $S = 0.521$, $C = 0.643$.",
+        "$\\theta = 30°$: $p = (0.750, 0.250)$, $S = 0.811$, $C = 0.866$.",
+        "$\\theta = 40°$: $p = (0.587, 0.413)$, $S = 0.978$, $C = 0.985$.",
+        "$\\theta = 45°$: $p = (0.5, 0.5)$, $S = 1$, $C = 1$: the Bell state $\\vert\\Phi^+\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Notice how fast entropy rises at the start: a $10°$ tilt, a tiny change, already gives $0.195$ bit, because the entropy has an infinite slope at a product state (the $-p\\log p$ curve rises steeply from zero). The entropy and the concurrence are two different rulers, so they do not agree on 'halfway', but they agree on the ends and on the ordering of these states. For the Schmidt example above, $p = (0.8727, 0.1273)$ gives $S = 0.1714 + 0.3786 = 0.550$ bit."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Local operations cannot change it"
+    },
+    {
+      "type": "prose",
+      "text": "Apply a unitary $U_1\\otimes U_2$, one gate on each qubit separately. If $\\vert\\psi\\rangle = \\sum_k\\lambda_k\\vert a_k\\rangle\\vert b_k\\rangle$, the new state is $\\sum_k\\lambda_k\\,(U_1\\vert a_k\\rangle)(U_2\\vert b_k\\rangle)$. Unitaries preserve orthonormality, so $U_1\\vert a_k\\rangle$ and $U_2\\vert b_k\\rangle$ are still orthonormal sets, and this is a Schmidt decomposition with the same $\\lambda_k$. The coefficients, the entropy and the concurrence are unchanged. Local operations can rotate the entanglement into a different form, but cannot create or destroy it. The sample code applies random gates to both qubits and shows the entropy staying at $0.6139$; a CNOT, which acts on both qubits together, changes it to $0.4730$."
+    },
+    {
+      "type": "callout",
+      "text": "Entropy of the whole versus entropy of a part. A pure two-qubit state has entropy 0 as a whole (it is one definite state), yet the entanglement entropy $S > 0$ is the entropy of either part. These are different quantities. Part of a perfectly known whole can be maximally uncertain: that is what entanglement means, and The Partial Trace and Reduced States (#/quantum/many-body/partial-trace) shows how to compute the part's state."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: entropy of a state",
+      "text": "What is the entanglement entropy of $\\vert\\Psi^+\\rangle = (\\vert01\\rangle + \\vert10\\rangle)/\\sqrt2$?",
+      "hint": "All Bell states have the same Schmidt coefficients.",
+      "solution": [
+        "Amplitude matrix $\\tfrac{1}{\\sqrt2}\\times$ rows $(0, 1)$, $(1, 0)$. Its singular values are both $\\tfrac{1}{\\sqrt2}$ (the matrix just swaps and scales).",
+        "$p = (\\tfrac12, \\tfrac12)$, $S = -2\\times\\tfrac12\\log_2\\tfrac12 = 1$ bit."
+      ],
+      "answer": "1 bit"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Entanglement is shared, not copied: monogamy"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "If qubit A is entangled with qubit B, can it also be fully entangled with qubit C? Correlations in everyday life are freely shared: many people can all know the same fact. Entanglement is not like that."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Monogamy of entanglement says that the more entangled A is with B, the less entangled it can be with anyone else. The extreme case is easy to see. Suppose A and B are in a maximally entangled state, say $\\vert\\Phi^+\\rangle$, and nobody else is involved. Then AB is in a definite pure state. The general fact is that if a pair AB is in a pure state of its own, then the whole system, whatever else it contains, is a product of the AB state and the state of the rest, so nothing outside is correlated with A or B at all. Put the other way round: for any third qubit C to be correlated with A, the pair AB must be in a mixed state, and that means A and B were less than perfectly entangled. A maximally entangled pair is private."
+    },
+    {
+      "type": "prose",
+      "text": "Between the extremes there is a trade. The three-qubit GHZ state $(\\vert000\\rangle + \\vert111\\rangle)/\\sqrt2$ has each pair of qubits only classically correlated: tracing out one qubit leaves the other two in the mixture 'both 0 or both 1' (the envelope pair from before; the sample on The Partial Trace and Reduced States (#/quantum/many-body/partial-trace) computes it). The three-qubit W state $(\\vert001\\rangle + \\vert010\\rangle + \\vert100\\rangle)/\\sqrt3$, one excitation shared over three qubits, does the opposite: every pair is genuinely entangled, but only partly. Each pair's (mixed) reduced state has concurrence $\\tfrac23$, against $1$ for a Bell pair. The overall rule is an inequality found by Coffman, Kundu and Wootters (in the sources), which we state without proof. It uses the concurrence extended to mixed pairs (Wootters' formula, also in the sources): $C_{AB}^2 + C_{AC}^2 \\le 4\\det\\rho_A$, where $\\rho_A$ is qubit A's reduced state (The Partial Trace and Reduced States (#/quantum/many-body/partial-trace)) and $4\\det\\rho_A$ measures A's entanglement with B and C together; for a pure pair it is just $C^2$. The W state meets it with equality: $\\tfrac49 + \\tfrac49 = \\tfrac89$, and $\\rho_A$ has diagonal $(\\tfrac23, \\tfrac13)$, so $4\\det\\rho_A = 4\\times\\tfrac29 = \\tfrac89$. For the GHZ state both pair concurrences are 0 while $4\\det\\rho_A = 1$: all of A's entanglement is three-way."
+    },
+    {
+      "type": "prose",
+      "text": "The same trade shows up when a system meets its environment: as a qubit becomes entangled with its surroundings, its own reduced state becomes mixed and its superpositions fade. That is the subject of Decoherence: How Superpositions Fade (#/quantum/many-body/decoherence)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: sharing a Bell pair",
+      "text": "Alice and Bob share $\\vert\\Phi^+\\rangle$. A third qubit C is prepared separately in $\\vert0\\rangle$ and never interacts with them. What is the entanglement entropy between C and AB?",
+      "hint": "Is the global state a product between AB and C?",
+      "solution": [
+        "The global state is $\\vert\\Phi^+\\rangle_{AB}\\otimes\\vert0\\rangle_C$, a product of an AB-state and a C-state.",
+        "The test for 'AB versus C' is the same product test, and it passes, so the Schmidt rank is 1 and $S = 0$. C shares nothing."
+      ],
+      "answer": "0 bits"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why reservoir computing needs it"
+    },
+    {
+      "type": "prose",
+      "text": "A quantum reservoir is a handful of interacting qubits driven by an input signal. Its features are averages of simple operators. If the qubits stay in a product state, each qubit evolves independently, and the reservoir is equivalent to a handful of one-qubit reservoirs whose state needs only $2n$ numbers: no more computational power than a few separate memory cells, and easy to simulate. Entanglement is what makes the state space truly $2^n$-dimensional. It lets correlators such as $\\langle Z_iZ_j\\rangle$ carry information that no single-qubit average holds (as in the Bell state above, where all single-qubit averages vanish and the correlator is 1). That is the resource a quantum reservoir uses."
+    },
+    {
+      "type": "prose",
+      "text": "There is a cost. Entanglement with the environment is how information leaks out of a system (decoherence), and strong scrambling, which spreads entanglement through all the qubits, can make each local average nearly constant, so that local features stop depending on the input. Both effects appear on the QRC shelf: Concentration and Scalability (#/qrc/theory/concentration-and-scalability). For this page, the tool you need to follow them is the way to describe 'one part of an entangled whole': the reduced state, on the next page The Partial Trace and Reduced States (#/quantum/many-body/partial-trace)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Computing all of this"
+    },
+    {
+      "type": "prose",
+      "text": "The sample runs the product test on five states, builds the four Bell states from the circuit, compares the classical envelope pair with the Bell pair on $ZZ$, $XX$ and $YY$, computes the Schmidt decomposition by SVD and rebuilds the state from it, tabulates the entropy family, and applies random local gates."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nnp.set_printoptions(precision=4, suppress=True)\ndef ad_bc(psi): return psi[0] * psi[3] - psi[1] * psi[2]\ndef entropy_bits(p):\n    p = np.asarray(p); p = p[p > 1e-12]; return float(-(p * np.log2(p)).sum()) + 0.0\ntests = {\n    \"product (0.6,0.8)x(0.8,-0.6)\": np.kron([0.6, 0.8], [0.8, -0.6]),\n    \"(1,2,3,6)/sqrt(50)\": np.array([1, 2, 3, 6]) / np.sqrt(50),\n    \"Bell Phi+\": np.array([1, 0, 0, 1]) / np.sqrt(2),\n    \"(|00>+|01>+|11>)/sqrt3\": np.array([1, 1, 0, 1]) / np.sqrt(3),\n    \"(1,2,2,1)/sqrt(10)\": np.array([1, 2, 2, 1]) / np.sqrt(10),\n}\nfor name, psi in tests.items():\n    print(f\"{name:32s} ad-bc = {ad_bc(psi):+.4f}   concurrence 2|ad-bc| = {2 * abs(ad_bc(psi)):.4f}\")\n# --- Bell states from a circuit: H on qubit 1, then CNOT (qubit 1 controls qubit 2)\nH = np.array([[1, 1], [1, -1]]) / np.sqrt(2); I2 = np.eye(2)\nCNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])\nU = CNOT @ np.kron(H, I2)\nfor start in (\"00\", \"01\", \"10\", \"11\"):\n    v = np.zeros(4); v[int(start, 2)] = 1\n    print(\"start |\" + start + \">  ->\", np.round(U @ v * np.sqrt(2), 3), \"/ sqrt2\")\n# --- classical correlation vs entanglement\nX = np.array([[0., 1], [1, 0]]); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1])\nbell = np.array([1, 0, 0, 1]) / np.sqrt(2)\nrho_bell = np.outer(bell, bell.conj()); rho_mix = np.diag([0.5, 0, 0, 0.5])\nfor nm, P in ((\"ZZ\", np.kron(Z, Z)), (\"XX\", np.kron(X, X)), (\"YY\", np.kron(Y, Y))):\n    print(f\"<{nm}>  Bell pair: {np.trace(rho_bell @ P).real:+.3f}   classical coin pair: {np.trace(rho_mix @ P).real:+.3f}\")\n# --- Schmidt decomposition from the singular value decomposition\npsi = np.array([1, 1, 0, 1]) / np.sqrt(3)\nu, s, vh = np.linalg.svd(psi.reshape(2, 2))\nprint(\"Schmidt coefficients:\", s, \" squares:\", s ** 2, \" entropy:\", round(entropy_bits(s ** 2), 4), \"bit\")\nprint(\"qubit-1 vectors (columns):\", u.round(4).tolist(), \" qubit-2 vectors (rows):\", vh.round(4).tolist())\nrebuilt = sum(s[k] * np.kron(u[:, k], vh[k]) for k in range(2))\nprint(\"rebuilt from the sum:\", rebuilt.round(4), \" original:\", psi.round(4))\nprint(\"product of Schmidt coefficients\", round(s[0] * s[1], 4), \"= |ad-bc| =\", round(abs(ad_bc(psi)), 4))\n# --- entropy of cos(t)|00> + sin(t)|11>\nfor deg in (0, 10, 20, 30, 40, 45):\n    t = np.radians(deg)\n    print(f\"theta = {deg:2d} deg: probabilities ({np.cos(t)**2:.4f}, {np.sin(t)**2:.4f})  entropy {entropy_bits([np.cos(t)**2, np.sin(t)**2]):.4f} bit  concurrence {np.sin(2*t):.4f}\")\n# --- local gates do not change the entropy\nrng = np.random.default_rng(1)\ndef random_unitary():\n    q, _ = np.linalg.qr(rng.normal(size=(2, 2)) + 1j * rng.normal(size=(2, 2))); return q\npsi = np.array([np.cos(0.4), 0, 0, np.sin(0.4)])\nlocal = np.kron(random_unitary(), random_unitary()) @ psi\nfor nm, v in ((\"before\", psi), (\"after random local gates\", local)):\n    print(f\"entropy {nm}: {entropy_bits(np.linalg.svd(v.reshape(2, 2), compute_uv=False) ** 2):.4f}\")\nprint(\"after CNOT:\", round(entropy_bits(np.linalg.svd((CNOT @ local).reshape(2, 2), compute_uv=False) ** 2), 4))\n"
+    },
+    {
+      "type": "prose",
+      "text": "What the run prints: the product test gives $0$ for the first two states (with concurrence $0$) and $0.5$, $0.3333$, $-0.3$ for the rest (concurrences $1$, $0.667$, $0.6$). The circuit gives $(1, 0, 0, 1)/\\sqrt2$ from $\\vert00\\rangle$, $(0, 1, 1, 0)/\\sqrt2$ from $\\vert01\\rangle$, $(1, 0, 0, -1)/\\sqrt2$ from $\\vert10\\rangle$ and $(0, 1, -1, 0)/\\sqrt2$ from $\\vert11\\rangle$. For $ZZ$ both the Bell pair and the envelope pair give $+1$; for $XX$ the Bell pair gives $+1$ and the envelopes $0$; for $YY$ the Bell pair gives $-1$ and the envelopes $0$. The Schmidt coefficients are $0.9342$ and $0.3568$, entropy $0.55$ bit, the rebuilt state equals the original, and $\\lambda_1\\lambda_2 = 0.3333 = \\vert ad - bc\\vert$. The entropy table matches the one above. With random local gates the entropy stays at $0.6139$ and after a CNOT it is $0.473$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A source makes the state $\\vert\\psi\\rangle = \\tfrac{1}{\\sqrt{10}}(\\vert00\\rangle + 2\\vert01\\rangle + 2\\vert10\\rangle + \\vert11\\rangle)$. Decide whether it is entangled, find its Schmidt form, entropy and concurrence, and say what measuring both qubits in the $X$ basis shows."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Test: $ad - bc = \\tfrac{1}{10}(1\\cdot1 - 2\\cdot2) = -0.3$. Not zero, so the state is entangled. Concurrence $C = 2\\times0.3 = 0.6$.",
+        "Step 2. Schmidt form: the matrix with rows $(1,2),(2,1)$ has eigenvectors $(1, 1)$ and $(1,-1)$ with eigenvalues $3$ and $-1$ (Check yourself above). So $\\vert\\psi\\rangle = \\tfrac{3}{\\sqrt{10}}\\vert{+}{+}\\rangle - \\tfrac{1}{\\sqrt{10}}\\vert{-}{-}\\rangle$, with $\\lambda = (0.9487, 0.3162)$.",
+        "Step 3. Probabilities: $p = (0.9, 0.1)$ (these sum to 1).",
+        "Step 4. Entropy: $-0.9\\log_20.9 - 0.1\\log_20.1 = 0.9\\times0.1520 + 0.1\\times3.3219 = 0.1368 + 0.3322 = 0.469$ bit.",
+        "Step 5. Cross-check: $C = 2\\lambda_1\\lambda_2 = 2\\times0.9487\\times0.3162 = 0.600$. Same as step 1.",
+        "Step 6. What does the measurement of both qubits in the $X$ basis see? In the $\\vert\\pm\\rangle$ basis the state has only the two terms $\\vert{+}{+}\\rangle$ (probability 0.9) and $\\vert{-}{-}\\rangle$ (probability 0.1): the two $X$ results always agree. Qubit 1's result is $+$ with probability $0.9$, and qubit 2 then certainly gives the same. That is the Schmidt form in action."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A pure two-qubit state is a product if and only if $ad - bc = 0$; otherwise it is entangled. The factors can be read off from the proportional rows.",
+        "A classical correlation is a mixture of product states. It can agree in one basis only, while a Bell state agrees in several incompatible bases ($ZZ = XX = 1$, $YY = -1$).",
+        "A Hadamard on one qubit followed by a CNOT makes a Bell state from a basis state; local gates alone never create entanglement.",
+        "Every pure two-qubit state has a Schmidt form $\\lambda_1\\vert a_1b_1\\rangle + \\lambda_2\\vert a_2b_2\\rangle$; the $\\lambda_k$ are the singular values of the amplitude matrix.",
+        "The entanglement entropy $S = -\\sum p_k\\log_2p_k$ with $p_k = \\lambda_k^2$ is $0$ for products and $1$ bit for Bell states; the concurrence is $2\\lambda_1\\lambda_2$.",
+        "Local unitaries leave the Schmidt coefficients, entropy and concurrence unchanged.",
+        "Entanglement is monogamous: a maximally entangled pair has no entanglement left for anyone else.",
+        "Reservoirs use entanglement to make the state space genuinely $2^n$-dimensional, and risk losing it to scrambling and to the environment."
       ]
     },
     {
@@ -306,33 +734,79 @@
     },
     {
       "type": "problem",
-      "title": "Reduced state of a partly entangled pair",
-      "text": "For $\\cos\\theta\\vert00\\rangle + \\sin\\theta\\vert11\\rangle$ with $\\theta = \\pi/8$, find $\\rho_A$ and its entropy.",
+      "title": "Product or entangled",
+      "text": "For each state, say whether it is a product, and if so find its factors: (a) $\\tfrac{1}{\\sqrt{50}}(1, 3, 2, 6)$; (b) the state with amplitudes proportional to $(1, 1, 1, -2)$.",
+      "hint": "Compute $ad - bc$ with the unnormalised amplitudes.",
       "solution": [
-        "The state is already in Schmidt form, so $\\rho_A = \\mathrm{diag}(\\cos^2\\theta, \\sin^2\\theta) = \\mathrm{diag}(0.854, 0.146)$.",
-        "$S = -0.854\\log_2 0.854 - 0.146\\log_2 0.146 = 0.194 + 0.405 = 0.60$ bit, matching the sample's 0.601."
+        "(a) $ad - bc \\propto 1\\cdot6 - 3\\cdot2 = 0$. Product. Rows $(1, 3)$ and $(2, 6) = 2(1, 3)$: qubit 1 is $\\propto(1, 2)$ and qubit 2 is $\\propto(1, 3)$. Normalised: $\\tfrac{1}{\\sqrt5}(1, 2)\\otimes\\tfrac{1}{\\sqrt{10}}(1, 3)$.",
+        "(b) $ad - bc \\propto 1\\cdot(-2) - 1\\cdot1 = -3 \\ne 0$. Entangled."
       ],
-      "answer": "diag(0.854, 0.146); 0.60 bit"
+      "answer": "(a) product, (1,2)/sqrt5 (x) (1,3)/sqrt10; (b) entangled"
     },
     {
       "type": "problem",
-      "title": "Entangled or not",
-      "text": "Is $(\\vert00\\rangle + \\vert01\\rangle + \\vert11\\rangle)/\\sqrt3$ entangled?",
+      "title": "Which Bell state",
+      "text": "Start the Hadamard-then-CNOT circuit from $\\vert10\\rangle$. Which state results, and what are $\\langle Z\\otimes Z\\rangle$ and $\\langle X\\otimes X\\rangle$ in it?",
+      "hint": "Hadamard on $\\vert1\\rangle$ gives a minus sign.",
       "solution": [
-        "Amplitude matrix (rows qubit 1, columns qubit 2): $(1, 1)$ and $(0, 1)$, divided by $\\sqrt3$.",
-        "Its determinant is $1/3 \\ne 0$, so the rank is 2: entangled (though not maximally)."
+        "$H_d$ on qubit 1: $\\vert10\\rangle\\to\\tfrac{1}{\\sqrt2}(\\vert00\\rangle - \\vert10\\rangle)$.",
+        "CNOT: $\\vert10\\rangle\\to\\vert11\\rangle$, so the state is $\\tfrac{1}{\\sqrt2}(\\vert00\\rangle - \\vert11\\rangle) = \\vert\\Phi^-\\rangle$.",
+        "$Z\\otimes Z$ is $+1$ on both $\\vert00\\rangle$ and $\\vert11\\rangle$, so $\\langle Z\\otimes Z\\rangle = +1$.",
+        "$(X\\otimes X)\\vert\\Phi^-\\rangle = \\tfrac{1}{\\sqrt2}(\\vert11\\rangle - \\vert00\\rangle) = -\\vert\\Phi^-\\rangle$, so $\\langle X\\otimes X\\rangle = -1$."
       ],
-      "answer": "Yes, Schmidt rank 2"
+      "answer": "Phi minus; ZZ = +1, XX = -1"
     },
     {
       "type": "problem",
-      "title": "No signal from one half",
-      "text": "Alice holds qubit A of $\\vert\\Phi^+\\rangle$ and measures it in the $X$ basis. Does that change any statistics Bob can see on qubit B alone?",
+      "title": "Entropy and concurrence",
+      "text": "For $\\vert\\psi\\rangle = \\cos30°\\vert00\\rangle + \\sin30°\\vert11\\rangle$ compute the concurrence and the entanglement entropy.",
+      "hint": "This one is already in Schmidt form.",
       "solution": [
-        "Bob's statistics are fixed by $\\rho_B = \\operatorname{Tr}_A\\vert\\Phi^+\\rangle\\langle\\Phi^+\\vert = I/2$.",
-        "Averaged over Alice's unknown outcome, Bob's state is still $I/2$, whatever she measured. Entanglement creates correlations, not a communication channel."
+        "$p = (\\cos^230°, \\sin^230°) = (0.75, 0.25)$.",
+        "$C = \\sin60° = 0.866$ (also $2\\times0.866\\times0.5$).",
+        "$S = -0.75\\log_20.75 - 0.25\\log_20.25 = 0.75\\times0.4150 + 0.25\\times2 = 0.3113 + 0.5 = 0.811$ bit."
       ],
-      "answer": "No: ρ_B stays I/2"
+      "answer": "C = 0.866; S = 0.811 bit"
+    },
+    {
+      "type": "problem",
+      "title": "Classical pair versus Bell pair",
+      "text": "A source emits $\\vert00\\rangle$ or $\\vert11\\rangle$ at random, each with probability $\\tfrac12$. By hand, show that $\\langle X\\otimes X\\rangle = 0$.",
+      "hint": "Each possible state is mapped to an orthogonal one.",
+      "solution": [
+        "$X\\otimes X$ sends $\\vert00\\rangle\\to\\vert11\\rangle$ and $\\vert11\\rangle\\to\\vert00\\rangle$.",
+        "For each possible state the average of $X\\otimes X$ is $\\langle00\\vert11\\rangle = 0$ or $\\langle11\\vert00\\rangle = 0$, because the two basis states are orthogonal.",
+        "The overall average is $\\tfrac12\\cdot0 + \\tfrac12\\cdot0 = 0$. For the superposition $\\vert\\Phi^+\\rangle$ the cross terms between $\\vert00\\rangle$ and $\\vert11\\rangle$ add up instead and give $+1$."
+      ],
+      "answer": "0"
+    },
+    {
+      "type": "problem",
+      "title": "Local gates",
+      "text": "Does applying $H_d\\otimes H_d$ to $\\vert\\Phi^+\\rangle$ change its entanglement entropy? What state do you get?",
+      "hint": "Local unitaries preserve the Schmidt coefficients.",
+      "solution": [
+        "$H_d\\otimes H_d$ is a product of local unitaries, so the Schmidt coefficients and entropy cannot change: still 1 bit.",
+        "Compute the state: $H_d\\otimes H_d\\vert00\\rangle = \\vert{+}{+}\\rangle = \\tfrac12(1,1,1,1)$ and $H_d\\otimes H_d\\vert11\\rangle = \\vert{-}{-}\\rangle = \\tfrac12(1,-1,-1,1)$.",
+        "Sum over $\\sqrt2$: $\\tfrac{1}{2\\sqrt2}(2, 0, 0, 2) = \\tfrac{1}{\\sqrt2}(1, 0, 0, 1)$, which is $\\vert\\Phi^+\\rangle$ again. (Check: $ad - bc = \\tfrac12$, as before.)"
+      ],
+      "answer": "No: entropy 1 bit; the state is |Phi+> again"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The reduced state of one qubit of an entangled pair, and what it tells you: The Partial Trace and Reduced States (#/quantum/many-body/partial-trace).",
+        "Entanglement tested against hidden pre-agreed answers: Bell Inequalities and Nonlocality (#/quantum/many-body/bell-inequalities).",
+        "Entanglement with an environment as the source of noise: Decoherence: How Superpositions Fade (#/quantum/many-body/decoherence).",
+        "The reset of the input qubit is a partial trace: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) and Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "Correlator features $\\langle Z_iZ_j\\rangle$ read information that local features miss: Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
+        "Scrambling and the concentration of local observables: Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+      ]
     },
     {
       "type": "heading",
@@ -343,8 +817,10 @@
       "type": "list",
       "items": [
         "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), sections 2.4 to 2.5",
-        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 3",
-        "R. Horodecki, P. Horodecki, M. Horodecki and K. Horodecki, Quantum entanglement, Reviews of Modern Physics 81, 865 (2009)"
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapters 2 and 4",
+        "R. Horodecki, P. Horodecki, M. Horodecki and K. Horodecki, Quantum entanglement, Reviews of Modern Physics 81, 865 (2009)",
+        "W. K. Wootters, Entanglement of formation of an arbitrary state of two qubits, Physical Review Letters 80, 2245 (1998)",
+        "V. Coffman, J. Kundu and W. K. Wootters, Distributed entanglement, Physical Review A 61, 052306 (2000)"
       ]
     }
   ]

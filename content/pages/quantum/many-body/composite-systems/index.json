@@ -1,19 +1,146 @@
 {
   "title": "Composite Systems and Tensor Products",
-  "intro": "Two quantum systems together are described by the tensor product of their state spaces, so $n$ qubits need $2^n$ amplitudes. This page fixes the conventions (basis order, which factor is which qubit) that every reservoir simulation relies on.",
+  "intro": "Two quantum systems together are described by the tensor product of their state spaces, so $n$ qubits need $2^n$ amplitudes. This page builds that rule entry by entry and fixes the conventions (basis order, which factor is which qubit) that every reservoir simulation relies on.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "The tensor product of states"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "If qubit 1 is in $\\vert a\\rangle$ and qubit 2 in $\\vert b\\rangle$, the pair is in $\\vert a\\rangle\\otimes\\vert b\\rangle$, written $\\vert ab\\rangle$. Numerically this is the Kronecker product of the two vectors. The basis of two qubits is $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$, in that order: the index of $\\vert b_1b_2\\cdots b_n\\rangle$ is the binary number $b_1b_2\\cdots b_n$, with qubit 1 as the most significant bit. That is the convention of `np.kron` with qubit 1 as the leftmost factor, and of every sample on the QRC shelf."
+      "text": "Kets, amplitudes and the Born rule from States and Dirac Notation (#/quantum/foundations/states-and-dirac-notation) and Measurement and the Born Rule (#/quantum/foundations/measurement), and the idea of a matrix acting on a vector from Linear Algebra for Quantum Mechanics (#/quantum/foundations/linear-algebra). The Pauli matrices $X$ and $Z$ from Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations) appear as examples."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Explain why two qubits need four amplitudes, and why that is more than two single-qubit states can supply.",
+        "Build the state of two or three qubits from the states of the parts, entry by entry, and say which basis state sits at which position of the vector.",
+        "Write an operator that acts on one qubit of many ($Z\\otimes I$, $I\\otimes X$, $X_1Z_3$) as a matrix and apply it to a state.",
+        "Decide quickly whether a two-qubit state could be a product of two single-qubit states.",
+        "Count amplitudes and memory for $n$ qubits, and say what the exponential growth does and does not buy you."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two qubits need four amplitudes"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "A general two-qubit state is any unit vector in this four-dimensional space, $\\sum_{ij} c_{ij}\\vert ij\\rangle$. Only some of them are products $\\vert a\\rangle\\otimes\\vert b\\rangle$; the rest are entangled (Entanglement and Reduced States (#/quantum/many-body/entanglement)). A quick test: arrange the amplitudes into the $2\\times2$ matrix $c_{ij}$. The state is a product exactly when that matrix has rank 1."
+      "text": "One qubit is described by two amplitudes, $\\alpha\\vert0\\rangle + \\beta\\vert1\\rangle$. Suppose you have two qubits. The obvious plan is to describe each with its own pair of amplitudes. Is that enough? Here is a test. Take the pair in the state $\\vert\\Phi^+\\rangle = (\\vert00\\rangle + \\vert11\\rangle)/\\sqrt2$ and measure qubit 1 in the $Z$ basis: you get $0$ or $1$ with probability $\\tfrac12$ each. Qubit 2 alone does the same. Now take the pair in the state $\\vert{+}\\rangle\\otimes\\vert{+}\\rangle = \\tfrac12(\\vert00\\rangle + \\vert01\\rangle + \\vert10\\rangle + \\vert11\\rangle)$. Measure qubit 1: $0$ or $1$ with probability $\\tfrac12$ each. Qubit 2: the same."
+    },
+    {
+      "type": "prose",
+      "text": "The two pairs look identical one qubit at a time. They are very different together. In the first pair the two results always agree (00 or 11, each with probability $\\tfrac12$, never 01 or 10). In the second pair all four combinations come up with probability $\\tfrac14$. A description that lists only what each qubit does on its own cannot tell these two cases apart. A pair of qubits needs a description of the pair."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "The pair has four possible joint outcomes, $00, 01, 10, 11$, and quantum mechanics assigns an amplitude to each. So the state of two qubits is a list of four complex numbers $c_{00}, c_{01}, c_{10}, c_{11}$, with $\\vert c_{00}\\vert^2 + \\vert c_{01}\\vert^2 + \\vert c_{10}\\vert^2 + \\vert c_{11}\\vert^2 = 1$, and the state is"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi\\rangle = c_{00}\\vert00\\rangle + c_{01}\\vert01\\rangle + c_{10}\\vert10\\rangle + c_{11}\\vert11\\rangle.",
+      "caption": "A general state of two qubits: one amplitude for every joint outcome."
+    },
+    {
+      "type": "prose",
+      "text": "Here $\\vert ij\\rangle$ means 'qubit 1 gives $i$ and qubit 2 gives $j$', and $\\vert c_{ij}\\vert^2$ is the probability of that joint result. This is the Born rule applied to the pair, exactly as for one qubit. The new fact is only the count: the pair lives in a space of dimension 4, not 2 + 2. The everyday picture is a table of joint probabilities, like the weather in two cities: knowing 'rain in city 1 with probability 50 per cent' and 'rain in city 2 with probability 50 per cent' does not tell you whether the two cities rain together. The analogy breaks in one important way: the table here holds amplitudes, which can be negative or complex and which interfere, not probabilities."
+    },
+    {
+      "type": "prose",
+      "text": "When can two separate single-qubit descriptions be enough? When the qubits are independent, and then the joint amplitude of an outcome is the product of the separate amplitudes. That is the next section."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: same single-qubit statistics",
+      "text": "The state $\\tfrac{1}{\\sqrt2}(\\vert01\\rangle + \\vert10\\rangle)$ has each qubit alone giving 0 or 1 with probability $\\tfrac12$. Which joint results can occur, and with what probabilities?",
+      "hint": "The probability of a joint result is $\\vert c_{ij}\\vert^2$.",
+      "solution": [
+        "Read off the amplitudes: $c_{01} = c_{10} = 1/\\sqrt2$ and $c_{00} = c_{11} = 0$.",
+        "Probabilities are the squared sizes: $\\tfrac12$ for 01, $\\tfrac12$ for 10, $0$ for 00 and 11.",
+        "Qubit 1 alone: it gives 0 with probability $P(01) = \\tfrac12$ and 1 with probability $P(10) = \\tfrac12$. The same holds for qubit 2. The qubits are perfectly anti-correlated, yet each looks like a fair coin."
+      ],
+      "answer": "01 and 10, each with probability 1/2; 00 and 11 never"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The tensor product, entry by entry"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "If qubit 1 is in the state $\\vert a\\rangle = a_0\\vert0\\rangle + a_1\\vert1\\rangle$ and qubit 2 is independently in $\\vert b\\rangle = b_0\\vert0\\rangle + b_1\\vert1\\rangle$, what are the four amplitudes of the pair? We need a rule that turns two small vectors into one large one."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The rule"
+    },
+    {
+      "type": "prose",
+      "text": "Independence means the probabilities multiply: the chance that qubit 1 gives $i$ and qubit 2 gives $j$ is $\\vert a_i\\vert^2\\vert b_j\\vert^2$. The amplitudes that give those probabilities are the products, so the amplitude of $\\vert ij\\rangle$ is $a_ib_j$. The resulting state is called the tensor product of $\\vert a\\rangle$ and $\\vert b\\rangle$, written $\\vert a\\rangle\\otimes\\vert b\\rangle$ or just $\\vert ab\\rangle$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert a\\rangle\\otimes\\vert b\\rangle = a_0b_0\\vert00\\rangle + a_0b_1\\vert01\\rangle + a_1b_0\\vert10\\rangle + a_1b_1\\vert11\\rangle.",
+      "caption": "The tensor product of two qubit states: every amplitude of the first times every amplitude of the second."
+    },
+    {
+      "type": "prose",
+      "text": "As a column of numbers, listed in the order $00, 01, 10, 11$, this is $(a_0b_0,\\ a_0b_1,\\ a_1b_0,\\ a_1b_1)$. Read it as: take each entry of $\\vert a\\rangle$ in turn and multiply the whole vector $\\vert b\\rangle$ by it. In numpy this is np.kron(a, b), the Kronecker product. The result is normalised automatically: $\\sum_{ij}\\vert a_ib_j\\vert^2 = \\left(\\sum_i\\vert a_i\\vert^2\\right)\\left(\\sum_j\\vert b_j\\vert^2\\right) = 1\\cdot1$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "Let qubit 1 be in $\\vert a\\rangle = 0.6\\vert0\\rangle + 0.8\\vert1\\rangle$ and qubit 2 in $\\vert b\\rangle = 0.8\\vert0\\rangle - 0.6\\vert1\\rangle$. Both are normalised: $0.36 + 0.64 = 1$ and $0.64 + 0.36 = 1$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. First entry of $\\vert a\\rangle$ times the whole of $\\vert b\\rangle$: $0.6\\times(0.8, -0.6) = (0.48, -0.36)$. These are the amplitudes of $\\vert00\\rangle$ and $\\vert01\\rangle$.",
+        "Step 2. Second entry of $\\vert a\\rangle$ times the whole of $\\vert b\\rangle$: $0.8\\times(0.8, -0.6) = (0.64, -0.48)$. These are the amplitudes of $\\vert10\\rangle$ and $\\vert11\\rangle$.",
+        "Step 3. Put them together: $\\vert a\\rangle\\otimes\\vert b\\rangle = (0.48,\\ -0.36,\\ 0.64,\\ -0.48)$.",
+        "Step 4. Check the length: $0.2304 + 0.1296 + 0.4096 + 0.2304 = 1.0000$.",
+        "Step 5. Read a probability. The chance of getting 1 from qubit 1 and 0 from qubit 2 is $0.64^2 = 0.4096$. It equals $\\vert a_1\\vert^2\\vert b_0\\vert^2 = 0.64\\times0.64$, the independent-probabilities rule."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The sample code at the end of the page repeats this and prints $(0.48, -0.36, 0.64, -0.48)$ both from the by-hand formula and from np.kron."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Which entry is which: the ordering convention"
+    },
+    {
+      "type": "prose",
+      "text": "A vector is a list, so the four basis states must be put in some order. This site always uses the order $\\vert00\\rangle, \\vert01\\rangle, \\vert10\\rangle, \\vert11\\rangle$: the label read as a binary number is the position, counting from 0. So $\\vert01\\rangle$ is at position 1 and $\\vert10\\rangle$ is at position 2. The leftmost bit is qubit 1, and it changes slowest as you go down the list. For three qubits $\\vert b_1b_2b_3\\rangle$ is at position $4b_1 + 2b_2 + b_3$, so $\\vert101\\rangle$ is at $4 + 0 + 1 = 5$. In general the position of $\\vert b_1b_2\\cdots b_n\\rangle$ is the binary number $b_1b_2\\cdots b_n$."
     },
     {
       "type": "figure",
@@ -22,48 +149,288 @@
       "caption": "The basis order used by every simulator on the site: qubit 1 is the left factor and the most significant bit."
     },
     {
-      "type": "heading",
-      "level": 2,
-      "text": "Operators on part of a system"
+      "type": "prose",
+      "text": "Two conventions are in use in the wild. This one (leftmost qubit is the most significant bit) is what np.kron produces when you write the first qubit first, and it is the one every sample on this site uses. Some quantum software libraries number qubits the other way round, so when you compare results with a library, check which end is qubit 1 before you compare."
+    },
+    {
+      "type": "callout",
+      "text": "The order of the factors matters. $\\vert a\\rangle\\otimes\\vert b\\rangle$ and $\\vert b\\rangle\\otimes\\vert a\\rangle$ are different vectors unless $\\vert a\\rangle = \\vert b\\rangle$. With the numbers above, swapping the factors gives $(0.48, 0.64, -0.36, -0.48)$: the middle two entries trade places. The first factor always belongs to qubit 1."
     },
     {
       "type": "prose",
-      "text": "An operator $A$ acting on qubit $i$ alone is $I\\otimes\\cdots\\otimes A\\otimes\\cdots\\otimes I$, with $A$ in slot $i$. The QRC samples build this with a small `op(o, i, n)` helper. Operators on different qubits commute. A two-qubit coupling such as $X_iX_j$ is the product of two such single-qubit operators. A Pauli string is a tensor product of one Pauli (or $I$) per qubit; there are $4^n$ of them and they form an orthogonal basis for all operators on $n$ qubits, which is why a density matrix of $n$ qubits has $4^n - 1$ real coordinates."
+      "text": "The basis states themselves are tensor products: $\\vert1\\rangle\\otimes\\vert0\\rangle = (0\\cdot1, 0\\cdot0, 1\\cdot1, 1\\cdot0) = (0, 0, 1, 0)$, which is the vector with a 1 at position 2, as the rule says. Any product of basis states is a basis vector, and every basis vector of the pair arises this way."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: building a product",
+      "text": "Write $\\vert{+}\\rangle\\otimes\\vert{-}\\rangle$ as four amplitudes, where $\\vert\\pm\\rangle = (\\vert0\\rangle \\pm \\vert1\\rangle)/\\sqrt2$.",
+      "hint": "Multiply each entry of the first vector by the whole second vector.",
+      "solution": [
+        "$\\vert+\\rangle = \\tfrac{1}{\\sqrt2}(1, 1)$ and $\\vert-\\rangle = \\tfrac{1}{\\sqrt2}(1, -1)$.",
+        "First entry of $\\vert+\\rangle$ times $\\vert-\\rangle$: $\\tfrac{1}{\\sqrt2}\\cdot\\tfrac{1}{\\sqrt2}(1, -1) = \\tfrac12(1, -1)$. Second entry gives the same $\\tfrac12(1, -1)$.",
+        "Together: $\\tfrac12(1, -1, 1, -1)$. Probabilities are all $\\tfrac14$."
+      ],
+      "answer": "(1/2)(1, -1, 1, -1)"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Exponential growth, and what it does and does not mean"
+      "text": "Product states, and states that are not"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The tensor product turns two single-qubit states into a two-qubit state. Does every two-qubit state arise that way? Count the real numbers needed. A single qubit state, up to normalisation and an unobservable overall phase, is fixed by 2 real numbers (the two angles of the Bloch sphere), so a product of two needs $2 + 2 = 4$. A general two-qubit state has four complex amplitudes, which is 8 real numbers, minus 1 for normalisation and 1 for the overall phase: 6. Four is less than six, so products cannot reach every state."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A quick test"
+    },
+    {
+      "type": "prose",
+      "text": "Write the four amplitudes of a general state as a table with qubit 1's value down the side and qubit 2's value across the top: row 0 is $(c_{00}, c_{01})$ and row 1 is $(c_{10}, c_{11})$. For a product, $c_{ij} = a_ib_j$, so row 0 is $a_0(b_0, b_1)$ and row 1 is $a_1(b_0, b_1)$: the two rows are multiples of each other. Multiply across the diagonals: $c_{00}c_{11} = a_0b_0a_1b_1$ and $c_{01}c_{10} = a_0b_1a_1b_0$. Those are the same number. So a product state always satisfies"
     },
     {
       "type": "math",
-      "tex": "\\dim\\left((\\mathbb{C}^2)^{\\otimes n}\\right) = 2^n",
-      "caption": "n qubits: 2ⁿ complex amplitudes, 4ⁿ density-matrix entries."
+      "tex": "c_{00}c_{11} - c_{01}c_{10} = 0.",
+      "caption": "A necessary condition for a product state. The Entanglement page shows it is also sufficient."
     },
     {
       "type": "prose",
-      "text": "Thirty qubits need about a billion amplitudes; fifty are beyond any classical memory. This is the headline argument for quantum computing and quantum reservoirs. But a quantum device does not hand you those amplitudes: you learn about the state only through measurement, a few numbers at a time, each from many shots. The QRC shelf's Concentration and Scalability (#/qrc/theory/concentration-and-scalability) is about exactly this gap between the size of the state and the size of what can be read from it."
-    },
-    {
-      "type": "code",
-      "lang": "python",
-      "source": "import numpy as np\n# Two qubits: basis order |00>, |01>, |10>, |11> with the LEFT factor as qubit 1\nzero, one = np.array([1., 0]), np.array([0., 1])\nprint(\"|0>(x)|1> =\", np.kron(zero, one), \" (index 1 = binary 01)\")\n# Operators on one qubit act as A (x) I; ordering matters\nX = np.array([[0, 1], [1, 0]]); I = np.eye(2)\nv = np.kron(zero, zero)\nprint(\"X on qubit 1:\", np.kron(X, I) @ v, \"  X on qubit 2:\", np.kron(I, X) @ v)\n# A state is a product exactly when its 2x2 amplitude matrix has rank 1\ndef schmidt_rank(psi): return np.linalg.matrix_rank(psi.reshape(2, 2), tol=1e-12)\nprod = np.kron([0.6, 0.8], [1 / np.sqrt(2), 1j / np.sqrt(2)])\nbell = np.array([1, 0, 0, 1]) / np.sqrt(2)\nprint(\"rank of a product state:\", schmidt_rank(prod), \"   rank of the Bell state:\", schmidt_rank(bell))\n# Dimension count\nfor n in (1, 2, 5, 10, 20):\n    print(f\"n = {n:2d} qubits: state vector {2**n:>8d} amplitudes, density matrix {4**n:>14d} entries\")"
-    },
-    {
-      "type": "prose",
-      "text": "Output of the run: $\\vert0\\rangle\\otimes\\vert1\\rangle$ is the basis vector at index 1 (binary 01). $X$ on qubit 1 sends $\\vert00\\rangle$ to index 2 ($\\vert10\\rangle$); $X$ on qubit 2 sends it to index 1 ($\\vert01\\rangle$). The amplitude matrix of a product state has rank 1 and that of the Bell state rank 2. The table shows 32 amplitudes and 1024 density-matrix entries at 5 qubits, and about $10^{12}$ entries at 20."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Where QRC uses this"
+      "text": "The state is then called a product state. If the difference is not zero, no choice of $\\vert a\\rangle$ and $\\vert b\\rangle$ can produce it, and the state is called entangled: the pair has a state, but the parts do not. The next page, Entanglement and Reduced States (#/quantum/many-body/entanglement), proves the test works both ways and uses it. For now we use it to check examples."
     },
     {
       "type": "list",
       "items": [
-        "Every reservoir sample builds its operators with Kronecker products, qubit 1 leftmost: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
-        "The Pauli-string basis is the reservoir's coordinate system: Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
-        "The cost of exact classical simulation grows as $4^n$ memory and $8^n$ time per step: Resource Accounting (#/qrc/hardware/resource-accounting)."
+        "The state $(0.48, -0.36, 0.64, -0.48)$ from the worked example: $0.48\\times(-0.48) - (-0.36)\\times0.64 = -0.2304 + 0.2304 = 0$. It is a product, as we built it to be.",
+        "The state $\\vert\\Phi^+\\rangle = \\tfrac{1}{\\sqrt2}(1, 0, 0, 1)$: $\\tfrac12(1\\cdot1 - 0\\cdot0) = \\tfrac12 \\ne 0$. Not a product, so entangled.",
+        "The state $\\tfrac12(1, 1, 1, -1)$: $\\tfrac14(1\\cdot(-1) - 1\\cdot1) = -\\tfrac12 \\ne 0$. Entangled, even though no amplitude is zero. Zeros in the list are not what makes a state entangled."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "Most states of two qubits are entangled. The product states are a thin subset, in the way that points on a line are a thin subset of the plane. A state picked at random has $c_{00}c_{11} - c_{01}c_{10} \\ne 0$ with certainty."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: product or not",
+      "text": "Is the state with amplitudes proportional to $(1, 2, 1.5, 3)$, that is $\\vert00\\rangle + 2\\vert01\\rangle + 1.5\\vert10\\rangle + 3\\vert11\\rangle$ before normalising, a product state?",
+      "hint": "Multiply along each diagonal and compare.",
+      "solution": [
+        "Compute $c_{00}c_{11} = 1\\times3 = 3$ and $c_{01}c_{10} = 2\\times1.5 = 3$.",
+        "The difference is zero, so it passes. (Scaling every amplitude by the same factor to normalise it multiplies both products by the same number and does not change the answer.)",
+        "Indeed the rows $(1, 2)$ and $(1.5, 3)$ are proportional, with ratio 1.5."
+      ],
+      "answer": "Yes: 1×3 = 2×1.5"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Operators on one qubit of many"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A measurement or gate often touches only one qubit: 'flip qubit 2', 'measure $Z$ on qubit 1'. But the state vector has four entries now, so the $2\\times2$ matrix $Z$ is the wrong size. We need to turn a one-qubit operator into a four-by-four matrix that acts on the pair and leaves the other qubit alone."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "'Act with $A$ on qubit 1 and do nothing to qubit 2' is written $A\\otimes I$, where $I$ is the $2\\times2$ identity. The rule for a product state is that each operator acts on its own factor:"
+    },
+    {
+      "type": "math",
+      "tex": "(A\\otimes B)\\,(\\vert a\\rangle\\otimes\\vert b\\rangle) = (A\\vert a\\rangle)\\otimes(B\\vert b\\rangle).",
+      "caption": "A tensor-product operator acts on each qubit separately."
+    },
+    {
+      "type": "prose",
+      "text": "Since the basis states are products, this rule fixes what $A\\otimes B$ does to every basis state, and so fixes its matrix. The recipe: the matrix entry linking row $(i,j)$ and column $(k,l)$ is $A_{ik}B_{jl}$. In words: the matrix is made of four blocks, one for each entry of $A$, and the block for entry $A_{ik}$ is $A_{ik}$ times the whole matrix $B$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: Z on qubit 1, then on qubit 2"
+    },
+    {
+      "type": "prose",
+      "text": "The matrix $Z$ has rows $(1, 0)$ and $(0, -1)$ and gives $+1$ for $\\vert0\\rangle$ and $-1$ for $\\vert1\\rangle$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $Z\\otimes I$: the action on basis states is $\\vert ij\\rangle \\to (Z\\vert i\\rangle)\\otimes\\vert j\\rangle = (-1)^i\\vert ij\\rangle$. So it multiplies $\\vert00\\rangle$ and $\\vert01\\rangle$ by $+1$ and $\\vert10\\rangle$ and $\\vert11\\rangle$ by $-1$.",
+        "Step 2. As a matrix this is diagonal with entries $(1, 1, -1, -1)$. Row 1: $(1,0,0,0)$; row 2: $(0,1,0,0)$; row 3: $(0,0,-1,0)$; row 4: $(0,0,0,-1)$.",
+        "Step 3. $I\\otimes Z$ gives $(-1)^j$ instead, so it is diagonal with entries $(1, -1, 1, -1)$: the sign follows qubit 2's bit.",
+        "Step 4. Apply both to the state $(0.48, -0.36, 0.64, -0.48)$. $Z\\otimes I$ gives $(0.48, -0.36, -0.64, 0.48)$. The average of $Z$ on qubit 1 is the state's inner product with that: $0.2304 + 0.1296 - 0.4096 - 0.2304 = -0.28$.",
+        "Step 5. Check against single-qubit numbers: for $\\vert a\\rangle$ the average of $Z$ is $0.36 - 0.64 = -0.28$. The same. Similarly $I\\otimes Z$ gives $+0.28$, which is $0.64 - 0.36$ for $\\vert b\\rangle$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A coupling between two qubits is a product of two such operators. $Z\\otimes Z$ is diagonal with entries $(1, -1, -1, 1)$: $+1$ when the two bits agree, $-1$ when they differ. For our product state its average is $0.2304 - 0.1296 - 0.4096 + 0.2304 = -0.0784$, and indeed $(-0.28)\\times(+0.28) = -0.0784$. For a product state the average of a product operator is the product of the averages. For an entangled state it is not, and that is one way correlations show up: $\\langle Z\\otimes Z\\rangle = 1$ in $\\vert\\Phi^+\\rangle$ while $\\langle Z\\otimes I\\rangle = 0$ and $\\langle I\\otimes Z\\rangle = 0$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "An operator that moves amplitudes"
+    },
+    {
+      "type": "prose",
+      "text": "Take $X$, which swaps $\\vert0\\rangle$ and $\\vert1\\rangle$. $X\\otimes I$ sends $\\vert ij\\rangle$ to $\\vert\\bar i j\\rangle$ with the first bit flipped, so it swaps positions 0 and 2 and positions 1 and 3. Its rows are $(0,0,1,0)$, $(0,0,0,1)$, $(1,0,0,0)$, $(0,1,0,0)$. Applied to our state it gives $(0.64, -0.48, 0.48, -0.36)$: the two halves of the vector swapped. $I\\otimes X$ instead swaps positions 0 and 1, and 2 and 3. The figure above shows this: the left factor sits in the slow, high bit, so acting on it moves entries a long way along the list."
+    },
+    {
+      "type": "prose",
+      "text": "Operators on different qubits commute: $(A\\otimes I)(I\\otimes B) = A\\otimes B = (I\\otimes B)(A\\otimes I)$. Two operators on the same qubit generally do not: $X$ and $Z$ on qubit 1 anticommute, exactly as for one qubit."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Many qubits"
+    },
+    {
+      "type": "prose",
+      "text": "With $n$ qubits, an operator $A$ acting on qubit $i$ alone is $I\\otimes\\cdots\\otimes A\\otimes\\cdots\\otimes I$ with $A$ in slot $i$ and identities elsewhere, a $2^n\\times2^n$ matrix. We write $A_i$ for it, so $X_1Z_3$ means $X\\otimes I\\otimes Z$ on three qubits. A tensor product of one Pauli (or $I$) per qubit is called a Pauli string, and Pauli strings are the building blocks of the Hamiltonians on Spin Models (#/quantum/many-body/spin-models). The sample code builds these with a helper op(A, i, n)."
+    },
+    {
+      "type": "callout",
+      "text": "Do not write the matrix of $Z\\otimes I$ as $Z$ with an $I$ next to it, or multiply $2\\times2$ matrices into a $4\\times4$ by adding rows. The tensor product of matrices is the block rule above. Also note $Z\\otimes I$ is not the same as $I\\otimes Z$ as matrices, even though both are 'a $Z$ on one qubit'."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: an operator on both qubits",
+      "text": "Write the matrix of $X\\otimes Z$ by the block rule, and say what it does to $\\vert00\\rangle$.",
+      "hint": "Each entry of $X$ becomes a $2\\times2$ block equal to that entry times $Z$.",
+      "solution": [
+        "$X = $ rows $(0,1)$ and $(1,0)$. The block for $X_{01} = 1$ is the top-right and the block for $X_{10}=1$ is the bottom-left; the diagonal blocks are zero. Each non-zero block is $1\\times Z$.",
+        "Top-right block (rows 0-1, columns 2-3) is $Z$ = rows $(1,0)$, $(0,-1)$; bottom-left block (rows 2-3, columns 0-1) is the same.",
+        "Rows: $(0,0,1,0)$, $(0,0,0,-1)$, $(1,0,0,0)$, $(0,-1,0,0)$.",
+        "On $\\vert00\\rangle$ = $(1,0,0,0)$ the result is $(0,0,1,0) = \\vert10\\rangle$: $X$ flips qubit 1 and $Z$ on $\\vert0\\rangle$ gives $+1$."
+      ],
+      "answer": "rows (0,0,1,0), (0,0,0,-1), (1,0,0,0), (0,-1,0,0); sends |00> to |10>"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How fast the state space grows"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Each added qubit doubles the number of joint outcomes. How big does that get, and what does it mean for simulating a quantum computer or a quantum reservoir on a normal computer?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Counting"
+    },
+    {
+      "type": "prose",
+      "text": "For $n$ qubits there are $2^n$ outcomes (each qubit independently contributes a factor of 2) and so $2^n$ amplitudes:"
+    },
+    {
+      "type": "math",
+      "tex": "\\dim = 2^n, \\qquad \\text{state: } 2^n \\text{ complex numbers}, \\qquad \\text{operator: } 2^n\\times2^n = 4^n \\text{ entries}.",
+      "caption": "Dimension counts for n qubits."
+    },
+    {
+      "type": "prose",
+      "text": "A product state needs only the $n$ single-qubit pairs: $2n$ complex numbers (fewer if you drop normalisation and global phase). The gap between $2n$ and $2^n$ is the room that entangled states occupy. The sample code prints the table at the end of the page. At 10 qubits, 1024 amplitudes. At 20, a bit over a million, about 17 megabytes in double-precision complex numbers (16 bytes each). At 30, about a billion, about 17 gigabytes, the memory of a good laptop. At 40, 17.6 terabytes. At 50, 18 petabytes, more than any single machine has. Each step of 10 qubits multiplies the cost by about a thousand."
+    },
+    {
+      "type": "prose",
+      "text": "Operators are worse. A full operator on $n$ qubits has $4^n$ entries, so a $30$-qubit operator written as a matrix has about $10^{18}$ entries. Practical simulations therefore never store such matrices in full: they use the structure (a sum of a few Pauli strings, each cheap to apply)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What this does and does not mean"
+    },
+    {
+      "type": "prose",
+      "text": "The growth is the headline reason quantum computers and quantum reservoirs are interesting: a 50-qubit device carries a state no classical memory can hold. But it is easy to over-read. You never get to see the amplitudes. A measurement returns one of $2^n$ bit strings, and the state is only learned through averages such as $\\langle Z_i\\rangle$ or $\\langle Z_iZ_j\\rangle$, each estimated from many shots (Measurement and the Born Rule (#/quantum/foundations/measurement)). Only a polynomial number of such averages is ever read out. How much of the large state's power survives that bottleneck is the subject of the QRC page Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: memory",
+      "text": "How many amplitudes and how much memory (16 bytes each) does a 12-qubit state need?",
+      "hint": "Doubling 12 times: $2^{10} = 1024$, then times 4.",
+      "solution": [
+        "$2^{12} = 4096$ amplitudes.",
+        "$4096\\times16 = 65{,}536$ bytes, about 66 kilobytes. Tiny: 12 qubits are easy to simulate exactly."
+      ],
+      "answer": "4096 amplitudes, 65,536 bytes (64 KiB)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Computing all of this"
+    },
+    {
+      "type": "prose",
+      "text": "The sample reproduces the numbers above: the entry-by-entry product against np.kron, basis positions, the one-qubit operators and the three-qubit helper, and the growth table. The operators are built as full matrices, which is fine for a handful of qubits."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nnp.set_printoptions(precision=4, suppress=True)\n# --- tensor product entry by entry\na = np.array([0.6, 0.8]); b = np.array([0.8, -0.6])\nby_hand = np.array([a[i] * b[j] for i in range(2) for j in range(2)])\nprint(\"a (x) b by hand :\", by_hand)\nprint(\"np.kron(a, b)   :\", np.kron(a, b))\nprint(\"np.kron(b, a)   :\", np.kron(b, a), \" <- order matters\")\n# --- basis order: index = binary number b1 b2 ... bn\ndef index(bits): return int(\"\".join(map(str, bits)), 2)\nprint(\"index of |01> =\", index([0, 1]), \"  |10> =\", index([1, 0]), \"  |101> =\", index([1, 0, 1]))\n# --- operators on one qubit of two\nI2 = np.eye(2); X = np.array([[0., 1], [1, 0]]); Z = np.diag([1., -1])\npsi = np.kron(a, b)\nfor name, op in [(\"Z(x)I\", np.kron(Z, I2)), (\"I(x)Z\", np.kron(I2, Z)), (\"Z(x)Z\", np.kron(Z, Z)), (\"X(x)I\", np.kron(X, I2))]:\n    print(f\"{name}: rows {np.round(op, 0).astype(int).tolist()}\")\n    print(f\"   <psi|{name}|psi> = {psi @ op @ psi:+.4f}\")\nprint(\"<Z>_a * <Z>_b =\", round((a @ Z @ a) * (b @ Z @ b), 4), \"  = <Z(x)Z> for a product state\")\n# --- helper for n qubits: A on qubit i (counting from 1) of n\ndef op(A, i, n):\n    out = np.eye(1)\n    for k in range(1, n + 1):\n        out = np.kron(out, A if k == i else I2)\n    return out\nplus = np.array([1, 1]) / np.sqrt(2); zero = np.array([1., 0]); one = np.array([0., 1])\npsi3 = np.kron(np.kron(plus, zero), one)\nprint(\"|+>|0>|1> nonzero at indices\", np.nonzero(psi3)[0].tolist(), \"value\", psi3[psi3 != 0].round(4).tolist())\nflipped = op(X, 2, 3) @ psi3\nprint(\"after X on qubit 2, nonzero at\", np.nonzero(flipped)[0].tolist())\nprint(\"<Z1 Z3> =\", round(psi3 @ op(Z, 1, 3) @ op(Z, 3, 3) @ psi3, 4), \"  <Z3> =\", round(psi3 @ op(Z, 3, 3) @ psi3, 4))\nprint(\"X1 Z2 = Z2 X1:\", np.allclose(op(X, 1, 3) @ op(Z, 2, 3), op(Z, 2, 3) @ op(X, 1, 3)))\n# --- growth\nprint(\"  n   amplitudes         memory (complex128, 16 bytes each)\")\nfor n in (1, 2, 3, 10, 20, 30, 40, 50):\n    byt = 16 * 2 ** n\n    unit, v = \"B\", float(byt)\n    for u in (\"KB\", \"MB\", \"GB\", \"TB\", \"PB\"):\n        if v >= 1000: v /= 1000; unit = u\n    print(f\"{n:3d}  {2**n:>18,d}   {v:8.1f} {unit}\")\nprint(\"a product of n qubits needs 2n complex numbers: n=30 ->\", 60, \"vs\", 2 ** 30)\n"
+    },
+    {
+      "type": "prose",
+      "text": "What the run prints: both ways of building the product give $(0.48, -0.36, 0.64, -0.48)$, and swapping the arguments gives $(0.48, 0.64, -0.36, -0.48)$. The positions are $\\vert01\\rangle \\to 1$, $\\vert10\\rangle \\to 2$, $\\vert101\\rangle \\to 5$. The averages are $-0.28$ for $Z\\otimes I$, $+0.28$ for $I\\otimes Z$, $-0.0784$ for $Z\\otimes Z$ (the product of the first two) and $0.96$ for $X\\otimes I$ (which equals $2\\times0.6\\times0.8$, the $X$ average of $\\vert a\\rangle$). The three-qubit state $\\vert+\\rangle\\vert0\\rangle\\vert1\\rangle$ has two non-zero entries, both $0.7071$, at positions 1 and 5; after $X$ on qubit 2 they are at positions 3 and 7; $\\langle Z_1Z_3\\rangle = 0$ while $\\langle Z_3\\rangle = -1$; and $X_1$ commutes with $Z_2$. The growth table runs from 2 amplitudes at 1 qubit to $1.126\\times10^{15}$ at 50 qubits, which needs 18.0 petabytes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Three qubits start in $\\vert\\psi\\rangle = \\vert+\\rangle\\otimes\\vert0\\rangle\\otimes\\vert1\\rangle$. Find where its amplitudes sit, apply $X$ to qubit 2, and find the average of $Z_1Z_3$ both from the vector and from a product-state shortcut."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Expand $\\vert+\\rangle\\vert0\\rangle\\vert1\\rangle = \\tfrac{1}{\\sqrt2}(\\vert0\\rangle + \\vert1\\rangle)\\vert0\\rangle\\vert1\\rangle = \\tfrac{1}{\\sqrt2}(\\vert001\\rangle + \\vert101\\rangle)$.",
+        "Step 2. Positions: $001_2 = 1$ and $101_2 = 5$. The vector has $0.7071$ at positions 1 and 5 and zeros at the other six.",
+        "Step 3. $X_2$ flips the middle bit: $\\vert001\\rangle\\to\\vert011\\rangle$ (position 3) and $\\vert101\\rangle\\to\\vert111\\rangle$ (position 7). The state is now $\\vert+\\rangle\\vert1\\rangle\\vert1\\rangle$.",
+        "Step 4. $Z_1Z_3$ multiplies each basis state by $(-1)^{b_1 + b_3}$. On the original state: $\\vert001\\rangle$ has $b_1 = 0, b_3 = 1$, sign $-1$; $\\vert101\\rangle$ has $b_1 = 1, b_3 = 1$, sign $+1$.",
+        "Step 5. The average is $\\tfrac12(-1) + \\tfrac12(+1) = 0$.",
+        "Step 6. Shortcut for a product state: $\\langle Z_1Z_3\\rangle = \\langle Z\\rangle_{+}\\langle Z\\rangle_{1} = 0\\times(-1) = 0$. The two methods agree. The step-3 state gives the same average, since $X_2$ commutes with $Z_1Z_3$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Two qubits have four amplitudes $c_{ij}$ and $n$ qubits have $2^n$: one amplitude per joint outcome, with $\\vert c_{ij}\\vert^2$ the probability of that outcome.",
+        "Single-qubit statistics do not determine the joint state: $\\vert\\Phi^+\\rangle$ and $\\vert{+}{+}\\rangle$ look the same one qubit at a time and differ as a pair.",
+        "The tensor product multiplies amplitudes: $(a\\otimes b)_{ij} = a_ib_j$, computed by np.kron. The order of factors matters.",
+        "Basis order: the label read as binary is the position in the vector; qubit 1 is the leftmost, most significant bit.",
+        "An operator on one qubit of many is $A$ in its slot with $I$ everywhere else. Operators on different qubits commute.",
+        "A product state has $c_{00}c_{11} = c_{01}c_{10}$. Failing it means entangled; most states fail it.",
+        "The dimension $2^n$ is huge, but you read it out only through a modest number of measured averages."
       ]
     },
     {
@@ -73,32 +440,77 @@
     },
     {
       "type": "problem",
-      "title": "Index of a basis state",
-      "text": "At which index (counting from 0) is $\\vert1\\rangle\\otimes\\vert0\\rangle\\otimes\\vert1\\rangle$ in the 8-dimensional vector of three qubits?",
+      "title": "Positions in the vector",
+      "text": "(a) At which position (counting from 0) is $\\vert0110\\rangle$ in the 16-entry vector of four qubits? (b) Which basis state is at position 11?",
+      "hint": "Position = binary number from the bits, qubit 1 first.",
       "solution": [
-        "Read the bits as a binary number with qubit 1 first: $101_2 = 5$."
+        "(a) Read the bits as binary: $0110_2 = 4 + 2 = 6$.",
+        "(b) Write 11 in binary: $11 = 8 + 2 + 1 = 1011_2$, so the state is $\\vert1011\\rangle$."
       ],
-      "answer": "5"
+      "answer": "(a) 6; (b) |1011>"
     },
     {
       "type": "problem",
-      "title": "Product or entangled",
-      "text": "Is $\\tfrac12(\\vert00\\rangle + \\vert01\\rangle + \\vert10\\rangle + \\vert11\\rangle)$ a product state? If so, of what?",
+      "title": "Build and test a product",
+      "text": "Qubit 1 is in $\\tfrac{1}{\\sqrt5}(1, 2)$ and qubit 2 in $\\tfrac{1}{\\sqrt{10}}(1, 3)$. Write the pair's four amplitudes and verify the product test.",
+      "hint": "Multiply each entry of the first vector by the whole second vector.",
       "solution": [
-        "All four amplitudes are $\\tfrac12$, so the amplitude matrix has two equal rows: rank 1, a product.",
-        "It is $\\vert+\\rangle\\otimes\\vert+\\rangle$: expand $\\tfrac12(\\vert0\\rangle + \\vert1\\rangle)(\\vert0\\rangle + \\vert1\\rangle)$."
+        "Scale: $\\tfrac{1}{\\sqrt5}\\cdot\\tfrac{1}{\\sqrt{10}} = \\tfrac{1}{\\sqrt{50}} = 0.1414$.",
+        "Entries before scaling: $1\\times(1, 3) = (1, 3)$ and $2\\times(1, 3) = (2, 6)$, so the vector is $\\tfrac{1}{\\sqrt{50}}(1, 3, 2, 6)$.",
+        "Normalisation: $1 + 9 + 4 + 36 = 50$, so the length is 1.",
+        "Test: $c_{00}c_{11} - c_{01}c_{10} \\propto 1\\times6 - 3\\times2 = 0$."
       ],
-      "answer": "Yes: |+⟩⊗|+⟩"
+      "answer": "(1, 3, 2, 6)/sqrt(50); the test gives 0"
     },
     {
       "type": "problem",
-      "title": "Counting operators",
-      "text": "How many Pauli strings act on 3 qubits, and how many of them are diagonal in the computational basis?",
+      "title": "Averages of one-qubit operators",
+      "text": "For $\\vert\\psi\\rangle = \\vert{+}\\rangle\\otimes\\vert0\\rangle$, compute $\\langle X\\otimes I\\rangle$, $\\langle I\\otimes Z\\rangle$ and $\\langle X\\otimes Z\\rangle$.",
+      "hint": "Averages of product operators on a product state multiply.",
       "solution": [
-        "Each qubit carries one of $I, X, Y, Z$: $4^3 = 64$ strings.",
-        "Diagonal ones use only $I$ and $Z$: $2^3 = 8$, including the identity."
+        "For a product state, averages of product operators multiply.",
+        "$\\langle X\\rangle_+ = 1$ and $\\langle Z\\rangle_0 = 1$, $\\langle Z\\rangle_+ = 0$, $\\langle X\\rangle_0 = 0$.",
+        "$\\langle X\\otimes I\\rangle = \\langle X\\rangle_+ = 1$; $\\langle I\\otimes Z\\rangle = \\langle Z\\rangle_0 = 1$; $\\langle X\\otimes Z\\rangle = 1\\times1 = 1$.",
+        "Check the last by hand: $\\vert{+}0\\rangle = \\tfrac{1}{\\sqrt2}(\\vert00\\rangle + \\vert10\\rangle)$, and $X\\otimes Z$ sends it to $\\tfrac{1}{\\sqrt2}(\\vert10\\rangle + \\vert00\\rangle)$, which is itself, eigenvalue $+1$."
       ],
-      "answer": "64; 8 diagonal"
+      "answer": "1, 1, 1"
+    },
+    {
+      "type": "problem",
+      "title": "Memory for 40 qubits",
+      "text": "A classical computer stores a 40-qubit state as complex numbers of 16 bytes each. How much memory, and how much if a 41st qubit is added?",
+      "hint": "$2^{10}\\approx1000$, so $2^{40}\\approx10^{12}$.",
+      "solution": [
+        "$2^{40} = 1{,}099{,}511{,}627{,}776$ amplitudes.",
+        "Times 16 bytes: $1.759\\times10^{13}$ bytes, 17.6 terabytes.",
+        "One more qubit doubles it: 35.2 terabytes."
+      ],
+      "answer": "17.6 TB; 35.2 TB"
+    },
+    {
+      "type": "problem",
+      "title": "Counting Pauli strings",
+      "text": "How many Pauli strings are there on 4 qubits, and how many are diagonal in the computational basis (using only $I$ and $Z$)?",
+      "hint": "Choose a symbol independently for each qubit.",
+      "solution": [
+        "Each qubit carries one of $I, X, Y, Z$, so $4^4 = 256$ strings.",
+        "Diagonal strings use $I$ or $Z$ on each qubit: $2^4 = 16$."
+      ],
+      "answer": "256; 16"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Next, Entanglement and Reduced States (#/quantum/many-body/entanglement) studies the states that fail the product test, and The Partial Trace and Reduced States (#/quantum/many-body/partial-trace) shows what you can still say about one qubit of an entangled pair.",
+        "Every reservoir sample builds its operators with Kronecker products, qubit 1 leftmost: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "The Pauli-string basis is the reservoir's coordinate system: Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "Exact classical simulation of a noisy reservoir stores its density matrix (a $2^n\\times2^n$ matrix, Mixed States (#/quantum/many-body/mixed-states)), which needs $4^n$ numbers of memory, and one step of multiplying it by full $2^n\\times2^n$ matrices costs about $8^n$ operations: Resource Accounting (#/qrc/hardware/resource-accounting)."
+      ]
     },
     {
       "type": "heading",
@@ -109,7 +521,8 @@
       "type": "list",
       "items": [
         "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010), section 2.1.7",
-        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 2"
+        "J. Preskill, Lecture Notes for Physics 219: Quantum Information and Computation, Caltech (online), chapter 2",
+        "N. D. Mermin, Quantum Computer Science: An Introduction, Cambridge University Press (2007), chapter 1"
       ]
     }
   ]
