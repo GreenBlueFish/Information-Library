@@ -160,7 +160,7 @@ export function walkSteps(sig, omegaDeg, mode = "decibels") {
     },
     {
       title: "Region of convergence",
-      text: `The sum only converges for ${sig.rocText}: that is the region of convergence (ROC), shaded in the z-plane panel and drawn solid on the surface. ${rocWhy} The ROC never contains a pole, and the formula alone does not say which signal you have: the right-sided and left-sided exponentials share X(z) = z/(z − r) and differ only in their ROC.`,
+      text: `${sig.roc.empty ? `There is no region of convergence: ${sig.rocText}.` : `The sum only converges for ${sig.rocText}: that is the region of convergence (ROC), shaded in the z-plane panel and drawn solid on the surface.`} ${rocWhy} The ROC never contains a pole, and the formula alone does not say which signal you have: the right-sided and left-sided exponentials share X(z) = z/(z − r) and differ only in their ROC.`,
     },
     {
       title: "The unit circle",
@@ -458,7 +458,8 @@ function mountZSurface(ctx) {
     readout.textContent =
       `${sig.formula}; ROC: ${sig.rocText}. At ω = ${Number(s.omega)}°: X(e^(jω)) = ${Number.isFinite(val[0]) ? cfmt(val, 3) : "∞"}, |X| = ${fmt(m, 3)}` +
       `${m > 0 && Number.isFinite(m) ? ` (${fmt(20 * Math.log10(m), 1)} dB)` : ""}.` +
-      (unused.length ? ` This signal ignores ${unused.map((k) => (k === "r" ? "r" : "θ")).join(" and ")}.` : "");
+      (unused.length ? ` This signal ignores ${unused.map((k) => (k === "r" ? "r" : "θ")).join(" and ")}.` : "") +
+      (sig.note ? ` ${sig.note}` : "");
   }
 
   redraw();

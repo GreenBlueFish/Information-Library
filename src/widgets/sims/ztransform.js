@@ -110,8 +110,9 @@ function buildSignal(name, r, thetaDeg) {
       return { ...base, uses: ["r"], rightSided: false, x: (n) => r ** Math.abs(n),
         zeros: [[0, 0]], poles: [[r, 0], [1 / r, 0]], gain: -(1 - r * r) / r, roc: roc(r, 1 / r),
         sequence: `x[n] = ${f2(r)}^|n| for every n`,
-        formula: `X(z) = (1 − ${f2(r * r)}) z / ((z − ${f2(r)})(1 − ${f2(r)}z))`,
-        rocText: r < 1 ? `${f2(r)} < |z| < ${f2(1 / r)}` : "none: with r ≥ 1 one of the two halves always blows up" };
+        formula: `X(z) = (1 − ${f2(r * r)})z / ((z − ${f2(r)})(1 − ${f2(r)}z)) = ${f2(-(1 - r * r) / r)}·z / ((z − ${f2(r)})(z − ${f2(1 / r)}))`,
+        rocText: r < 1 ? `${f2(r)} < |z| < ${f2(1 / r)}` : "no z at all: with r ≥ 1 the samples do not decay in either direction",
+        note: r >= 1 ? `With r ≥ 1 this transform does not exist; the faded surface is only the formula${Math.abs(r - 1) < 1e-9 ? ", whose constant is 0 at r = 1, so it lies flat on the floor" : ""}.` : "" };
     case "ramped exponential n·rⁿu[n]":
       return { ...base, uses: ["r"], x: (n) => (n >= 0 ? n * r ** n : 0), zeros: [[0, 0]], poles: [[r, 0], [r, 0]], gain: r,
         roc: roc(r, Infinity), sequence: `x[n] = n·${f2(r)}ⁿ for n ≥ 0`,
@@ -119,11 +120,13 @@ function buildSignal(name, r, thetaDeg) {
     case "damped cosine rⁿcos(θn)u[n]":
       return { ...base, uses: ["r", "theta"], x: (n) => (n >= 0 ? r ** n * Math.cos(th * n) : 0),
         zeros: [[0, 0], [r * ct, 0]], poles: [p, pc], gain: 1, roc: roc(r, Infinity),
+        note: Math.abs(st) < 1e-9 ? `At θ = ${thetaDeg}° the zero at ${f2(r * ct)} cancels one of the two poles there, and the signal is just (${f2(r * ct)})ⁿu[n].` : "",
         sequence: `x[n] = ${f2(r)}ⁿ·cos(${thetaDeg}°·n) for n ≥ 0`,
         formula: `X(z) = z(z ${minus(r * ct)}) / (z² ${minus(2 * r * ct)}z ${plus(r * r)})`, rocText: `|z| > ${f2(r)}` };
     case "damped sine rⁿsin(θn)u[n]":
       return { ...base, uses: ["r", "theta"], x: (n) => (n >= 0 ? r ** n * Math.sin(th * n) : 0),
-        zeros: [[0, 0]], poles: [p, pc], gain: r * st, roc: roc(r, Infinity),
+        zeros: [[0, 0]], poles: [p, pc], gain: Math.abs(st) < 1e-9 ? 0 : r * st, roc: roc(r, Infinity),
+        note: Math.abs(st) < 1e-9 ? "At θ = 0° or 180° every sample is 0, so X(z) = 0 everywhere; the poles are drawn where they sit for nearby θ." : "",
         sequence: `x[n] = ${f2(r)}ⁿ·sin(${thetaDeg}°·n) for n ≥ 0`,
         formula: `X(z) = ${f2(r * st)}z / (z² ${minus(2 * r * ct)}z ${plus(r * r)})`, rocText: `|z| > ${f2(r)}` };
     case "8-sample pulse u[n]−u[n−8]": {
