@@ -1,24 +1,126 @@
 {
   "title": "Lindblad Dynamics",
-  "intro": "When a reservoir decays, dephases or is pumped continuously, its evolution in time is a Lindblad (GKSL) master equation. Written as a matrix, the Liouvillian's spectrum gives the reservoir's relaxation rates, its steady state and therefore its memory time.",
+  "intro": "When a reservoir decays, dephases or is pumped continuously, its evolution in time is a Lindblad (GKSL) master equation. This page builds that equation from small channels, solves it for one qubit (T1 and T2), writes it as a matrix whose spectrum gives the relaxation rates and the steady state, and turns the gap into a reservoir's memory time.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "The GKSL equation"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "A family of channels $\\mathcal{E}_t = e^{t\\mathcal{L}}$ that forms a semigroup ($\\mathcal{E}_{t+u} = \\mathcal{E}_t\\mathcal{E}_u$, no memory in the environment) has a generator of the form"
+      "text": "The previous page, Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels), introduced density matrices and channels, including amplitude damping and dephasing as maps with a parameter $\\gamma$ or $p$. This page needs those, the Schrödinger equation from The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation), and the idea of an eigenvalue from Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors). The chapter Getting Started (#/qrc/start) gave the reservoir step in discrete time; here we see where the channel of a step comes from when the physics runs continuously."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Write a Lindblad master equation for a qubit or a few qubits and say what each term does.",
+        "Derive the T1 and T2 decay laws from the equation and explain why $T_2\\le2T_1$.",
+        "Build the Liouvillian as a matrix in numpy, find its steady state, and read the relaxation time from its gap.",
+        "Convert a continuous decay rate into the damping parameter of one reservoir step and into a memory length measured in steps.",
+        "Explain what a quantum trajectory is and why its average reproduces the master equation."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From a decay law to a master equation"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The channels of the previous page came with a single number, $\\gamma$ or $p$, that said how much damping happened in one go. In a real device, damping is a process in time: the longer you wait, the more of it there is. We need an equation that says how the state changes in each small instant, and that is guaranteed to give a valid channel at every time. The closed-system version is the Schrödinger equation $\\dot{\\vert\\psi\\rangle}=-iH\\vert\\psi\\rangle$ (units with $\\hbar=1$), or for density matrices $\\dot\\rho=-i[H,\\rho]$. The open-system version has extra terms for what the environment does."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Think of a bucket with a small leak. The water level falls at a rate proportional to how much water is in it, $\\dot h=-h/\\tau$, so the level decays exponentially with a time constant $\\tau$. The leak does not care how long the bucket has been leaking, only how much is in it now: the process has no memory. That 'no memory' property is called the Markov property, and an excited qubit radiating into its surroundings behaves in the same way: in each short interval $dt$ it has a probability $\\gamma\\,dt$ of decaying, whatever happened before. The analogy breaks on one point. A leaking bucket stays a bucket; a qubit decaying also loses its phase information, in a way that is tied to the population loss by the quantum mechanics of the process. The equation below gets both right."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths: a channel for a very short time"
+    },
+    {
+      "type": "prose",
+      "text": "Take a short time $dt$ and ask what Kraus operators describe what happens to the system. Two things can happen: either nothing detectable occurs, and the state evolves under the Hamiltonian with a slight shrinking of the amplitude, or a 'jump' occurs, an abrupt event such as a photon emission. A jump is described by an operator $L$, the jump operator, and occurs with a probability proportional to $dt$. So we choose"
     },
     {
       "type": "math",
-      "tex": "\\mathcal{L}(\\rho) = -i[H,\\rho] + \\sum_j \\gamma_j\\left(L_j\\rho L_j^\\dagger - \\tfrac12 L_j^\\dagger L_j\\rho - \\tfrac12\\rho L_j^\\dagger L_j\\right)",
-      "caption": "Lindblad 1976 and Gorini–Kossakowski–Sudarshan 1976; $\\gamma_j\\ge0$ makes every $e^{t\\mathcal{L}}$ CPTP. Units with $\\hbar=1$."
+      "tex": "K_0=I-\\Big(iH+\\tfrac12\\gamma L^\\dagger L\\Big)dt,\\qquad K_1=\\sqrt{\\gamma\\,dt}\\;L",
+      "caption": "Kraus operators for a short time $dt$: no jump ($K_0$), and a jump ($K_1$). $\\gamma\\ge0$ is the rate."
     },
     {
       "type": "prose",
-      "text": "It is derived from system + bath under the Born (weak coupling), Markov (bath correlation time much shorter than the system's relaxation) and secular (drop fast-rotating terms) approximations. The first term is the coherent part, possibly with a Lamb-shift correction; the jump operators $L_j$ describe what the bath does: $L=\\sigma^-$ for energy loss, $L=Z$ for dephasing, $L=\\sigma^+$ for heating. The anticommutator terms keep the trace fixed: they are the 'no-jump' back-action that a jump that did not happen still has on the state."
+      "text": "Check that this is a valid channel to first order in $dt$. $K_0^\\dagger K_0=I+\\big(iH-iH-\\gamma L^\\dagger L\\big)dt+O(dt^2)=I-\\gamma L^\\dagger L\\,dt$ (the two Hamiltonian terms cancel because $H$ is Hermitian, and the $L^\\dagger L$ terms add). And $K_1^\\dagger K_1=\\gamma\\,dt\\,L^\\dagger L$. The sum is $I$ ✓. The 'no jump' operator carries a piece $-\\tfrac12\\gamma L^\\dagger L\\,dt$ with a precise purpose: it is exactly the shrinkage needed so that the total probability stays 1, and it means that not seeing a jump is itself information, as the trajectory picture below makes concrete."
+    },
+    {
+      "type": "prose",
+      "text": "Now apply the channel to $\\rho$ and keep terms to first order in $dt$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$K_0\\rho K_0^\\dagger=\\rho-i[H,\\rho]\\,dt-\\tfrac12\\gamma\\big(L^\\dagger L\\rho+\\rho L^\\dagger L\\big)dt$, where $[H,\\rho]=H\\rho-\\rho H$ comes from the $-iH\\,dt$ on each side.",
+        "$K_1\\rho K_1^\\dagger=\\gamma\\,dt\\,L\\rho L^\\dagger$.",
+        "Add them and move $\\rho$ to the left: $\\dfrac{\\rho(t+dt)-\\rho(t)}{dt}=-i[H,\\rho]+\\gamma\\Big(L\\rho L^\\dagger-\\tfrac12L^\\dagger L\\rho-\\tfrac12\\rho L^\\dagger L\\Big)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "With several channels of loss, each with its own $L_j$ and rate $\\gamma_j$, the terms add. The result is the master equation of Gorini, Kossakowski, Sudarshan and Lindblad (GKSL, or just Lindblad):"
+    },
+    {
+      "type": "math",
+      "tex": "\\dot\\rho=\\mathcal L(\\rho)=-i[H,\\rho]+\\sum_j\\gamma_j\\Big(L_j\\rho L_j^\\dagger-\\tfrac12L_j^\\dagger L_j\\rho-\\tfrac12\\rho L_j^\\dagger L_j\\Big)",
+      "caption": "The Lindblad equation. The first term is the unitary part. Each $j$ is a dissipator, one kind of environment action. $\\mathcal L$ is called the Lindbladian or Liouvillian."
+    },
+    {
+      "type": "prose",
+      "text": "Doing $N$ short steps of length $dt=t/N$ in a row gives $(1+\\mathcal L\\,dt)^N\\to e^{t\\mathcal L}$ as $N\\to\\infty$, so the solution is $\\rho(t)=e^{t\\mathcal L}\\rho(0)$. The family $\\mathcal E_t=e^{t\\mathcal L}$ has the semigroup property $\\mathcal E_{t+u}=\\mathcal E_t\\mathcal E_u$ (a process without memory), and the theorem of Lindblad and of Gorini–Kossakowski–Sudarshan says the converse: any semigroup of channels has a generator of exactly this form, with $\\gamma_j\\ge0$. The condition $\\gamma_j\\ge0$ is what makes every $e^{t\\mathcal L}$ completely positive."
+    },
+    {
+      "type": "prose",
+      "text": "The equation is derived for a system weakly coupled to a large bath under three approximations. The Born approximation: the coupling is weak, so the bath is not changed by the system. The Markov approximation: the bath forgets any disturbance much faster than the system changes, so there is no memory. The secular approximation: terms that rotate fast compared with the relaxation are dropped. Where they fail (strongly coupled or structured environments) the evolution is not a semigroup and the equation is not valid. A common mistake is to write $-\\tfrac12\\{L^\\dagger L,\\rho\\}$ as a free choice: it is not; without it the trace is not conserved, since $\\operatorname{Tr}(L\\rho L^\\dagger)=\\operatorname{Tr}(L^\\dagger L\\rho)$ and the three dissipator terms cancel exactly in the trace."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The common jump operators"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Energy loss ($T_1$ decay): $L=\\sigma^-=\\vert0\\rangle\\langle1\\vert$ at rate $\\gamma_1$. Takes the excited state $\\vert1\\rangle$ to $\\vert0\\rangle$. (The convention here: $\\vert0\\rangle$ is the ground state, $Z=+1$.)",
+        "Pure dephasing: $L=Z$ at rate $\\gamma_\\varphi/2$. Does not change populations; the dissipator reduces to $Z\\rho Z-\\rho$.",
+        "Heating (absorption): $L=\\sigma^+=\\vert1\\rangle\\langle0\\vert$ at rate $\\gamma_\\uparrow$.",
+        "Depolarising: all three of $X,Y,Z$ at equal rates."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: trace of the dissipator",
+      "text": "Show that $\\operatorname{Tr}\\mathcal L(\\rho)=0$ for every $\\rho$, which is why the trace stays 1.",
+      "hint": "Use $\\operatorname{Tr}(AB)=\\operatorname{Tr}(BA)$ on each term.",
+      "solution": [
+        "$\\operatorname{Tr}[H,\\rho]=\\operatorname{Tr}(H\\rho)-\\operatorname{Tr}(\\rho H)=0$ by cyclicity.",
+        "$\\operatorname{Tr}(L\\rho L^\\dagger)=\\operatorname{Tr}(L^\\dagger L\\rho)$ by cyclicity.",
+        "$\\operatorname{Tr}(L^\\dagger L\\rho)$ and $\\operatorname{Tr}(\\rho L^\\dagger L)$ are equal, so the three terms give $1-\\tfrac12-\\tfrac12=0$."
+      ],
+      "answer": "The three dissipator terms contribute $+\\operatorname{Tr}(L^\\dagger L\\rho)-\\tfrac12\\operatorname{Tr}(L^\\dagger L\\rho)-\\tfrac12\\operatorname{Tr}(L^\\dagger L\\rho)=0$; the commutator has zero trace"
     },
     {
       "type": "heading",
@@ -26,17 +128,53 @@
       "text": "One qubit: T1 and T2"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "The equations of motion"
+    },
+    {
       "type": "prose",
-      "text": "With $L_1 = \\sigma^- = \\vert0\\rangle\\langle1\\vert$ at rate $\\gamma_1 = 1/T_1$ and $L_2 = Z$ at rate $\\gamma_\\varphi/2$ with $\\gamma_\\varphi = 1/T_\\varphi$ (a $Z$ dissipator at rate $\\gamma$ damps coherences at $2\\gamma$), the solution is"
+      "text": "Write $\\rho$ with entries $\\rho_{00},\\rho_{01},\\rho_{10},\\rho_{11}$, take $H=\\tfrac\\omega2Z$ (a qubit with energy splitting $\\omega$), and use the two dissipators: $L_1=\\sigma^-$ at rate $\\gamma_1=1/T_1$ and $L_2=Z$ at rate $\\gamma_\\varphi/2$. We need each dissipator's action on the entries."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Hamiltonian part. $-i[H,\\rho]$ with $H=\\tfrac\\omega2Z$: the entry $(j,k)$ of $H\\rho-\\rho H$ is $(h_j-h_k)\\rho_{jk}$ with $h_0=\\omega/2$, $h_1=-\\omega/2$. So populations are unchanged and $\\dot\\rho_{01}=-i\\omega\\rho_{01}$: the coherence rotates at frequency $\\omega$ (its modulus stays).",
+        "Relaxation $\\sigma^-$. Here $\\sigma^-\\rho\\sigma^+=\\rho_{11}\\vert0\\rangle\\langle0\\vert$ and $\\sigma^+\\sigma^-=\\vert1\\rangle\\langle1\\vert$. The term $-\\tfrac12\\{\\vert1\\rangle\\langle1\\vert,\\rho\\}$ has entries $(1,1)$: $-\\rho_{11}$; $(0,1)$ and $(1,0)$: $-\\tfrac12\\rho_{01}$, $-\\tfrac12\\rho_{10}$; $(0,0)$: 0. Total: $\\dot\\rho_{00}=+\\gamma_1\\rho_{11}$, $\\dot\\rho_{11}=-\\gamma_1\\rho_{11}$, $\\dot\\rho_{01}=-\\tfrac12\\gamma_1\\rho_{01}$.",
+        "Dephasing $Z$ with rate $g=\\gamma_\\varphi/2$. $Z\\rho Z$ equals $\\rho$ on the diagonal and $-\\rho$ on the off-diagonal; and $-\\tfrac12\\{Z^2,\\rho\\}=-\\rho$. So the dissipator gives $0$ on the diagonal and $-2\\rho_{01}$ on the coherence: $\\dot\\rho_{01}=-2g\\rho_{01}=-\\gamma_\\varphi\\rho_{01}$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "All the ingredients are decoupled linear equations with the solutions"
     },
     {
       "type": "math",
-      "tex": "\\rho_{11}(t) = \\rho_{11}(0)\\,e^{-t/T_1},\\qquad \\rho_{01}(t) = \\rho_{01}(0)\\,e^{-i\\omega t}\\,e^{-t/T_2},\\qquad \\frac{1}{T_2} = \\frac{1}{2T_1}+\\frac{1}{T_\\varphi}",
-      "caption": "Populations relax at $1/T_1$; coherences at $1/T_2$; $T_2\\le 2T_1$ always."
+      "tex": "\\rho_{11}(t)=\\rho_{11}(0)\\,e^{-t/T_1},\\qquad \\rho_{01}(t)=\\rho_{01}(0)\\,e^{-i\\omega t}\\,e^{-t/T_2},\\qquad \\frac1{T_2}=\\frac1{2T_1}+\\frac1{T_\\varphi}",
+      "caption": "Populations relax at $1/T_1$, coherences at $1/T_2$. $T_\\varphi=1/\\gamma_\\varphi$ is the pure-dephasing time."
     },
     {
       "type": "prose",
-      "text": "The bound $T_2\\le2T_1$ is not a convention: an amplitude that decays at rate $1/T_1$ in probability decays at $1/(2T_1)$ in amplitude, and the off-diagonal element is a product of two amplitudes. Pure dephasing ($T_\\varphi$) only adds to the coherence loss. On superconducting qubits $T_1$ and $T_2$ are typically tens to hundreds of microseconds against gate times of tens of nanoseconds; that ratio, not $T_1$ itself, is what fixes how many reservoir steps fit before natural noise has erased the state."
+      "text": "The bound $T_2\\le2T_1$ follows at once, since $1/T_\\varphi\\ge0$. It is not a convention. The coherence $\\rho_{01}$ is a product of two amplitudes, one for $\\vert0\\rangle$ and one for $\\vert1\\rangle$. The excited amplitude decays at half the rate of the probability (probability is amplitude squared), so even without any extra noise the coherence decays at $\\gamma_1/2$. Extra dephasing can only add to that."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit with $T_1=50$ and $T_2=40$ (microseconds), starting in $\\vert+\\rangle$, so $\\rho_{11}(0)=\\tfrac12$ and $\\vert\\rho_{01}(0)\\vert=\\tfrac12$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $1/T_\\varphi=1/T_2-1/(2T_1)=1/40-1/100=0.015$ per microsecond, so $T_\\varphi=66.7$.",
+        "Step 2. After 20 microseconds: $\\rho_{11}=0.5\\,e^{-20/50}=0.5\\cdot0.670=0.335$.",
+        "Step 3. $\\vert\\rho_{01}\\vert=0.5\\,e^{-20/40}=0.5\\cdot0.6065=0.303$.",
+        "Step 4. The expectation $\\langle Z\\rangle=\\rho_{00}-\\rho_{11}=1-2\\rho_{11}=0.330$. It started at 0 and is climbing to $+1$ as the qubit relaxes to $\\vert0\\rangle$.",
+        "Step 5. Read both off the code below, which builds the Liouvillian of the next section for these numbers and prints the same values."
+      ]
     },
     {
       "type": "widget",
@@ -90,7 +228,31 @@
     },
     {
       "type": "prose",
-      "text": "Try $T_2 = 2T_1$ (pure relaxation, no extra dephasing) and then $T_2 \\ll T_1$: the coherence curve collapses while the populations are unchanged. With $\\theta=90°$ the state starts on the equator, $\\langle Z\\rangle$ climbs from 0 to 1 as it relaxes to $\\vert0\\rangle$, and the coherence decays independently of it. A reservoir read out only through $\\langle Z\\rangle$ sees $T_1$ directly and $T_2$ only through what the coupling Hamiltonian converts from coherence into populations."
+      "text": "Try this. (1) Leave the defaults ($T_1=50$, $T_2=40$, $\\theta=90^\\circ$). The population curve starts at 0.5 and decays; $\\langle Z\\rangle$ starts at 0 and rises toward 1; the coherence starts at 0.5 and has fallen to $0.5/e=0.18$ by time 40. (2) Set $T_2=100$: this is $2T_1$, pure relaxation with no extra dephasing, and the coherence decays as slowly as it can, reaching $0.18$ at time 100. (3) Set $T_2=10$ with $T_1=50$: the coherence collapses within a few tens of time units while $\\rho_{11}$ and $\\langle Z\\rangle$ do not change at all, because dephasing never touches populations. (4) Set $\\theta=180^\\circ$ (the state $\\vert1\\rangle$): the coherence curve is flat zero (there is no superposition), and $\\langle Z\\rangle=1-2e^{-t/50}$ crosses zero at $50\\ln2=34.7$, the time at which half the population has decayed. A reservoir read out only through $\\langle Z\\rangle$ sees $T_1$ directly, and sees $T_2$ only through whatever the coupling Hamiltonian converts from coherence into populations."
+    },
+    {
+      "type": "prose",
+      "text": "A scale to keep in mind. On superconducting qubits $T_1$ and $T_2$ are typically tens to hundreds of microseconds against gate times of tens of nanoseconds. It is that ratio, not $T_1$ itself, that fixes how many reservoir steps fit before natural noise has erased the state: with a 1 microsecond step, $T_1=50$ microseconds is 50 steps."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "From a rate to one reservoir step"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir step lasting $\\Delta t$ applies the channel $e^{\\Delta t\\mathcal L}$. For the damping alone, comparing with the amplitude-damping channel of the previous page, whose excited population is multiplied by $1-\\gamma$, shows that the discrete parameter is $\\gamma=1-e^{-\\Delta t/T_1}$. Dephasing multiplies the coherence by $1-2p$, so $1-2p=e^{-\\Delta t/T_\\varphi}$. For small $\\Delta t/T_1$ these are $\\gamma\\approx\\Delta t/T_1$ and $p\\approx\\Delta t/(2T_\\varphi)$. With $\\Delta t=1$ and $T_1=50$: $\\gamma=1-e^{-0.02}=0.0198$, almost exactly $\\Delta t/T_1=0.02$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: per-step damping",
+      "text": "A step lasts $\\Delta t=1\\ \\mu s$ on a qubit with $T_1=50\\ \\mu s$ and $T_2=40\\ \\mu s$. What is the coherence factor per step, and what dephasing probability $p$ does that correspond to?",
+      "hint": "Use the total coherence decay time $T_2$, not $T_1$.",
+      "solution": [
+        "The coherence decays at $1/T_2$ in total (both effects), so the factor per step is $e^{-\\Delta t/T_2}=e^{-0.025}=0.9753$.",
+        "Written as a dephasing alone, $1-2p=0.9753$, so $p=0.0123$. (The amplitude-damping channel alone already contributes $\\sqrt{1-\\gamma}=0.9901$ to this factor; the rest is extra dephasing.)"
+      ],
+      "answer": "Factor $e^{-1/40}=0.9753$, so $p=(1-0.9753)/2=0.0123$"
     },
     {
       "type": "heading",
@@ -98,31 +260,115 @@
       "text": "The Liouvillian as a matrix"
     },
     {
-      "type": "prose",
-      "text": "Stack the rows of $\\rho$ into a vector of length $d^2$. With row-major vectorisation, $\\mathrm{vec}(A\\rho B) = (A\\otimes B^{\\top})\\,\\mathrm{vec}(\\rho)$, so"
-    },
-    {
-      "type": "math",
-      "tex": "\\hat{\\mathcal{L}} = -i\\left(H\\otimes I - I\\otimes H^{\\top}\\right) + \\sum_j\\gamma_j\\left(L_j\\otimes L_j^{*} - \\tfrac12 L_j^\\dagger L_j\\otimes I - \\tfrac12 I\\otimes (L_j^\\dagger L_j)^{\\top}\\right)",
-      "caption": "The Liouvillian as a $d^2\\times d^2$ matrix; $\\mathrm{vec}\\,\\rho(t) = e^{t\\hat{\\mathcal{L}}}\\mathrm{vec}\\,\\rho(0)$."
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "Its eigenvalues $\\lambda_k$ satisfy $\\mathrm{Re}\\,\\lambda_k\\le0$ and come in complex-conjugate pairs. At least one is 0, and its eigenvector (normalised to unit trace) is a steady state. If the zero eigenvalue is unique, every initial state converges to that steady state, and the slowest rate of approach is the spectral gap $g = -\\max_{k\\ge1}\\mathrm{Re}\\,\\lambda_k$ (the Liouvillian gap). For a reservoir, $1/g$ is the longest time over which any trace of the past survives: the memory horizon. A gap that is too large means the reservoir forgets faster than the task needs; too small, and it remembers the initial state and old inputs too long, and the washout must be long."
+      "text": "For one qubit we could solve by hand. For two or more qubits, with Hamiltonians coupling them, we need a systematic method, and the observation that makes one possible is that $\\mathcal L$ is a linear map on matrices, so it is a matrix once we stack the entries of $\\rho$ into a vector."
     },
     {
       "type": "heading",
-      "level": 2,
-      "text": "Example: two coupled, damped qubits"
+      "level": 3,
+      "text": "The maths"
+    },
+    {
+      "type": "prose",
+      "text": "Stack the rows of $\\rho$ one after another into a vector $\\operatorname{vec}(\\rho)$ of length $d^2$ (row-major order, as numpy's reshape does). If $\\rho$ has entries $\\rho_{kl}$, then the entry of $A\\rho B$ at position $(i,j)$ is $\\sum_{k,l}A_{ik}\\rho_{kl}B_{lj}$. As a map on the stacked vector, that is a matrix whose entry at row $(i,j)$, column $(k,l)$ is $A_{ik}B_{lj}$, which is exactly the Kronecker product $A\\otimes B^\\top$. So $\\operatorname{vec}(A\\rho B)=(A\\otimes B^\\top)\\operatorname{vec}(\\rho)$. Apply it to each term:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$H\\rho$ is $A=H$, $B=I$: matrix $H\\otimes I$. $\\rho H$ is $A=I$, $B=H$: matrix $I\\otimes H^\\top$.",
+        "$L\\rho L^\\dagger$: $A=L$, $B=L^\\dagger$, so $B^\\top=L^*$ (the element-wise complex conjugate): matrix $L\\otimes L^*$.",
+        "$L^\\dagger L\\rho$: $(L^\\dagger L)\\otimes I$. $\\rho L^\\dagger L$: $I\\otimes(L^\\dagger L)^\\top$."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "\\hat{\\mathcal L}=-i\\big(H\\otimes I-I\\otimes H^\\top\\big)+\\sum_j\\gamma_j\\Big(L_j\\otimes L_j^*-\\tfrac12L_j^\\dagger L_j\\otimes I-\\tfrac12I\\otimes(L_j^\\dagger L_j)^\\top\\Big)",
+      "caption": "The Liouvillian as a $d^2\\times d^2$ matrix; $\\operatorname{vec}\\rho(t)=e^{t\\hat{\\mathcal L}}\\operatorname{vec}\\rho(0)$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What its eigenvalues mean"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Real parts are $\\le0$. The matrices $e^{t\\hat{\\mathcal L}}$ are channels, and channels never increase the distance between states (the next page, Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points), proves it), so nothing can grow exponentially.",
+        "There is at least one eigenvalue $0$. Since $\\operatorname{Tr}\\mathcal L(\\rho)=0$ for every $\\rho$, the row vector $\\operatorname{vec}(I)^\\top$ (which computes the trace) satisfies $\\operatorname{vec}(I)^\\top\\hat{\\mathcal L}=0$, so $0$ is an eigenvalue and a right eigenvector exists too. The right eigenvector, normalised to unit trace, is a steady state $\\rho_{\\mathrm{ss}}$, with $\\mathcal L(\\rho_{\\mathrm{ss}})=0$.",
+        "Complex eigenvalues come in conjugate pairs ($\\mathcal L$ maps Hermitian matrices to Hermitian matrices). The imaginary parts are oscillation frequencies of the relaxation.",
+        "If the zero eigenvalue is unique, every initial state converges to $\\rho_{\\mathrm{ss}}$: $\\rho(t)=\\rho_{\\mathrm{ss}}+\\sum_kc_ke^{\\lambda_kt}R_k$ with coefficients $c_k$ fixed by the initial state. The slowest approach is at the Liouvillian gap $g=-\\max_{k\\ge1}\\operatorname{Re}\\lambda_k$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For a reservoir, $1/g$ is the longest time over which any trace of the initial state or of old inputs survives: the memory horizon. If $g$ is too large, the reservoir forgets faster than the task needs. If $g$ is too small, it remembers the initial state and old inputs for too long, the washout (the initial stretch discarded before training, see Training, Testing and Measuring Error (#/qrc/start/training-and-testing)) must be long, and old inputs contaminate the new ones."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the one-qubit spectrum"
+    },
+    {
+      "type": "prose",
+      "text": "For the qubit above with $T_1=50$, $T_2=40$, $\\omega=0.2$, the matrix is $4\\times4$. Its eigenvalues are what we found by hand: $0$ (the steady state, $\\vert0\\rangle\\langle0\\vert$), $-1/T_1=-0.02$ (the population mode), and the pair $-1/T_2\\pm i\\omega=-0.025\\pm0.2i$ (the two coherences). The code below finds all of these numerically."
     },
     {
       "type": "code",
       "lang": "python",
-      "source": "import numpy as np\nfrom scipy.linalg import expm\nI = np.eye(2); X = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.])\nsm = np.array([[0, 1], [0, 0]])          # sigma^- = |0><1| (|1> is the excited state)\n\ndef kron(*ops):\n    out = np.array([[1.]])\n    for o in ops: out = np.kron(out, o)\n    return out\n\ndef liouvillian(H, jumps):\n    \"\"\"Row-major vectorisation: vec(A rho B) = (A kron B^T) vec(rho).\"\"\"\n    d = H.shape[0]; Id = np.eye(d)\n    L = -1j * (np.kron(H, Id) - np.kron(Id, H.T))\n    for c in jumps:\n        cdc = c.conj().T @ c\n        L += np.kron(c, c.conj()) - 0.5 * np.kron(cdc, Id) - 0.5 * np.kron(Id, cdc.T)\n    return L\n\n# two coupled qubits: H = J X1 X2 + h (Z1 + Z2), amplitude damping gamma on each\nJ, h, gamma = 1.0, 1.0, 0.1\nH = J * kron(X, X) + h * (kron(Z, I) + kron(I, Z))\nL = liouvillian(H, [np.sqrt(gamma) * kron(sm, I), np.sqrt(gamma) * kron(I, sm)])\nev = np.linalg.eigvals(L)\nev = ev[np.argsort(-ev.real)]\nprint(\"slowest decay rates -Re(lambda):\", np.round(-ev.real[:5], 4))\ngap = -ev.real[1]\nprint(\"spectral gap %.4f -> relaxation time ~ %.1f\" % (gap, 1 / gap))\n\n# steady state = kernel of L\nw, v = np.linalg.eig(L)\nss = v[:, np.argmin(abs(w))].reshape(4, 4); ss /= np.trace(ss)\nprint(\"steady-state populations |00>,|01>,|10>,|11>:\", np.round(np.diag(ss).real, 4))\n\n# check: evolve |11> for a long time and compare\nrho0 = np.zeros((4, 4)); rho0[3, 3] = 1\nrhoT = (expm(L * 200) @ rho0.reshape(-1)).reshape(4, 4)\nprint(\"rho(t=200) matches steady state:\", np.allclose(rhoT, ss, atol=1e-6))\n"
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nI = np.eye(2); X = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1])\nsm = np.array([[0, 1], [0, 0]])           # sigma^- = |0><1|: |1> is the excited state\n\ndef liouvillian(H, jumps):\n    \"\"\"Row-major vectorisation: vec(A rho B) = (A kron B^T) vec(rho).\"\"\"\n    d = H.shape[0]; Id = np.eye(d)\n    L = -1j * (np.kron(H, Id) - np.kron(Id, H.T))\n    for c in jumps:\n        cdc = c.conj().T @ c\n        L += np.kron(c, c.conj()) - 0.5 * np.kron(cdc, Id) - 0.5 * np.kron(Id, cdc.T)\n    return L\n\nT1, T2, w = 50.0, 40.0, 0.2\ng1 = 1 / T1; gphi = 1 / T2 - 1 / (2 * T1)          # 1/T2 = 1/(2 T1) + 1/Tphi\nH = 0.5 * w * Z                                    # H = omega Z / 2\nL = liouvillian(H, [np.sqrt(g1) * sm, np.sqrt(gphi / 2) * Z])\nev = np.linalg.eigvals(L); ev = ev[np.argsort(-ev.real)]\nprint(\"1/T1 = %.4f, 1/T2 = %.4f, 1/Tphi = %.4f\" % (g1, 1 / T2, gphi))\nprint(\"Liouvillian eigenvalues:\", np.round(ev, 4))\nrho0 = np.array([[0.5, 0.5], [0.5, 0.5]])         # |+><+|\nfor t in [0, 20, 40, 100]:\n    r = (expm(L * t) @ rho0.reshape(-1)).reshape(2, 2)\n    print(f\"t={t:3d}: rho11 = {r[1,1].real:.4f}  |rho01| = {abs(r[0,1]):.4f}   (formulas {0.5*np.exp(-t/T1):.4f}, {0.5*np.exp(-t/T2):.4f})\")\n"
     },
     {
       "type": "prose",
-      "text": "Output: the spectral gap is 0.0553, a relaxation time of about 18 time units, close to the isolated-qubit coherence decay rate $\\gamma/2 = 0.05$ (the slowest modes are coherences, which decay at half the population rate). The steady state is not $\\vert00\\rangle$: populations $(0.850, 0.050, 0.050, 0.050)$. The $X_1X_2$ coupling contains the pair-creation term $\\sigma^+\\sigma^+ + \\sigma^-\\sigma^-$, which keeps pumping excitations in against the damping. A driven-dissipative reservoir generally relaxes to a nontrivial state set by the competition of $H$ and the jumps, and with an input-dependent $H(s)$ that steady state carries the input."
+      "text": "The program prints: 1/T1 = 0.0200, 1/T2 = 0.0250, 1/Tphi = 0.0150, and the four eigenvalues $0$, $-0.02$, $-0.025\\mp0.2i$ as predicted. At times 0, 20, 40, 100 the matrix exponential gives $\\rho_{11}=0.5,\\ 0.3352,\\ 0.2247,\\ 0.0677$ and $\\vert\\rho_{01}\\vert=0.5,\\ 0.3033,\\ 0.1839,\\ 0.0410$, equal to the closed-form formulas to four digits. At time 20, $\\vert\\rho_{01}\\vert=0.3033$, matching the 0.303 of the hand calculation."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: reading the spectrum",
+      "text": "A single qubit has Liouvillian eigenvalues $0,\\ -0.1,\\ -0.15\\pm0.5i$. What are $T_1$, $T_2$, the Larmor frequency and the gap? After how long has the population mode shrunk by a factor of 100?",
+      "hint": "The real parts are the rates; the imaginary parts are frequencies.",
+      "solution": [
+        "The population mode decays at $1/T_1=0.1$, so $T_1=10$.",
+        "The coherence pair is $-1/T_2\\pm i\\omega$, so $T_2=1/0.15=6.67$ and $\\omega=0.5$. Check $T_2\\le2T_1=20$ ✓.",
+        "The gap is the smallest decay rate, $\\min(0.1,0.15)=0.1$.",
+        "$e^{-0.1t}=1/100$ gives $t=\\ln100/0.1=46.05$."
+      ],
+      "answer": "$T_1=10$, $T_2=6.67$, $\\omega=0.5$, gap $0.1$; $46$ time units"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Several qubits: balancing the Hamiltonian against the damping"
+    },
+    {
+      "type": "prose",
+      "text": "Take the two coupled, damped qubits $H=J\\,X_1X_2+h\\,(Z_1+Z_2)$ with $J=h=1$, and amplitude damping at rate $\\gamma$ on each. One might guess the steady state is $\\vert00\\rangle$, everything relaxed to the ground state, but that is wrong. The coupling $X_1X_2$ contains pair-creation terms, $\\sigma^+_1\\sigma^+_2+\\sigma^-_1\\sigma^-_2$ (plus the number-conserving ones), which keep pumping excitations in against the damping. The steady state is the compromise of the two, and it is just the null vector of $\\hat{\\mathcal L}$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nI = np.eye(2); X = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.])\nsm = np.array([[0, 1], [0, 0]])          # sigma^- = |0><1| (|1> is the excited state)\n\ndef kron(*ops):\n    out = np.array([[1.]])\n    for o in ops: out = np.kron(out, o)\n    return out\n\ndef liouvillian(H, jumps):\n    d = H.shape[0]; Id = np.eye(d)\n    L = -1j * (np.kron(H, Id) - np.kron(Id, H.T))\n    for c in jumps:\n        cdc = c.conj().T @ c\n        L += np.kron(c, c.conj()) - 0.5 * np.kron(cdc, Id) - 0.5 * np.kron(Id, cdc.T)\n    return L\n\nJ, h = 1.0, 1.0\nH = J * kron(X, X) + h * (kron(Z, I) + kron(I, Z))\nfor gamma in [0.1, 0.4]:\n    L = liouvillian(H, [np.sqrt(gamma) * kron(sm, I), np.sqrt(gamma) * kron(I, sm)])\n    ev = np.linalg.eigvals(L); ev = ev[np.argsort(-ev.real)]\n    gap = -ev.real[1]\n    print(f\"gamma = {gamma}: slowest rates -Re(lambda) = {np.round(-ev.real[:5], 4)}, gap {gap:.4f}, relaxation time {1/gap:.1f}\")\n    w, v = np.linalg.eig(L)\n    ss = v[:, np.argmin(abs(w))].reshape(4, 4); ss /= np.trace(ss)\n    print(\"   steady-state populations |00>,|01>,|10>,|11>:\", np.round(np.diag(ss).real, 4), \" trace\", np.round(np.trace(ss).real, 4))\n    rho0 = np.zeros((4, 4)); rho0[3, 3] = 1\n    rhoT = (expm(L * 300) @ rho0.reshape(-1)).reshape(4, 4)\n    print(\"   rho(t=300) from |11> matches steady state:\", np.allclose(rhoT, ss, atol=1e-6))\n"
+    },
+    {
+      "type": "prose",
+      "text": "The output: for $\\gamma=0.1$ the slowest decay rates are 0.0553 (four-fold degenerate), a relaxation time of 18.1 time units, a little shorter than the 20 you would get from the isolated-qubit coherence rate $\\gamma/2=0.05$ (the slowest modes are coherences, which decay at half the population rate). The steady-state populations of $\\vert00\\rangle,\\vert01\\rangle,\\vert10\\rangle,\\vert11\\rangle$ are $0.8501,\\ 0.05,\\ 0.05,\\ 0.05$: far from $\\vert00\\rangle$. For $\\gamma=0.4$ the gap is 0.2217, about four times larger ($0.2217/0.0553=4.0$), in proportion to $\\gamma$; the relaxation time is 4.5; and the steady state is almost the same ($0.8512,0.0496,\\dots$, a change in the third decimal). So here the damping rate sets how fast the system settles, while the Hamiltonian-against-damping balance sets where it settles. Starting from $\\vert11\\rangle$ and waiting 300 time units gives the steady state to six digits."
+    },
+    {
+      "type": "prose",
+      "text": "This is the typical shape of a driven-dissipative reservoir: a non-trivial steady state set by the competition between the Hamiltonian and the jumps, relaxation at a rate set mostly by the damping, and, once the Hamiltonian depends on an input $s$, a steady state that carries the input."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Heating: a quick steady-state calculation"
+    },
+    {
+      "type": "prose",
+      "text": "One more exact result is worth having. With both energy loss ($\\sigma^-$ at rate $\\gamma_\\downarrow$) and heating ($\\sigma^+$ at rate $\\gamma_\\uparrow$) and no Hamiltonian, the excited population obeys $\\dot\\rho_{11}=-\\gamma_\\downarrow\\rho_{11}+\\gamma_\\uparrow\\rho_{00}=\\gamma_\\uparrow-(\\gamma_\\downarrow+\\gamma_\\uparrow)\\rho_{11}$, because $\\rho_{00}=1-\\rho_{11}$. It relaxes to $\\rho_{11}^*=\\gamma_\\uparrow/(\\gamma_\\uparrow+\\gamma_\\downarrow)$ at rate $\\gamma_\\uparrow+\\gamma_\\downarrow$. With $\\gamma_\\downarrow=0.1$ and $\\gamma_\\uparrow=0.02$: $\\rho_{11}^*=0.02/0.12=0.167$ and the rate is $0.12$, so the heating both limits the steady state and speeds up the approach to it."
     },
     {
       "type": "heading",
@@ -131,53 +377,173 @@
     },
     {
       "type": "prose",
-      "text": "Reservoir models are usually written in discrete time: input $s_k$ arrives, the system evolves for $\\Delta t$, features are read. With a Lindbladian the step is $\\mathcal{T}_{s} = e^{\\Delta t\\,\\mathcal{L}(s)}$, possibly composed with an input-writing channel. A gap $g$ then contracts the deviation from the instantaneous steady state by roughly $e^{-g\\Delta t}$ per step, so the memory in steps is about $1/(g\\Delta t)$. This is the knob Sannia et al. tune when they add tunable local losses to a spin reservoir: continuous dissipation at the right rate reproduces the reset-based models, supplies fading memory, and improves both linear and nonlinear memory tasks and chaotic-series forecasting (see Dissipation as a Resource (#/qrc/models/dissipation-as-resource))."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Quantum trajectories (in one paragraph)"
+      "text": "Reservoir models are usually written in discrete time: input $s_k$ arrives, the system evolves for $\\Delta t$, the features are read. With a Lindbladian the step is $\\mathcal T_s=e^{\\Delta t\\,\\mathcal L(s)}$, possibly composed with an input-writing channel such as the reset of Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels). A gap $g$ then contracts the deviation from the steady state by about $e^{-g\\Delta t}$ per step, so the memory is about $1/(g\\Delta t)$ steps. Two cautions. First, with a different Liouvillian $\\mathcal L(s)$ at each step, the steady state moves with $s$, and what the reservoir remembers is a smoothed-out record of where the steady state has been. The non-commutation of $\\mathcal L(s)$ at different $s$ is where nonlinear memory comes from. Second, the contraction of a product of channels is not the product of the gaps: the next page, Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points), handles that."
     },
     {
       "type": "prose",
-      "text": "The same Lindblad equation is the average over stochastic pure-state trajectories: evolve under the non-Hermitian $H_{\\mathrm{eff}} = H - \\tfrac i2\\sum_j\\gamma_jL_j^\\dagger L_j$, and at random times (rate $\\gamma_j\\Vert L_j\\psi\\Vert^2$) apply a jump $\\psi\\to L_j\\psi/\\Vert L_j\\psi\\Vert$. Simulating $M$ trajectories costs memory $O(d)$ instead of $O(d^2)$, with statistical error $O(1/\\sqrt M)$. The trajectory picture is also what a device that monitors its environment would actually see, which is the bridge to measurement-based protocols on Online Protocols (#/qrc/hardware/online-protocols)."
+      "text": "This is the knob that Sannia and co-authors tune in Dissipation as a Resource (#/qrc/models/dissipation-as-resource): adding tunable local losses to a spin reservoir supplies fading memory without any reset, reproduces the reset-based models, and improves linear and nonlinear memory tasks and the forecast of chaotic series."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: memory in steps",
+      "text": "A reservoir has Liouvillian gap $g=0.2217$ and each step lasts $\\Delta t=0.5$. Roughly how many steps until a perturbation has shrunk by $e^3\\approx20$?",
+      "hint": "Multiply the gap by the step length first.",
+      "solution": [
+        "Per step the deviation shrinks by $e^{-g\\Delta t}=e^{-0.1109}$.",
+        "$e^{-0.1109k}=e^{-3}$ gives $k=3/0.1109=27.1$."
+      ],
+      "answer": "About 27 steps"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Quantum trajectories"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why bother"
+    },
+    {
+      "type": "prose",
+      "text": "The master equation describes the average state of many identical systems. A single system observed in its environment (a device that watches the emitted photons) follows a random path: it evolves smoothly for a while and occasionally jumps. This is also a practical simulation method: $M$ trajectories of pure states cost memory of order $d$ instead of the $d^2$ of a density matrix, with a statistical error of order $1/\\sqrt M$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The recipe and why it works"
+    },
+    {
+      "type": "prose",
+      "text": "Our short-time Kraus operators already contain the recipe. Over $dt$, a state $\\vert\\psi\\rangle$ goes either to $K_0\\vert\\psi\\rangle$ or to $K_j\\vert\\psi\\rangle$. The chance of a jump $j$ is $\\Vert K_j\\psi\\Vert^2=\\gamma_j\\,dt\\,\\Vert L_j\\psi\\Vert^2$. So: evolve with the non-Hermitian effective Hamiltonian $H_{\\mathrm{eff}}=H-\\tfrac i2\\sum_j\\gamma_jL_j^\\dagger L_j$ (the norm falls by exactly the probability that a jump happened), and at random times apply a jump $\\psi\\to L_j\\psi/\\Vert L_j\\psi\\Vert$. Averaging $\\vert\\psi\\rangle\\langle\\psi\\vert$ over many runs reproduces $\\rho(t)$, because each step is the Kraus map of the previous section, applied in a way that keeps a record of the 'which Kraus operator' choice. A single trajectory's pure state is the state of an observer who sees every jump. The master equation is the state of an observer who sees none."
+    },
+    {
+      "type": "prose",
+      "text": "The next program simulates a driven, decaying qubit ($H=\\tfrac12\\Omega X$ and $\\sigma^-$ at rate 0.3) with 1000 trajectories, and compares $\\langle Z\\rangle$ against the exact result from the Liouvillian."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nrng = np.random.default_rng(3)\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1., -1]).astype(complex); sm = np.array([[0, 1], [0, 0]], complex)\nOm, gam, dt, T = 1.0, 0.3, 0.01, 10.0            # H = (Om/2) X, jump sigma^- at rate gam\nH = 0.5 * Om * X\nHeff = H - 0.5j * gam * sm.conj().T @ sm\nUeff = expm(-1j * Heff * dt)\nsteps = int(T / dt); M = 1000\nzs = np.zeros(steps)\nfor m in range(M):\n    psi = np.array([1, 0], complex)               # start in |0>\n    for k in range(steps):\n        psi = Ueff @ psi                          # no-jump evolution (norm shrinks)\n        pjump = 1 - np.vdot(psi, psi).real        # probability a jump happened in dt\n        if rng.random() < pjump:\n            psi = sm @ psi                        # jump\n        psi /= np.linalg.norm(psi)\n        zs[k] += np.vdot(psi, Z @ psi).real\nzs /= M\n# exact master equation by vectorisation\nId = np.eye(2)\nL = -1j * (np.kron(H, Id) - np.kron(Id, H.T)) + gam * (np.kron(sm, sm.conj()) - 0.5 * np.kron(sm.conj().T @ sm, Id) - 0.5 * np.kron(Id, (sm.conj().T @ sm).T))\nrho0 = np.array([[1, 0], [0, 0]], complex).reshape(-1)\nfor t in [1, 3, 6, 10]:\n    r = (expm(L * t) @ rho0).reshape(2, 2)\n    print(f\"t = {t:4.1f}: <Z> master equation {np.trace(Z @ r).real:+.4f}   {M} trajectories {zs[int(t/dt)-1]:+.4f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "The output: at $t=1,3,6,10$ the master equation gives $\\langle Z\\rangle=+0.6026,\\ -0.4223,\\ +0.2635,\\ -0.0549$ and the trajectory average gives $+0.6026,\\ -0.4232,\\ +0.2533,\\ -0.0902$. The agreement is within about $0.03$ even at the end, the size of the statistical error $\\sim1/\\sqrt{1000}$. The curve is a damped Rabi oscillation, relaxing toward the steady state $\\langle Z\\rangle\\approx0$ of the driven, damped qubit. The trajectory picture is also what a device that monitors its environment would see, which is the bridge to measurement-based protocols on Online Measurement Protocols (#/qrc/hardware/online-protocols)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together: the memory budget of a real qubit"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir is built from superconducting qubits with $T_1=50\\ \\mu s$ and $T_2=40\\ \\mu s$ and a step of $\\Delta t=1\\ \\mu s$. We want to know how many steps its natural noise allows."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Per-step amplitude damping: $\\gamma=1-e^{-1/50}=0.0198$.",
+        "Step 2. Per-step coherence factor: $e^{-1/40}=0.9753$. As dephasing alone that is $p=0.0123$; part of the loss, $\\sqrt{1-\\gamma}=0.9901$, is already inside the amplitude damping, so the extra pure dephasing is a factor $0.9753/0.9901=0.9851$.",
+        "Step 3. Memory length for populations: $T_1/\\Delta t=50$ steps to fall to $1/e$; for coherences $T_2/\\Delta t=40$ steps. Coherence-carried memory goes first.",
+        "Step 4. To fall by a factor 1000 (a typical 'forgotten' level) takes $\\ln1000$ times these: 345 steps for populations and 276 for coherences.",
+        "Step 5. So any reservoir on this hardware that needs memory beyond a few hundred steps must reckon with the noise as a source of unwanted contraction; and as a resource, it supplies the fading memory for free (the next page returns to this)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The Lindblad equation $\\dot\\rho=-i[H,\\rho]+\\sum_j\\gamma_j(L_j\\rho L_j^\\dagger-\\tfrac12\\{L_j^\\dagger L_j,\\rho\\})$ is the continuous-time limit of channels made of a no-jump and a jump Kraus operator; $\\gamma_j\\ge0$ guarantees complete positivity.",
+        "The dissipator terms cancel in the trace, so $\\operatorname{Tr}\\rho$ stays 1. The anticommutator is the effect of no jump having occurred.",
+        "For a qubit, populations decay at $1/T_1$ and coherences at $1/T_2$ with $1/T_2=1/(2T_1)+1/T_\\varphi$, so $T_2\\le2T_1$.",
+        "Per reservoir step of length $\\Delta t$: $\\gamma=1-e^{-\\Delta t/T_1}$, and coherence factor $e^{-\\Delta t/T_2}$.",
+        "Vectorising gives the Liouvillian matrix $\\hat{\\mathcal L}$ via $\\operatorname{vec}(A\\rho B)=(A\\otimes B^\\top)\\operatorname{vec}\\rho$. Its zero eigenvector is the steady state; the smallest nonzero decay rate is the gap $g$, and the memory is about $1/(g\\Delta t)$ steps.",
+        "A Hamiltonian competing with damping gives a non-trivial steady state, not the ground state.",
+        "Quantum trajectories (no-jump evolution with $H_{\\mathrm{eff}}$ plus random jumps) average to the master equation."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
       "title": "Pure dephasing time",
-      "text": "A qubit has $T_1 = 50\\,\\mu s$ and $T_2 = 40\\,\\mu s$. Find $T_\\varphi$. Starting in $\\vert+\\rangle$, what is $\\vert\\rho_{01}\\vert$ after $20\\,\\mu s$? Starting in $\\vert1\\rangle$, what is $\\langle Z\\rangle$ then?",
+      "text": "A qubit has $T_1=50\\ \\mu s$ and $T_2=40\\ \\mu s$. Find $T_\\varphi$. Starting in $\\vert+\\rangle$, what is $\\vert\\rho_{01}\\vert$ after $20\\ \\mu s$? Starting in $\\vert1\\rangle$, what is $\\langle Z\\rangle$ then?",
+      "hint": "Use the combination rule for $1/T_2$.",
       "solution": [
-        "$1/T_\\varphi = 1/T_2 - 1/(2T_1) = 1/40 - 1/100 = 0.015\\ \\mu s^{-1}$, so $T_\\varphi = 66.7\\,\\mu s$.",
-        "$\\vert\\rho_{01}(0)\\vert = 1/2$; after 20 μs it is $0.5\\,e^{-20/40} = 0.303$.",
-        "$\\rho_{11} = e^{-20/50} = 0.670$, so $\\langle Z\\rangle = 1-2(0.670) = -0.341$."
+        "$1/T_\\varphi=1/T_2-1/(2T_1)=1/40-1/100=0.015\\ \\mu s^{-1}$, so $T_\\varphi=66.7\\ \\mu s$.",
+        "$\\vert\\rho_{01}(0)\\vert=1/2$; after $20\\ \\mu s$ it is $0.5\\,e^{-20/40}=0.303$.",
+        "$\\rho_{11}=e^{-20/50}=0.670$, so $\\langle Z\\rangle=1-2(0.670)=-0.341$."
       ],
-      "answer": "$T_\\varphi = 66.7\\,\\mu s$; $\\vert\\rho_{01}\\vert = 0.303$; $\\langle Z\\rangle = -0.341$"
+      "answer": "$T_\\varphi=66.7\\ \\mu s$; $\\vert\\rho_{01}\\vert=0.303$; $\\langle Z\\rangle=-0.341$"
     },
     {
       "type": "problem",
       "title": "Damping per reservoir step",
-      "text": "A reservoir step lasts $\\Delta t = 1\\,\\mu s$ on qubits with $T_1 = 50\\,\\mu s$. What amplitude-damping parameter $\\gamma$ does one step apply, and after how many steps has an excited population fallen to $1/e$ of its value?",
+      "text": "A reservoir step lasts $\\Delta t=1\\ \\mu s$ on qubits with $T_1=50\\ \\mu s$. What amplitude-damping parameter does one step apply, and after how many steps has an excited population fallen to $1/e$?",
+      "hint": "The population obeys $e^{-t/T_1}$.",
       "solution": [
-        "$\\gamma = 1-e^{-\\Delta t/T_1} = 1 - e^{-0.02} = 0.0198$.",
-        "Each step multiplies the excited population by $1-\\gamma = e^{-0.02}$; reaching $1/e$ takes $T_1/\\Delta t = 50$ steps."
+        "$\\gamma=1-e^{-\\Delta t/T_1}=1-e^{-0.02}=0.0198$.",
+        "Each step multiplies the excited population by $1-\\gamma=e^{-0.02}$; reaching $1/e$ takes $T_1/\\Delta t=50$ steps."
       ],
       "answer": "$\\gamma\\approx0.0198$; 50 steps"
     },
     {
       "type": "problem",
       "title": "Memory horizon from the gap",
-      "text": "The two-qubit example has Liouvillian gap $g = 0.0553$. If the reservoir is sampled every $\\Delta t = 1$, roughly how many steps until a perturbation of the state has shrunk by a factor $e^{3}\\approx20$?",
+      "text": "The two-qubit example at $\\gamma=0.1$ has gap $0.0553$. If the reservoir is sampled every $\\Delta t=1$, roughly how many steps until a perturbation has shrunk by $e^3\\approx20$? What about $\\gamma=0.4$ (gap $0.2217$)?",
+      "hint": "$t=3/g$.",
       "solution": [
         "The slowest mode decays as $e^{-gt}$.",
-        "$e^{-g t} = e^{-3}$ at $t = 3/g = 54$.",
-        "So about 54 steps; inputs older than that are effectively forgotten, and the washout should be at least that long."
+        "$e^{-gt}=e^{-3}$ at $t=3/g=3/0.0553=54$ steps.",
+        "For $\\gamma=0.4$: $3/0.2217=13.5$ steps. A four times stronger damping gives a four times shorter memory.",
+        "So the washout should be at least about 54 (or 14) steps."
       ],
-      "answer": "about 54 steps"
+      "answer": "about 54 steps; about 14 steps"
+    },
+    {
+      "type": "problem",
+      "title": "A steady state with heating",
+      "text": "A qubit with no Hamiltonian has $\\sigma^-$ at rate $\\gamma_\\downarrow=0.1$ and $\\sigma^+$ at rate $\\gamma_\\uparrow=0.02$. Find the steady-state excited population and the time to approach it. Starting from $\\rho_{11}=0$, what is $\\rho_{11}$ at $t=10$?",
+      "hint": "Use $\\rho_{00}=1-\\rho_{11}$ to get one equation.",
+      "solution": [
+        "$\\dot\\rho_{11}=\\gamma_\\uparrow-(\\gamma_\\uparrow+\\gamma_\\downarrow)\\rho_{11}$.",
+        "Steady state: $\\rho_{11}^*=0.02/0.12=0.1667$; rate $0.12$, time constant $8.33$.",
+        "$\\rho_{11}(t)=\\rho_{11}^*(1-e^{-0.12t})$, which at $t=10$ is $0.1667\\,(1-e^{-1.2})=0.1667\\cdot0.6988=0.1165$."
+      ],
+      "answer": "$\\rho_{11}^*=0.167$, time constant $8.33$; $\\rho_{11}(10)=0.1165$"
+    },
+    {
+      "type": "problem",
+      "title": "From the Kraus operators to the equation",
+      "text": "Show that the dephasing dissipator $\\gamma_\\varphi/2$ with $L=Z$ is what you get by applying $Z$ with probability $p=\\gamma_\\varphi dt/2$ in a short time $dt$.",
+      "hint": "For small $dt$, compare the coefficient of $dt$.",
+      "solution": [
+        "Short-step channel: $\\rho\\mapsto(1-p)\\rho+pZ\\rho Z$.",
+        "So $(\\rho(t+dt)-\\rho(t))/dt=\\tfrac{\\gamma_\\varphi}2(Z\\rho Z-\\rho)$.",
+        "The Lindblad term with $L=Z$ and rate $\\gamma=\\gamma_\\varphi/2$ is $\\gamma(Z\\rho Z-\\tfrac12Z^2\\rho-\\tfrac12\\rho Z^2)=\\gamma(Z\\rho Z-\\rho)$ since $Z^2=I$. The two agree.",
+        "The coherence then obeys $\\dot\\rho_{01}=\\tfrac{\\gamma_\\varphi}2(-2)\\rho_{01}=-\\gamma_\\varphi\\rho_{01}$, as used above."
+      ],
+      "answer": "Both give $\\tfrac{\\gamma_\\varphi}2(Z\\rho Z-\\rho)$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The next page, Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points), turns the gap and the channel spectrum into the contraction and fixed-point conditions behind the echo state property.",
+        "The page Measurement (#/qrc/open-systems/measurement) is the third kind of environment: an ignored measurement is also a channel.",
+        "On the Models shelf, Dissipation as a Resource (#/qrc/models/dissipation-as-resource) and Dynamical Regimes (#/qrc/models/dynamical-regimes) use the Lindbladian as a tunable resource; on the Hardware shelf, Gate-Based Devices (#/qrc/hardware/gate-based-devices) meets T1 and T2 in real devices."
+      ]
     },
     {
       "type": "heading",

@@ -1,24 +1,141 @@
 {
   "title": "Measurement",
-  "intro": "A quantum reservoir's features are expectation values, and hardware can only estimate them by measuring, which costs shots and disturbs the state. This page covers POVMs and back-action, the statistics of estimating many observables, which ones can share shots, and weak measurement as a dial between information and disturbance.",
+  "intro": "A quantum reservoir's features are expectation values, and hardware can only estimate them by measuring, which costs shots and disturbs the state. This page builds the general measurement (POVMs and the post-measurement state), counts the shots needed to estimate many features, shows which observables share shots, and treats weak measurement as a dial between information and disturbance.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "POVMs and the post-measurement state"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "A general measurement is a set of measurement operators $\\{M_m\\}$ with $\\sum_m M_m^\\dagger M_m = I$. Outcome $m$ occurs with probability $p_m = \\operatorname{Tr}(E_m\\rho)$, $E_m = M_m^\\dagger M_m$ (the POVM elements), and leaves the state"
+      "text": "You need the Born rule and projective measurement from Measurement and the Born Rule (#/quantum/foundations/measurement), the density matrix and channels from Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels), and the last section of A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand), where the features $\\langle Z_1\\rangle,\\langle Z_2\\rangle$ were read out. The chapter Getting Started (#/qrc/start) explains why the readout wants many clean features per step."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Describe a general measurement by operators $M_m$, compute outcome probabilities and the post-measurement state, with or without keeping the outcome.",
+        "Say what a measurement whose result is thrown away does to a density matrix.",
+        "Compute the number of shots needed to estimate a feature vector to a given accuracy, and see how readout weights amplify shot noise.",
+        "Decide which observables can be estimated from the same shots, and how many measurement settings a feature set needs.",
+        "Quantify the trade-off between information gained and coherence destroyed by a weak measurement."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why measurement is the hard part of a quantum reservoir"
+    },
+    {
+      "type": "prose",
+      "text": "On paper a reservoir's features are expectation values $\\operatorname{Tr}(O\\rho)$. They are exact, smooth numbers and you read as many as you like. In a laboratory a single measurement gives one random bit, not an expectation; and obtaining the bit changes the state, which is the thing carrying the memory. A student of quantum computing usually meets measurement only as the last step of a circuit, after which the qubits are discarded. In reservoir computing the reservoir keeps running on a stream, so what the measurement does to the state matters just as much as what it reports."
+    },
+    {
+      "type": "prose",
+      "text": "This page has two halves. The first, the formalism, shows that every measurement is a channel with a record attached, so that the machinery of Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels) applies to it. The second counts the cost: the number of repetitions (shots) that estimating features takes, which ones come for free together, and how to trade information against disturbance with weak measurement."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The general measurement"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need more than projectors"
+    },
+    {
+      "type": "prose",
+      "text": "The Born rule of Measurement and the Born Rule (#/quantum/foundations/measurement) describes projective measurements: an observable has eigenvectors; you obtain one eigenvalue with probability equal to the squared overlap; and the state jumps to the eigenvector. Real measuring devices are not perfect projectors. A photon detector has a finite efficiency; a measurement of a qubit through a resonator can be gentle and incomplete. We want a description that includes these, and, as the next sections show, includes a measurement whose result is later discarded."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths"
+    },
+    {
+      "type": "prose",
+      "text": "A general measurement is a set of operators $\\{M_m\\}$, one for each possible outcome $m$, with $\\sum_mM_m^\\dagger M_m=I$ (the same completeness condition as for Kraus operators; indeed the $M_m$ are Kraus operators with a label that we can read). If the system is in $\\rho$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The probability of outcome $m$ is $p_m=\\operatorname{Tr}(E_m\\rho)$ with $E_m=M_m^\\dagger M_m\\ge0$. The $E_m$ are the POVM elements (positive operator-valued measure); they sum to $I$, which makes the probabilities sum to 1.",
+        "If the outcome $m$ is recorded, the state becomes $\\rho_m=M_m\\rho M_m^\\dagger/p_m$ (the division restores unit trace).",
+        "If the outcome is not recorded (or is ignored), the state becomes the average: $\\rho'=\\sum_mp_m\\rho_m=\\sum_mM_m\\rho M_m^\\dagger$."
+      ]
     },
     {
       "type": "math",
-      "tex": "\\rho\\ \\mapsto\\ \\frac{M_m\\rho M_m^\\dagger}{p_m}\\quad\\text{(outcome kept)},\\qquad \\rho\\ \\mapsto\\ \\sum_m M_m\\rho M_m^\\dagger\\quad\\text{(outcome discarded)}",
-      "caption": "Selective and non-selective post-measurement states. A projective measurement has $M_m = \\Pi_m$, orthogonal projectors."
+      "tex": "\\rho\\ \\mapsto\\ \\frac{M_m\\rho M_m^\\dagger}{p_m}\\quad\\text{(outcome kept)},\\qquad \\rho\\ \\mapsto\\ \\sum_mM_m\\rho M_m^\\dagger\\quad\\text{(outcome discarded)}",
+      "caption": "Selective and non-selective post-measurement states. A projective measurement has $M_m=\\Pi_m$, orthogonal projectors."
     },
     {
       "type": "prose",
-      "text": "Two facts matter for reservoirs. First, the non-selective map is a channel, so even a measurement whose result is thrown away changes the state: a projective $Z$ measurement deletes every coherence in the $Z$ basis (it is complete dephasing). Second, by Naimark's theorem any POVM is a projective measurement on system plus ancilla, which is how weak and generalised measurements are implemented: couple the system to an ancilla, measure the ancilla projectively."
+      "text": "The second line is a channel in Kraus form. This is the key point for reservoirs. Even a measurement whose result is thrown away changes the state: the non-selective map of a projective $Z$ measurement is $\\rho\\mapsto\\vert0\\rangle\\langle0\\vert\\rho\\vert0\\rangle\\langle0\\vert+\\vert1\\rangle\\langle1\\vert\\rho\\vert1\\rangle\\langle1\\vert$, which deletes every off-diagonal element: complete dephasing, the dephasing channel of Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels) with $p=1/2$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "A qubit is in the state with Bloch vector $(0.6,0,0.8)$, so $\\rho$ has rows $(0.9,\\,0.3)$ and $(0.3,\\,0.1)$. We measure $Z$ projectively."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Operators $M_0=\\vert0\\rangle\\langle0\\vert$, $M_1=\\vert1\\rangle\\langle1\\vert$. $p_0=\\rho_{00}=0.9$, $p_1=\\rho_{11}=0.1$.",
+        "Step 2. Outcome 0 recorded: the state is $\\vert0\\rangle\\langle0\\vert$ (the $0.9$ in the numerator and in $p_0$ cancel). Outcome 1: $\\vert1\\rangle\\langle1\\vert$.",
+        "Step 3. Outcome discarded: $\\rho'=0.9\\vert0\\rangle\\langle0\\vert+0.1\\vert1\\rangle\\langle1\\vert$, rows $(0.9,0)$ and $(0,0.1)$. The coherence $0.3$ is gone, the populations are unchanged, and $\\langle Z\\rangle=0.8$ is the same before and after.",
+        "Step 4. In Bloch coordinates the vector went from $(0.6,0,0.8)$ to $(0,0,0.8)$: the $x$ component was deleted. Purity fell from 1 to $0.81+0.01=0.82$."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "So a measurement does not just read the state: a non-selective measurement is a channel that kills everything not diagonal in the measured basis. A reservoir that is measured projectively at every step keeps only its diagonal (populations) between steps. Whatever memory was carried by coherences is lost."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why a POVM needs an ancilla: weak measurements"
+    },
+    {
+      "type": "prose",
+      "text": "Where does a non-projective $M_m$ come from physically? By Naimark's theorem every POVM can be realised as a projective measurement on the system plus a helper qubit (an ancilla): couple the system to the ancilla by a unitary, then measure the ancilla projectively. The Kraus operators of the combined process are $M_m=\\langle m\\vert_AV\\vert0\\rangle_A$, the same construction as the Stinespring dilation of Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels) with the environment now being read."
+    },
+    {
+      "type": "prose",
+      "text": "The example that matters here is a weak measurement of $Z$. Let the ancilla start in $\\vert0\\rangle$. Let $V$ rotate it by an angle $+2\\phi$ about the $y$ axis if the system is in $\\vert0\\rangle$ and by $-2\\phi$ if the system is in $\\vert1\\rangle$. The ancilla ends in one of two states $\\vert a_0\\rangle=\\cos\\phi\\vert0\\rangle+\\sin\\phi\\vert1\\rangle$ and $\\vert a_1\\rangle=\\cos\\phi\\vert0\\rangle-\\sin\\phi\\vert1\\rangle$, whose overlap is $\\cos^2\\phi-\\sin^2\\phi=\\cos2\\phi$. Now measure the ancilla in the basis $\\vert\\pm\\rangle$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$M_+=\\langle+\\vert_AV\\vert0\\rangle_A$ is diagonal with entries $\\langle+\\vert a_0\\rangle=(\\cos\\phi+\\sin\\phi)/\\sqrt2$ for system $\\vert0\\rangle$ and $\\langle+\\vert a_1\\rangle=(\\cos\\phi-\\sin\\phi)/\\sqrt2$ for system $\\vert1\\rangle$.",
+        "Squares: $(\\cos\\phi\\pm\\sin\\phi)^2/2=(1\\pm\\sin2\\phi)/2$. So $M_\\pm=\\sqrt{(I\\pm\\varepsilon Z)/2}$ with $\\varepsilon=\\sin2\\phi$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The ancilla only partly learns which state the system is in, because $\\vert a_0\\rangle$ and $\\vert a_1\\rangle$ overlap. For small $\\phi$, nearly nothing is learned and nearly nothing disturbed; at $\\phi=\\pi/4$ ($\\varepsilon=1$) the ancilla states are orthogonal and we have a projective measurement. The first program below builds these operators from the ancilla circuit and checks that they equal $\\sqrt{(I\\pm\\varepsilon Z)/2}$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: probabilities and post-measurement state",
+      "text": "A qubit in $\\vert+\\rangle$ is measured with $M_\\pm=\\sqrt{(I\\pm\\varepsilon Z)/2}$, $\\varepsilon=0.6$. Find $p_+$ and the state after outcome $+$ (give its Bloch $z$ and $x$ components).",
+      "hint": "Write $M_+$ as a diagonal matrix of square roots, apply to $\\vert+\\rangle$, normalise.",
+      "solution": [
+        "$p_+=\\operatorname{Tr}(M_+^\\dagger M_+\\rho)=\\operatorname{Tr}\\big(\\tfrac{I+0.6Z}2\\rho\\big)=\\tfrac12(1+0.6\\langle Z\\rangle)=0.5$ since $\\langle Z\\rangle=0$.",
+        "$M_+=\\mathrm{diag}(\\sqrt{0.8},\\sqrt{0.2})$. $M_+\\vert+\\rangle=(\\sqrt{0.8}\\vert0\\rangle+\\sqrt{0.2}\\vert1\\rangle)/\\sqrt2$, norm squared $0.5$, normalised: $\\sqrt{0.8}\\vert0\\rangle+\\sqrt{0.2}\\vert1\\rangle$.",
+        "Its Bloch vector: $z=0.8-0.2=0.6$, $x=2\\sqrt{0.8\\cdot0.2}=0.8$, $y=0$. Length 1: still pure. The outcome pushed the state toward $\\vert0\\rangle$ by an amount equal to the $\\varepsilon$ we used."
+      ],
+      "answer": "$p_+=0.5$; the post-measurement Bloch vector is $(0.8,0,0.6)$"
     },
     {
       "type": "heading",
@@ -26,17 +143,154 @@
       "text": "Shot noise"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "One shot of a $\\pm1$-valued observable such as $Z_i$ returns $+1$ with probability $(1+\\langle Z_i\\rangle)/2$. The mean of $S$ shots is unbiased with variance $(1-\\langle Z_i\\rangle^2)/S$, so the standard error is at most $1/\\sqrt S$. For a feature vector of $M$ observables, Hoeffding plus a union bound gives the number of shots for all estimates to be within $\\epsilon$ with probability $1-\\delta$:"
+      "text": "A single projective shot of a $\\pm1$-valued observable such as $Z_i$ returns $+1$ or $-1$. To get an expectation, repeat on identical copies and average. Identical copies, here, means rerunning the whole experiment from scratch for each shot, an issue we return to below."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths"
+    },
+    {
+      "type": "prose",
+      "text": "$Z_i$ gives $+1$ with probability $(1+\\langle Z_i\\rangle)/2$. One shot has mean $\\langle Z_i\\rangle$ and variance $1-\\langle Z_i\\rangle^2$ (the variance of a $\\pm1$ variable is $E[x^2]-E[x]^2$). The average of $S$ independent shots is unbiased with variance $(1-\\langle Z_i\\rangle^2)/S$, so its standard error is at most $1/\\sqrt S$. To halve the error you need four times the shots; one more significant digit costs 100 times."
+    },
+    {
+      "type": "prose",
+      "text": "For a feature vector of $M$ observables, we want all $M$ estimates to be within $\\epsilon$ of the truth together, with confidence $1-\\delta$. Hoeffding's inequality says that the mean of $S$ independent variables with values in $[-1,1]$ deviates from its expectation by more than $\\epsilon$ with probability at most $2e^{-S\\epsilon^2/2}$. The union bound says that the chance that any of the $M$ estimates fails is at most the sum of the $M$ failure chances, $2Me^{-S\\epsilon^2/2}$. Setting this $\\le\\delta$ and solving for $S$:"
     },
     {
       "type": "math",
-      "tex": "S\\ \\ge\\ \\frac{2}{\\epsilon^2}\\ln\\frac{2M}{\\delta}",
-      "caption": "Shots for $M$ estimates of $\\pm1$ observables to be simultaneously $\\epsilon$-accurate with confidence $1-\\delta$."
+      "tex": "S\\ \\ge\\ \\frac2{\\epsilon^2}\\ln\\frac{2M}{\\delta}",
+      "caption": "Shots for $M$ estimates of $\\pm1$ observables to be simultaneously $\\epsilon$-accurate with confidence $1-\\delta$. The dependence on $M$ is only logarithmic."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. A readout uses $M=20$ features, each a $\\pm1$ observable, to accuracy $\\epsilon=0.01$ with $\\delta=0.01$ (99% confidence).",
+        "Step 2. $2/\\epsilon^2=20{,}000$ and $\\ln(2M/\\delta)=\\ln4000=8.294$.",
+        "Step 3. $S\\ge20{,}000\\times8.294=165{,}881$ shots. If all 20 features are of $Z$-type, they come from the same bit strings (next section), so this is the total, not per feature.",
+        "Step 4. The price of accuracy is in the $1/\\epsilon^2$: at $\\epsilon=0.1$, the same calculation gives 1,659 shots; going from $M=20$ to $M=2000$ costs only a factor $\\ln(400{,}000)/\\ln(4000)=1.55$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Readout weights amplify shot noise"
     },
     {
       "type": "prose",
-      "text": "The $1/\\epsilon^2$ is the expensive part: one more significant digit costs 100 times the shots. The readout weights then amplify the noise: a prediction $y=\\sum_iw_ix_i$ built from independently estimated features has noise variance $\\sum_iw_i^2\\operatorname{Var}(\\hat x_i)$, so a readout that relies on large weights on nearly-collinear features (common when features are strongly correlated) magnifies shot noise. This is one reason the ridge parameter must be retuned when moving from exact simulation to finite shots; Resource Accounting (#/qrc/hardware/resource-accounting) works through full budgets, and the memory plot on The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) lets you add shot noise and watch capacity fall."
+      "text": "The prediction is $y=\\sum_iw_ix_i$, built from estimated features $\\hat x_i$. If the estimates were independent, the noise on $y$ would have variance $\\sum_iw_i^2\\operatorname{Var}(\\hat x_i)=\\sum_iw_i^2(1-x_i^2)/S$. Large weights on nearly collinear features (which ridge regression is meant to avoid, see Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge)) are ruinous: two features that are almost equal, with weights $+10$ and $-10$, can represent a small difference accurately in the exact computation, but each carries independent shot noise and the noise does not cancel. This is one reason the ridge parameter must be retuned when moving from an exact simulation to finite shots, and why a reservoir that looks excellent in exact simulation can be poor on hardware; Resource Accounting (#/qrc/hardware/resource-accounting) works through full budgets."
+    },
+    {
+      "type": "prose",
+      "text": "The second program shows two things. First, six features, three $\\langle Z_i\\rangle$ and three $\\langle Z_iZ_j\\rangle$, are estimated from one set of 2000 bit strings. Second, the noise of a prediction built from two of them with weights $(0.5,0.5)$ versus $(10,-10)$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(2)\nn = 3\namp = rng.normal(size=8) + 1j * rng.normal(size=8); amp /= np.linalg.norm(amp)   # a random 3-qubit pure state\nprob = np.abs(amp) ** 2                                       # probabilities of the bit strings 000..111\nbits = np.array([[(k >> (n - 1 - i)) & 1 for i in range(n)] for k in range(8)])   # qubit 1 = leftmost bit\nzval = 1 - 2 * bits                                           # the (+1, -1) value of each Z_i for each bit string\nfeats = {\"Z1\": zval[:, 0], \"Z2\": zval[:, 1], \"Z3\": zval[:, 2],\n         \"Z1Z2\": zval[:, 0] * zval[:, 1], \"Z1Z3\": zval[:, 0] * zval[:, 2], \"Z2Z3\": zval[:, 1] * zval[:, 2]}\nexact = {k: float(prob @ v) for k, v in feats.items()}\n\nS = 2000\nshots = rng.choice(8, size=S, p=prob)                         # S computational-basis shots, each returns a bit string\nprint(f\"{S} shots -> six features from the SAME bit strings\")\nfor k, v in feats.items():\n    est = v[shots].mean(); se = np.sqrt((1 - exact[k] ** 2) / S)\n    print(f\"  {k:5s} exact {exact[k]:+.4f}  estimate {est:+.4f}  standard error {se:.4f}\")\n\n# noise amplification: the same two features with small and with large readout weights\nx = np.array([exact[\"Z1\"], exact[\"Z1Z2\"]])\nfor name, w in [(\"w = (0.5, 0.5)\", np.array([0.5, 0.5])), (\"w = (10, -10)\", np.array([10., -10.]))]:\n    var = (w ** 2 * (1 - x ** 2) / S).sum()\n    print(f\"{name}: prediction noise sd (ignoring correlations) = {np.sqrt(var):.4f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output: with 2000 shots the six estimates ($+0.1170$, $-0.1600$, $-0.3000$, $-0.7710$, $-0.4490$, $+0.4420$) lie within about one standard error of the exact values ($+0.1188$, $-0.1510$, $-0.3040$, $-0.7705$, $-0.4623$, $+0.4382$), with standard errors between 0.014 and 0.022, all computed from the same shots. The noise of a prediction with weights $(0.5,0.5)$ is 0.0132; with weights $(10,-10)$ it is 0.2638, twenty times larger. (The estimates share shots, so they are correlated and the 'independent' figure is only a guide.)"
+    },
+    {
+      "type": "prose",
+      "text": "The memory plot below uses the spin reservoir of The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) and lets you add shot noise to the features before the ridge readout is trained."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Memory function of the spin reservoir",
+        "params": [
+          {
+            "key": "qubits",
+            "label": "Qubits",
+            "control": "range",
+            "min": 2,
+            "max": 5,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "h",
+            "label": "Field h",
+            "control": "range",
+            "min": 0.01,
+            "max": 20,
+            "step": 0.01,
+            "default": 1
+          },
+          {
+            "key": "W",
+            "label": "Disorder W",
+            "control": "range",
+            "min": 0,
+            "max": 5,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "dt",
+            "label": "Evolution time per input Δt",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          },
+          {
+            "key": "V",
+            "label": "Virtual nodes V",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 1
+          },
+          {
+            "key": "shots",
+            "label": "Shots per expectation (0 = exact)",
+            "control": "range",
+            "min": 0,
+            "max": 100000,
+            "step": 10,
+            "default": 0
+          }
+        ],
+        "config": {
+          "sim": "qrc-memory",
+          "xLabel": "delay d (input steps)",
+          "yLabel": "r² of recalling s(k−d)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try this. With 4 qubits, $h=1$, evolution time 10 and virtual nodes $V=5$, the exact features give a memory capacity MC of 5.10. Set shots to 1000: it falls to 3.33. Set shots to 100: it falls to 1.90. Set shots to 100,000: it recovers to 4.89. With $V=1$ (4 features) the exact value is 2.14 and 1000 shots gives 1.78: the larger feature set suffered more, because the finer, smaller-variance directions that the extra features supply are exactly the ones swamped by noise. Capacity bought with more features has to be paid for with shots."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: shots for one feature",
+      "text": "A feature has $\\langle Z\\rangle=0.5$. How many shots give a standard error of 0.01?",
+      "hint": "Standard error squared equals variance per shot divided by $S$.",
+      "solution": [
+        "The variance per shot is $1-0.25=0.75$.",
+        "Standard error $0.01$ means variance $10^{-4}=0.75/S$, so $S=7500$."
+      ],
+      "answer": "7,500"
     },
     {
       "type": "heading",
@@ -44,8 +298,42 @@
       "text": "Which observables share shots"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
       "type": "prose",
-      "text": "A single shot in the computational basis returns a bit string $b\\in\\{0,1\\}^n$, from which every product of $Z$s is computed classically: $Z_i\\mapsto(-1)^{b_i}$, $Z_iZ_j\\mapsto(-1)^{b_i+b_j}$. So all $2^n-1$ diagonal Pauli strings are estimated from the same $S$ shots, at no extra quantum cost (the estimates are correlated, which does not matter for a linear readout). Observables that do not commute need different measurement settings: $\\langle X_i\\rangle$ needs a Hadamard before readout, $\\langle Y_i\\rangle$ an $S^\\dagger$ followed by a Hadamard. More generally, Pauli strings that qubit-wise commute (on every qubit the two strings carry the same Pauli, or at least one carries $I$) share a setting. Randomised measurements (classical shadows, Huang, Kueng and Preskill) estimate $M$ arbitrary $k$-local Pauli expectations to accuracy $\\epsilon$ with $O(3^k\\log M/\\epsilon^2)$ shots, a useful way to read many non-commuting features of a small reservoir."
+      "text": "A shot in the computational basis returns a string of bits $b_1b_2\\ldots b_n$. From that single string we can compute the value of every product of $Z$ operators: $Z_i\\mapsto(-1)^{b_i}$ and $Z_iZ_j\\mapsto(-1)^{b_i+b_j}$, because the string is a simultaneous eigenstate of all of them. So all $2^n-1$ non-trivial $Z$-strings are estimated from the same $S$ shots, at no extra quantum cost. The program above does this: one list of 2000 bit strings, six features. The estimates are correlated, which does not matter for a linear readout."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Other Pauli operators"
+    },
+    {
+      "type": "prose",
+      "text": "A shot cannot give both $Z_1$ and $X_1$, because they do not commute (see Commutators and Compatible Observables (#/quantum/foundations/commutators)). To read $\\langle X_i\\rangle$, rotate qubit $i$ so that the $X$ basis becomes the computational basis (a Hadamard gate), then read as usual. For $\\langle Y_i\\rangle$ apply $S^\\dagger$ then a Hadamard. The rotated shot then gives the value of $X_i$ for that qubit, and any product of $X$s on the rotated qubits. More generally, two Pauli strings can share a setting if they commute qubit by qubit: on every qubit, either they carry the same Pauli, or at least one of them carries the identity. Example on 3 qubits: $Z_1Z_2$, $Z_2Z_3$ and $Z_1$ share a setting (all $Z$); $X_1X_2$ and $X_3$ share another; but $Z_1X_2$ and $X_1Z_2$ need different settings, even though they commute as operators, because they disagree on qubits 1 and 2."
+    },
+    {
+      "type": "prose",
+      "text": "So for a feature set the cost counts settings: the feature set $\\{\\langle Z_i\\rangle,\\langle Z_iZ_j\\rangle\\}$ needs 1 setting; adding all $\\langle X_i\\rangle,\\langle X_iX_j\\rangle$ gives 2; adding the $Y$-type ones, 3. Each setting needs its own $S$ shots, so measuring all three families costs three times as many shots in total."
+    },
+    {
+      "type": "prose",
+      "text": "For many non-commuting features of a small reservoir, randomised measurements (classical shadows, Huang, Kueng and Preskill) measure each shot in a random Pauli basis and estimate any $k$-local Pauli expectation, with a number of shots that grows as $3^k\\log M/\\epsilon^2$ for $M$ such features: a useful way to read many non-commuting features of a small reservoir without choosing settings."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: counting settings",
+      "text": "A 4-qubit reservoir is read out through $\\langle Z_i\\rangle$, $\\langle Z_iZ_j\\rangle$, $\\langle X_i\\rangle$ and $\\langle X_1X_2\\rangle$. How many measurement settings does that take, and how many shots in total if each setting needs 20,000?",
+      "hint": "Group the features by which Pauli appears.",
+      "solution": [
+        "All the $Z$-type features share the all-$Z$ setting: 1 setting.",
+        "All the $X$-type features share the all-$X$ setting (a Hadamard on every qubit): 1 setting.",
+        "Total $2\\times20{,}000=40{,}000$ shots."
+      ],
+      "answer": "2 settings; 40,000 shots"
     },
     {
       "type": "heading",
@@ -54,7 +342,11 @@
     },
     {
       "type": "prose",
-      "text": "A reservoir is useful because its state carries the input history. Measuring it projectively at step $k$ replaces that state with a post-measurement state that has lost the coherences carrying much of the memory, and the next shot at step $k+1$ is only meaningful if the system has been prepared again. The standard work-around in simulations and early experiments is to rerun the whole input sequence up to step $k$ for every shot at every step, which costs $O(S\\,T^2)$ evolution steps for a series of length $T$ instead of $O(T)$. Ways around it (restarting with a short window, weak measurements, rewinding, measuring only part of the system) are the subject of Measurement Back-Action (#/qrc/hardware/measurement-back-action) and Online Protocols (#/qrc/hardware/online-protocols). The physics behind all of them is the information–disturbance trade-off below."
+      "text": "A reservoir is useful because its state carries the input history. Measuring it projectively at step $k$ replaces that state with the post-measurement state, which has lost the coherences that carried much of the memory (the worked example above), and the next shot at step $k+1$ is only meaningful if the system is prepared again. The standard work-around in simulations and early experiments is to rerun the entire input sequence up to step $k$ for every shot at every step. To get $S$ shots at each of $T$ steps that costs $S\\sum_{k=1}^{T}k=S\\,T(T+1)/2$ evolution steps, instead of the $T$ steps of a single run. With $T=1000$ and $S=1000$ that is $5.0\\times10^8$ evolution steps against $10^3$ for one run (and $10^6$ if each shot could be a fresh run of one step each). The time per feature is therefore quadratic in the length of the series."
+    },
+    {
+      "type": "prose",
+      "text": "Ways round it (restarting with a short window, weak measurements, rewinding, measuring only part of the system) are the subject of Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Online Measurement Protocols (#/qrc/hardware/online-protocols). The physics behind all of them is the information-disturbance trade-off of the next section."
     },
     {
       "type": "heading",
@@ -62,26 +354,52 @@
       "text": "Weak measurement: information against disturbance"
     },
     {
-      "type": "prose",
-      "text": "Take the two-outcome measurement with operators"
-    },
-    {
-      "type": "math",
-      "tex": "M_\\pm = \\sqrt{\\frac{I\\pm\\varepsilon Z}{2}},\\qquad 0\\le\\varepsilon\\le1",
-      "caption": "A weak $Z$ measurement; $\\varepsilon=1$ is projective, $\\varepsilon\\to0$ learns nothing and disturbs nothing."
+      "type": "heading",
+      "level": 3,
+      "text": "The maths"
     },
     {
       "type": "prose",
-      "text": "Outcome $+$ has probability $p_+ = (1+\\varepsilon\\langle Z\\rangle)/2$, so $\\hat z = (2\\hat p_+-1)/\\varepsilon$ is unbiased with variance $(1-\\varepsilon^2\\langle Z\\rangle^2)/(\\varepsilon^2S)$: information per shot falls as $\\varepsilon^2$. The disturbance, with the outcome discarded, leaves populations alone and multiplies the coherence by $2\\sqrt{(1+\\varepsilon)(1-\\varepsilon)}/2 = \\sqrt{1-\\varepsilon^2}$. For small $\\varepsilon$ the information per shot is of order $\\varepsilon^2$ and the coherence loss is of order $\\varepsilon^2/2$ too, which is the trade-off at its sharpest: you cannot learn about $Z$ without dephasing in proportion. In a reservoir, a sequence of weak measurements on an ensemble (as in NMR) or on a repeated single system gives an online signal while preserving most of the memory; Mujal et al. show for time-series QRC that weak measurements operated online at the right strength extract the features accurately without destroying the needed memory, and compare this with protocols that rerun part of the experiment after each projective measurement."
+      "text": "Take the two-outcome measurement of the last section, $M_\\pm=\\sqrt{(I\\pm\\varepsilon Z)/2}$ with $0\\le\\varepsilon\\le1$. For $\\varepsilon=1$ it is projective; as $\\varepsilon\\to0$ it learns nothing and disturbs nothing. We need two things: how much we learn per shot, and how much we disturb."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Information. The probability of outcome $+$ is $p_+=\\operatorname{Tr}(M_+^\\dagger M_+\\rho)=(1+\\varepsilon\\langle Z\\rangle)/2$. After $S$ shots the fraction of $+$ outcomes, $\\hat p_+$, estimates $p_+$, and $\\hat z=(2\\hat p_+-1)/\\varepsilon$ is an unbiased estimator of $\\langle Z\\rangle$. The variance of $\\hat p_+$ is $p_+(1-p_+)/S=(1-\\varepsilon^2\\langle Z\\rangle^2)/(4S)$, so $\\operatorname{Var}\\hat z=\\frac4{\\varepsilon^2}\\cdot\\frac{1-\\varepsilon^2\\langle Z\\rangle^2}{4S}=\\frac{1-\\varepsilon^2\\langle Z\\rangle^2}{\\varepsilon^2S}$. The information per shot, the inverse of the variance per shot, falls as $\\varepsilon^2$.",
+        "Disturbance. With the outcome discarded, the non-selective map is $\\rho\\mapsto M_+\\rho M_++M_-\\rho M_-$. Both operators are diagonal, so populations are unchanged. The coherence $\\rho_{01}$ is multiplied by $(M_+)_{00}(M_+)_{11}+(M_-)_{00}(M_-)_{11}=2\\sqrt{\\tfrac{(1+\\varepsilon)(1-\\varepsilon)}4}=\\sqrt{1-\\varepsilon^2}$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For small $\\varepsilon$, $\\sqrt{1-\\varepsilon^2}\\approx1-\\varepsilon^2/2$: the coherence lost per shot is of order $\\varepsilon^2/2$, and the information gained is of order $\\varepsilon^2$ too. That is the trade-off at its sharpest: you cannot learn about $Z$ without dephasing in proportion. Now repeat $N$ times on the same system. The coherence is multiplied by $(1-\\varepsilon^2)^{N/2}\\approx e^{-N\\varepsilon^2/2}$, and the variance of the combined estimate is about $1/(N\\varepsilon^2)$. The product $N\\varepsilon^2$ appears in both: it is the total measurement strength. Reading $\\langle Z\\rangle$ with standard deviation $\\sigma$ on a single system needs $N\\varepsilon^2\\approx1/\\sigma^2$, which multiplies the coherence by $e^{-1/(2\\sigma^2)}$. For $\\sigma=0.3$ that is $0.0039$; for $\\sigma=0.1$ it is $2\\times10^{-22}$. A single system cannot be read precisely without losing the coherence of the measured qubit: precision has to come from many copies (ensembles or reruns), not from squeezing more information out of one."
+    },
+    {
+      "type": "prose",
+      "text": "In a reservoir the picture is less bleak than on an isolated qubit, because the measured qubit is coupled to the others and the unitary spreads memory across them, so a partial loss on one qubit is not a loss of everything. Mujal and co-authors show for time-series quantum reservoir computing that weak measurements operated online at a suitable strength extract the features accurately enough without destroying the memory they need, and compare this with protocols that rerun part of the experiment after every projective measurement."
+    },
+    {
+      "type": "prose",
+      "text": "The first program (which also contains the ancilla check above) estimates $\\langle Z\\rangle$ of a state with $\\langle Z\\rangle=0.5$ and coherence $0.433$ from 20,000 shots at three strengths."
     },
     {
       "type": "code",
       "lang": "python",
-      "source": "import numpy as np\nrng = np.random.default_rng(0)\nZ = np.diag([1., -1.])\n\ndef weak_kraus(eps):\n    \"\"\"M_pm = sqrt((I pm eps Z)/2): eps = 1 is a projective Z measurement, eps -> 0 learns nothing.\"\"\"\n    return [np.diag(np.sqrt((1 + sgn * eps * np.diag(Z)) / 2)) for sgn in (+1, -1)]\n\ntheta = np.pi / 3                        # true state: <Z> = cos(theta) = 0.5, coherence |rho01| = sin(theta)/2\npsi = np.array([np.cos(theta / 2), np.sin(theta / 2)]); rho = np.outer(psi, psi)\nshots = 20000\nfor eps in [1.0, 0.5, 0.1]:\n    Mp, Mm = weak_kraus(eps)\n    p_plus = np.trace(Mp @ rho @ Mp).real\n    clicks = rng.random(shots) < p_plus\n    z_hat = (2 * clicks.mean() - 1) / eps            # unbiased estimator of <Z>\n    sd_theory = np.sqrt((1 - (eps * 0.5) ** 2) / (eps ** 2 * shots))\n    after = Mp @ rho @ Mp + Mm @ rho @ Mm             # state after one measurement, outcome discarded\n    print(f\"eps={eps}: <Z> estimate {z_hat:.3f} (sd {sd_theory:.4f}); \"\n          f\"coherence {abs(rho[0, 1]):.3f} -> {abs(after[0, 1]):.3f} (factor sqrt(1-eps^2) = {np.sqrt(1 - eps ** 2):.3f})\")\n"
+      "source": "import numpy as np\nrng = np.random.default_rng(0)\nZ = np.diag([1., -1])\n\ndef weak_kraus(eps):\n    \"\"\"M_pm = sqrt((I pm eps Z)/2): eps = 1 is a projective Z measurement, eps -> 0 learns nothing.\"\"\"\n    return [np.diag(np.sqrt((1 + sgn * eps * np.diag(Z)) / 2)) for sgn in (+1, -1)]\n\ndef ancilla_kraus(phi):\n    \"\"\"Same operators from an ancilla: rotate it by +2phi (system |0>) or -2phi (system |1>), measure it in the |+>,|-> basis.\"\"\"\n    ry = lambda a: np.array([[np.cos(a / 2), -np.sin(a / 2)], [np.sin(a / 2), np.cos(a / 2)]])\n    V = np.kron(np.diag([1., 0]), ry(2 * phi)) + np.kron(np.diag([0., 1]), ry(-2 * phi))   # system (x) ancilla\n    V3 = V.reshape(2, 2, 2, 2)[:, :, :, 0]                 # [s_out, a_out, s_in], ancilla starts in |0>\n    out = []\n    for b in (np.array([1, 1]) / np.sqrt(2), np.array([1, -1]) / np.sqrt(2)):\n        out.append(np.einsum('a,sat->st', b, V3))\n    return out\n\nphi = 0.2; eps = np.sin(2 * phi)\nprint(\"eps = sin(2 phi) = %.4f\" % eps)\nprint(\"ancilla Kraus operators equal sqrt((I +- eps Z)/2):\",\n      all(np.allclose(a, w) for a, w in zip(ancilla_kraus(phi), weak_kraus(eps))))\n\ntheta = np.pi / 3                        # true state: <Z> = cos(theta) = 0.5, coherence |rho01| = sin(theta)/2\npsi = np.array([np.cos(theta / 2), np.sin(theta / 2)]); rho = np.outer(psi, psi)\nshots = 20000\nfor eps in [1.0, 0.5, 0.1]:\n    Mp, Mm = weak_kraus(eps)\n    p_plus = np.trace(Mp @ rho @ Mp).real\n    clicks = rng.random(shots) < p_plus\n    z_hat = (2 * clicks.mean() - 1) / eps            # unbiased estimator of <Z>\n    sd_theory = np.sqrt((1 - (eps * 0.5) ** 2) / (eps ** 2 * shots))\n    after = Mp @ rho @ Mp + Mm @ rho @ Mm             # state after one measurement, outcome discarded\n    print(f\"eps={eps}: <Z> estimate {z_hat:.3f} (sd {sd_theory:.4f}); \"\n          f\"coherence {abs(rho[0, 1]):.3f} -> {abs(after[0, 1]):.3f} (factor sqrt(1-eps^2) = {np.sqrt(1 - eps ** 2):.3f})\")\n"
     },
     {
       "type": "prose",
-      "text": "With 20,000 shots on a state with $\\langle Z\\rangle=0.5$: the projective measurement ($\\varepsilon=1$) estimates 0.496 with standard deviation 0.006 and destroys the coherence (0.433 to 0); $\\varepsilon=0.5$ gives 0.501 with sd 0.014 and keeps 87% of the coherence; $\\varepsilon=0.1$ gives 0.521 with sd 0.071 and keeps 99.5% of it. The estimate's standard deviation grows about elevenfold from $\\varepsilon=1$ to $0.1$, so matching the projective accuracy at $\\varepsilon=0.1$ needs about 130 times the shots (the variance ratio is $99.75/0.75$)."
+      "text": "Output: the ancilla operators with $\\phi=0.2$ ($\\varepsilon=\\sin0.4=0.3894$) equal $\\sqrt{(I\\pm\\varepsilon Z)/2}$ (True). With 20,000 shots on the state: the projective measurement ($\\varepsilon=1$) estimates 0.496 with standard deviation 0.0061 and destroys the coherence (0.433 to 0); $\\varepsilon=0.5$ gives 0.501 with standard deviation 0.0137 and keeps 87% of the coherence ($0.433\\to0.375$); $\\varepsilon=0.1$ gives 0.521 with standard deviation 0.0706 and keeps 99.5% of it. The standard deviation grows about elevenfold from $\\varepsilon=1$ to $\\varepsilon=0.1$, so matching the projective accuracy at $\\varepsilon=0.1$ needs about 133 times the shots (the variance ratio is $99.75/0.75$)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: how weak is weak",
+      "text": "A weak measurement with $\\varepsilon=0.2$ is applied 25 times to the same qubit with the outcomes discarded. What fraction of the coherence remains? What is the approximate standard error of $\\hat z$ for a state with $\\langle Z\\rangle=0$ from the 25 outcomes?",
+      "hint": "Both the coherence and the variance depend on $N\\varepsilon^2$.",
+      "solution": [
+        "Per shot the coherence factor is $\\sqrt{1-0.04}=\\sqrt{0.96}=0.9798$. For 25 shots: $0.96^{12.5}=0.600$.",
+        "The variance of $\\hat z$ is $(1-0)/(\\varepsilon^2N)=1/(0.04\\cdot25)=1$, so the standard error is 1.0: a useless estimate. 25 weak shots at $\\varepsilon=0.2$ cost 40% of the coherence and tell you almost nothing, because $N\\varepsilon^2=1$."
+      ],
+      "answer": "$0.96^{12.5}=0.60$ remains; standard error $1/(0.2\\sqrt{25})=1.0$"
     },
     {
       "type": "heading",
@@ -90,20 +408,58 @@
     },
     {
       "type": "prose",
-      "text": "In an ensemble platform such as NMR, $10^{15}$ or more identical molecules evolve together and the signal is directly the ensemble average $\\operatorname{Tr}(O\\rho)$, read weakly and continuously with negligible back-action per molecule. That is why the first QRC proposals by Fujii and Nakajima were phrased for disordered ensembles and why expectation values were treated as directly available. On a single-system platform (superconducting qubits, trapped ions, neutral atoms) each shot is one projective measurement of one copy, and the expectation is only reached by repetition; the cost analysis on Resource Accounting (#/qrc/hardware/resource-accounting) is about this difference."
+      "text": "In an ensemble platform such as NMR, $10^{15}$ or more identical molecules evolve together and the signal is directly the ensemble average $\\operatorname{Tr}(O\\rho)$, read weakly and continuously with negligible back-action per molecule. That is why the first QRC proposals by Fujii and Nakajima were phrased for disordered ensembles, and why expectation values were treated as directly available there: the 'shots' are the molecules, all read at once. On a single-system platform (superconducting qubits, trapped ions, neutral atoms) each shot is one projective measurement of one copy, and the expectation is reached only by repetition. The cost analysis of Resource Accounting (#/qrc/hardware/resource-accounting) is about this difference."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Putting it together: a measurement budget"
+    },
+    {
+      "type": "prose",
+      "text": "A designer plans a four-qubit reservoir read out through the 10 features $\\langle Z_i\\rangle$ and $\\langle Z_iZ_j\\rangle$, on a series of $T=500$ input steps, with each feature needed to $\\epsilon=0.02$ at confidence 95%."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. One setting suffices for all ten features (all $Z$-type).",
+        "Step 2. Shots per step: $S\\ge\\frac2{0.02^2}\\ln\\frac{2\\cdot10}{0.05}=5000\\cdot\\ln400=5000\\cdot5.991=29{,}957$.",
+        "Step 3. If the state could be read non-destructively at every step, a single run of 500 steps would need $500\\times29{,}957=1.5\\times10^7$ shots in all.",
+        "Step 4. If each projective shot destroys the state, every shot at step $k$ needs a rerun of $k$ steps. The number of evolution steps is $29{,}957\\times500\\times501/2=3.75\\times10^9$, about 250 times more than the number of shots (that ratio is $T/2$ on average).",
+        "Step 5. Four ways to bring this down, the subject of the hardware pages: lower $\\epsilon$ (it enters squared), fewer features, weak measurement (costs shots but keeps the state), or measuring only a part of the system so that the rest keeps the memory."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A general measurement is a set $\\{M_m\\}$ with $\\sum_mM_m^\\dagger M_m=I$; outcome $m$ has probability $\\operatorname{Tr}(M_m^\\dagger M_m\\rho)$ and leaves $M_m\\rho M_m^\\dagger/p_m$. Ignoring the outcome gives the channel $\\sum_mM_m\\rho M_m^\\dagger$.",
+        "A projective measurement with the outcome discarded is complete dephasing in the measured basis: only the diagonal survives.",
+        "Every POVM is a projective measurement on system plus ancilla. A weak measurement is a partial read-out of an ancilla.",
+        "Shot noise: standard error $\\le1/\\sqrt S$. For $M$ features to be $\\epsilon$-accurate with confidence $1-\\delta$: $S\\ge(2/\\epsilon^2)\\ln(2M/\\delta)$.",
+        "Large readout weights amplify shot noise; retune the ridge parameter for finite shots.",
+        "All $Z$-strings share one setting; strings share a setting if they match qubit by qubit.",
+        "Weak measurement of strength $\\varepsilon$: information per shot $\\sim\\varepsilon^2$ and coherence loss per shot $\\sim\\varepsilon^2/2$: information costs coherence on the measured system.",
+        "Projective readout at every step makes a time series cost $O(ST^2)$ evolution steps; avoiding that is the subject of the hardware pages."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
       "title": "Shots for one feature",
-      "text": "A feature has $\\langle Z\\rangle = 0.5$. How many shots give a standard error of 0.01? How many with a weak measurement at $\\varepsilon=0.1$?",
+      "text": "A feature has $\\langle Z\\rangle=0.5$. How many shots give a standard error of 0.01? How many with a weak measurement at $\\varepsilon=0.1$?",
+      "hint": "Variance per shot over $S$ equals the squared standard error.",
       "solution": [
-        "Projective: variance per shot $1-0.25 = 0.75$; need $0.75/S = 10^{-4}$, so $S=7500$.",
-        "Weak: variance per shot $(1-\\varepsilon^2\\langle Z\\rangle^2)/\\varepsilon^2 = (1-0.0025)/0.01 = 99.75$; need $99.75/S = 10^{-4}$, so $S\\approx 997{,}500$, about $10^6$.",
+        "Projective: variance per shot $1-0.25=0.75$; need $0.75/S=10^{-4}$, so $S=7500$.",
+        "Weak: variance per shot $(1-\\varepsilon^2\\langle Z\\rangle^2)/\\varepsilon^2=(1-0.0025)/0.01=99.75$; need $99.75/S=10^{-4}$, so $S\\approx997{,}500$, about $10^6$.",
         "The weak measurement costs about 133 times more shots here, in exchange for keeping 99.5% of the coherence."
       ],
       "answer": "7,500 projective; about $10^6$ weak"
@@ -112,9 +468,10 @@
       "type": "problem",
       "title": "A whole feature vector",
       "text": "A readout uses $M=20$ features, each a $\\pm1$ observable. How many shots make all 20 estimates accurate to $\\pm0.01$ with 99% confidence (Hoeffding plus union bound)? If they are all $Z$-type products, how many measurement settings is that?",
+      "hint": "Use $\\delta=0.01$ and $\\epsilon=0.01$.",
       "solution": [
-        "$S\\ge(2/\\epsilon^2)\\ln(2M/\\delta) = 2\\times10^4\\times\\ln(4000)$.",
-        "$\\ln 4000 = 8.29$, so $S\\approx165{,}900$ shots.",
+        "$S\\ge(2/\\epsilon^2)\\ln(2M/\\delta)=2\\times10^4\\times\\ln(4000)$.",
+        "$\\ln4000=8.29$, so $S\\approx165{,}900$ shots.",
         "All $Z$-type products are computed from the same computational-basis bit strings, so it is one setting: 165,900 shots in total, not per feature."
       ],
       "answer": "about 166,000 shots, one setting"
@@ -123,12 +480,51 @@
       "type": "problem",
       "title": "Disturbance of a projective readout",
       "text": "After a projective measurement of all $Z_i$ with the outcome discarded, what remains of a reservoir state's Pauli coordinates $r_P$?",
+      "hint": "What does a diagonal density matrix look like in the Pauli expansion?",
       "solution": [
         "The non-selective map is complete dephasing in the computational basis: $\\rho\\mapsto\\sum_b\\vert b\\rangle\\langle b\\vert\\rho\\vert b\\rangle\\langle b\\vert$.",
         "Diagonal Pauli strings (products of $I$ and $Z$) are unchanged; every string containing an $X$ or a $Y$ has zero expectation in a diagonal state.",
-        "So only the $2^n$ diagonal coordinates survive out of $4^n$; all coherence-carried memory is erased."
+        "So only the $2^n-1$ non-trivial $Z$-type coordinates survive out of $4^n-1$; all coherence-carried memory is erased."
       ],
       "answer": "Only the $2^n-1$ non-trivial $Z$-type coordinates survive; all others become 0"
+    },
+    {
+      "type": "problem",
+      "title": "Weak measurement from an ancilla",
+      "text": "An ancilla is rotated by $\\pm2\\phi$ according to the system's $Z$ value, with $\\phi=0.3$, and then measured in the $\\vert\\pm\\rangle$ basis. Find $\\varepsilon$, the probability of outcome $+$ for a system in $\\vert+\\rangle$ and for a system in $\\vert0\\rangle$, and the coherence factor.",
+      "hint": "Use $\\varepsilon=\\sin2\\phi$.",
+      "solution": [
+        "$\\varepsilon=\\sin2\\phi=\\sin0.6=0.5646$.",
+        "For $\\vert+\\rangle$, $\\langle Z\\rangle=0$ so $p_+=\\tfrac12(1+0)=0.5$.",
+        "For $\\vert0\\rangle$, $\\langle Z\\rangle=1$ so $p_+=\\tfrac12(1+0.5646)=0.7823$ (check: $(\\cos\\phi+\\sin\\phi)^2/2=(0.9553+0.2955)^2/2=0.7823$ ✓).",
+        "The coherence factor is $\\sqrt{1-\\varepsilon^2}=\\cos2\\phi=\\cos0.6=0.8253$, the overlap of the two ancilla states."
+      ],
+      "answer": "$\\varepsilon=0.565$; $p_+=0.5$ and $0.782$; coherence factor $0.825$"
+    },
+    {
+      "type": "problem",
+      "title": "A budget with reruns",
+      "text": "A reservoir is run for $T=200$ steps; each step needs $S=2000$ shots and each shot destroys the state, so step $k$ needs a rerun of $k$ evolution steps. How many evolution steps in total, and how many would a single non-destructive run use?",
+      "hint": "Sum $1+2+\\dots+T$.",
+      "solution": [
+        "Step $k$ costs $S\\cdot k$ evolution steps; summing over $k=1..T$ gives $S\\,T(T+1)/2=2000\\cdot200\\cdot201/2=4.02\\times10^7$.",
+        "A single non-destructive run would use $T=200$ steps (though it would still need the same number of shots read from it).",
+        "The rerun overhead is the factor $S(T+1)/2\\approx2\\times10^5$ in evolution steps."
+      ],
+      "answer": "$4.02\\times10^7$ steps against 200"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The hardware shelf builds on this page: Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Online Measurement Protocols (#/qrc/hardware/online-protocols) are the protocols that avoid the quadratic rerun cost; Resource Accounting (#/qrc/hardware/resource-accounting) turns shots into a full budget; Gate-Based Devices (#/qrc/hardware/gate-based-devices) meets measurement in real devices.",
+        "On the models shelf, Readout and Multiplexing (#/qrc/models/readout-and-multiplexing) chooses which observables to read and how to multiplex them; The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) has the memory plot with shot noise.",
+        "Back on this chapter: Open Quantum Systems Toolkit (#/qrc/open-systems) collects the pages; the contraction analysis of Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points) applies to measurement channels as well, since the non-selective measurement is a channel."
+      ]
     },
     {
       "type": "heading",

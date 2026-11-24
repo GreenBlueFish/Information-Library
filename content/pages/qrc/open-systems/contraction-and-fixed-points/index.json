@@ -1,15 +1,131 @@
 {
   "title": "Contraction and Fixed Points",
-  "intro": "A quantum reservoir has the echo state property when the channels its inputs select squeeze any two initial states together. This page makes that precise with the trace distance, contraction coefficients and channel spectra, and shows how a conserved quantity breaks it.",
+  "intro": "A quantum reservoir has the echo state property when the channels its inputs select squeeze any two initial states together. This page makes that precise with the trace distance, contraction coefficients and the spectrum of a channel, and shows how a conserved quantity breaks it.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Trace distance and why it is the right metric"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "The trace distance $D(\\rho,\\sigma) = \\tfrac12\\Vert\\rho-\\sigma\\Vert_1 = \\tfrac12\\sum_i\\vert\\lambda_i(\\rho-\\sigma)\\vert$ is the maximum over measurements of the difference in outcome probabilities: $D = \\max_{0\\le\\Pi\\le I}\\operatorname{Tr}\\Pi(\\rho-\\sigma)$. Helstrom's theorem makes it operational: given one copy of either state with equal priors, the best guess succeeds with probability $\\tfrac12(1+D)$. It also bounds every readout: for any observable with $\\Vert O\\Vert\\le1$, $\\vert\\operatorname{Tr}O\\rho - \\operatorname{Tr}O\\sigma\\vert\\le 2D(\\rho,\\sigma)$. So if two runs of a reservoir end in states at trace distance $\\epsilon$, no linear readout of bounded observables can tell them apart by more than $2\\epsilon\\Vert w\\Vert_1$. For one qubit, $D = \\tfrac12\\vert\\vec r-\\vec s\\vert$, half the Euclidean distance of the Bloch vectors."
+      "text": "From Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels) you need density matrices, the Bloch vector, channels and the Bloch map $\\vec r\\mapsto T\\vec r+\\vec t$. From Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics) you need the idea of a decay rate and of the Liouvillian's eigenvalues. For the machine-learning side, The Echo State Property (#/qrc/foundations/echo-state-property) states the echo state property for classical networks; this page proves the quantum version. The chapter Getting Started (#/qrc/start) has the background on why a reservoir must forget its starting state."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Compute the trace distance between two states and say what it means for distinguishing them and for a readout.",
+        "Compute the contraction coefficient of a one-qubit channel from its Bloch map and use it to bound how many steps are needed to forget.",
+        "Find the fixed points of a channel, read the forgetting rate from the second-largest eigenvalue, and spot extra fixed points caused by a conserved quantity.",
+        "State and use the sufficient condition for the echo state property of an input-driven quantum reservoir, and explain why the standard spin reservoir needs a condition on several steps instead of one.",
+        "Check numerically whether a given reservoir forgets its initial state."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why a reservoir has to forget"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir is a machine that you start in some state, and the starting state is arbitrary: nobody should have to know it. Run the machine on a long stream of inputs. At the end, the machine's state ought to depend on the recent inputs, not on how it was started. If it still depended on the start, two runs on the same data would give different features, and the trained readout would be fitted to an accident of the initial condition. The property that rules this out is the echo state property; the reservoir's capacity to hold the last few inputs but not the first is its fading memory (see The Echo State Property (#/qrc/foundations/echo-state-property) for the classical definition)."
+    },
+    {
+      "type": "prose",
+      "text": "For a quantum reservoir the 'state' is a density matrix and the 'machine' is a sequence of channels. So we need three things: a way to say how far apart two density matrices are; a way to say that a channel brings them closer; and a way to say that a whole sequence of different channels does. The first is the trace distance, the second the contraction coefficient, and the third combines the second with the fixed points of the channels. Unitary evolution cannot supply any of this: it preserves every distance, so it never forgets, and the forgetting in a quantum reservoir must come from a reset, a damping or a measurement."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Trace distance: how far apart are two states?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "If someone hands you one qubit that is either in state $\\rho$ or in state $\\sigma$, how well can you tell which? The answer is a number between 0 (hopeless, the states are identical) and 1 (perfect, the states are orthogonal). That number, the trace distance, is the natural distance between states for our purposes because it measures what a measurement can see."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths"
+    },
+    {
+      "type": "prose",
+      "text": "The difference $\\rho-\\sigma$ is Hermitian and has trace 0, so its eigenvalues $\\mu_i$ are real and sum to zero: some positive, some negative, with positive and negative parts of equal total size. Define"
+    },
+    {
+      "type": "math",
+      "tex": "D(\\rho,\\sigma)=\\tfrac12\\Vert\\rho-\\sigma\\Vert_1=\\tfrac12\\sum_i\\vert\\mu_i\\vert=\\sum_{\\mu_i>0}\\mu_i",
+      "caption": "The trace distance. $\\Vert A\\Vert_1$ is the sum of the absolute values of the eigenvalues of a Hermitian $A$. The last form holds because the positive and negative parts are equal."
+    },
+    {
+      "type": "prose",
+      "text": "Why this is the right distance. Choose a yes/no measurement described by an operator $0\\le\\Pi\\le I$ ('yes' has probability $\\operatorname{Tr}\\Pi\\rho$). The difference in the probabilities of 'yes' for the two states is $\\operatorname{Tr}\\Pi(\\rho-\\sigma)=\\sum_i\\mu_i\\langle i\\vert\\Pi\\vert i\\rangle$ in the eigenbasis of $\\rho-\\sigma$. Each $\\langle i\\vert\\Pi\\vert i\\rangle$ lies between 0 and 1, so the sum is largest when it is 1 on the positive $\\mu_i$ and 0 on the negative ones, and that maximum is $\\sum_{\\mu_i>0}\\mu_i=D$. Hence"
+    },
+    {
+      "type": "math",
+      "tex": "D(\\rho,\\sigma)=\\max_{0\\le\\Pi\\le I}\\operatorname{Tr}\\,\\Pi(\\rho-\\sigma)",
+      "caption": "The trace distance is the largest difference in outcome probability that any measurement can produce."
+    },
+    {
+      "type": "prose",
+      "text": "Two operational consequences follow."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Guessing. Given one copy of $\\rho$ or $\\sigma$, each with probability one half, the best strategy (measure the projector onto the positive part of $\\rho-\\sigma$ and guess $\\rho$ when 'yes') succeeds with probability $\\tfrac12(1+D)$ (Helstrom). At $D=0$ it is a coin flip; at $D=1$ it is certain.",
+        "Readouts. For an observable $O$ with all eigenvalues between $-1$ and $1$, $\\vert\\operatorname{Tr}O\\rho-\\operatorname{Tr}O\\sigma\\vert\\le2D(\\rho,\\sigma)$. So if two runs of a reservoir end at distance $\\epsilon$, every feature differs by at most $2\\epsilon$, and a linear readout with weights $w_i$ differs by at most $2\\epsilon\\,\\Vert w\\Vert_1$. Small trace distance means indistinguishable by any readout."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "For one qubit, $\\rho-\\sigma=\\tfrac12(\\vec r-\\vec s)\\cdot\\vec\\sigma$, whose eigenvalues are $\\pm\\tfrac12\\vert\\vec r-\\vec s\\vert$ (the eigenvalues of $\\vec a\\cdot\\vec\\sigma$ are $\\pm\\vert\\vec a\\vert$). So"
+    },
+    {
+      "type": "math",
+      "tex": "D(\\rho,\\sigma)=\\tfrac12\\vert\\vec r-\\vec s\\vert",
+      "caption": "One qubit: half the Euclidean distance between the Bloch vectors."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. States $\\vert0\\rangle$ (Bloch vector $(0,0,1)$) and $\\vert+\\rangle$ (vector $(1,0,0)$). The difference of the vectors is $(-1,0,1)$, of length $\\sqrt2=1.414$.",
+        "Step 2. $D=\\tfrac12\\sqrt2=0.707$.",
+        "Step 3. Best guessing probability $\\tfrac12(1+0.707)=0.854$. (Measuring $X$ instead and guessing $\\vert+\\rangle$ on '$+$' succeeds with probability $\\tfrac12(1)+\\tfrac12(\\tfrac12)=0.75$: worse, because $X$ is not the optimal measurement, which lies along $(-1,0,1)/\\sqrt2$.)",
+        "Step 4. Compare $\\vert0\\rangle$ with the maximally mixed state: the vectors differ by $(0,0,1)$, so $D=0.5$. Any pure state is at distance 0.5 from $I/2$.",
+        "Step 5. Orthogonal states $\\vert0\\rangle,\\vert1\\rangle$: $D=\\tfrac12\\cdot2=1$."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "A common confusion: a small difference in individual matrix entries can still be a large trace distance if it is spread over many eigenvalues. Always compute from the eigenvalues of the difference."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: distance and guessing",
+      "text": "Two qubit states have Bloch vectors $(0.6,0,0.2)$ and $(0.2,0,-0.1)$. Find $D$ and the best probability of telling them apart from one copy.",
+      "hint": "Subtract the vectors, take the length, halve it.",
+      "solution": [
+        "The difference is $(0.4,0,0.3)$, of length $\\sqrt{0.16+0.09}=0.5$.",
+        "$D=\\tfrac12\\cdot0.5=0.25$.",
+        "Success $=\\tfrac12(1+0.25)=0.625$."
+      ],
+      "answer": "$D=0.25$; success probability $0.625$"
     },
     {
       "type": "heading",
@@ -17,30 +133,168 @@
       "text": "Channels never increase distance"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Monotonicity"
+    },
+    {
       "type": "prose",
-      "text": "For every CPTP map, $D(\\mathcal{E}\\rho,\\mathcal{E}\\sigma)\\le D(\\rho,\\sigma)$ (monotonicity, a data-processing inequality). Unitaries achieve equality. The contraction coefficient"
+      "text": "A central fact: for every channel $\\mathcal E$ and any two states,"
     },
     {
       "type": "math",
-      "tex": "\\eta(\\mathcal{E}) = \\sup_{\\rho\\neq\\sigma}\\frac{D(\\mathcal{E}\\rho,\\mathcal{E}\\sigma)}{D(\\rho,\\sigma)}\\ \\in[0,1]",
-      "caption": "The worst-case factor by which one application of the channel shrinks trace distance."
+      "tex": "D(\\mathcal E(\\rho),\\mathcal E(\\sigma))\\le D(\\rho,\\sigma)",
+      "caption": "Monotonicity of the trace distance (a data-processing inequality)."
     },
     {
       "type": "prose",
-      "text": "measures how strongly a channel forgets. For a qubit channel $\\vec r\\mapsto T\\vec r+\\vec t$, differences of Bloch vectors map as $T(\\vec r-\\vec s)$, so $\\eta$ is the largest singular value of $T$: depolarising gives $1-p$, amplitude damping $\\sqrt{1-\\gamma}$, dephasing 1 (populations are never forgotten: $Z$ eigenstates stay distinguishable), and a full reset $0$. Contraction coefficients multiply under composition, $\\eta(\\mathcal{E}_2\\mathcal{E}_1)\\le\\eta(\\mathcal{E}_2)\\eta(\\mathcal{E}_1)$, which is all the echo state property needs."
+      "text": "The reason is a short argument using the maximum formula. Let $\\Pi$ be the best measurement for the output states. Then $D(\\mathcal E\\rho,\\mathcal E\\sigma)=\\operatorname{Tr}\\Pi\\,\\mathcal E(\\rho-\\sigma)=\\operatorname{Tr}\\mathcal E^\\dagger(\\Pi)(\\rho-\\sigma)$, where $\\mathcal E^\\dagger(\\Pi)=\\sum_mK_m^\\dagger\\Pi K_m$ is the channel acting on operators (the Heisenberg picture, defined by $\\operatorname{Tr}\\Pi\\mathcal E(\\rho)=\\operatorname{Tr}\\mathcal E^\\dagger(\\Pi)\\rho$ and obtained from the Kraus form by cyclicity of the trace). Now $0\\le\\mathcal E^\\dagger(\\Pi)\\le I$ because $\\sum_mK_m^\\dagger K_m=I$. So $\\mathcal E^\\dagger(\\Pi)$ is itself an allowed measurement on the input states, and its value cannot exceed their maximum, $D(\\rho,\\sigma)$. In words: processing the states first can only make the best measurement worse. Unitaries give equality, since they can be undone."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The contraction coefficient"
+    },
+    {
+      "type": "prose",
+      "text": "How strongly does a particular channel squeeze? Define the worst case,"
+    },
+    {
+      "type": "math",
+      "tex": "\\eta(\\mathcal E)=\\sup_{\\rho\\ne\\sigma}\\frac{D(\\mathcal E\\rho,\\mathcal E\\sigma)}{D(\\rho,\\sigma)}\\in[0,1]",
+      "caption": "The contraction coefficient: the largest factor by which one application of the channel shrinks the trace distance."
+    },
+    {
+      "type": "prose",
+      "text": "For one qubit with Bloch map $\\vec r\\mapsto T\\vec r+\\vec t$ the output distance is $\\tfrac12\\vert T(\\vec r-\\vec s)\\vert$, because $\\vec t$ cancels in the difference. The ratio $\\vert T\\vec a\\vert/\\vert\\vec a\\vert$ over all directions of $\\vec a=\\vec r-\\vec s$ is largest, by definition, for the largest singular value of $T$, and every direction of $\\vec a$ is available (two states inside the ball can differ along any direction). So"
+    },
+    {
+      "type": "math",
+      "tex": "\\eta(\\mathcal E)=\\sigma_{\\max}(T)",
+      "caption": "One qubit: the largest singular value of the Bloch-map matrix $T$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Depolarising $\\rho\\mapsto(1-p)\\rho+pI/2$: $T=(1-p)\\mathbb1$, so $\\eta=1-p$.",
+        "Amplitude damping with parameter $\\gamma$: $T=\\mathrm{diag}(\\sqrt{1-\\gamma},\\sqrt{1-\\gamma},1-\\gamma)$, so $\\eta=\\sqrt{1-\\gamma}$. Coherences are squeezed slowest: $\\vert+\\rangle$ and $\\vert-\\rangle$ stay far apart longer than $\\vert0\\rangle$ and $\\vert1\\rangle$.",
+        "Dephasing: $T=\\mathrm{diag}(1-2p,1-2p,1)$, so $\\eta=1$ however large $p$ is. $\\vert0\\rangle$ and $\\vert1\\rangle$, which differ in a population, are never brought together: dephasing forgets phases, not populations.",
+        "Reset to a fixed state: $T=0$, $\\eta=0$. One step forgets everything.",
+        "Unitaries: rotations of the ball, $\\eta=1$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Contraction coefficients are submultiplicative under composition: $\\eta(\\mathcal E_2\\mathcal E_1)\\le\\eta(\\mathcal E_2)\\eta(\\mathcal E_1)$. Proof: for any pair, $D(\\mathcal E_2\\mathcal E_1\\rho,\\mathcal E_2\\mathcal E_1\\sigma)\\le\\eta_2D(\\mathcal E_1\\rho,\\mathcal E_1\\sigma)\\le\\eta_2\\eta_1D(\\rho,\\sigma)$, then take the sup. This one line is what the echo state property needs: a chain of channels each squeezing by at most $\\eta$ squeezes by at most $\\eta^k$ over $k$ steps."
+    },
+    {
+      "type": "prose",
+      "text": "The program below checks the single-qubit formulas by brute force: it draws 20,000 random pairs of states from the Bloch ball and records the largest ratio of output to input distance for four channels."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(0)\nI = np.eye(2); X = np.array([[0, 1], [1, 0]]); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1])\ndef apply(kr, rho): return sum(K @ rho @ K.conj().T for K in kr)\ndef td(a, b): return 0.5 * np.abs(np.linalg.eigvalsh(a - b)).sum()\ndef rand_state():\n    r = rng.normal(size=3); r *= rng.uniform() ** (1 / 3) / np.linalg.norm(r)    # random point of the Bloch ball\n    return 0.5 * (I + r[0] * X + r[1] * Y + r[2] * Z)\ng, p, q, s = 0.3, 0.2, 0.4, 0.36\npsi = np.array([np.sqrt(1 - s), np.sqrt(s)])\nchans = {\n    \"amplitude damping\": ([np.diag([1, np.sqrt(1 - g)]), np.array([[0, np.sqrt(g)], [0, 0]])], np.sqrt(1 - g)),\n    \"dephasing\":         ([np.sqrt(1 - p) * I, np.sqrt(p) * Z], 1.0),\n    \"depolarising\":      ([np.sqrt(1 - 3 * q / 4) * I] + [np.sqrt(q / 4) * P for P in (X, Y, Z)], 1 - q),\n    \"reset\":             ([np.outer(psi, [1, 0]), np.outer(psi, [0, 1])], 0.0),\n}\nfor name, (kr, eta) in chans.items():\n    best = max(td(apply(kr, a), apply(kr, b)) / td(a, b) for a, b in ((rand_state(), rand_state()) for _ in range(20000)))\n    print(f\"{name:18s} formula eta = {eta:.3f}   largest ratio found over 20000 random pairs = {best:.3f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output: amplitude damping 0.837 (formula $\\sqrt{0.7}=0.837$), dephasing 1.000, depolarising with $p=0.4$ 0.600, reset 0.000. In each case the largest ratio found equals the formula to three digits."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Amplitude damping with $\\gamma=0.3$: $\\eta=\\sqrt{0.7}=0.837$, the largest singular value of $\\mathrm{diag}(0.837,0.837,0.7)$.",
+        "Step 2. It is reached by differences along $x$ or $y$: $\\vert+\\rangle$ and $\\vert-\\rangle$ are at distance 1 before and $0.837$ after.",
+        "Step 3. A difference along $z$ shrinks faster. $\\vert0\\rangle$ has $z=1$ and stays; $\\vert1\\rangle$ has $z=-1$ and goes to $(1-\\gamma)(-1)+\\gamma=-0.4$. The distance falls from 1 to $\\tfrac12(1.4)=0.7$: a factor 0.7, not 0.837.",
+        "Step 4. So the bound $\\eta^k=0.837^k$ is exact for the $\\pm x$ pair and conservative for the $z$ pair."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: composing channels",
+      "text": "A qubit goes through amplitude damping ($\\gamma=0.3$) and then depolarising ($p=0.2$). Bound $\\eta$ of the combination and compare with the exact value from the combined Bloch map.",
+      "hint": "Multiply the diagonal matrices and read the largest entry.",
+      "solution": [
+        "Bound: $\\eta_1\\eta_2=0.837\\cdot0.8=0.670$.",
+        "Combined $T=0.8\\,\\mathrm{diag}(0.837,0.837,0.7)=\\mathrm{diag}(0.670,0.670,0.56)$, largest singular value $0.670$.",
+        "They agree because both maps have their worst direction along the same axes; in general the bound is not tight."
+      ],
+      "answer": "Bound $0.837\\times0.8=0.670$; exact $\\sigma_{\\max}$ also $0.670$"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Fixed points and convergence for a fixed channel"
+      "text": "Fixed points of a single channel"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
     },
     {
       "type": "prose",
-      "text": "Every channel has at least one fixed state $\\mathcal{E}(\\rho^*)=\\rho^*$ (the state space is compact and convex). If $\\eta<1$ the fixed point is unique and $D(\\mathcal{E}^k\\rho,\\rho^*)\\le\\eta^k$ (Banach). More finely, write the channel as a $d^2\\times d^2$ matrix (its superoperator). Its eigenvalues lie in the unit disc; the eigenvalue 1 belongs to the fixed point; other eigenvalues on the unit circle mean undamped oscillations or extra fixed points. If 1 is the only peripheral eigenvalue and it is simple, the channel is mixing (called primitive when, in addition, the fixed state has full rank), and the second-largest eigenvalue modulus $\\vert\\lambda_2\\vert$ sets the asymptotic rate $D_k\\sim\\vert\\lambda_2\\vert^k$. The memory timescale in steps is about $1/(1-\\vert\\lambda_2\\vert)$."
+      "text": "Apply the same channel again and again, as a reservoir does when the input is constant. What does the state converge to? A state $\\rho^*$ with $\\mathcal E(\\rho^*)=\\rho^*$ is a fixed point. Every channel has at least one: the set of states is closed, bounded and convex (a ball, for a qubit), and a continuous map of such a set into itself always has a fixed point (Brouwer's theorem). The interesting questions are whether there is exactly one and how fast every state converges to it."
     },
     {
-      "type": "callout",
-      "text": "Conserved quantities are fixed points in disguise. If an observable $Q$ satisfies $\\mathcal{E}^\\dagger(Q)=Q$ for every input (the Heisenberg-picture channel leaves it alone), then $\\operatorname{Tr}(Q\\rho_k) = \\operatorname{Tr}(Q\\rho_0)$ for ever: the reservoir remembers that part of its initial state and the echo state property fails. Symmetries of the Hamiltonian that the input map also respects are the usual culprits."
+      "type": "heading",
+      "level": 3,
+      "text": "A unique fixed point from contraction"
+    },
+    {
+      "type": "prose",
+      "text": "If $\\eta<1$ the fixed point is unique and $D(\\mathcal E^k\\rho,\\rho^*)\\le\\eta^kD(\\rho,\\rho^*)\\le\\eta^k$. Uniqueness: if there were two, $D(\\rho^*,\\sigma^*)=D(\\mathcal E\\rho^*,\\mathcal E\\sigma^*)\\le\\eta D(\\rho^*,\\sigma^*)$, which forces $D=0$. Convergence is the Banach fixed-point argument: a map that shrinks every distance by $\\eta<1$ has one fixed point and every starting point is drawn to it geometrically."
+    },
+    {
+      "type": "prose",
+      "text": "Example: amplitude damping with $\\gamma=0.3$ has the fixed point $\\vert0\\rangle$ ($z=1$, since $(1-\\gamma)\\cdot1+\\gamma=1$). Start in $\\vert1\\rangle$, $z=-1$. After $k$ steps $z_k=1-2(0.7)^k$, so $D=\\tfrac12(1-z_k)=0.7^k$, below $10^{-3}$ when $k\\ge\\ln(10^{-3})/\\ln0.7=19.4$: after 20 steps. The bound with $\\eta=0.837$ would have said 39 steps."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The spectrum of a channel"
+    },
+    {
+      "type": "prose",
+      "text": "Write the channel as a $d^2\\times d^2$ matrix $\\hat{\\mathcal E}$ acting on the stacked entries of $\\rho$ (the same vectorisation as in Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics)). Its eigenvalues describe how deviations from the fixed point change under repeated application. Facts:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "All eigenvalues lie in the closed unit disc, $\\vert\\lambda\\vert\\le1$, because $\\hat{\\mathcal E}^k$ is a channel and cannot amplify anything without limit.",
+        "1 is an eigenvalue: the fixed point is its right eigenvector, and the trace is its left eigenvector.",
+        "Eigenvalues of modulus 1 other than 1 itself are called peripheral. They signal undamped oscillations or extra fixed points (for instance additional conserved quantities).",
+        "If 1 is the only eigenvalue of modulus 1 and it is non-degenerate, the channel is mixing: every state converges to $\\rho^*$. (If the fixed state also has full rank, the channel is called primitive.) The speed is set by the second-largest modulus $\\vert\\lambda_2\\vert$: $D(\\mathcal E^k\\rho,\\rho^*)\\sim\\vert\\lambda_2\\vert^k$ for large $k$.",
+        "The memory time in steps is about $1/(1-\\vert\\lambda_2\\vert)$: 50 steps for $\\vert\\lambda_2\\vert=0.98$, 2 steps for $0.5$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A caution: $\\eta$ and $\\vert\\lambda_2\\vert$ answer different questions. $\\vert\\lambda_2\\vert$ is the long-run rate and $\\eta$ the worst case for one step. For channels that act differently in different directions they can differ, and the true distance can sit above $\\vert\\lambda_2\\vert^k$ for a few steps before settling."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Conserved quantities are fixed points in disguise"
+    },
+    {
+      "type": "prose",
+      "text": "The Heisenberg-picture channel $\\mathcal E^\\dagger$ tells you what happens to expectations: $\\operatorname{Tr}(Q\\,\\mathcal E(\\rho))=\\operatorname{Tr}(\\mathcal E^\\dagger(Q)\\rho)$. Suppose an observable $Q$ satisfies $\\mathcal E^\\dagger(Q)=Q$. Then $\\operatorname{Tr}(Q\\rho_k)=\\operatorname{Tr}(Q\\rho_0)$ for ever: the channel cannot change that expectation, so two states with different $\\langle Q\\rangle$ never converge, and the echo state property fails. Dephasing is the simplest case: $\\mathcal E^\\dagger(Z)=Z$, so $\\langle Z\\rangle$ is conserved and every diagonal state is a fixed point. The transfer matrix of dephasing, $\\mathrm{diag}(1,1-2p,1-2p,1)$, has eigenvalue 1 twice: once for the identity (the trace) and once for $Z$. In larger reservoirs the usual culprits are symmetries of the Hamiltonian that the input map also respects; see Symmetries and Conservation (#/quantum/dynamics/symmetries-and-conservation) for the link between symmetry and conservation."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: how many steps",
+      "text": "A channel has $\\vert\\lambda_2\\vert=0.9$. Roughly how many steps until differences have shrunk by a factor $10^{-3}$?",
+      "hint": "Solve $\\vert\\lambda_2\\vert^k=10^{-3}$ with logarithms.",
+      "solution": [
+        "We need $0.9^k=10^{-3}$, so $k=\\ln(10^{-3})/\\ln(0.9)=6.908/0.10536=65.6$.",
+        "About 66 steps. (The rule-of-thumb memory time $1/(1-0.9)=10$ steps is the time to shrink by a factor $e$.)"
+      ],
+      "answer": "About 66 steps"
     },
     {
       "type": "heading",
@@ -48,26 +302,53 @@
       "text": "The input-driven case: the echo state property"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "The definition and a sufficient condition"
+    },
+    {
       "type": "prose",
-      "text": "A reservoir applies a different channel at each step, $\\rho_k = \\mathcal{T}_{s_k}(\\rho_{k-1})$. It has the echo state property if for every input sequence and every pair of initial states $D(\\rho_k,\\sigma_k)\\to0$; then $\\rho_k$ is, asymptotically, a function of the input history alone. A sufficient condition is uniform strict contraction over the input set (Chen and Nurdin state a condition of this type, as a uniform bound $1-\\epsilon$ on the norm of every input channel restricted to traceless operators):"
+      "text": "A reservoir applies a different channel at each step, $\\rho_k=\\mathcal T_{s_k}(\\rho_{k-1})$, chosen by the input. It has the echo state property if, for every input sequence and every pair of initial states, $D(\\rho_k,\\sigma_k)\\to0$ as $k\\to\\infty$, where $\\sigma_k$ is the run started from $\\sigma_0$. Then $\\rho_k$ is, asymptotically, a function of the input history alone. Contraction coefficients give a simple sufficient condition:"
     },
     {
       "type": "math",
-      "tex": "\\sup_{s}\\ \\eta(\\mathcal{T}_s)\\le 1-\\epsilon<1\\ \\Rightarrow\\ D(\\rho_k,\\sigma_k)\\le(1-\\epsilon)^k D(\\rho_0,\\sigma_0)",
-      "caption": "Uniform contractivity gives the echo state property and fading memory, with memory decaying geometrically."
+      "tex": "\\sup_s\\ \\eta(\\mathcal T_s)\\le1-\\epsilon<1\\ \\ \\Rightarrow\\ \\ D(\\rho_k,\\sigma_k)\\le(1-\\epsilon)^kD(\\rho_0,\\sigma_0)",
+      "caption": "Uniform contractivity gives the echo state property and fading memory, with memory decaying geometrically. (Chen and Nurdin state a condition of this kind, as a uniform bound on the norm of every input channel restricted to traceless operators.)"
     },
     {
       "type": "prose",
-      "text": "It is sufficient, not necessary. The Fujii–Nakajima step 'reset qubit 1, then evolve with $U$' has $\\eta=1$ for a single step: two states that differ only on qubits $2,\\ldots,n$ pass the reset untouched and $U$ preserves distance. Contraction appears only over several steps, as $U$ moves the difference onto qubit 1 where the next reset erases it. The right condition is then on products of $L$ consecutive channels, and whether such an $L$ exists depends on how well $U$ mixes. Martínez-Peña and Ortega rewrite finite-dimensional quantum reservoirs in Bloch-vector (Pauli or Gell-Mann) coordinates as classical state-affine systems and use this to give a necessary and sufficient condition for the echo state and fading memory properties under standard hypotheses."
+      "text": "Proof in one line: by submultiplicativity the chain $\\mathcal T_{s_k}\\cdots\\mathcal T_{s_1}$ has coefficient at most $(1-\\epsilon)^k$, whatever the sequence. The condition is sufficient, not necessary: it asks for contraction at every single step for every input."
     },
     {
       "type": "heading",
-      "level": 2,
+      "level": 3,
+      "text": "Why the standard spin reservoir fails the simple test"
+    },
+    {
+      "type": "prose",
+      "text": "Consider the reservoir of The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir), whose step is 'reset qubit 1 to the input state, then evolve with $U$'. Take two states that differ only on qubits $2,\\dots,n$, for instance $\\rho=\\vert0\\rangle\\langle0\\vert_1\\otimes\\alpha$ and $\\sigma=\\vert0\\rangle\\langle0\\vert_1\\otimes\\beta$. The reset replaces qubit 1 and keeps the reduced state of the rest, so the two states after the reset are $\\psi_s\\otimes\\alpha$ and $\\psi_s\\otimes\\beta$, at the same distance $D(\\alpha,\\beta)$ as before. The unitary then preserves it. So a single step has $\\eta=1$ and the simple condition fails. Contraction appears only over several steps: $U$ moves some of the difference from the other qubits onto qubit 1, where the next reset erases it. The right condition is on products of $L$ consecutive channels, $\\eta(\\mathcal T_{s_L}\\cdots\\mathcal T_{s_1})<1$ for all inputs, and whether such an $L$ exists depends on how well $U$ mixes. Martínez-Peña and Ortega rewrite finite-dimensional quantum reservoirs in Bloch-vector coordinates as classical state-affine systems and use this to give necessary and sufficient conditions for the echo state and fading memory properties under standard hypotheses."
+    },
+    {
+      "type": "prose",
+      "text": "The next program follows the distance between two copies of a two-qubit reservoir, started in $\\vert00\\rangle$ and $\\vert11\\rangle$ and fed the same random inputs, and prints the distance at the start of each step, after the reset and after the unitary. At step 1 the two states differ on qubit 2 too, so the reset removes nothing. Only afterwards does the distance shrink."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nrng = np.random.default_rng(5)\nI = np.eye(2); X = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1])\nk = np.kron\nH = 0.5 * k(X, X) + 1.0 * (k(Z, I) + k(I, Z)); U = expm(-1j * H * 5.0)   # two qubits, evolution time 5 per step\n\ndef td(a, b): return 0.5 * np.abs(np.linalg.eigvalsh(a - b)).sum()\ndef reduced2(rho): return np.einsum('abad->bd', rho.reshape(2, 2, 2, 2))   # trace out qubit 1\ndef pure(v): v = np.array(v, complex); return np.outer(v, v.conj())\n\na, b = pure([1, 0, 0, 0]), pure([0, 0, 0, 1])           # two copies: |00> and |11>\nprint(\"step | D at start | D after reset | D after reset+U | ratio per step\")\nfor t in range(1, 9):\n    s = rng.uniform()\n    ps = np.array([np.sqrt(1 - s), np.sqrt(s)])\n    a_r = k(np.outer(ps, ps), reduced2(a)); b_r = k(np.outer(ps, ps), reduced2(b))\n    d0, d1 = td(a, b), td(a_r, b_r)\n    a, b = U @ a_r @ U.conj().T, U @ b_r @ U.conj().T\n    d2 = td(a, b)\n    print(f\"{t:4d} | {d0:.4f} | {d1:.4f} | {d2:.4f} | {d2 / d0:.3f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output: at step 1, $D=1\\to1\\to1$ (ratio 1.000). Then $D$ falls through 0.7264, 0.5411, 0.3905, 0.3134, 0.2662, 0.2017 and 0.1560 over steps 2 to 8, with a per-step ratio between 0.72 and 0.85. The 'after reset' and 'after reset and U' columns are identical at every step: $U$ does not change the distance, and all the shrinking is done by the reset. The per-step ratio varies with the input $s$, which is why a bound has to hold for every input."
+    },
+    {
+      "type": "heading",
+      "level": 3,
       "text": "Seeing it: two copies of one reservoir"
     },
     {
       "type": "prose",
-      "text": "The plot runs two copies of the same reservoir from different initial states ($\\vert0\\cdots0\\rangle$ and $\\vert1\\cdots1\\rangle$ in the quantum case), feeds both the same random inputs, and shows $\\log_{10}$ of their trace distance. A straight downward line is geometric contraction; its slope is $\\log_{10}$ of the effective contraction factor per step."
+      "text": "The plot runs two copies of the same reservoir from different initial states ($\\vert0\\cdots0\\rangle$ and $\\vert1\\cdots1\\rangle$ in the quantum case), feeds both the same random inputs, and shows $\\log_{10}$ of their distance. A straight downward line is geometric contraction; its slope is $\\log_{10}$ of the effective contraction factor per step."
     },
     {
       "type": "widget",
@@ -140,25 +421,38 @@
     },
     {
       "type": "prose",
-      "text": "With 3 qubits, $h=1$, $\\Delta t=10$, the distance falls by about one decade in 40 steps (from 1 to about 0.09). With $h=0.1$ it falls faster, to about $10^{-2.6}$; with $h=10$ or $\\Delta t=1$ it falls much more slowly (about $10^{-0.7}$ and $10^{-0.4}$ after 40 steps): a strong field or a short evolution moves little information onto the reset qubit per step. Even $h=0$ converges here (to about $10^{-0.9}$), because $\\vert0\\cdots0\\rangle$ and $\\vert1\\cdots1\\rangle$ have the same $\\langle X_j\\rangle=0$; the conserved quantities below only show for initial states that differ in them. For the classical network (where the plot shows the Euclidean distance of the two state vectors), a weight scale of 0.5 contracts by about 15 decades in 40 steps, 1.2 still contracts (the input drives the tanh units into saturation, where their gain is below 1), and 2 barely converges. The classical sufficient condition is on the largest singular value of the weight matrix, not on its spectral radius; spectral radius below 1 is the usual heuristic, as The Echo State Property (#/qrc/foundations/echo-state-property) explains."
+      "text": "Try this. (1) With 3 qubits, $h=1$, evolution time 10 and 40 steps, the log distance ends at $-1.05$: the distance has fallen from 1 to about 0.09. (2) Set $h=0.1$: it falls faster, to about $-2.57$. (3) Set $h=10$, or evolution time 1: much more slowly (about $-0.73$ and $-0.38$ after 40 steps), since a strong field or a short evolution moves little information onto the reset qubit per step. (4) Set $h=0$: it still converges here (to about $-0.89$), because $\\vert0\\cdots0\\rangle$ and $\\vert1\\cdots1\\rangle$ have the same $\\langle X_j\\rangle=0$; the conserved quantities of the next section only show for initial states that differ in them. (5) Switch to the classical network: weight scale 0.5 contracts by about 14.5 decades in 40 steps; 1.2 still contracts (to about $-1.9$, since the input drives the $\\tanh$ units into saturation where their gain is below 1); 2 does not converge (the log distance ends at $+0.24$). The classical sufficient condition is on the largest singular value of the weight matrix; spectral radius below 1 is the usual heuristic, as The Echo State Property (#/qrc/foundations/echo-state-property) explains."
     },
     {
       "type": "heading",
-      "level": 2,
+      "level": 3,
       "text": "A conserved quantity, made concrete"
     },
     {
       "type": "prose",
-      "text": "Take the spin reservoir $H=\\sum_{i<j}J_{ij}X_iX_j + h\\sum_iZ_i$ at $h=0$. Every term commutes with every $X_j$. The reset of qubit 1 leaves the reduced state of qubits $2,\\ldots,n$ unchanged, so for $j\\ge2$ it preserves $\\langle X_j\\rangle$ too. Hence $\\langle X_2\\rangle$, $\\langle X_3\\rangle$, $\\langle X_2X_3\\rangle$, and so on, are frozen for ever: start two copies with qubit 2 in $\\vert+\\rangle$ and $\\vert-\\rangle$ and they never converge. The script checks this, and computes the spectrum of the fixed-input channel."
+      "text": "Take the spin reservoir $H=\\sum_{i<j}J_{ij}X_iX_j+h\\sum_iZ_i$ at $h=0$. Every term commutes with every $X_j$. The reset of qubit 1 leaves the reduced state of qubits $2,\\dots,n$ alone, so for $j\\ge2$ it preserves $\\langle X_j\\rangle$ too. Therefore $\\langle X_2\\rangle$, $\\langle X_3\\rangle$, $\\langle X_2X_3\\rangle$ and so on are frozen for ever: start two copies with qubit 2 in $\\vert+\\rangle$ and $\\vert-\\rangle$ and they never converge. The program checks this and computes the spectrum of the fixed-input channel (the $64\\times64$ matrix for $s=0.3$)."
     },
     {
       "type": "code",
       "lang": "python",
-      "source": "import numpy as np\nrng = np.random.default_rng(1)\nI = np.eye(2); X = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.])\nn = 3; D = 2 ** n\n\ndef op(o, i):\n    m = np.array([[1.]])\n    for k in range(n): m = np.kron(m, o if k == i else I)\n    return m\n\ndef hamiltonian(h):\n    r = np.random.default_rng(1); H = np.zeros((D, D))\n    for i in range(n):\n        for j in range(i + 1, n): H += r.uniform(-0.5, 0.5) * op(X, i) @ op(X, j)\n    return H + h * sum(op(Z, i) for i in range(n))\n\ndef step(rho, s, U):\n    \"\"\"Reset qubit 1 to sqrt(1-s)|0> + sqrt(s)|1>, then evolve: rho -> U (psi psi^T (x) Tr_1 rho) U^dag.\"\"\"\n    r4 = rho.reshape(2, D // 2, 2, D // 2)\n    psi = np.array([np.sqrt(1 - s), np.sqrt(s)])\n    return U @ np.kron(np.outer(psi, psi), r4[0, :, 0, :] + r4[1, :, 1, :]) @ U.conj().T\n\ndef trace_distance(a, b):\n    return 0.5 * np.abs(np.linalg.eigvalsh(a - b)).sum()\n\ndef superoperator(s, U):\n    \"\"\"The channel for a fixed input s as a D^2 x D^2 matrix acting on vec(rho).\"\"\"\n    S = np.zeros((D * D, D * D), complex)\n    for k in range(D * D):\n        E = np.zeros(D * D, complex); E[k] = 1\n        S[:, k] = step(E.reshape(D, D), s, U).reshape(-1)\n    return S\n\nfor h in [0.0, 1.0]:\n    E, V = np.linalg.eigh(hamiltonian(h)); U = V @ np.diag(np.exp(-10j * E)) @ V.conj().T\n    lam = np.sort(np.abs(np.linalg.eigvals(superoperator(0.3, U))))[::-1]\n    # two copies: qubit 2 in |+> versus |->, everything else equal, same random inputs\n    plus = np.array([1, 1]) / np.sqrt(2); minus = np.array([1, -1]) / np.sqrt(2); z = np.array([1., 0])\n    a = np.kron(np.kron(z, plus), z); b = np.kron(np.kron(z, minus), z)\n    ra, rb = np.outer(a, a).astype(complex), np.outer(b, b).astype(complex)\n    d = []\n    for k, s in enumerate(rng.uniform(0, 1, 60)):\n        ra, rb = step(ra, s, U), step(rb, s, U)\n        if k + 1 in (1, 10, 30, 60): d.append(trace_distance(ra, rb))\n    print(f\"h = {h}: |eigenvalues| of the s=0.3 channel: {np.round(lam[:5], 4)}; \"\n          f\"D after 1, 10, 30, 60 steps: {np.round(d, 4)}\")\n"
+      "source": "import numpy as np\nrng = np.random.default_rng(1)\nI = np.eye(2); X = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1])\nn = 3; D = 2 ** n\n\ndef op(o, i):\n    m = np.array([[1.]])\n    for k in range(n): m = np.kron(m, o if k == i else I)\n    return m\n\ndef hamiltonian(h):\n    r = np.random.default_rng(1); H = np.zeros((D, D))\n    for i in range(n):\n        for j in range(i + 1, n): H += r.uniform(-0.5, 0.5) * op(X, i) @ op(X, j)\n    return H + h * sum(op(Z, i) for i in range(n))\n\ndef step(rho, s, U):\n    \"\"\"Reset qubit 1 to sqrt(1-s)|0> + sqrt(s)|1>, then evolve: rho -> U (psi psi^T (x) Tr_1 rho) U^dag.\"\"\"\n    r4 = rho.reshape(2, D // 2, 2, D // 2)\n    psi = np.array([np.sqrt(1 - s), np.sqrt(s)])\n    return U @ np.kron(np.outer(psi, psi), r4[0, :, 0, :] + r4[1, :, 1, :]) @ U.conj().T\n\ndef trace_distance(a, b):\n    return 0.5 * np.abs(np.linalg.eigvalsh(a - b)).sum()\n\ndef superoperator(s, U):\n    \"\"\"The channel for a fixed input s as a D^2 x D^2 matrix acting on vec(rho).\"\"\"\n    S = np.zeros((D * D, D * D), complex)\n    for k in range(D * D):\n        E = np.zeros(D * D, complex); E[k] = 1\n        S[:, k] = step(E.reshape(D, D), s, U).reshape(-1)\n    return S\n\nfor h in [0.0, 1.0]:\n    E, V = np.linalg.eigh(hamiltonian(h)); U = V @ np.diag(np.exp(-10j * E)) @ V.conj().T\n    lam = np.sort(np.abs(np.linalg.eigvals(superoperator(0.3, U))))[::-1]\n    plus = np.array([1, 1]) / np.sqrt(2); minus = np.array([1, -1]) / np.sqrt(2); z = np.array([1., 0])\n    a = np.kron(np.kron(z, plus), z); b = np.kron(np.kron(z, minus), z)\n    ra, rb = np.outer(a, a).astype(complex), np.outer(b, b).astype(complex)\n    d = []\n    for k, s in enumerate(rng.uniform(0, 1, 60)):\n        ra, rb = step(ra, s, U), step(rb, s, U)\n        if k + 1 in (1, 10, 30, 60): d.append(trace_distance(ra, rb))\n    print(f\"h = {h}: |eigenvalues| of the s=0.3 channel: {np.round(lam[:5], 4)}; \"\n          f\"D after 1, 10, 30, 60 steps: {np.round(d, 4)}\")\n"
     },
     {
       "type": "prose",
-      "text": "Output: at $h=0$ the fixed-input channel ($s=0.3$) has four eigenvalues of modulus exactly 1 (one for each conserved $I$, $X_2$, $X_3$, $X_2X_3$; the next is 0.9975) and the two copies stay at trace distance 1 for all 60 steps. At $h=1$ the leading moduli are $1, 0.9804, 0.9804, 0.962$, and with the random inputs the distance falls to 0.755, 0.499 and 0.257 after 10, 30 and 60 steps. With $\\vert\\lambda_2\\vert = 0.98$ the slowest mode has a timescale of order $1/(1-0.98)\\approx 50$ steps: this reservoir forgets, but slowly, so it needs a long washout. (The input $s=0.5$ is a bad choice for this check: it writes $\\vert+\\rangle$, an eigenstate of $X_1$, and then all 16 modes of qubits 2 and 3 in the $X$ basis are undamped, not just the four conserved ones.)"
+      "text": "Output: at $h=0$ the fixed-input channel has four eigenvalues of modulus exactly 1 (one for each conserved $I$, $X_2$, $X_3$, $X_2X_3$; the next is 0.9975), and the two copies stay at trace distance 1 for all 60 steps. At $h=1$ the leading moduli are $1,0.9804,0.9804,0.962,0.9398$, and with the random inputs the distance falls to 0.755, 0.4988 and 0.2568 after 10, 30 and 60 steps. With $\\vert\\lambda_2\\vert=0.9804$ the slowest mode has a timescale of about $1/(1-0.9804)\\approx51$ steps: this reservoir forgets, but slowly, so it needs a long washout. (The input $s=0.5$ would be a bad choice for this check: it writes $\\vert+\\rangle$, an eigenstate of $X_1$, and then all 16 modes of qubits 2 and 3 in the $X$ basis are undamped, not just four.)"
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a symmetry check",
+      "text": "A two-qubit reservoir evolves with $H=J(X_1X_2+Y_1Y_2)+h(Z_1+Z_2)$ between inputs and writes the input by a rotation $e^{-i\\theta(s)Z_1/2}$ on qubit 1, with no reset. Does it have the echo state property?",
+      "hint": "Look for an operator that commutes with every step.",
+      "solution": [
+        "$X_1X_2+Y_1Y_2=2(\\sigma^+_1\\sigma^-_2+\\sigma^-_1\\sigma^+_2)$ conserves the total excitation number, so $[H,Z_1+Z_2]=0$.",
+        "The input rotation is about $Z_1$, which also commutes with $Z_1+Z_2$.",
+        "Every step is unitary, so $\\eta=1$ and nothing is forgotten; in addition $\\langle Z_1+Z_2\\rangle$ is conserved exactly.",
+        "A reservoir needs a non-unitary element (reset, dissipation or measurement); here there is also an explicit conserved quantity."
+      ],
+      "answer": "No: it is unitary, and $Z_1+Z_2$ is conserved"
     },
     {
       "type": "heading",
@@ -168,7 +462,7 @@
     {
       "type": "list",
       "items": [
-        "Contraction is necessary for a usable reservoir, but too much contraction is also bad: if $\\eta\\approx0$ the state depends only on the last input and the reservoir has no memory beyond one step (a quantum extreme learning machine, see Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines)).",
+        "Contraction is necessary for a usable reservoir, but too much is also bad: if $\\eta\\approx0$ the state depends only on the last input and the reservoir has no memory beyond one step, which is the regime of a quantum extreme learning machine (Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines)).",
         "The useful regime has a contraction timescale comparable to the memory the task needs. The parameters that set it are the reset or dissipation rate, the evolution time $\\Delta t$, and how well $H$ spreads information (its integrability, field strength and disorder; see Dynamical Regimes (#/qrc/models/dynamical-regimes)).",
         "Symmetries kill the echo state property. Before trusting a model, list the operators that commute with $H$ and survive the input map; any that the readout or the dynamics can reach is a memory of the initial state.",
         "Noise on hardware adds contraction for free: global depolarising noise with probability $p$ per step guarantees $\\eta\\le1-p$. Chen, Nurdin and Yamamoto build a universal class of dissipative quantum reservoirs from operations native to noisy gate-based devices and run small ones on cloud superconducting hardware."
@@ -177,41 +471,117 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Putting it together: does this reservoir forget?"
+    },
+    {
+      "type": "prose",
+      "text": "A designer proposes a three-qubit device whose step is a unitary followed by global depolarising noise with $p=0.1$, and asks two questions: does it have the echo state property, and how long a washout is needed to get the dependence on the initial state below $10^{-3}$ in trace distance?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The unitary has $\\eta=1$. Global depolarising $\\rho\\mapsto(1-p)\\rho+pI/d$ sends $\\rho-\\sigma$ to exactly $(1-p)(\\rho-\\sigma)$, since the $I/d$ terms cancel, so $D$ scales by exactly $0.9$ in any dimension: $\\eta=0.9$.",
+        "Step 2. By submultiplicativity each step, whatever the input, has $\\eta\\le1\\cdot0.9=0.9$. The uniform condition holds with $\\epsilon=0.1$, so the echo state property holds.",
+        "Step 3. $D_k\\le0.9^kD_0\\le0.9^k$. We need $0.9^k\\le10^{-3}$, so $k\\ge\\ln(10^{-3})/\\ln0.9=65.6$: a washout of 66 steps suffices (a bound; the true forgetting may be faster).",
+        "Step 4. A trade-off. Every coordinate of the state is also multiplied by 0.9 per step, so an old input's imprint is down to $0.9^{10}=0.35$ after 10 steps and $0.9^{30}=0.042$ after 30. If the task needs memory of 30 steps, that may be too small against the readout's noise. So choose $p$ to match the task."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The trace distance $D=\\tfrac12\\Vert\\rho-\\sigma\\Vert_1$ is the largest probability difference any measurement can give. Best guessing success is $\\tfrac12(1+D)$; any bounded observable differs by at most $2D$. For one qubit, $D$ is half the Bloch distance.",
+        "Every channel satisfies $D(\\mathcal E\\rho,\\mathcal E\\sigma)\\le D(\\rho,\\sigma)$; unitaries keep it exactly.",
+        "The contraction coefficient $\\eta$ is the worst-case shrink factor; for a qubit it is the largest singular value of $T$. It is submultiplicative.",
+        "$\\eta<1$ means a unique fixed point and geometric convergence $\\eta^k$. In general the spectrum of the channel matrix decides: the second-largest modulus gives the long-run rate, and other eigenvalues of modulus 1 are extra fixed points or oscillations.",
+        "A conserved quantity, $\\mathcal E^\\dagger(Q)=Q$, is an extra fixed-point direction and breaks the echo state property.",
+        "Uniform $\\eta(\\mathcal T_s)\\le1-\\epsilon$ is sufficient for the echo state property. The spin reservoir has $\\eta=1$ per step and contracts only over several steps.",
+        "Too much contraction leaves no memory; too little needs a long washout."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
       "title": "Steps to forget",
       "text": "Each input step of a reservoir is followed by depolarising noise with $p=0.1$, and the step itself is otherwise unitary. Bound the number of steps after which two arbitrary initial states are within trace distance $10^{-3}$.",
+      "hint": "Take logarithms.",
       "solution": [
-        "Unitaries have $\\eta=1$; (global) depolarising has $\\eta=1-p=0.9$; contraction coefficients multiply, so each step has $\\eta\\le0.9$.",
-        "$D_k\\le0.9^k D_0\\le0.9^k$.",
-        "$0.9^k\\le10^{-3}$ when $k\\ge\\ln(10^{-3})/\\ln(0.9) = 65.6$, so 66 steps."
+        "Unitaries have $\\eta=1$; depolarising has $\\eta=1-p=0.9$; contraction coefficients multiply, so each step has $\\eta\\le0.9$.",
+        "$D_k\\le0.9^kD_0\\le0.9^k$.",
+        "$0.9^k\\le10^{-3}$ when $k\\ge\\ln(10^{-3})/\\ln(0.9)=65.6$, so 66 steps."
       ],
       "answer": "66 steps (at most)"
     },
     {
       "type": "problem",
       "title": "Contraction coefficient of amplitude damping",
-      "text": "Find $\\eta$ for amplitude damping with $\\gamma=0.3$, and the pair of states that achieves it.",
+      "text": "Find $\\eta$ for amplitude damping with $\\gamma=0.3$, and a pair of states that achieves it.",
+      "hint": "Read off the largest diagonal entry of $T$.",
       "solution": [
         "The Bloch map has $T=\\mathrm{diag}(\\sqrt{0.7},\\sqrt{0.7},0.7)$; $\\eta$ is its largest singular value, $\\sqrt{0.7}=0.837$.",
-        "It is achieved by a difference along $x$ (or $y$): for example $\\vert+\\rangle$ and $\\vert-\\rangle$, at distance 1 before and $0.837$ after.",
+        "It is achieved by a difference along $x$: for example $\\vert+\\rangle$ and $\\vert-\\rangle$, at distance 1 before and $0.837$ after.",
         "Differences along $z$ ($\\vert0\\rangle$ against $\\vert1\\rangle$) shrink faster, by 0.7."
       ],
-      "answer": "$\\eta = \\sqrt{0.7}\\approx0.837$, achieved by $\\vert+\\rangle,\\vert-\\rangle$"
+      "answer": "$\\eta=\\sqrt{0.7}\\approx0.837$, achieved by $\\vert+\\rangle,\\vert-\\rangle$"
     },
     {
       "type": "problem",
-      "title": "Spot the conserved quantity",
-      "text": "A two-qubit reservoir evolves with $H = J(X_1X_2+Y_1Y_2) + h(Z_1+Z_2)$ between inputs, and the input is written by a rotation $e^{-i\\theta(s)Z_1/2}$ on qubit 1 (no reset). Does it have the echo state property?",
+      "title": "Uniform contraction over several channels",
+      "text": "A reservoir uses two channels depending on the input bit: $\\mathcal A$ with $\\eta=0.95$ and $\\mathcal B$ with $\\eta=0.8$. Does it have the echo state property for every bit sequence? How many steps guarantee a distance below 0.01?",
+      "hint": "The worst case is the channel with the larger $\\eta$.",
       "solution": [
-        "$X_1X_2+Y_1Y_2 = 2(\\sigma^+_1\\sigma^-_2 + \\sigma^-_1\\sigma^+_2)$ conserves the total excitation number, so $[H, Z_1+Z_2]=0$.",
-        "The input rotation is about $Z_1$, which also commutes with $Z_1+Z_2$.",
-        "Every step is unitary anyway, so $\\eta=1$ and nothing is forgotten; in addition $\\langle Z_1+Z_2\\rangle$ is conserved exactly.",
-        "No: without a non-unitary element (reset, dissipation, measurement) there is no echo state property, and here there is also an explicit conserved quantity."
+        "Every step has $\\eta\\le0.95$ whichever channel is chosen, so the uniform condition holds with $\\epsilon=0.05$.",
+        "$D_k\\le0.95^k$. We need $0.95^k\\le0.01$: $k\\ge\\ln0.01/\\ln0.95=4.605/0.05129=89.8$.",
+        "So 90 steps guarantee it, whatever the sequence. (Sequences with many $\\mathcal B$ steps do better.)"
       ],
-      "answer": "No: the dynamics are unitary, and $Z_1+Z_2$ is conserved"
+      "answer": "Yes; 90 steps"
+    },
+    {
+      "type": "problem",
+      "title": "The spin reservoir does not contract in one step",
+      "text": "Two states of a three-qubit reservoir differ only in qubit 3: $\\rho=\\vert000\\rangle\\langle000\\vert$ and $\\sigma=\\vert001\\rangle\\langle001\\vert$. What is their distance after (a) the reset of qubit 1, (b) the unitary? Can the distance fall during that step?",
+      "hint": "What does the reset keep?",
+      "solution": [
+        "Before the step, $D=1$ (orthogonal).",
+        "(a) The reset replaces qubit 1 and keeps the reduced states of qubits 2 and 3, which are $\\vert00\\rangle$ and $\\vert01\\rangle$, still orthogonal. After the reset the states are $\\psi_s\\otimes\\vert00\\rangle$ and $\\psi_s\\otimes\\vert01\\rangle$: $D=1$.",
+        "(b) The unitary preserves distance: $D=1$.",
+        "No: the step has $\\eta=1$ for this pair. The distance can fall only in later steps, once $U$ has moved the difference onto qubit 1 (so that qubit 1 carries information about qubit 3), and the next reset throws it away."
+      ],
+      "answer": "$D=1$ after the reset and after the unitary; contraction can only come in later steps"
+    },
+    {
+      "type": "problem",
+      "title": "The conserved quantities of the XX reservoir",
+      "text": "At $h=0$ the reservoir has $H=\\sum J_{ij}X_iX_j$ and a reset on qubit 1. Name three independent quantities that stay constant, and say whether the echo state property holds. What changes if $h\\ne0$?",
+      "hint": "What commutes with every $X_iX_j$?",
+      "solution": [
+        "$\\langle X_2\\rangle$, $\\langle X_3\\rangle$ and $\\langle X_2X_3\\rangle$ are each unchanged by $H$ (they commute with every term) and by the reset (it leaves the reduced state of qubits 2 and 3 alone).",
+        "Two states with different values never converge, so the echo state property fails (the spectrum shows four eigenvalues of modulus 1, including the trace).",
+        "With $h\\ne0$ the field terms $Z_i$ do not commute with $X_i$, so the $X$-type quantities rotate into others and the reset can reach them: the symmetry is broken and the reservoir forgets (slowly at $h=1$, with $\\vert\\lambda_2\\vert=0.98$)."
+      ],
+      "answer": "$\\langle X_2\\rangle,\\langle X_3\\rangle,\\langle X_2X_3\\rangle$; no echo state property at $h=0$; restored for $h\\ne0$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The echo state property of the whole shelf rests on this page: The Echo State Property (#/qrc/foundations/echo-state-property) gives the classical statement; Dynamical Regimes (#/qrc/models/dynamical-regimes) maps where the quantum one holds as a function of Hamiltonian parameters.",
+        "The memory timescale $1/(1-\\vert\\lambda_2\\vert)$ sets the washout and the usable delays in Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity).",
+        "The next page, Measurement (#/qrc/open-systems/measurement), treats measurement, which is a channel too and can add or remove contraction.",
+        "On the Theory shelf, Expressivity and Universality (#/qrc/theory/expressivity-and-universality) asks what a contracting reservoir can compute."
+      ]
     },
     {
       "type": "heading",
@@ -223,10 +593,10 @@
       "items": [
         "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary edition, Cambridge University Press (2010)",
         "M. M. Wilde, Quantum Information Theory, 2nd edition, Cambridge University Press (2017)",
-        "J. Chen and H. I. Nurdin, Learning nonlinear input–output maps with dissipative quantum systems, Quantum Inf. Process. 18, 198 (2019)",
+        "J. Chen and H. I. Nurdin, Learning nonlinear input-output maps with dissipative quantum systems, Quantum Inf. Process. 18, 198 (2019)",
         "R. Martínez-Peña and J.-P. Ortega, Quantum reservoir computing in finite dimensions, Phys. Rev. E 107, 035306 (2023)",
         "J. Chen, H. I. Nurdin and N. Yamamoto, Temporal information processing on noisy quantum computers, Phys. Rev. Applied 14, 024065 (2020)",
-        "H. Jaeger, The \"echo state\" approach to analysing and training recurrent neural networks, GMD Report 148, German National Research Center for Information Technology (2001)",
+        "H. Jaeger, The echo state approach to analysing and training recurrent neural networks, GMD Report 148, German National Research Center for Information Technology (2001)",
         "L. Grigoryeva and J.-P. Ortega, Echo state networks are universal, Neural Netw. 108, 495 (2018)"
       ]
     }
