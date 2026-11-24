@@ -1,15 +1,61 @@
 {
   "title": "Online Measurement Protocols",
-  "intro": "Online protocols read the reservoir while it keeps running, trading some disturbance or extra noise for a cost that grows linearly rather than quadratically with the length of the series. This page covers the three that matter: weak measurement, projective measurement of part of the system with reset, and readout of a macroscopic ensemble.",
+  "intro": "Online protocols read the reservoir while it keeps running, trading some disturbance or extra noise for a cost that grows linearly rather than quadratically with the length of the series. This page works through the three that matter: weak measurement, projective measurement of part of the system with reset, and readout of a macroscopic ensemble.",
   "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "The previous page, Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action): one shot returns $\\pm1$, the averaged error is $\\sqrt{(1-x^2)/S}$, a non-selective $Z$ measurement keeps the diagonal of $\\rho$ and erases the coherences, and the restart protocol costs $S\\,T$ runs. From the Quantum Mechanics shelf: the Born rule (Measurement and the Born Rule (#/quantum/foundations/measurement)), density matrices (Mixed States (#/quantum/many-body/mixed-states)) and tensor products (Composite Systems and Tensor Products (#/quantum/many-body/composite-systems)). The idea of a quantum channel as a list of Kraus operators is explained where it is used; Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels) gives the full treatment."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Write down a weak measurement as a set of Kraus operators, derive its outcome statistics and its dephasing, and read off the price in shots of a given amount of disturbance.",
+        "Choose a measurement strength for a given run budget, and explain why the best strength is intermediate.",
+        "Describe a partial-measurement-and-reset protocol, derive the channel it applies to the unmeasured memory qubits in a small example, and say what it costs the memory.",
+        "Say what an ensemble readout is, compute the shot-equivalent of $N$ copies, and say what limits it in NMR.",
+        "Count the circuit executions each protocol needs and pick between them for a given task."
+      ]
+    },
     {
       "type": "heading",
       "level": 2,
       "text": "What an online protocol has to achieve"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "A protocol is online if one run processes the whole sequence $s_1,\\dots,s_T$ and yields an outcome at every step. Then $S$ runs give $S$ outcomes per step for a total of $S\\,T$ evolution steps and only $S$ separate runs, against $S\\,T$ runs for any restart protocol (see Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action)). The catch is that the measurement at step $k$ is now part of the dynamics at step $k+1$: the reservoir that is trained is $\\mathcal{M}\\circ\\mathcal{T}_s$, where $\\mathcal{M}$ is the measurement's non-selective channel. An online protocol works if this composite map still has useful memory and nonlinearity, and if the outcomes still carry the information the readout needs."
+      "text": "The restart protocol of the last page works but is wasteful in a particular way: it throws away the reservoir after every measurement and rebuilds it for the next time step. For a series of $T=2000$ inputs and $S=5000$ shots that is ten million separate circuit executions, each of which on real hardware carries a fixed overhead for reset, control and readout. The obvious wish is to run the series once, measure at every step, and carry on."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "A protocol is online if one run processes the whole sequence $s_1,\\dots,s_T$ and yields an outcome at every step. Then $S$ runs give $S$ outcomes per step for a total of $S\\,T$ evolution steps and only $S$ separate runs, compared with $S\\,T$ runs for any restart protocol. The price is exactly what the last page described: the measurement at step $k$ is now part of the dynamics at step $k+1$. Think of reading a sand pattern with a rake every second while also dropping new sand on it: you can still read it, but the pattern you read is a pattern shaped by the rake."
+    },
+    {
+      "type": "prose",
+      "text": "Formally, the reservoir that gets trained is no longer $\\mathcal{T}_{s}$ but $\\mathcal{M}\\circ\\mathcal{T}_{s}$, where $\\mathcal{M}$ is the channel that the measurement applies to the outcome-averaged state. An online protocol works if two things hold: the composite map still has useful memory and nonlinearity, and the recorded outcomes still carry the information the readout needs. Three designs achieve this in different ways: weak measurement of everything (gentle but noisy), strong measurement of part of the register (clean but selective), and measurement of an ensemble (gentle and clean but needs many copies)."
+    },
+    {
+      "type": "callout",
+      "text": "One fact makes all of this consistent. The readout is trained on whatever features the device produces. If the measurement changes the reservoir, but changes it in the same way every run, the trained weights are still correct. What matters is repeatability, not fidelity to the ideal model."
     },
     {
       "type": "heading",
@@ -17,33 +63,83 @@
       "text": "Weak measurement with a Gaussian pointer"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "Couple the observable $Z$ to a pointer, read the pointer, and let its spread $\\sigma$ set the measurement strength. In Kraus form, for outcome $x\\in\\mathbb{R}$,"
+      "text": "A strong ($Z$) measurement extracts one bit and kills coherence entirely. Is there a measurement that extracts less per shot and disturbs less, with a dial between the two? Yes, and the dial can be set to trade information against disturbance continuously."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Couple the qubit's $Z$ to a pointer, a measuring needle with a position $x$ that is a real number. If the qubit is in $|0\\rangle$ ($Z=+1$) the needle is pushed to $x\\approx+1$; if in $|1\\rangle$ ($Z=-1$) to $x\\approx-1$. The needle is fuzzy: it is a bell curve of width $\\sigma$ around its target. A narrow needle ($\\sigma$ small) tells $|0\\rangle$ from $|1\\rangle$ in one reading: that is a nearly projective measurement. A fat needle ($\\sigma$ large) barely distinguishes them in one reading: the reading is a noisy hint. You read the needle and discard the quantum system's own copy of the answer. The question is what happens to the qubit."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "The measurement is described by Kraus operators $M_x$, one for each possible needle reading $x$. They are diagonal in the $Z$ basis, so they act on the two basis states as numbers. Define the bell curve $g(x;m) = (2\\pi\\sigma^2)^{-1/4}\\exp\\!\\left(-\\frac{(x-m)^2}{4\\sigma^2}\\right)$. Then"
     },
     {
       "type": "math",
-      "tex": "M_x = (2\\pi\\sigma^2)^{-1/4}\\exp\\!\\left(-\\frac{(x - Z)^2}{4\\sigma^2}\\right), \\qquad \\int M_x^{\\dagger}M_x\\,dx = I"
+      "tex": "M_x = g(x;+1)\\,|0\\rangle\\langle0| + g(x;-1)\\,|1\\rangle\\langle1|, \\qquad\\text{i.e. } M_x = (2\\pi\\sigma^2)^{-1/4}\\exp\\!\\left(-\\frac{(x - Z)^2}{4\\sigma^2}\\right)",
+      "caption": "Kraus operators of a Gaussian-pointer measurement of Z."
     },
     {
       "type": "prose",
-      "text": "The outcome density is a mixture of two Gaussians of width $\\sigma$ at $\\pm1$, weighted by the populations, so the mean outcome is exactly $\\langle Z\\rangle$ (the estimator is unbiased at any strength) and the variance per shot is"
+      "text": "Step 1. Probability of a reading. For a state $\\rho$ the probability density of reading $x$ is $p(x) = \\operatorname{Tr}(M_x\\rho M_x^{\\dagger}) = g(x;1)^2\\rho_{00} + g(x;-1)^2\\rho_{11}$, because $M_x$ is diagonal."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Square the bell curve: $g(x;m)^2 = (2\\pi\\sigma^2)^{-1/2}\\exp\\!\\left(-\\frac{(x-m)^2}{2\\sigma^2}\\right)$. That is a normal distribution with mean $m$ and variance $\\sigma^2$, and it integrates to 1. So $p(x)$ is a mixture of two normal curves of width $\\sigma$, centred at $+1$ and $-1$, weighted by the populations $\\rho_{00}$ and $\\rho_{11}$. Normalisation: $\\int M_x^{\\dagger}M_x\\,dx = I$, as a set of Kraus operators requires."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Mean reading: $\\mathbb{E}[x] = \\rho_{00}(+1) + \\rho_{11}(-1) = \\langle Z\\rangle$. The reading is an unbiased estimate of $\\langle Z\\rangle$ at every strength."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Variance of a reading. For a mixture of two normals, $\\mathbb{E}[x^2] = \\sigma^2 + 1$ (each component has second moment $\\sigma^2 + m^2 = \\sigma^2 + 1$), so $\\operatorname{Var}(x) = \\sigma^2 + 1 - \\langle Z\\rangle^2$."
     },
     {
       "type": "math",
-      "tex": "\\operatorname{Var}(x) = \\sigma^2 + 1 - \\langle Z\\rangle^2"
+      "tex": "\\operatorname{Var}(x) = \\sigma^2 + 1 - \\langle Z\\rangle^2",
+      "caption": "Variance of one weak reading. Compare 1 - <Z>^2 for a projective one: the extra sigma squared is the price of gentleness."
     },
     {
       "type": "prose",
-      "text": "Averaged over outcomes, the coherence between $|0\\rangle$ and $|1\\rangle$ is multiplied by $\\int M_x(+1)M_x(-1)\\,dx$:"
+      "text": "Step 5. The disturbance. A reading $x$ changes the state to $M_x\\rho M_x^{\\dagger}/p(x)$. Averaging over readings, the populations $\\rho_{00}$ and $\\rho_{11}$ are unchanged (the Kraus operators are diagonal) but the coherence $\\rho_{01}$ is multiplied by $\\int g(x;+1)\\,g(x;-1)\\,dx$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 6. Compute that integral. The product of the two bell curves is $(2\\pi\\sigma^2)^{-1/2}\\exp\\!\\left(-\\frac{(x-1)^2 + (x+1)^2}{4\\sigma^2}\\right)$. Expand $(x-1)^2+(x+1)^2 = 2x^2 + 2$, so the product is $(2\\pi\\sigma^2)^{-1/2}\\,e^{-1/(2\\sigma^2)}\\,e^{-x^2/(2\\sigma^2)}$. The last two factors: the $x$ dependence is a normal curve that integrates to 1, leaving the constant $e^{-1/(2\\sigma^2)}$."
     },
     {
       "type": "math",
-      "tex": "\\rho_{01} \\;\\mapsto\\; e^{-1/(2\\sigma^2)}\\,\\rho_{01}, \\qquad \\rho_{00},\\ \\rho_{11}\\ \\text{unchanged}",
-      "caption": "Back-action of a Gaussian-pointer Z measurement: pure dephasing whose strength falls as the measurement weakens."
+      "tex": "\\rho_{01}\\;\\mapsto\\; c\\,\\rho_{01},\\qquad c = e^{-1/(2\\sigma^2)},\\qquad \\rho_{00},\\ \\rho_{11}\\ \\text{unchanged}",
+      "caption": "Back-action of a Gaussian-pointer Z measurement: pure dephasing of strength c = exp(-1/(2 sigma^2))."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Reading the trade-off"
     },
     {
       "type": "prose",
-      "text": "That is the whole trade-off in two formulas. A strong measurement ($\\sigma\\to 0$) gives the least noisy outcomes and erases coherence; a weak one ($\\sigma\\gg 1$) barely dephases, $e^{-1/(2\\sigma^2)}\\approx 1 - 1/(2\\sigma^2)$, but each outcome is buried in noise of variance $\\approx\\sigma^2$, so the shots needed grow as $\\sigma^2$. The sample below checks both formulas by direct integration over the pointer:"
+      "text": "These two formulas are the whole story. For three values of $\\sigma$ (computed in the sample below): at $\\sigma=0.5$ the coherence factor is $c=0.135$ and the reading variance is $1.25-\\langle Z\\rangle^2$ (almost a projective measurement); at $\\sigma=1$, $c=0.607$ and variance $2-\\langle Z\\rangle^2$; at $\\sigma=2$, $c=0.882$ and $5-\\langle Z\\rangle^2$; at $\\sigma=4$, $c=0.969$ and $17-\\langle Z\\rangle^2$. A weak reading of strength $\\sigma\\gg1$ barely dephases, $c\\approx1-1/(2\\sigma^2)$, but each reading is buried in noise of variance $\\approx\\sigma^2$, so the shots needed to reach a given precision grow as $\\sigma^2$: the number of extra shots is $(1+\\sigma^2-x^2)/(1-x^2)$ times the projective count."
+    },
+    {
+      "type": "prose",
+      "text": "The sample below integrates over the pointer numerically for a qubit with $\\cos(\\pi/6)|0\\rangle + \\sin(\\pi/6)|1\\rangle$ and checks that the closed forms agree:"
     },
     {
       "type": "code",
@@ -53,12 +149,72 @@
     {
       "type": "list",
       "items": [
-        "For $\\langle Z\\rangle=0.5$, $|\\rho_{01}|=0.433$: at $\\sigma=0.5$ the coherence after is 0.059 and the per-shot variance 1.00; at $\\sigma=1$, 0.263 and 1.75; at $\\sigma=2$, 0.382 and 4.75; at $\\sigma=4$, 0.420 and 16.75. Numerical and closed-form values agree to the printed digits."
+        "For this state $\\langle Z\\rangle=0.5$ and $|\\rho_{01}| = 0.433$. At $\\sigma=0.5$ the coherence after is 0.0586 and the per-shot variance 1.000; at $\\sigma=1$, 0.2626 and 1.750; at $\\sigma=2$, 0.3821 and 4.750; at $\\sigma=4$, 0.4197 and 16.750.",
+        "The numerical columns equal the closed forms $1+\\sigma^2-\\langle Z\\rangle^2$ and $e^{-1/(2\\sigma^2)}\\rho_{01}$ to the printed digits. The mean reading is $0.500$ in every row."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "You weakly measure $Z$ with $\\sigma=1.5$ on a qubit with $\\langle Z\\rangle=0$. Step 1: $c = e^{-1/(2\\times2.25)} = e^{-0.2222} = 0.8007$: about a fifth of the coherence is lost. Step 2: the reading variance is $\\sigma^2+1 = 3.25$, against $1$ for a projective measurement. Step 3: to reach the same variance of the average you need $3.25$ times the shots. Step 4: if you want to lose at most $10\\%$ of the coherence, $c\\ge0.9$ needs $1/(2\\sigma^2)\\le\\ln(1/0.9)=0.1054$, so $\\sigma^2\\ge 4.746$, $\\sigma\\ge2.18$, and the shot penalty at $\\langle Z\\rangle=0$ is $1+\\sigma^2 = 5.75$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "In a many-qubit reservoir"
+    },
+    {
+      "type": "prose",
+      "text": "If each of the four qubits is weakly measured every sub-step, every qubit gets the same dephasing. The coherence between two basis states $|a\\rangle$ and $|a'\\rangle$ is multiplied by $c^{h}$, where $h$ is the number of measured qubits on which the bit strings $a$ and $a'$ differ. The sample below runs the 4-qubit, $V=5$ reservoir of the last page under this channel and adds shot noise of variance $(\\sigma^2+1-x^2)/R$ for $R$ runs of the whole series. Its memory capacity table, from an actual run, is:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else I2)\n    return m\nn, D, V = 4, 16, 5\nr = np.random.default_rng(1); H = np.zeros((D, D))\nfor i in range(n):\n    for j in range(i + 1, n): H += r.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n)\nfor i in range(n): H += op(Z, i, n)\nE_, Q = np.linalg.eigh(H)\nU = Q @ np.diag(np.exp(-1j * E_ * 10.0 / V)) @ Q.T\nZd = [np.diag(op(Z, i, n)) for i in range(n)]\nbits = np.array([[(a >> (n - 1 - q)) & 1 for q in range(n)] for a in range(D)])\ndef dephase_mask(c, qubits):\n    \"\"\"Matrix of factors c^(number of measured qubits on which row and column bit strings differ).\"\"\"\n    diff = np.array([[sum(bits[a, q] != bits[b, q] for q in qubits) for b in range(D)] for a in range(D)])\n    return c ** diff\ndef run(s, c=1.0, meas=range(4), reset=(), feat_q=range(4)):\n    \"\"\"Weak (strength c) measurement of the qubits in meas after every sub-step; qubits in reset are then reset to |0>.\"\"\"\n    mask = dephase_mask(c, list(meas)); rho = np.eye(D) / D; F = []\n    for x in s:\n        r4 = rho.reshape(2, D // 2, 2, D // 2); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)]); rho = np.kron(np.outer(psi, psi), rest)\n        f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T; p = np.real(np.diag(rho)); f += [Zd[q] @ p for q in feat_q]\n            rho = rho * mask\n            for q in reset:                       # reset qubit q to |0>: trace it out, put |0> back\n                P0 = np.diag([1 - bits[a, q] for a in range(D)]).astype(float)\n                P1 = np.diag([bits[a, q] for a in range(D)]).astype(float)\n                Xq = op(X, q, n)\n                rho = P0 @ rho @ P0 + Xq @ P1 @ rho @ P1 @ Xq\n        F.append(f)\n    return np.array(F)\ndef mc(F, s, w=200, tr=800, dmax=12, lam=1e-6):\n    A = np.hstack([F, np.ones((len(F), 1))]); tot = 0\n    for d in range(1, dmax + 1):\n        y = s[w - d:len(s) - d]; Atr, Ate = A[w:w + tr], A[w + tr:]\n        wts = np.linalg.solve(Atr.T @ Atr + lam * np.eye(A.shape[1]), Atr.T @ y[:tr])\n        tot += np.corrcoef(Ate @ wts, y[tr:])[0, 1]**2\n    return tot\nrng = np.random.default_rng(0); s = rng.uniform(0, 1, 1400)\nS = 1000\nprint(\"A. weak measurement of all four qubits after every sub-step. Memory capacity (delays 1-12) with R runs of the whole series\")\nprint(\"  (shot noise per feature has variance (sigma^2 + 1 - x^2)/R, added as Gaussian noise; ridge lambda = 1)\")\nruns_list = [1000, 10000, 100000]\nprint(\" sigma | coherence c | exact |\" + \"\".join(f\" R={R:<7d}|\" for R in runs_list))\nfor sig in [1, 2, 3, 5, 10]:\n    c = np.exp(-1 / (2 * sig**2)); F = run(s, c); row = []\n    for R in runs_list:\n        vals = []\n        for rep in range(3):\n            noise = rng.normal(size=F.shape) * np.sqrt(sig**2 + 1 - F**2) / np.sqrt(R)\n            vals.append(mc(F + noise, s, lam=1.0))\n        row.append(np.mean(vals))\n    print(f\"{sig:6d} | {c:11.3f} | {mc(F, s):5.2f} |\" + \"\".join(f\" {v:8.2f} |\" for v in row))\nF = run(s, 1.0); noise_row = []\nfor S in [1000]:\n    vals = [mc(F + rng.normal(size=F.shape) * np.sqrt(1 - F**2) / np.sqrt(S), s, lam=1.0) for _ in range(3)]\nprint(f\"reference, restart protocol with S = 1000 shots per output time ({1000*1400:,} runs): MC = {np.mean(vals):.2f}; exact features {mc(F, s):.2f}\")\nprint(\"B. only qubits 3 and 4 are read: measured projectively and reset to |0> every sub-step (qubits 1, 2 never measured)\")\nFb = run(s, c=0.0, meas=[2, 3], reset=[2, 3], feat_q=[2, 3])\nFn = run(s, c=1.0, meas=[], feat_q=[2, 3])\nprint(f\" features <Z3>,<Z4> x 5 sub-steps, ideal unmeasured model: MC = {mc(Fn, s):.2f}\")\nprint(f\" same, qubits 3,4 measured and reset each sub-step:        MC = {mc(Fb, s):.2f}\")\nFb1 = run(s, c=0.0, meas=[3], reset=[3], feat_q=[3]); Fn1 = run(s, c=1.0, meas=[], feat_q=[3])\nprint(f\" read qubit 4 only, ideal: {mc(Fn1, s):.2f}; measured and reset: {mc(Fb1, s):.2f}\")\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Exact features (no shot noise): MC rises with $\\sigma$ as the dephasing weakens: 1.98 at $\\sigma=1$, 2.97 at 2, 3.20 at 3, 3.58 at 5, 3.78 at 10. The ideal is 3.84.",
+        "With $R=1000$ runs: best at $\\sigma=3$, MC 1.23. With $R=10{,}000$: best at $\\sigma=5$, MC 2.09. With $R=100{,}000$: best at $\\sigma=5$ to $10$, MC 2.70 to 2.75.",
+        "For comparison, the restart protocol with $S=1000$ shots per output time reaches MC 2.90 but needs 1,400,000 runs. The online protocol reaches 1.23 with 1000 runs and 2.75 with 100,000."
       ]
     },
     {
       "type": "prose",
-      "text": "In a multi-qubit reservoir, weakly measuring each $Z_i$ applies this dephasing to every qubit each step. Mujal and coauthors (2023) studied exactly this regime in a spin reservoir and found that an online weak-measurement protocol, operated at an intermediate strength where information is extracted accurately without destroying the memory the task needs, reaches ideal performance on memory and forecasting tasks, the fading-memory time being the key parameter. The dephasing is not only a cost: it is a dissipative channel that can supply the fading memory the reservoir needs (compare Dissipation as a Resource (#/qrc/models/dissipation-as-resource))."
+      "text": "Two lessons. First, the best strength is intermediate and shifts with the budget: with few runs you cannot afford to wait for weak measurements to average out, so you measure harder; with many runs you can measure more gently. This is the behaviour Mujal and coauthors (2023) report: ideal performance on memory and forecasting tasks when the measurement is neither too strong nor too weak. Second, even 100,000 runs fall a little short of the restart's 2.90 here, but the runs needed are 14 times fewer than the restart's, a trade that gets better with longer series."
+    },
+    {
+      "type": "prose",
+      "text": "There is also a positive side. The dephasing is a dissipative channel, and the reservoir may need some. A closed unitary reservoir keeps its initial state forever and has no echo state property, so measurement-induced dephasing can supply the fading memory (compare Dissipation as a Resource (#/qrc/models/dissipation-as-resource)). The cost is that the strength is the same for all features; you cannot tune dissipation and precision separately."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Believing weak measurement is free because it is unbiased. Unbiased means the reading is right on average for the state at the moment of measuring; later states are altered by the dephasing.",
+        "Choosing $\\sigma$ by looking only at the exact-feature column. The shot-limited column has a different optimum, and that is the one that matters on hardware.",
+        "Using $c$ as if it applied once. It applies at every measurement: a coherence that must survive $m$ steps is multiplied by $c^{m}$."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: weak measurement price",
+      "text": "You measure $Z$ weakly with $\\sigma=2$ on a qubit with $\\langle Z\\rangle=0$. By what factor is the coherence multiplied per measurement, and how many times more shots are needed than for a projective measurement?",
+      "hint": "Use $c=e^{-1/(2\\sigma^2)}$ and $\\operatorname{Var} = \\sigma^2+1-\\langle Z\\rangle^2$.",
+      "solution": [
+        "$c = e^{-1/(2\\sigma^2)} = e^{-1/8} = e^{-0.125} = 0.8825$.",
+        "Reading variance $\\sigma^2+1-0 = 5$ against $1$: 5 times as many shots."
+      ],
+      "answer": "$c = 0.882$; 5 times as many shots."
     },
     {
       "type": "heading",
@@ -66,24 +222,118 @@
       "text": "Partial projective measurement with reset"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "On gate-based hardware the natural online primitive is mid-circuit measurement: measure some qubits projectively, reset them, and keep the others unmeasured. Split the register into a memory part $A$ (never measured) and a readout part $B$ (measured, then reset, every step). Per step:"
+      "text": "Weak measurement of every qubit is gentle everywhere and informative nowhere. A different compromise: measure some qubits strongly, leave the others alone. Gate-based hardware offers this natively as mid-circuit measurement with conditional reset."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Divide the register into a memory part $A$, which is never measured, and a readout part $B$, which is measured every step and then reset to $|0\\dots0\\rangle$. The input is injected, the whole register evolves under the reservoir's unitary (which entangles $A$ with $B$), $B$ is measured in the computational basis and the bitstring is recorded, and $B$ is reset. The reset puts fresh $|0\\rangle$ qubits into $B$, so the entropy that the evolution moved from $A$ into $B$ leaves with them. That is the same mechanism by which the input reset in the Fujii-Nakajima model makes the map contractive."
+    },
+    {
+      "type": "prose",
+      "text": "The memory $A$ is protected, because nothing measures it directly. But it is not left alone: it was entangled with $B$, and measuring $B$ acts on $A$ indirectly. The next section shows in the smallest possible example that this is a dephasing."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Let $\\rho_A$ be the state of the memory and $B$ start in $|0\\rangle$. The step is: $\\rho_A\\otimes|0\\rangle\\langle0|\\;\\to\\;U(\\rho_A\\otimes|0\\rangle\\langle0|)U^{\\dagger}$, then measure $B$ with outcome $b$, then reset. For a given outcome $b$ the (unnormalised) state of $A$ is $K_b\\,\\rho_A\\,K_b^{\\dagger}$ with"
+    },
+    {
+      "type": "math",
+      "tex": "K_b = (I_A\\otimes\\langle b|_B)\\;U\\;(I_A\\otimes|0\\rangle_B)",
+      "caption": "Kraus operator of the memory for outcome b of the readout qubits."
+    },
+    {
+      "type": "prose",
+      "text": "The outcome probability is $p_b = \\operatorname{Tr}(K_b\\rho_AK_b^{\\dagger})$ and $\\sum_b K_b^{\\dagger}K_b = I_A$ because $U$ is unitary. Averaged over outcomes the memory evolves by $\\rho_A\\mapsto\\sum_bK_b\\rho_AK_b^{\\dagger}$, a CPTP map that depends on the input through $U$. This is exactly the structure of a quantum channel as in Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the smallest case"
+    },
+    {
+      "type": "prose",
+      "text": "Let $A$ and $B$ be one qubit each. Let $U$ be a controlled rotation: if $A$ is $|0\\rangle$ then $B$ stays $|0\\rangle$; if $A$ is $|1\\rangle$ then $B$ is rotated to $\\cos(\\theta/2)|0\\rangle + \\sin(\\theta/2)|1\\rangle$. For $\\theta=\\pi$ this is the CNOT gate, which copies $A$'s bit into $B$. Let $\\rho_A$ have populations $\\rho_{00}=a$, $\\rho_{11} = 1-a$ and coherence $\\rho_{01}=q$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Compute the Kraus operators. $U(|a'\\rangle\\otimes|0\\rangle)$ is $|0\\rangle|0\\rangle$ for $a'=0$ and $|1\\rangle(\\cos\\tfrac\\theta2|0\\rangle+\\sin\\tfrac\\theta2|1\\rangle)$ for $a'=1$. Taking the $B$ component along $\\langle b|$: $K_0 = |0\\rangle\\langle0| + \\cos\\tfrac\\theta2\\,|1\\rangle\\langle1|$ and $K_1 = \\sin\\tfrac\\theta2\\,|1\\rangle\\langle1|$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Check completeness: $K_0^{\\dagger}K_0 + K_1^{\\dagger}K_1 = |0\\rangle\\langle0| + (\\cos^2\\tfrac\\theta2+\\sin^2\\tfrac\\theta2)|1\\rangle\\langle1| = I$. Good."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The averaged memory state: the $00$ entry is $a$ (from $K_0$ only); the $11$ entry is $(\\cos^2\\tfrac\\theta2+\\sin^2\\tfrac\\theta2)(1-a) = 1-a$; the $01$ entry is $q\\cdot1\\cdot\\cos\\tfrac\\theta2$ (only $K_0$ has both entries). Populations unchanged; coherence multiplied by $\\cos(\\theta/2)$."
+    },
+    {
+      "type": "math",
+      "tex": "\\rho_{01}\\;\\mapsto\\;\\cos\\!\\left(\\tfrac{\\theta}{2}\\right)\\rho_{01},\\qquad \\Pr(b=1) = (1-a)\\sin^2\\!\\left(\\tfrac\\theta2\\right)",
+      "caption": "A partially coupled readout qubit measured and reset: dephasing cos(theta/2) of the memory, and the bit tells you about its population."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Interpret. For $\\theta=\\pi$ (CNOT), the coherence is multiplied by $\\cos(\\pi/2)=0$: the memory is fully dephased and the bit $b$ is a perfect sample of its $Z$ value. For $\\theta=\\pi/2$ the factor is $0.707$ and $\\Pr(b=1) = 0.5(1-a)$: a half-strength readout. For small $\\theta$ the factor tends to 1 and the bit carries little. This is a weak measurement in different clothes, and the same trade-off applies."
+    },
+    {
+      "type": "prose",
+      "text": "In a real reservoir $A$ and $B$ are several qubits and $U$ is the full evolution, so the memory channel is not a pure dephasing but a general contractive map. The next sample puts a number on it for the 4-qubit reservoir: qubits 3 and 4 are $B$ (measured and reset to $|0\\rangle$ after every sub-step, with exact outcome-averaged features), qubits 1 and 2 are the memory. Features are $\\langle Z_3\\rangle$, $\\langle Z_4\\rangle$ after each of the five sub-steps (the same sample as above prints this at its end):"
     },
     {
       "type": "list",
       "items": [
-        "Inject $s_k$ (reset an input qubit and rotate it, or rotate in place).",
-        "Evolve $A\\cup B$ with the reservoir unitary, which entangles them.",
-        "Measure $B$ in the computational basis; record the bitstring; reset $B$ to $|0\\dots0\\rangle$."
+        "Features $\\langle Z_3\\rangle,\\langle Z_4\\rangle$ of the ideal, unmeasured reservoir (only ten features): MC = 3.04. The same features, with qubits 3 and 4 measured and reset every sub-step: MC = 1.14.",
+        "Reading only qubit 4: ideal 2.40, measured and reset 1.71."
       ]
     },
     {
       "type": "prose",
-      "text": "Averaged over outcomes, the state of $A$ evolves by a CPTP map that depends on the input, and the readout bits are samples of a distribution that depends on that state. The memory channel on $A$ is typically contractive (for generic couplings between $A$ and $B$) because each step dumps entropy into the reset ancillas $B$, which is the same mechanism as the input reset in the Fujii–Nakajima model. Yasuda and coauthors (2023) implemented a repeated-measurement scheme of this kind (repeated quantum non-demolition measurements of tunable strength) on IBM superconducting devices: since every step's outputs come from one pass through the data, the number of circuit executions no longer scales with the series length, and they reported shorter execution time and higher accuracy than a conventional restart-type method, identified the measurement strength that best balances extracted information against induced dissipation, and discussed a preliminary result on a 120-qubit device."
+      "text": "So partial measurement is not free: reading two qubits and resetting them costs about 60% of the capacity here, because most of what the readout qubits carry is overwritten at every sub-step, while the memory qubits only reach the readout through the entangling evolution. Reading fewer qubits disturbs less (2.40 to 1.71 for one qubit). Which split is best depends on the coupling pattern, and is a design choice, not a rule."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What has been done on hardware"
     },
     {
       "type": "prose",
-      "text": "One subtlety: in a single run, $A$ is not in the averaged state but in a state conditioned on all previous outcomes. The features are still the averages over $S$ runs at each step, which equal the expectation values of the averaged (non-selective) dynamics, so training on them is consistent. What is lost is information carried by correlations between outcomes at different times within a run, which a smarter readout could in principle use."
+      "text": "Yasuda and coauthors (2023) implemented a repeated-measurement scheme of this kind on IBM superconducting devices, using quantum non-demolition measurements of tunable strength. Because every step's outputs come from one pass through the data, the number of circuit executions no longer scales with the series length. They report shorter execution time and higher accuracy than a conventional restart-type method, identify the measurement strength that best balances extracted information against induced dissipation, and discuss a preliminary result on a 120-qubit device. (I give their claims as reported in their abstract; I have not repeated their experiment.)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A subtlety: single runs against averages"
+    },
+    {
+      "type": "prose",
+      "text": "In a single run $A$ is not in the averaged state but in the state conditioned on all earlier outcomes. The features are the averages over $S$ runs at each step, which are expectation values of the outcome-averaged dynamics, so training on them is consistent with the model $\\mathcal{M}\\circ\\mathcal{T}_s$. What is lost is information carried by correlations between outcomes at different times within one run, which a cleverer readout could in principle use."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: half-strength readout",
+      "text": "In the controlled-rotation example, $\\theta = 2\\pi/3$ and $a = 0.5$. By what factor is the memory coherence multiplied per step, and with what probability does the readout bit come out 1?",
+      "hint": "Use $\\rho_{01}\\mapsto\\cos(\\theta/2)\\rho_{01}$ and $\\Pr(b=1) = (1-a)\\sin^2(\\theta/2)$.",
+      "solution": [
+        "$\\cos(\\theta/2) = \\cos(\\pi/3) = 0.5$.",
+        "$\\Pr(b=1)=(1-a)\\sin^2(\\theta/2) = 0.5\\times\\sin^2(60^\\circ) = 0.5\\times0.75 = 0.375$."
+      ],
+      "answer": "Factor $0.5$; probability $0.375$."
     },
     {
       "type": "heading",
@@ -91,8 +341,63 @@
       "text": "Ensemble readout"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "If the reservoir is an ensemble of $N_{\\text{ens}}$ identical, non-interacting copies driven identically, a collective measurement such as the total magnetisation returns $\\approx N_{\\text{ens}}\\langle Z\\rangle$ in a single run, with relative fluctuations $\\sim 1/\\sqrt{N_{\\text{ens}}}$, and a weak collective measurement disturbs each copy by an amount that vanishes as $N_{\\text{ens}}$ grows. NMR is the canonical example: the free-induction signal is an average over a macroscopic number of nuclear spins, which is why NMR was among the first QRC demonstrations (Negoro et al. 2018). The price is control: every copy must see the same Hamiltonian, and the signal per copy is small at the thermal polarisations of room-temperature NMR."
+      "text": "Both previous protocols fight the single-copy nature of a quantum computer. If instead you have many identical copies of the reservoir, a measurement of the sum over copies is an average already, in one run."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Let $N$ identical, non-interacting copies be driven identically, so every copy has $\\langle Z\\rangle=x$. Let a collective measurement return the total $M = \\sum_{j=1}^{N}z_j$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Each $z_j$ has mean $x$ and variance $1-x^2$ (last page), and the copies are independent, so $\\mathbb{E}[M] = Nx$ and $\\operatorname{Var}(M) = N(1-x^2)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Estimate $x$ as $M/N$: mean $x$, variance $(1-x^2)/N$. This is exactly the variance of an $S$-shot estimate with $S=N$."
+    },
+    {
+      "type": "math",
+      "tex": "\\hat{x} = \\frac{M}{N},\\qquad \\sigma(\\hat x) = \\sqrt{\\frac{1-x^2}{N}}",
+      "caption": "An ensemble of N copies measured once is equivalent, statistically, to N shots of a single copy."
+    },
+    {
+      "type": "prose",
+      "text": "So $N=10^6$ copies give $\\sigma = 0.001$ at $x=0$ in a single run, with no restarts and no reset. Moreover, a weak collective measurement disturbs each copy by an amount that vanishes as $N$ grows (the information per copy is tiny, so is the back-action), so the reservoir can be read at every step without being destroyed. NMR is the canonical example: the free-induction signal is an average over a macroscopic number of nuclear spins, which is why NMR was among the first QRC demonstrations (Negoro et al. 2018)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What limits it"
+    },
+    {
+      "type": "prose",
+      "text": "The price is control and signal. All copies must see the same Hamiltonian and the same input, so the ensemble is a bulk sample, not a programmable array. And at room temperature the spins are barely polarised. For protons in a 1 tesla field at 300 K the thermal polarisation is $\\tanh(h\\nu/2k_BT)$ with $\\nu = 42.58$ MHz, which comes to $3.4\\times10^{-6}$. So the average of $Z$ over the ensemble is only about three parts in a million of its maximum, and $x$ in the formula above is that small number, not the order-one values of our model."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Even so, the signal can be large: one gram of water holds $6.7\\times10^{22}$ protons, so the net signal-to-noise (signal $P\\,N$ against projection noise $\\sqrt N$) is $P\\sqrt N = 3.4\\times10^{-6}\\times\\sqrt{6.7\\times10^{22}} = 8.8\\times10^{5}$. In practice electronic noise in the detector, not this projection noise, sets the sensitivity; the point is that the ensemble gives a usable average in one run."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: ensemble against shots",
+      "text": "How many identical copies in one collective measurement match the precision of a single copy measured $10^{4}$ times, and what is the standard deviation when $x=0$?",
+      "hint": "Compare $(1-x^2)/N$ with $(1-x^2)/S$.",
+      "solution": [
+        "The ensemble variance $(1-x^2)/N$ equals the shot variance $(1-x^2)/S$ when $N=S=10^4$.",
+        "At $x=0$: $\\sigma = \\sqrt{1/10^4} = 0.01$."
+      ],
+      "answer": "$10^4$ copies; $\\sigma = 0.01$."
     },
     {
       "type": "heading",
@@ -103,49 +408,129 @@
       "type": "list",
       "items": [
         "Restart (windowed): $S\\,T$ runs, $S\\,T\\,w$ steps, features exactly those of the ideal model. Use when runs are cheap or $T$ is short.",
-        "Weak measurement: $S'$ runs, $S'\\,T$ steps, with $S' \\approx S\\,(1+\\sigma^2)$ to match precision; adds dephasing of strength $1/(2\\sigma^2)$ per step to the model.",
-        "Partial projective + reset: $S$ runs, $S\\,T$ steps; needs mid-circuit measurement and fast reset; the reservoir map includes the measurement.",
-        "Ensemble: one run in principle; needs a platform with many identical copies and collective readout."
+        "Weak measurement: $R$ runs, $R\\,T$ steps, with $R\\approx S\\,(1+\\sigma^2)$ to match the precision of $S$ projective shots when $\\langle Z\\rangle\\approx0$; adds dephasing of strength $c = e^{-1/(2\\sigma^2)}$ per step to the model.",
+        "Partial projective measurement with reset: $S$ runs, $S\\,T$ steps; needs mid-circuit measurement and fast reset; the reservoir map includes the measurement and the reset.",
+        "Ensemble: one run in principle; needs a platform with many identical copies and a collective readout, and the signal is set by the polarisation."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A rule of thumb that follows from the numbers in this page: if the series is short or the runs cheap, restart; if the series is long and the device supports mid-circuit measurement, go online with a measurement strength chosen on a noisy simulation of your own reservoir; if you have a bulk sample, use it. Resource Accounting (#/qrc/hardware/resource-accounting) puts times on these."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A series of $T=2000$ inputs needs $S=5000$ shots per feature on a device that does one circuit execution per 1 ms including reset, with 5 microseconds per input step. Compare the windowed restart ($w=20$) with a weak-measurement online protocol at $\\sigma=3$ at the same effective precision."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Restart runs: $S\\,T = 10^7$; at 1 ms each, $10^{4}$ s $=2.8$ hours. Steps: $S\\,T\\,w=2\\times10^{8}$, at 5 $\\mu$s each $=1000$ s. Total $11{,}000$ s, about 3.1 hours."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Online with weak measurement at $\\sigma=3$: per-shot variance at $x=0$ is $1+9=10$, so the number of runs is $R = 10\\,S = 50{,}000$. Each run covers all $T$ steps: $R\\,T = 10^8$ steps at 5 $\\mu$s $=500$ s; runs $50{,}000$ at 1 ms $=50$ s. Total about $550$ s $=9$ minutes."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The online protocol is 20 times faster here. In exchange its reservoir has dephasing factor $c = e^{-1/18} = 0.946$ per step, which (see the table above) cost about a fifth of the exact-feature capacity: 3.20 against 3.84. Whether that is acceptable depends on what the task needs; the table says what to expect."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "An online protocol runs the series once and measures at every step: $S$ runs and $S\\,T$ steps instead of $S\\,T$ runs, at the cost that measurement becomes part of the reservoir.",
+        "A Gaussian-pointer weak measurement of $Z$ has an unbiased reading with variance $\\sigma^2+1-\\langle Z\\rangle^2$ and dephases the qubit by $c=e^{-1/(2\\sigma^2)}$. Gentle costs shots; strong costs memory.",
+        "The best strength is intermediate and depends on the run budget: stronger when runs are few, weaker when they are many.",
+        "Partial measurement with reset gives the memory qubits a contractive channel with Kraus operators $K_b=(I\\otimes\\langle b|)U(I\\otimes|0\\rangle)$; in the simplest case it is a dephasing of strength $\\cos(\\theta/2)$.",
+        "An ensemble of $N$ copies read collectively is statistically equal to $N$ shots in one run; in NMR, polarisation of about $3\\times10^{-6}$ limits the signal per spin.",
+        "The readout is trained on whatever the device does, so only repeatability matters, not agreement with the ideal model."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Problems"
     },
     {
       "type": "problem",
       "title": "Price of a weak measurement",
-      "text": "You weakly measure $Z$ with pointer width $\\sigma = 1.5$. By what factor is the qubit's coherence multiplied, and by what factor must the shot count grow (relative to a projective measurement) to keep the same estimator variance when $\\langle Z\\rangle = 0$?",
-      "hint": "Variance per shot is $\\sigma^2 + 1 - \\langle Z\\rangle^2$.",
+      "text": "You weakly measure $Z$ with pointer width $\\sigma=1.5$. By what factor is the qubit's coherence multiplied, and by what factor must the shot count grow (relative to a projective measurement) to keep the same estimator variance when $\\langle Z\\rangle=0$?",
+      "hint": "Use $c=e^{-1/(2\\sigma^2)}$ and the variance formula.",
       "solution": [
-        "Coherence factor $e^{-1/(2\\sigma^2)} = e^{-1/4.5} = e^{-0.222} \\approx 0.80$.",
-        "Per-shot variance: weak $\\sigma^2 + 1 - 0 = 3.25$; projective $1 - 0 = 1$. To match, multiply shots by 3.25."
+        "Coherence factor $e^{-1/(2\\sigma^2)} = e^{-1/4.5} = e^{-0.222} = 0.80$.",
+        "Per-shot variance: weak $\\sigma^2+1-0=3.25$; projective $1-0=1$. To match, multiply shots by 3.25."
       ],
       "answer": "About 0.80, and 3.25 times the shots."
     },
     {
       "type": "problem",
       "title": "Runs saved by going online",
-      "text": "A task has $T = 2000$ steps and needs $S = 5000$ shots per feature. How many separate circuit executions do the windowed restart and the partial-measurement protocol need?",
+      "text": "A task has $T=2000$ steps and needs $S=5000$ shots per feature. How many separate circuit executions do the windowed restart and the partial-measurement protocol need?",
       "hint": "Count runs, not steps.",
       "solution": [
-        "Restart: one execution per (output time, shot) pair: $S\\,T = 10^7$.",
-        "Online: one execution per shot, each covering all $T$ steps: $S = 5000$.",
-        "The online protocol needs $T = 2000$ times fewer executions, though each is $T$ steps long."
+        "Restart: one execution per (output time, shot) pair: $S\\,T=10^7$.",
+        "Online: one execution per shot, each covering all $T$ steps: $S=5000$.",
+        "The online protocol needs $T=2000$ times fewer executions, though each is $T$ steps long."
       ],
       "answer": "$10^7$ against 5000."
     },
     {
       "type": "problem",
-      "title": "Unbiasedness under back-action",
-      "text": "Explain why the weak measurement's mean outcome equals $\\langle Z\\rangle$ at the moment of measurement for every $\\sigma$, yet the features of a weakly measured reservoir still differ from those of the unmeasured model at later steps.",
-      "hint": "Separate the readout of the current state from its effect on the next one.",
+      "title": "Unbiased, yet disturbing",
+      "text": "Explain why the weak measurement's mean reading equals $\\langle Z\\rangle$ for every $\\sigma$, yet the features of a weakly measured reservoir differ from those of the unmeasured model at later steps.",
+      "hint": "Look at what the measurement does to the state, not to its mean.",
       "solution": [
-        "The outcome density is $p(x)=\\rho_{00}\\,\\mathcal{N}(x;1,\\sigma^2) + \\rho_{11}\\,\\mathcal{N}(x;-1,\\sigma^2)$, whose mean is $\\rho_{00}-\\rho_{11} = \\langle Z\\rangle$ independent of $\\sigma$.",
-        "But each measurement dephases by $e^{-1/(2\\sigma^2)}$, changing $\\rho$ and hence every later expectation value. The estimator is unbiased for the measured dynamics, not for the unmeasured model."
+        "The reading density is $p(x)=\\rho_{00}\\,\\mathcal{N}(x;1,\\sigma^2)+\\rho_{11}\\,\\mathcal{N}(x;-1,\\sigma^2)$, with mean $\\rho_{00}-\\rho_{11}=\\langle Z\\rangle$ for any $\\sigma$.",
+        "But each measurement multiplies $\\rho_{01}$ by $e^{-1/(2\\sigma^2)}$, changing $\\rho$ and hence every later expectation value.",
+        "The estimator is unbiased for the measured dynamics, not for the unmeasured model."
       ],
       "answer": "Unbiased per measurement; the dynamics, and so later features, are changed by the dephasing."
+    },
+    {
+      "type": "problem",
+      "title": "Designing the strength",
+      "text": "You can afford to lose at most 5% of the coherence per measurement. What is the smallest pointer width, and what is the shot penalty (relative to projective) for a feature with $\\langle Z\\rangle=0$?",
+      "hint": "Solve $e^{-1/(2\\sigma^2)}=0.95$ for $\\sigma$.",
+      "solution": [
+        "$c\\ge0.95$: $1/(2\\sigma^2)\\le\\ln(1/0.95) = 0.05129$.",
+        "$\\sigma^2\\ge1/(2\\times0.05129) = 9.749$, so $\\sigma\\ge3.12$.",
+        "Shot penalty $1+\\sigma^2 = 10.75$."
+      ],
+      "answer": "$\\sigma\\ge3.12$; about 10.7 times the shots."
+    },
+    {
+      "type": "problem",
+      "title": "Ensemble signal",
+      "text": "An NMR sample has $N=10^{20}$ spins with polarisation $P=3\\times10^{-6}$. What is the projection-noise limited signal-to-noise ratio of a single collective measurement?",
+      "hint": "Use SNR $=NP/\\sqrt N$.",
+      "solution": [
+        "Signal $= N P = 3\\times10^{14}$.",
+        "Noise $=\\sqrt{N(1-P^2)}\\approx\\sqrt{N} = 10^{10}$.",
+        "SNR $= P\\sqrt N = 3\\times10^{-6}\\times10^{10} = 3\\times10^{4}$."
+      ],
+      "answer": "About $3\\times10^{4}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The online protocols are what makes the shot budget of Resource Accounting (#/qrc/hardware/resource-accounting) affordable for long series.",
+        "Gate-Based Devices (#/qrc/hardware/gate-based-devices) shows the circuits and noise that mid-circuit measurement runs on.",
+        "Analog Platforms (#/qrc/hardware/analog-platforms) covers NMR and the other platforms where ensemble or snapshot readout is the norm.",
+        "Measurement as a channel is treated in Measurement (#/qrc/open-systems/measurement); dephasing and amplitude damping as environment interactions are in Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics)."
+      ]
     },
     {
       "type": "heading",

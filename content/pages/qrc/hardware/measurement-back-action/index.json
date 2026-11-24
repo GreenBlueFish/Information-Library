@@ -1,74 +1,215 @@
 {
   "title": "Measurement Back-Action and Shot Noise",
-  "intro": "Reading a quantum reservoir disturbs it, and each reading gives only a $\\pm 1$ outcome, so a hardware QRC must both protect the memory carried by the state and pay in repetitions for every feature value. This page works through both costs quantitatively: what projective measurement does to the recurrence, the restart protocol, and how finite shots shrink memory capacity.",
+  "intro": "Reading a quantum reservoir disturbs it, and each reading gives only a $\\pm 1$ outcome, so a hardware QRC must protect the memory carried by the state and pay in repetitions for every feature value. This page works through both costs: what one shot returns, what measurement does to the state, the restart protocol, and how finite shots shrink memory capacity.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "What a projective measurement does to the recurrence"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "The ideal reservoir update is $\\rho_k = \\mathcal{T}_{s_k}(\\rho_{k-1})$, with features $x_{k,i}=\\operatorname{Tr}(Z_i\\rho_k)$. If after step $k$ we measure every qubit in the computational basis and obtain the bitstring $b$, the state becomes $|b\\rangle\\langle b|$. Averaged over outcomes, the state passed on is the dephased state"
-    },
-    {
-      "type": "math",
-      "tex": "\\Delta(\\rho) = \\sum_{b\\in\\{0,1\\}^n} |b\\rangle\\langle b|\\,\\rho\\,|b\\rangle\\langle b|",
-      "caption": "Non-selective computational-basis measurement: all off-diagonal elements are erased."
-    },
-    {
-      "type": "prose",
-      "text": "So measuring everything every step replaces the map $\\mathcal{T}_s$ by $\\Delta\\circ\\mathcal{T}_s$. The reservoir now only carries a classical probability distribution over $2^n$ bitstrings from step to step, which is a Markov chain driven by the input. Worse, in a single run it does not even carry the distribution, it carries one sampled bitstring, so the next step's dynamics starts from a random basis state. Memory that lived in the coherences of $\\rho$ is gone, and the information that survives has to pass through one sample per step."
-    },
-    {
-      "type": "prose",
-      "text": "This is why the textbook models of QRC (the Fujii–Nakajima spin reservoir among them, see Spin-Network Reservoirs (#/qrc/models/spin-network-reservoir)) assume the features are ensemble averages taken without disturbing the evolution. In NMR that is literally true (a macroscopic ensemble of identical molecules gives the average in one run); on a single-copy device it has to be emulated."
+      "text": "The quantum-mechanics side: a qubit state and the Born rule, Measurement and the Born Rule (#/quantum/foundations/measurement); a density matrix and the expectation $\\langle O\\rangle = \\operatorname{Tr}(O\\rho)$, Mixed States (#/quantum/many-body/mixed-states). The reservoir side: what a reservoir computer is and what its readout does, What Is Reservoir Computing? (#/qrc/start/what-is-reservoir-computing) and Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge); and the two-qubit reservoir of A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand), which is the model this page keeps returning to. If you have met the sampling idea behind opinion polls (more people asked, smaller error), you have all the statistics you need."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "The restart protocol"
+      "text": "What you will be able to do"
     },
     {
-      "type": "prose",
-      "text": "The faithful emulation: for each output time $k$, prepare the initial state, feed inputs $s_1,\\dots,s_k$, measure, and repeat $S$ times. Every run is a fresh, undisturbed copy of the trajectory up to $k$, so the estimate $\\hat{x}_k$ is unbiased. The cost in evolution steps for a series of length $T$ is"
-    },
-    {
-      "type": "math",
-      "tex": "N_{\\text{steps}}^{\\text{full}} = S\\sum_{k=1}^{T} k = \\frac{S\\,T(T+1)}{2}"
-    },
-    {
-      "type": "prose",
-      "text": "With fading memory (the echo state property, see The Echo State Property (#/qrc/foundations/echo-state-property)) the state at time $k$ depends on inputs older than some window $w$ only negligibly. The run can then start at $k-w$ from any fixed state, and"
-    },
-    {
-      "type": "math",
-      "tex": "N_{\\text{steps}}^{\\text{window}} = S\\,T\\,w, \\qquad \\frac{N^{\\text{full}}}{N^{\\text{window}}} = \\frac{T+1}{2w}"
-    },
-    {
-      "type": "prose",
-      "text": "The window $w$ should be a few times the decay time of the reservoir's state distance (the slope you see in the esp-contraction plot on the echo state property page): if the distance between two copies shrinks by a factor $e^{-1/\\tau}$ per step, then $w \\approx \\tau \\ln(1/\\epsilon)$ makes the truncation error $\\epsilon$. Mujal and coauthors (2023) analysed this rewinding protocol (replaying only the fading-memory window) and found it reaches ideal performance on memory and forecasting tasks. Both versions still need $S\\,T$ separate runs, each ending in a measurement, and on most hardware the per-run overhead (reset, repetition delay, classical control) dominates the time per evolution step."
+      "type": "list",
+      "items": [
+        "Say what one measurement of a qubit returns, and show that the mean of $S$ of them estimates $\\langle Z\\rangle$ with standard deviation $\\sqrt{(1-x^2)/S}$.",
+        "Compute how many shots a feature needs for a target precision, and judge that precision against how much the feature actually moves.",
+        "Compute the state that is left after measuring some or all qubits, and say which expectation values survive it and which are erased.",
+        "Count the evolution steps and runs of the restart protocol, with and without a memory window, and choose the window from the reservoir's contraction rate.",
+        "Explain why shot noise acts like a ridge penalty, and tune the ridge parameter on noisy features, which is how it must be done on hardware."
+      ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Shot noise on the features"
+      "text": "The gap between the model and the machine"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "Measuring $Z_i$ on a state with $\\langle Z_i\\rangle = x$ gives $+1$ with probability $(1+x)/2$. The sample mean of $S$ shots is unbiased with"
+      "text": "Every reservoir on the other pages of this shelf is described by a recipe like this. At step $k$ the input $s_k$ is written into the quantum system, the system evolves, and the readout receives a list of numbers $x_{k,1}, x_{k,2},\\dots$ called features. In the models the features are expectation values, $x_{k,i} = \\operatorname{Tr}(O_i\\rho_k)$: exact real numbers between $-1$ and $1$, as available as the entries of a table. Then a ridge readout, trained exactly as in Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge), combines them into a prediction."
+    },
+    {
+      "type": "prose",
+      "text": "A real quantum device does not hand you $\\operatorname{Tr}(O_i\\rho_k)$. It hands you the result of one measurement, and the rules of quantum mechanics say that this result is a random draw, and that making it changes the state. This page is about those two facts, what they cost, and how reservoir experiments are designed around them. Nothing here changes the model; it changes what you must pay to run it."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Think of a coin whose bias you want to know. One flip tells you almost nothing: heads is compatible with any bias that is not exactly zero. Ten thousand flips tell you the bias to about one percent. A feature $\\langle Z\\rangle$ is the bias of a quantum coin: each measurement is one flip. Repeating the flip many times is easy for a coin, because the coin is unchanged by being flipped. A qubit is different: measuring it destroys the state that carried the feature, so to flip the same coin again you must first rebuild it. The rebuilding is the expensive part, and the strategies that follow are different ways of paying for it."
+    },
+    {
+      "type": "prose",
+      "text": "The coin picture breaks in one respect. A classical coin's bias is a fixed fact. A reservoir's state is not a fixed coin: it changes every step because new input arrives. So what is estimated is the bias of a coin that must be reconstructed, from scratch, at every time step, with exactly the same history behind it. That reconstruction is the cost model of the whole chapter."
+    },
+    {
+      "type": "callout",
+      "text": "Three facts organise the page. (1) One measurement of a qubit gives $+1$ or $-1$, not a number between them. (2) Averaging $S$ measurements gives an unbiased estimate whose error shrinks as $1/\\sqrt S$. (3) A measurement disturbs the state, so the measured state cannot simply continue as the reservoir."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One shot: what a measurement returns"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Before counting costs we need the exact statistics of a single measurement, because every later formula is built from them. The question: if the qubit's true expectation is $\\langle Z\\rangle = x$, what does one measurement of $Z$ return, and what do $S$ of them look like on average?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "The Pauli operator $Z$ has two eigenvalues, $+1$ (eigenvector $|0\\rangle$) and $-1$ (eigenvector $|1\\rangle$). By the Born rule a measurement of $Z$ returns exactly one of these two numbers. Call the returned number $z$. Let $p$ be the probability of $z=+1$; then $z=-1$ has probability $1-p$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The expectation is the probability-weighted average of the outcomes: $x = \\langle Z\\rangle = (+1)\\,p + (-1)(1-p) = 2p - 1$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Solve for $p$: $p = (1+x)/2$. A state with $x = 0.6$ gives $+1$ with probability $0.8$ and $-1$ with probability $0.2$. A state with $x=0$ (an equal coin) gives each with probability $1/2$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The mean of one outcome is $x$ (that is what Step 1 says). To get the spread, compute the mean of the square. Since $z$ is $+1$ or $-1$, $z^2 = 1$ always, so $\\mathbb{E}[z^2] = 1$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. The variance is $\\operatorname{Var}(z) = \\mathbb{E}[z^2] - (\\mathbb{E}[z])^2 = 1 - x^2$. It is largest ($1$) when $x=0$ and shrinks to $0$ when $x=\\pm1$: a qubit that is certainly in $|0\\rangle$ always returns $+1$ and has nothing random in it."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5. Now take $S$ independent repetitions $z^{(1)},\\dots,z^{(S)}$, each prepared in the same state, and form the sample mean $\\hat{x} = \\frac{1}{S}\\sum_{m=1}^{S} z^{(m)}$. The mean of a sum is the sum of the means, so $\\mathbb{E}[\\hat{x}] = \\frac{1}{S}\\cdot S\\cdot x = x$: the estimator is unbiased. For independent draws the variances add, so $\\operatorname{Var}(\\hat{x}) = \\frac{1}{S^2}\\cdot S\\,(1-x^2) = \\frac{1-x^2}{S}$."
     },
     {
       "type": "math",
-      "tex": "\\sigma(\\hat{x}) = \\sqrt{\\frac{1-x^2}{S}} \\le \\frac{1}{\\sqrt{S}}"
+      "tex": "\\hat{x} = \\frac{1}{S}\\sum_{m=1}^{S} z^{(m)},\\qquad z^{(m)}\\in\\{-1,+1\\},\\qquad \\mathbb{E}[\\hat x] = x,\\qquad \\sigma(\\hat{x}) = \\sqrt{\\frac{1-x^2}{S}} \\le \\frac{1}{\\sqrt S}",
+      "caption": "A feature as it comes off the device: the average of S single-shot outcomes, each plus or minus one."
     },
     {
       "type": "prose",
-      "text": "Two facts make this cheaper than it looks. First, one computational-basis shot returns all $n$ bits at once, so all $\\langle Z_i\\rangle$ and all correlators $\\langle Z_iZ_j\\rangle$, $\\langle Z_iZ_jZ_k\\rangle,\\dots$ come from the same $S$ shots: a feature vector of size $2^n-1$ (every diagonal Pauli) costs the same shots as one feature, although the higher-order correlators of a reservoir near the maximally mixed state are small and so have poor signal to noise. Second, $1-x^2$ is below 1 for any non-zero signal. Observables outside the $Z$ basis (say $\\langle X_i\\rangle$) need a basis rotation before measuring and therefore separate batches of shots."
+      "text": "The word shot means one run of the circuit that ends in one measurement. The number $S$ is the shot count. The bound $\\sigma\\le 1/\\sqrt S$ holds for every $x$ and is the number to remember: a hundred shots give at worst $0.1$, ten thousand give at worst $0.01$. Because $\\sigma$ falls as $1/\\sqrt S$, to halve the error you need four times as many shots, and to gain one more decimal place you need a hundred times as many."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
     },
     {
       "type": "prose",
-      "text": "What matters for learning is not $\\sigma$ itself but its ratio to how much a feature moves as the input changes. In the 4-qubit reservoir of the numpy sample below, with $V=5$ virtual nodes, the $\\langle Z_i\\rangle$ traces vary over time with a standard deviation of only about 0.23. At $S=1000$ the shot noise is about 0.03, a signal-to-noise ratio near 8 per feature, and the memory capacity (delays 1 to 12) drops from 3.8 to 2.9. The plot runs the same model with a different random draw of couplings and inputs: it gives MC 5.1 with exact features and 3.3 at 1000 shots."
+      "text": "A feature has true value $x = 0.6$. How far off is a 1000-shot estimate, and how many shots give $\\sigma\\le 0.01$?"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. $1 - x^2 = 1 - 0.36 = 0.64$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. $\\sigma = \\sqrt{0.64/1000} = \\sqrt{0.00064} = 0.0253$. So a typical 1000-shot estimate lands within about $0.025$ of $0.6$; about two thirds of estimates are within one $\\sigma$ and about $95\\%$ within two ($0.05$)."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. For $\\sigma\\le 0.01$ we need $0.64/S \\le 10^{-4}$, i.e. $S \\ge 0.64/10^{-4} = 6400$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Check by simulation (the code below, which draws the shots from the binomial distribution and repeats the estimate 20000 times to see its spread). It prints the following, which agrees with the formula to the digits shown:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nrng = np.random.default_rng(7)\n\ndef estimate(x, S, repeats=20000):\n    \"\"\"Estimate <Z> = x from S single shots, repeated many times to see the spread.\"\"\"\n    p_plus = (1 + x) / 2                      # probability of the outcome +1\n    n_plus = rng.binomial(S, p_plus, size=repeats)\n    return (2 * n_plus - S) / S               # mean of S values of +1 or -1\n\nprint(\"true x | shots S | mean of estimates | std of estimates | sqrt((1-x^2)/S)\")\nfor x in [0.0, 0.6, 0.95]:\n    for S in [10, 100, 1000, 10000]:\n        est = estimate(x, S)\n        print(f\"{x:6.2f} | {S:7d} | {est.mean():17.4f} | {est.std():16.4f} | {np.sqrt((1 - x**2) / S):.4f}\")\n\n# shots needed for a target standard deviation\nx, target = 0.6, 0.01\nprint(\"shots needed for x = 0.6 and sigma <= 0.01:\", int(np.ceil((1 - x**2) / target**2)))\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "x = 0.6, S = 1000: standard deviation of the estimates 0.0254, formula 0.0253. S = 10000: 0.0080 against 0.0080.",
+        "x = 0.95, S = 100: 0.0311 against 0.0312. Near $x=\\pm1$ the same number of shots gives a much smaller error, because there is little randomness left.",
+        "The mean of the estimates is within 0.003 of $x$ in every row: the estimator is unbiased. Shots needed for $x=0.6$ and $\\sigma\\le0.01$: 6400."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Reading one shot as the feature. A single outcome is $\\pm1$; it is the average that approximates $x$. A feature value of $0.6$ never appears in one shot.",
+        "Forgetting that the error shrinks as $1/\\sqrt S$, not $1/S$. Doubling the shots does not halve the error.",
+        "Assuming the noise is the same for all features. It is $\\sqrt{(1-x^2)/S}$: features near $\\pm1$ are cheap, features near $0$ are not. Reservoir features that are well mixed sit near $0$, which is the expensive end."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: shots for a small feature",
+      "text": "A feature has $\\langle Z\\rangle = 0.2$. What is the standard deviation of a 400-shot estimate, and how many shots are needed for $\\sigma \\le 0.01$?",
+      "hint": "Use $\\sigma = \\sqrt{(1-x^2)/S}$ and solve for $S$.",
+      "solution": [
+        "$1 - x^2 = 1 - 0.04 = 0.96$.",
+        "$\\sigma = \\sqrt{0.96/400} = \\sqrt{0.0024} = 0.049$.",
+        "$0.96/S \\le 10^{-4}$ gives $S \\ge 9600$."
+      ],
+      "answer": "$\\sigma = 0.049$; $S \\ge 9600$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Precise enough compared with what?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A standard deviation of $0.025$ sounds small. Whether it is small depends on what the feature is doing. If a feature moves between $-0.9$ and $+0.9$ as the input changes, noise of $0.025$ is invisible. If it moves between $0.005$ and $-0.005$, noise of $0.025$ drowns it completely. The readout does not learn from the size of a feature; it learns from how the feature varies with the input. So the useful measure is the signal-to-noise ratio."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea and the maths"
+    },
+    {
+      "type": "prose",
+      "text": "Take one feature $x_i(k)$ as a function of time $k$ (it changes because the inputs change). Its signal is its temporal standard deviation $\\Sigma_i$: the spread of the exact values over the run. Its noise is the shot noise $\\sigma_i = \\sqrt{(1-\\bar{x}_i^2)/S}$ where $\\bar{x}_i$ is its typical value. The ratio is"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{SNR}_i = \\frac{\\Sigma_i}{\\sigma_i} = \\Sigma_i\\,\\sqrt{\\frac{S}{1-\\bar x_i^{\\,2}}} \\;\\ge\\; \\Sigma_i\\sqrt{S}"
+    },
+    {
+      "type": "prose",
+      "text": "In the 4-qubit reservoir used below (5 virtual nodes, so 20 features), the exact $\\langle Z_i\\rangle$ traces have an average temporal standard deviation of $\\Sigma = 0.232$ (the sample prints it). At $S=1000$ the worst-case noise is $1/\\sqrt{1000} = 0.0316$, so the worst-case SNR is $0.232/0.0316 = 7.3$. Using each feature's own $1-x^2$ instead of the worst case, the average noise is $0.0307$ and the SNR $7.6$. At $S = 100$ the SNR is $2.3$: the noise is nearly half the signal."
+    },
+    {
+      "type": "prose",
+      "text": "Notice what the SNR does not capture: how the information is distributed among the features. An input from eight steps ago contributes to the features only a tiny amount, and the readout recovers it by combining many features with large weights. Noise on each feature is multiplied by those weights, so the old inputs, whose signal is smallest, are lost first. The memory function in the widget below shows exactly this."
     },
     {
       "type": "widget",
@@ -131,76 +272,520 @@
     },
     {
       "type": "prose",
-      "text": "Try: set shots to 0 (exact) and note MC; then 100000, 10000, 1000, 100, 10. Capacity falls steadily as the shot budget shrinks, and faster the fewer shots you have: each tenfold cut removes about 0.2 of capacity near $10^5$ shots but about 1 near 100, and the long delays (whose signal is weakest in the features) go first. Then raise V with shots fixed at 1000: more virtual nodes still help, because the readout averages noise across more features, but less than in the exact case."
+      "text": "What the widget shows. The bars are the memory function: the squared correlation $r^2$ between the readout's output and the input from $d$ steps ago, for each delay $d$. Their sum over $d=1,\\dots,12$ is the memory capacity MC (Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)). The features come from a 4-qubit spin reservoir; shot noise is added to each feature with the standard deviation we just derived."
     },
     {
       "type": "prose",
-      "text": "The sample below reproduces this with the same model in numpy. Its output (from an actual run):"
+      "text": "Try this. (1) Set shots to 0 (exact): MC $= 5.10$, with delays 1 to 4 at $r^2\\approx 0.9$ or above and a tail to delay 12. (2) Step the shots through 100000, 10000, 1000, 100, 10: MC falls to 4.89, 4.29, 3.33, 1.90 and 0.70. A tenfold cut costs 0.6 of capacity around $10^4$ shots but 1.2 around $10^2$. (3) At 1000 shots look at the delays: delay 1 is still $0.99$ and delay 2 is $0.94$, but delay 6 has dropped from $0.70$ to $0.23$ and delay 8 from $0.22$ to $0.11$. The long delays go first. (4) With 1000 shots, raise V from 1 to 10: MC goes 1.78, 2.51, 3.33 (V=5), 3.73 (V=10). More virtual nodes still help, because the readout averages noise over more features, but much less than in the exact case, where V=10 reaches 6.16."
+    },
+    {
+      "type": "prose",
+      "text": "The sample below reproduces the effect in numpy with the same reservoir. It adds Gaussian noise of the right variance to the exact features (a good approximation of the binomial noise at these shot counts) and recomputes MC. Its output, from an actual run, is listed beneath it. The numbers differ slightly from the widget because the sample draws different random couplings and inputs."
     },
     {
       "type": "code",
       "lang": "python",
-      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else I2)\n    return m\ndef reservoir(n=4, h=1.0, dt=10.0, V=5, seed=1):\n    r = np.random.default_rng(seed); H = np.zeros((2**n, 2**n))\n    for i in range(n):\n        for j in range(i + 1, n): H += r.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n)\n    for i in range(n): H += h * op(Z, i, n)\n    E, Q = np.linalg.eigh(H)\n    return Q @ np.diag(np.exp(-1j * E * dt / V)) @ Q.T, [np.diag(op(Z, i, n)) for i in range(n)]\ndef features(s, n=4, V=5):\n    U, Zd = reservoir(n, V=V); D = 2**n; rho = np.eye(D) / D; F = []\n    for x in s:\n        r4 = rho.reshape(2, D // 2, 2, D // 2); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)]); rho = np.kron(np.outer(psi, psi), rest)\n        f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T; p = np.real(np.diag(rho)); f += [z @ p for z in Zd]\n        F.append(f)\n    return np.array(F)\ndef mc(F, s, w=200, tr=800, dmax=12):\n    A = np.hstack([F, np.ones((len(F), 1))]); tot = 0\n    for d in range(1, dmax + 1):\n        y = s[w - d:len(s) - d]; Atr, Ate = A[w:w + tr], A[w + tr:]\n        wts = np.linalg.solve(Atr.T @ Atr + 1e-6 * np.eye(A.shape[1]), Atr.T @ y[:tr])\n        tot += np.corrcoef(Ate @ wts, y[tr:])[0, 1]**2\n    return tot\nrng = np.random.default_rng(0); s = rng.uniform(0, 1, 1400)\nF = features(s)\nprint(f\"exact features: MC = {mc(F, s):.2f}\")\nfor S in [10, 100, 1000, 10000, 100000]:\n    vals = []\n    for rep in range(3):\n        noise = rng.normal(size=F.shape) * np.sqrt((1 - F**2) / S)\n        vals.append(mc(F + noise, s))\n    print(f\"S = {S:>6} shots: MC = {np.mean(vals):.2f}\")\nprint(f\"spread of the features over time: std <Z_i> = {F.std(axis=0).mean():.3f}\")\n"
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else I2)\n    return m\ndef reservoir(n=4, h=1.0, dt=10.0, V=5, seed=1):\n    r = np.random.default_rng(seed); H = np.zeros((2**n, 2**n))\n    for i in range(n):\n        for j in range(i + 1, n): H += r.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n)\n    for i in range(n): H += h * op(Z, i, n)\n    E, Q = np.linalg.eigh(H)\n    return Q @ np.diag(np.exp(-1j * E * dt / V)) @ Q.T, [np.diag(op(Z, i, n)) for i in range(n)]\ndef features(s, n=4, V=5):\n    U, Zd = reservoir(n, V=V); D = 2**n; rho = np.eye(D) / D; F = []\n    for x in s:\n        r4 = rho.reshape(2, D // 2, 2, D // 2); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)]); rho = np.kron(np.outer(psi, psi), rest)\n        f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T; p = np.real(np.diag(rho)); f += [z @ p for z in Zd]\n        F.append(f)\n    return np.array(F)\ndef fit(Atr, y, lam): return np.linalg.solve(Atr.T @ Atr + lam * np.eye(Atr.shape[1]), Atr.T @ y)\ndef mc(F, s, w=200, tr=800, dmax=12, lam=1e-6, Ftest=None):\n    \"\"\"Memory capacity: sum over delays of r^2 between target s(k-d) and the readout on the test window.\"\"\"\n    A = np.hstack([F, np.ones((len(F), 1))]); tot = 0\n    if Ftest is None: Ate = A[w + tr:]\n    else: Ate = np.hstack([Ftest, np.ones((len(Ftest), 1))])[w + tr:]\n    for d in range(1, dmax + 1):\n        y = s[w - d:len(s) - d]; wts = fit(A[w:w + tr], y[:tr], lam)\n        tot += np.corrcoef(Ate @ wts, y[tr:])[0, 1]**2\n    return tot\nrng = np.random.default_rng(0); s = rng.uniform(0, 1, 1400)\nF = features(s)\nprint(f\"exact features: MC = {mc(F, s):.2f}\")\nfor S in [10, 100, 1000, 10000, 100000]:\n    vals = []\n    for rep in range(3):\n        noise = rng.normal(size=F.shape) * np.sqrt((1 - F**2) / S)\n        vals.append(mc(F + noise, s))\n    print(f\"S = {S:>6} shots: MC = {np.mean(vals):.2f}\")\nprint(f\"spread of the features over time: std <Z_i> = {F.std(axis=0).mean():.3f}\")\n\n# Ridge parameter: tune on exact features vs tune on noisy features, then test on noisy features (S = 1000)\nS = 1000\nFtr_noisy = F + rng.normal(size=F.shape) * np.sqrt((1 - F**2) / S)\nFte_noisy = F + rng.normal(size=F.shape) * np.sqrt((1 - F**2) / S)\nprint(\"ridge lambda | MC on noisy test features, weights fitted on exact | fitted on noisy\")\nfor lam in [1e-8, 1e-6, 1e-4, 1e-2, 1e-1, 1, 10]:\n    a = mc(F, s, lam=lam, Ftest=Fte_noisy)\n    b = mc(Ftr_noisy, s, lam=lam, Ftest=Fte_noisy)\n    print(f\"{lam:11.0e} | {a:.2f} | {b:.2f}\")\n"
     },
     {
       "type": "list",
       "items": [
-        "exact features: MC = 3.84",
-        "S = 10: 0.99; S = 100: 1.98; S = 1000: 2.87; S = 10000: 3.46; S = 100000: 3.73",
-        "mean temporal std of the features: 0.232"
+        "Exact features: MC = 3.84. S = 10: 0.99; S = 100: 1.98; S = 1000: 2.87; S = 10000: 3.46; S = 100000: 3.73.",
+        "Spread of the features over time: standard deviation of $\\langle Z_i\\rangle$ = 0.232 (the $\\Sigma$ used above)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Choosing the shot count from the SNR of the largest feature. The readout needs the small, subtle differences between features; judge precision against the weakest feature that the task needs.",
+        "Assuming more qubits always give more usable features. Each extra feature comes with its own noise. For the widget's draw of couplings, 5 qubits at 1000 shots give MC 2.77 against 3.33 for 4 qubits, and with exact features 4.78 against 5.10."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: signal against noise",
+      "text": "A feature has temporal standard deviation $\\Sigma = 0.05$ and is near zero on average. How many shots make its worst-case SNR equal to 5?",
+      "hint": "Use SNR $\\ge \\Sigma\\sqrt{S}$ and solve for $S$.",
+      "solution": [
+        "Worst case: $\\mathrm{SNR} = \\Sigma\\sqrt S$.",
+        "Set $0.05\\sqrt S = 5$, so $\\sqrt S = 100$.",
+        "$S = 100^2 = 10000$."
+      ],
+      "answer": "$S = 10000$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a measurement does to the state"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "So far the cost looks only like a statistics problem: take more samples. If the reservoir could be measured and then continue as if nothing had happened, that would be the whole story. It cannot, and this is the part with no classical analogue."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "In Measurement and the Born Rule (#/quantum/foundations/measurement) you saw that measuring a qubit in the $Z$ basis and getting $+1$ leaves it in $|0\\rangle$, whatever it was before. All information about the state's relative phase between $|0\\rangle$ and $|1\\rangle$ is gone. In a reservoir that phase information is where much of the memory lives: the state is carried by the off-diagonal entries of $\\rho$ (the coherences), and those are exactly what the $Z$ measurement erases. Think of a sand pattern in a tray. Measuring it with a rake does read it, but afterwards the pattern is a different pattern."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Let the reservoir have $n$ qubits and state $\\rho$. Measure all of them in the computational basis. The possible outcomes are bitstrings $b\\in\\{0,1\\}^n$ with probabilities $p_b = \\langle b|\\rho|b\\rangle$, the diagonal entries of $\\rho$ (the Born rule again). After outcome $b$ the state is the basis state $|b\\rangle\\langle b|$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Suppose we perform the measurement but do not look at the outcome, or equivalently average over many identical runs. The state is then the probability-weighted mixture $\\sum_b p_b\\,|b\\rangle\\langle b|$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Write $p_b = \\langle b|\\rho|b\\rangle$: the mixture is $\\Delta(\\rho) = \\sum_b |b\\rangle\\langle b|\\,\\rho\\,|b\\rangle\\langle b|$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. What is $\\Delta(\\rho)$ as a matrix? The operator $|b\\rangle\\langle b|\\rho|b\\rangle\\langle b|$ keeps only the entry of $\\rho$ in row $b$ and column $b$. Summing over all $b$ keeps the diagonal and sets every off-diagonal entry to zero."
+    },
+    {
+      "type": "math",
+      "tex": "\\Delta(\\rho) = \\sum_{b\\in\\{0,1\\}^n} |b\\rangle\\langle b|\\,\\rho\\,|b\\rangle\\langle b| \\quad\\Rightarrow\\quad \\Delta(\\rho)_{ab} = \\delta_{ab}\\,\\rho_{aa}",
+      "caption": "Non-selective measurement of every qubit in the computational basis: the diagonal survives, all off-diagonal entries (the coherences) are erased."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. This is a legitimate channel (it is completely positive and preserves trace; Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels) explains channels), and it is a one-way street: the diagonal does not determine the off-diagonal entries, so nothing can restore them."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: two qubits"
+    },
+    {
+      "type": "prose",
+      "text": "Take the pure two-qubit state $|\\psi\\rangle = \\tfrac{1}{2}(|00\\rangle + |01\\rangle + |10\\rangle - |11\\rangle)$. Measure both qubits in the $Z$ basis and average over outcomes."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The amplitude of each basis state has magnitude $1/2$, so $p_{00}=p_{01}=p_{10}=p_{11} = 1/4$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Before: $\\rho = |\\psi\\rangle\\langle\\psi|$ has all sixteen entries of magnitude $1/4$ (the off-diagonals carry the signs of the amplitudes). Its purity is $\\operatorname{Tr}\\rho^2 = 1$, because it is a pure state."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. After: $\\Delta(\\rho) = \\tfrac14 I$, the maximally mixed state, with purity $\\operatorname{Tr}(\\rho^2) = 4\\times(1/4)^2 = 1/4$. The sample at the end of this section prints purity 1.0 before and 0.25 after."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Which expectation values survived? Anything built from $I$ and $Z$ only depends on the diagonal: $\\langle Z_1\\rangle$, $\\langle Z_2\\rangle$ and $\\langle Z_1Z_2\\rangle$ are unchanged. Anything with an $X$ or $Y$ depends on the off-diagonal entries and is destroyed: $\\langle X_1\\rangle$ was $\\tfrac12\\cdot$ (a sum of products of amplitudes) and is now $0$."
+    },
+    {
+      "type": "prose",
+      "text": "So the rule is: a non-selective $Z$-basis measurement keeps every $Z$-type expectation value and erases every other Pauli expectation value. Measuring only some qubits erases only the coherences that involve those qubits' $X$ and $Y$ parts."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What this does to a reservoir"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose the whole register is measured after every step and the outcomes are fed on. Per run, the state is now a single basis state $|b\\rangle$ (one sampled bitstring), and the next step starts from there. Averaged over runs, the state passed to the next step is $\\Delta(\\mathcal{T}_{s}(\\rho))$ instead of $\\mathcal{T}_s(\\rho)$. The reservoir has become a classical system: a Markov chain on $2^n$ bitstrings, driven by the input. What memory it has is whatever can be stored in $2^n$ probabilities, and in one run, in a single sampled bit pattern per step."
+    },
+    {
+      "type": "prose",
+      "text": "How much does that hurt? The next sample answers it for the 4-qubit, V = 5 reservoir. It runs the ideal model, and then the same model in which, after every sub-step, all qubits are measured and dephased (the outcome-averaged picture, so the features are still exact numbers and the only change is the back-action):"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else I2)\n    return m\nn, D, V = 4, 16, 5\nr = np.random.default_rng(1); H = np.zeros((D, D))\nfor i in range(n):\n    for j in range(i + 1, n): H += r.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n)\nfor i in range(n): H += 1.0 * op(Z, i, n)\nE_, Q = np.linalg.eigh(H)\nU = Q @ np.diag(np.exp(-1j * E_ * 10.0 / V)) @ Q.T\nZd = [np.diag(op(Z, i, n)) for i in range(n)]\n\ndef features(s, dephase):\n    \"\"\"dephase=True: measure ALL qubits in the Z basis after every sub-step and forget the outcomes\n    (the average state is the diagonal of rho); dephase=False: the ideal model.\"\"\"\n    rho = np.eye(D) / D; F = []\n    for x in s:\n        r4 = rho.reshape(2, D // 2, 2, D // 2); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)]); rho = np.kron(np.outer(psi, psi), rest)\n        f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T\n            p = np.real(np.diag(rho)); f += [z @ p for z in Zd]\n            if dephase: rho = np.diag(p).astype(complex)\n        F.append(f)\n    return np.array(F)\n\ndef mc(F, s, w=200, tr=800, dmax=12):\n    A = np.hstack([F, np.ones((len(F), 1))]); tot = 0; per = []\n    for d in range(1, dmax + 1):\n        y = s[w - d:len(s) - d]; Atr, Ate = A[w:w + tr], A[w + tr:]\n        wts = np.linalg.solve(Atr.T @ Atr + 1e-6 * np.eye(A.shape[1]), Atr.T @ y[:tr])\n        c = np.corrcoef(Ate @ wts, y[tr:])[0, 1]**2; per.append(c); tot += c\n    return tot, per\n\ns = np.random.default_rng(0).uniform(0, 1, 1400)\nfor name, deph in [(\"ideal (no measurement back-action)\", False), (\"all qubits measured and dephased each sub-step\", True)]:\n    m, per = mc(features(s, deph), s)\n    print(f\"{name}: MC = {m:.2f}; r^2 at delays 1..6 = \" + \" \".join(f\"{v:.2f}\" for v in per[:6]))\n\n# What one projective measurement does to a coherent state of two qubits\npsi = np.array([1, 1, 1, -1]) / 2.0          # (|00> + |01> + |10> - |11>)/2\nrho = np.outer(psi, psi)\nrho_after = np.diag(np.diag(rho))\nprint(\"purity before:\", round(float(np.trace(rho @ rho)), 3), \" after non-selective measurement:\", round(float(np.trace(rho_after @ rho_after)), 3))\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Ideal: MC = 3.84, with $r^2$ at delays 1 to 6 of 0.95, 0.78, 0.62, 0.57, 0.39, 0.27.",
+        "Measured and dephased every sub-step: MC = 1.96, with delays 1 to 6 at 1.00, 0.70, 0.18, 0.06, 0.01, 0.00.",
+        "Purity of the two-qubit example: 1.0 before, 0.25 after."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Capacity is halved, and almost all that remains is the first two delays. (Delay 1 stays perfect, most likely because the populations right after an input is written still contain it, so the most recent input needs no coherence. The longer memories seem to need the coherences.) The lesson is not that measuring is forbidden, but that a protocol which measures everything every step is a different, much weaker reservoir than the one in the model. Every protocol on the next pages is a way to reduce that damage."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Thinking the disturbance only matters if you look at the outcome. The non-selective average is the same whether you look or not: the state has changed either way.",
+        "Thinking that measuring $Z$ only disturbs $X$ and $Y$ features. It also disturbs later $Z$ features, because the next evolution step rotates the erased coherences into populations. The loss above shows up in the $\\langle Z\\rangle$ features at delays 3 and beyond.",
+        "Treating the ideal model as a bound that hardware can only fall short of. Some of the protocols below deliberately add dissipation, and dissipation can help (Dissipation as a Resource (#/qrc/models/dissipation-as-resource))."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a measured Bell state",
+      "text": "The Bell state $(|00\\rangle + |11\\rangle)/\\sqrt2$ is measured in the $Z$ basis on both qubits and the outcomes are averaged. Find the resulting state, its purity, and what happens to $\\langle Z_1Z_2\\rangle$ and $\\langle X_1X_2\\rangle$ (which are $+1$ and $+1$ before).",
+      "hint": "Keep only the diagonal of $|\\psi\\rangle\\langle\\psi|$; ask which Paulis need off-diagonal entries.",
+      "solution": [
+        "Outcome probabilities: $p_{00} = p_{11} = 1/2$, $p_{01}=p_{10}=0$.",
+        "The averaged state keeps the diagonal: $\\tfrac12|00\\rangle\\langle00| + \\tfrac12|11\\rangle\\langle11|$.",
+        "Purity: $(1/2)^2 + (1/2)^2 = 1/2$.",
+        "$Z_1Z_2$ is $+1$ on both $|00\\rangle$ and $|11\\rangle$, so it stays $+1$.",
+        "$X_1X_2$ swaps $|00\\rangle\\leftrightarrow|11\\rangle$, so it needs the off-diagonal entry between them, which is now $0$: $\\langle X_1X_2\\rangle = 0$."
+      ],
+      "answer": "State $\\tfrac12(|00\\rangle\\langle00| + |11\\rangle\\langle11|)$, purity $1/2$; $\\langle Z_1Z_2\\rangle = +1$ stays, $\\langle X_1X_2\\rangle$ becomes $0$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The restart protocol"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "If measuring destroys the reservoir, the most direct way to still get its features is to accept the destruction and rebuild. For each time $k$ at which we want features, we run the reservoir again from the beginning, feed it the first $k$ inputs, measure, and discard it. This is the restart protocol. It is the baseline against which every cleverer protocol is judged, because it reproduces the ideal model exactly."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Take a series of $T$ inputs $s_1,\\dots,s_T$ and $S$ shots per output time. One run for output time $k$ applies $k$ input-and-evolution steps, then measures."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The number of runs: one per (shot, output time) pair, so $N_{\\text{runs}} = S\\,T$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. The number of evolution steps. Output time $k$ costs $k$ steps per run. Summing over $k = 1,\\dots,T$ gives $1 + 2 + \\dots + T$. Write the sum twice, once forwards and once backwards: $(1+T) + (2 + T-1) + \\dots + (T+1) = T(T+1)$, so the sum is $T(T+1)/2$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Multiply by $S$: $N_{\\text{steps}}^{\\text{full}} = S\\,T(T+1)/2$. The cost grows as $T^2$: doubling the series length quadruples the work."
+    },
+    {
+      "type": "math",
+      "tex": "N_{\\text{runs}} = S\\,T, \\qquad N_{\\text{steps}}^{\\text{full}} = \\frac{S\\,T(T+1)}{2}",
+      "caption": "Cost of the restart protocol for a series of T inputs and S shots per output time."
+    },
+    {
+      "type": "prose",
+      "text": "The quadratic growth is wasteful, because a reservoir with fading memory has forgotten the distant past anyway (The Echo State Property (#/qrc/foundations/echo-state-property)). Two copies of the reservoir that start in different states but receive the same recent inputs end up nearly the same state. So to reproduce the features at time $k$ it is enough to start from any fixed state at time $k-w$ and feed only the last $w$ inputs. This is the windowed restart (Mujal and coauthors call a variant of it rewinding)."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Output time $k$ now costs $\\min(k,w)$ steps, so the total is $S\\,[\\,w(w+1)/2 + (T-w)\\,w\\,]$, which is $S\\,T\\,w$ up to a small correction $S\\,w(w-1)/2$. We use $N_{\\text{steps}}^{\\text{window}}\\approx S\\,T\\,w$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5. The saving is the ratio $\\dfrac{N^{\\text{full}}}{N^{\\text{window}}} = \\dfrac{T+1}{2w}$. The number of runs is unchanged: it is still $S\\,T$. Only the length of each run shrinks."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Choosing the window"
+    },
+    {
+      "type": "prose",
+      "text": "The window must be long enough that the starting state has been forgotten. Suppose the distance between two copies fed identical inputs shrinks by a factor $\\gamma < 1$ per step (the contraction rate; the esp-contraction plot on The Echo State Property (#/qrc/foundations/echo-state-property) shows it). After $w$ steps the distance is $\\gamma^{\\,w}$ of its starting value. Requiring this to be below a tolerance $\\epsilon$:"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. $\\gamma^{\\,w}\\le\\epsilon$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Take logarithms; $\\ln\\gamma$ is negative, so the inequality flips when we divide: $w\\,\\ln\\gamma \\le \\ln\\epsilon$, i.e. $w \\ge \\ln\\epsilon/\\ln\\gamma = \\ln(1/\\epsilon)/\\ln(1/\\gamma)$."
+    },
+    {
+      "type": "math",
+      "tex": "w \\;\\ge\\; \\frac{\\ln(1/\\epsilon)}{\\ln(1/\\gamma)}",
+      "caption": "Memory window for truncation tolerance epsilon when two copies approach each other by a factor gamma per step."
+    },
+    {
+      "type": "prose",
+      "text": "The next sample measures this for the 4-qubit reservoir with $V=1$ and $\\Delta t = 10$. It first runs one long trajectory, then recomputes the features at each of 200 output times from a window starting in $|0000\\rangle$, and prints the largest and mean feature error. It also tracks the trace distance between two copies started in $|0000\\rangle$ and $|1111\\rangle$, and checks the cost formulas by brute-force counting."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else I2)\n    return m\nn, D = 4, 16\nr = np.random.default_rng(1); H = np.zeros((D, D))\nfor i in range(n):\n    for j in range(i + 1, n): H += r.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n)\nfor i in range(n): H += 1.0 * op(Z, i, n)\nE_, Q = np.linalg.eigh(H)\nU = Q @ np.diag(np.exp(-1j * E_ * 10.0)) @ Q.T       # one input step, V = 1 (dt = 10)\nZd = [np.diag(op(Z, i, n)) for i in range(n)]\n\ndef step(rho, x):\n    r4 = rho.reshape(2, D // 2, 2, D // 2); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n    psi = np.array([np.sqrt(1 - x), np.sqrt(x)])\n    rho = np.kron(np.outer(psi, psi), rest)\n    return U @ rho @ U.conj().T\ndef feat(rho): return np.array([z @ np.real(np.diag(rho)) for z in Zd])\n\ns = np.random.default_rng(0).uniform(0, 1, 300)\n# full run: one long trajectory, features at every step\nrho = np.eye(D) / D; full = []\nfor x in s: rho = step(rho, x); full.append(feat(rho))\nfull = np.array(full)\n# windowed restart: for output time k, start from |0000> at step k-w+1 and feed only the last w inputs\nprint(\"window w | largest feature error over k = 100..299 | mean error\")\nfor w in [1, 2, 4, 6, 8, 12, 16, 24]:\n    errs = []\n    for k in range(100, 300):\n        rho = np.zeros((D, D), complex); rho[0, 0] = 1\n        for x in s[k - w + 1:k + 1]: rho = step(rho, x)\n        errs.append(np.abs(feat(rho) - full[k]).max())\n    print(f\"{w:8d} | {max(errs):.2e} | {np.mean(errs):.2e}\")\n\n# trace distance between two copies fed identical inputs from different initial states\nA = np.zeros((D, D), complex); A[0, 0] = 1\nB = np.zeros((D, D), complex); B[-1, -1] = 1\nprint(\"step | trace distance between the two copies\")\ndist = []\nfor t, x in enumerate(s[:20], 1):\n    A = step(A, x); B = step(B, x)\n    dist.append(0.5 * np.abs(np.linalg.eigvalsh(A - B)).sum())\n    if t in (1, 2, 3, 5, 8, 12, 16, 20): print(f\"{t:4d} | {dist[-1]:.3e}\")\nprint(\"geometric-mean shrink factor per step over steps 2..12:\", round((dist[11] / dist[1]) ** (1 / 10), 3))\n\n# counting evolution steps by brute force for a small series, against the formulas\nT, S, w = 40, 3, 5\nbrute_full = sum(k for _ in range(S) for k in range(1, T + 1))\nbrute_win = sum(min(k, w) for _ in range(S) for k in range(1, T + 1))\nprint(\"brute force:\", brute_full, \"formula S*T*(T+1)/2 =\", S * T * (T + 1) // 2, \"| windowed:\", brute_win, \"formula (approx S*T*w) =\", S * T * w)\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Window 4: largest feature error 0.69. Window 8: 0.29. Window 16: 0.081. Window 24: 0.029 (mean error 0.0079). The truncation error falls steadily, and it matches the contraction rate.",
+        "Trace distance between the two copies: 1.0 at step 1, 0.65 at step 5, 0.14 at step 12, 0.044 at step 16. The geometric-mean shrink factor over steps 2 to 12 is $\\gamma\\approx 0.82$.",
+        "With $\\gamma = 0.82$ and $\\epsilon=10^{-3}$: $w \\ge \\ln 1000/\\ln(1/0.82) = 6.908/0.198 = 34.8$, so $w = 35$. Check against the table: at $w=24$, $0.82^{24} = 0.0085$, and the observed mean feature error is $0.0079$. The same order of magnitude, as the argument predicts.",
+        "Brute-force count for $T=40$, $S=3$: 2460 steps, equal to $S\\,T(T+1)/2 = 2460$. Windowed with $w=5$: 570 steps against the approximation $S\\,T\\,w = 600$ (the correction $S\\,w(w-1)/2 = 30$ explains the difference)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Notice how long this window is. This reservoir (small field, long evolution per step) forgets slowly, with a memory of dozens of steps, because it was designed in the models chapter to have a long memory. A reservoir that forgets quickly needs a short window and is cheap to read with restarts; a reservoir with long memory is expensive to read. Capacity and read-out cost trade off directly."
+    },
+    {
+      "type": "prose",
+      "text": "One more saving. Restarts are only needed at the times where features are needed. A task with 200 washout steps, 800 training and 400 test steps needs features only at the 1200 times after the washout, so $S\\,T$ is taken with $T=1200$ for the runs, but each run still has to start early enough to cover its window."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Forgetting that the windowed protocol does not reduce the number of runs, only their length. If each run has a large fixed overhead (reset, compile, communication), the window barely helps; the runs, not the steps, dominate (Resource Accounting (#/qrc/hardware/resource-accounting)).",
+        "Taking the window from the average contraction instead of the worst case. The input sequence that makes two copies converge slowest sets the window you need.",
+        "Calling the windowed features 'exact'. They carry a truncation error of order $\\epsilon$ that the readout sees as an extra source of noise."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: cost of a windowed restart",
+      "text": "A series has $T=300$ inputs, $S=500$ shots, and window $w=10$. How many steps does the full restart need, how many the windowed restart (use $S\\,T\\,w$), and what is their ratio?",
+      "hint": "Use the two cost formulas and the ratio $(T+1)/(2w)$.",
+      "solution": [
+        "Full: $S\\,T(T+1)/2 = 500\\times300\\times301/2 = 22{,}575{,}000$.",
+        "Windowed: $S\\,T\\,w = 500\\times 300\\times 10 = 1{,}500{,}000$.",
+        "Ratio: $(T+1)/(2w) = 301/20 = 15.05$.",
+        "Runs: $S\\,T = 150{,}000$ in both."
+      ],
+      "answer": "22,575,000 against 1,500,000; ratio about 15."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Shot noise as a built-in regulariser"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The ridge readout of Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge) has a penalty $\\lambda\\Vert w\\Vert^2$ that stops the weights from growing. Which $\\lambda$ do you use on a device? A recipe that works on exact simulation will mislead you here, and the reason is itself instructive."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Let $X$ be the $T\\times m$ matrix of exact features (one row per training time), $y$ the target vector and $w$ the readout weights. The features you actually measure are $X+\\eta$, where $\\eta$ is a matrix of independent noise entries with zero mean and variance $\\sigma^2$. The least-squares objective on noisy training features, averaged over the noise, is $\\mathbb{E}\\Vert y - (X+\\eta)w\\Vert^2$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Write the residual as $r = (y - Xw) - \\eta w$ and expand the square: $\\Vert r\\Vert^2 = \\Vert y - Xw\\Vert^2 - 2\\,(y-Xw)^{\\top}\\eta w + \\Vert\\eta w\\Vert^2$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Average over the noise. The cross term is linear in $\\eta$, which has mean zero, so it vanishes."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. For the last term, the $t$-th entry of $\\eta w$ is $\\sum_i\\eta_{ti}w_i$, a sum of independent zero-mean terms, whose mean square is $\\sigma^2\\sum_i w_i^2 = \\sigma^2\\Vert w\\Vert^2$. Summing over the $T$ rows gives $T\\sigma^2\\Vert w\\Vert^2$."
+    },
+    {
+      "type": "math",
+      "tex": "\\mathbb{E}\\,\\Vert y - (X+\\eta)w\\Vert^2 \\;=\\; \\Vert y - Xw\\Vert^2 \\;+\\; T\\,\\sigma^2\\,\\Vert w\\Vert^2",
+      "caption": "Fitting on noisy features is, on average, ridge regression with penalty lambda = T sigma squared."
+    },
+    {
+      "type": "prose",
+      "text": "This is ridge regression with an effective $\\lambda_{\\text{eff}} = T\\sigma^2$. For the 4-qubit example at 1000 shots, the average noise variance per feature is $\\sigma^2 = 0.00094$ and $T=800$ training rows, so $\\lambda_{\\text{eff}} = 0.75$. (If you minimise the mean rather than the sum of squares, divide both terms by $T$ and the same ratio remains.)"
+    },
+    {
+      "type": "prose",
+      "text": "But the story has a second half. The test features are noisy too. The error that noise adds to a prediction $\\hat{y} = (x+\\eta)\\cdot w$ is $\\eta\\cdot w$, whose variance is $\\sigma^2\\Vert w\\Vert^2$. Large weights amplify test noise, just as they amplify training noise. The weights that recall an old input are large, because they combine small feature differences. That is why the memory function drops fastest at long delays."
+    },
+    {
+      "type": "prose",
+      "text": "The final lines of the shot-count sample (above) compare two ways of choosing $\\lambda$: fit on exact features, or fit on features with the planned shot noise. Both are tested on noisy features at $S=1000$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Weights fitted on exact features: MC 0.83 at $\\lambda = 10^{-8}$ and $10^{-6}$, 1.85 at $\\lambda = 0.01$, 2.74 at 0.1, 2.96 at $\\lambda=1$, 2.54 at $\\lambda=10$.",
+        "Weights fitted on noisy features: MC 2.88 at every $\\lambda$ from $10^{-8}$ to $10^{-1}$, and 2.87 at $\\lambda=1$; it falls to 2.50 only at $\\lambda=10$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Read the table slowly. A readout trained on exact features and then run on the device is a disaster with a tiny $\\lambda$ (0.83): its large weights amplify the shot noise. It needs $\\lambda$ near 1, very close to the $\\lambda_{\\text{eff}} = 0.75$ we computed, to recover. A readout trained on features that already contain the right noise does not need a separate $\\lambda$ at all, because the noise is its regulariser. The best exact-fit value (2.96) and the noisy-fit value (2.88) are about the same, so with a well-chosen $\\lambda$ the two routes end in the same place; the noisy fit simply gets there without a search. Either way, noise has cost capacity: both are far below the 3.84 of exact features."
+    },
+    {
+      "type": "callout",
+      "text": "Practical rule: tune the ridge parameter on noisy features, never on exact ones, and tune it at the shot count you will really use. If you must train on exact simulated features, set $\\lambda\\approx T\\sigma^2$ as a starting point."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: effective ridge penalty",
+      "text": "You train on $T=2000$ rows and each feature has noise variance $\\sigma^2 = 4\\times10^{-4}$. What effective ridge penalty does the noise supply, and what shot count would give that noise for a feature with $x=0$?",
+      "hint": "$\\lambda_{\\text{eff}} = T\\sigma^2$ and $\\sigma^2 = (1-x^2)/S$.",
+      "solution": [
+        "$\\lambda_{\\text{eff}} = T\\sigma^2 = 2000\\times 4\\times10^{-4} = 0.8$.",
+        "For $x=0$, $\\sigma^2 = 1/S$, so $S = 1/(4\\times10^{-4}) = 2500$."
+      ],
+      "answer": "$\\lambda_{\\text{eff}} = 0.8$; $S = 2500$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Plan the hardware run of the 4-qubit, V = 5 reservoir for the memory task, on a device that can run one circuit at a time. The task has 200 washout steps, 800 training steps and 400 test steps, so $T = 1400$ inputs, and you want $S = 1000$ shots."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Choose precision. From the widget, $S=1000$ gives MC $3.33$ against $5.10$ exact: we keep about 65% of the capacity. $S=10000$ would keep $4.29$ (84%). Settle on 1000 for the first test."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Choose the protocol. The trace distance of this reservoir (for the V = 1 version) falls 0.82 per step, so $w\\approx 35$ gives a truncation tolerance of $10^{-3}$. Full restart: $S\\,T(T+1)/2 = 1000\\times1400\\times1401/2 = 980{,}700{,}000$ evolution steps. Windowed, $w = 35$: about $1000\\times1400\\times35 = 49{,}000{,}000$ steps, a 20-fold saving: ratio $(1401)/(70) = 20.0$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Count runs. $S\\,T = 1.4\\times10^6$ in both versions. If each run has an overhead of $100\\ \\mu$s, that alone is $140$ s, and it does not shrink with the window. If the runs take 10 ms each, as is more typical of a cloud queue, it is 14,000 s, nearly four hours."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Re-tune $\\lambda$ on noisy features at 1000 shots: start from $\\lambda_{\\text{eff}} = T_{\\text{train}}\\sigma^2 = 800\\times 9.4\\times10^{-4} = 0.75$ and search a factor of 10 on either side."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5. Expect a result below the exact one by the amount in the widget, and remember that the dephasing-free restart is the best you can do on a single-copy device. The next page, Online Measurement Protocols (#/qrc/hardware/online-protocols), shows how to cut the run count by keeping the reservoir alive between measurements, at the price of some back-action."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "One measurement of a qubit returns $+1$ or $-1$. The mean of $S$ shots estimates $\\langle Z\\rangle=x$ without bias, with standard deviation $\\sqrt{(1-x^2)/S}\\le1/\\sqrt S$.",
+        "Precision must be judged against how much a feature varies over time (its $\\Sigma$), not against its size. Old inputs, which live in small feature differences, are the first lost to noise.",
+        "One computational-basis shot returns every qubit at once, so $Z$-type features come from the same shots, but $X$ and $Y$ type features need extra measurement settings and extra shots.",
+        "Measuring every qubit in the $Z$ basis and averaging gives $\\Delta(\\rho)$: it keeps the diagonal, erases all coherences, and leaves a classical Markov chain. In the example it halves MC, from 3.84 to 1.96.",
+        "Restart protocol: $S\\,T$ runs and $S\\,T(T+1)/2$ evolution steps. A window $w\\ge\\ln(1/\\epsilon)/\\ln(1/\\gamma)$ cuts the steps to about $S\\,T\\,w$ but not the number of runs.",
+        "Noise on training features is equivalent to ridge with $\\lambda=T\\sigma^2$; noise on test features still passes through the weights. Tune the readout on noisy features."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Shot noise as an implicit regulariser"
-    },
-    {
-      "type": "prose",
-      "text": "Independent zero-mean noise $\\eta$ of variance $\\sigma^2$ added to the training features turns the least-squares objective, in expectation, into ridge regression: for $T$ training rows, $\\mathbb{E}\\Vert y - (X+\\eta)w\\Vert^2 = \\Vert y - Xw\\Vert^2 + T\\sigma^2\\Vert w\\Vert^2$. So training on noisy features automatically shrinks the weights, which is why a QRC readout fitted on hardware data is often less over-fitted than one fitted on exact simulated features. But the test features are noisy too, and that noise passes straight through the weights to the output, with variance $\\sigma^2\\Vert w\\Vert^2$. The two effects together are why the memory function decays faster with fewer shots: recalling an old input needs large, finely balanced weights on small feature differences, exactly what noise forbids."
-    },
-    {
-      "type": "callout",
-      "text": "Practical consequence: tune the ridge parameter on noisy features, never on exact ones. A readout regularised for exact simulation will have weights that amplify shot noise on the device."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Worked problems"
+      "text": "Problems"
     },
     {
       "type": "problem",
       "title": "Shot noise on one feature",
-      "text": "A feature has true value $\\langle Z_1\\rangle = 0.6$. What is the standard deviation of its estimate from $S=1000$ shots, and how many shots bring it below 0.01?",
-      "hint": "Use $\\sigma = \\sqrt{(1-x^2)/S}$.",
+      "text": "A feature has $\\langle Z_1\\rangle = 0.6$. What is the standard deviation of an estimate from $S=1000$ shots, and how many shots bring it below $0.01$?",
+      "hint": "$\\sigma^2 = (1-x^2)/S$.",
       "solution": [
-        "$\\sigma = \\sqrt{(1-0.36)/1000} = \\sqrt{0.00064} \\approx 0.0253$.",
-        "For $\\sigma \\le 0.01$: $S \\ge 0.64/0.01^2 = 6400$ shots."
+        "$1-x^2 = 0.64$.",
+        "$\\sigma = \\sqrt{0.64/1000} = 0.0253$.",
+        "$0.64/S\\le 10^{-4}$ gives $S\\ge 6400$."
       ],
       "answer": "About 0.025; 6400 shots."
     },
     {
       "type": "problem",
-      "title": "Full versus windowed restart",
-      "text": "A series has $T=500$ inputs, you take $S=2000$ shots per output time, and the reservoir forgets inputs older than $w=15$ steps. Count the evolution steps for the full and the windowed restart protocols and their ratio.",
-      "hint": "Sum $k$ from 1 to $T$ for the full protocol.",
+      "title": "Full against windowed restart",
+      "text": "A series has $T=500$ inputs, $S=2000$ shots per output time, and the reservoir forgets inputs older than $w=15$ steps. Count the evolution steps for the full and the windowed restart protocols, and their ratio.",
+      "hint": "Full: $S\\,T(T+1)/2$. Window: $S\\,T\\,w$.",
       "solution": [
-        "Full: $S\\,T(T+1)/2 = 2000\\times 500\\times 501/2 = 2.505\\times 10^{8}$ steps.",
-        "Windowed: $S\\,T\\,w = 2000\\times 500\\times 15 = 1.5\\times 10^{7}$ steps.",
-        "Ratio $= (T+1)/(2w) = 501/30 \\approx 16.7$. Both use $S\\,T = 10^6$ runs."
+        "Full: $S\\,T(T+1)/2 = 2000\\times500\\times501/2 = 2.505\\times10^{8}$.",
+        "Windowed: $S\\,T\\,w = 2000\\times500\\times15 = 1.5\\times10^{7}$.",
+        "Ratio $= (T+1)/(2w) = 501/30 = 16.7$.",
+        "Both use $S\\,T = 10^6$ runs."
       ],
-      "answer": "$2.5\\times 10^{8}$ against $1.5\\times 10^{7}$: about 16.7 times fewer."
+      "answer": "$2.5\\times10^8$ against $1.5\\times10^7$ steps: about 16.7 times fewer, same number of runs."
     },
     {
       "type": "problem",
       "title": "Choosing the window",
-      "text": "Two copies of a reservoir fed the same inputs approach each other in trace distance by a factor 0.7 per step. How long a window $w$ keeps the truncation error below $10^{-3}$ of the initial distance?",
-      "hint": "Solve $0.7^w = 10^{-3}$.",
+      "text": "Two copies of a reservoir fed the same inputs approach each other by a factor $0.7$ per step. How long a window keeps the truncation error below $10^{-3}$ of the starting distance?",
+      "hint": "Take logs and divide by $\\ln(1/0.7)$.",
       "solution": [
         "After $w$ steps the distance is $0.7^w$ of its start.",
-        "$0.7^w \\le 10^{-3} \\Rightarrow w \\ge \\ln(10^{3})/\\ln(1/0.7) = 6.908/0.357 \\approx 19.4$, so $w = 20$."
+        "$0.7^w\\le10^{-3}$ gives $w\\ge \\ln(10^3)/\\ln(1/0.7) = 6.908/0.357 = 19.4$.",
+        "So $w=20$."
       ],
       "answer": "$w = 20$ steps."
+    },
+    {
+      "type": "problem",
+      "title": "Which features survive",
+      "text": "A three-qubit register in the state $|{+}{+}{+}\\rangle$ (every qubit in $(|0\\rangle+|1\\rangle)/\\sqrt2$) is measured on all qubits in the $Z$ basis and the outcomes are averaged. Find the resulting state, and the values of $\\langle X_1\\rangle$, $\\langle Z_1\\rangle$ and $\\langle Z_1Z_2\\rangle$ before and after.",
+      "hint": "Only expectation values that need off-diagonal entries are changed.",
+      "solution": [
+        "Each of the 8 bitstrings has probability $1/8$.",
+        "After: the maximally mixed state $I/8$.",
+        "Before: $\\langle X_1\\rangle = 1$, $\\langle Z_1\\rangle = 0$, $\\langle Z_1Z_2\\rangle = 0$.",
+        "After: $\\langle X_1\\rangle = 0$ (it needs a coherence, now erased), $\\langle Z_1\\rangle = 0$ and $\\langle Z_1Z_2\\rangle=0$ (unchanged, since the diagonal is unchanged)."
+      ],
+      "answer": "The state becomes $I/8$; only $\\langle X_1\\rangle$ changes (from 1 to 0)."
+    },
+    {
+      "type": "problem",
+      "title": "Ridge from noise",
+      "text": "Training uses $T = 800$ rows. You find the features have noise variance $\\sigma^2 = 9\\times10^{-4}$ at your shot count. What ridge penalty does the noise already supply, and by what factor do the weights amplify test noise if $\\Vert w\\Vert^2 = 25$?",
+      "hint": "The prediction error from noise is $\\eta\\cdot w$.",
+      "solution": [
+        "$\\lambda_{\\text{eff}} = T\\sigma^2 = 800\\times9\\times10^{-4} = 0.72$.",
+        "The prediction noise variance is $\\sigma^2\\Vert w\\Vert^2 = 9\\times10^{-4}\\times25 = 0.0225$, standard deviation $0.15$.",
+        "Compared with the noise on one feature ($0.03$) that is a factor $\\Vert w\\Vert = 5$."
+      ],
+      "answer": "$\\lambda_{\\text{eff}} = 0.72$; prediction noise $0.15$, five times the noise on one feature."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The next page, Online Measurement Protocols (#/qrc/hardware/online-protocols), replaces the restart by protocols that keep the reservoir running: weak measurement, partial measurement with reset, and ensemble readout.",
+        "Resource Accounting (#/qrc/hardware/resource-accounting) turns the counts of this page into a wall-clock cost model with device times.",
+        "The $1/\\sqrt{S}$ error is the practical face of Concentration and Scalability (#/qrc/theory/concentration-and-scalability): when observables concentrate near their mean, the signal shrinks and the shots needed explode.",
+        "The theory of measurements as channels, including the dephasing channel $\\Delta$, is in Measurement (#/qrc/open-systems/measurement) and Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels)."
+      ]
     },
     {
       "type": "heading",

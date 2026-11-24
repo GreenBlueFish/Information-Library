@@ -1,31 +1,78 @@
 {
   "title": "Resource Accounting",
-  "intro": "Whether a quantum reservoir is practical comes down to arithmetic: how many runs, shots, evolution steps and seconds a task costs on a given protocol and device, set against what the task needs. This page builds that cost model, gives the shot budget a task needs from the signal-to-noise of its features, and compares protocols on concrete numbers.",
+  "intro": "Whether a quantum reservoir is practical comes down to arithmetic: how many runs, shots, evolution steps and seconds a task costs on a given protocol and device, set against what the task needs. This page builds that cost model, derives the shot budget a task needs from the signal-to-noise of its features, and compares protocols on concrete numbers.",
   "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "The three protocols and their counts of runs and steps: Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Online Measurement Protocols (#/qrc/hardware/online-protocols). Shot noise $\\sqrt{(1-x^2)/S}$ from the first of those. The memory capacity as a score: Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity). Ridge regression: Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge). Only arithmetic is new on this page."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Write the wall-clock time of a protocol as runs times run overhead plus steps times step time plus measurements times readout time, and find which term dominates.",
+        "Estimate the shots a task needs from the temporal spread of its features and the precision it requires.",
+        "Count how many features one batch of shots provides, and why more qubits do not guarantee more usable features.",
+        "Say how much a classical simulation of the same reservoir would cost, and why that is only a first comparison.",
+        "Work through a pre-flight checklist before spending device time."
+      ]
+    },
     {
       "type": "heading",
       "level": 2,
       "text": "The cost model"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "Let a task have $T$ inputs (washout plus training plus test), let each feature vector need $S$ shots, let $w$ be the memory window for restarts, and let the device have per-run overhead $t_{\\text{rep}}$, time per evolution step $t_{\\text{step}}$ and time per measurement $t_{\\text{meas}}$. Then"
+      "text": "A reservoir computer is cheap in training (one linear fit) but on hardware it is expensive in a different place: collecting the features. A design that looks fine in simulation can turn out to need weeks of device time, or to exceed what a cloud queue will give you. The remedy is a cost model, small enough to write on the back of an envelope, which you evaluate before running anything."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Let the task have $T$ inputs (washout plus training plus test), let each feature vector need $S$ shots, and let $w$ be the memory window for restarts. Let the device have a per-run overhead $t_{\\text{rep}}$ (resetting, compiling, waiting for the next repetition), a time per evolution step $t_{\\text{step}}$, and a time per measurement $t_{\\text{meas}}$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The total time is the sum of three independent parts: how many runs you start, how many evolution steps you perform, and how many measurements you take."
     },
     {
       "type": "math",
-      "tex": "t_{\\text{total}} = N_{\\text{runs}}\\,t_{\\text{rep}} + N_{\\text{steps}}\\,t_{\\text{step}} + N_{\\text{meas}}\\,t_{\\text{meas}}"
+      "tex": "t_{\\text{total}} = N_{\\text{runs}}\\,t_{\\text{rep}} + N_{\\text{steps}}\\,t_{\\text{step}} + N_{\\text{meas}}\\,t_{\\text{meas}}",
+      "caption": "Wall-clock time of a protocol."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Fill in the counts for each protocol (from the two previous pages):"
     },
     {
       "type": "list",
       "items": [
-        "Full restart: $N_{\\text{runs}} = S\\,T$, $N_{\\text{steps}} = S\\,T(T+1)/2$, $N_{\\text{meas}} = S\\,T$.",
-        "Windowed restart: $N_{\\text{runs}} = S\\,T$, $N_{\\text{steps}} = S\\,T\\,w$, $N_{\\text{meas}} = S\\,T$.",
-        "Online (mid-circuit or weak): $N_{\\text{runs}} = S$, $N_{\\text{steps}} = S\\,T$, $N_{\\text{meas}} = S\\,T$ (with $S$ inflated by the weak-measurement noise factor where relevant)."
+        "Full restart: $N_{\\text{runs}}=S\\,T$, $N_{\\text{steps}}=S\\,T(T+1)/2$, $N_{\\text{meas}}=S\\,T$.",
+        "Windowed restart: $N_{\\text{runs}}=S\\,T$, $N_{\\text{steps}}=S\\,T\\,w$, $N_{\\text{meas}}=S\\,T$.",
+        "Online (mid-circuit or weak): $N_{\\text{runs}}=S$, $N_{\\text{steps}}=S\\,T$, $N_{\\text{meas}}=S\\,T$, with $S$ inflated by the weak-measurement noise factor $(1+\\sigma^2)$ where relevant."
       ]
     },
     {
       "type": "prose",
-      "text": "With $T = 1000$, $S = 10^4$, $w = 20$ and assumed device times $t_{\\text{step}} = 2$ µs, $t_{\\text{meas}} = 5$ µs, $t_{\\text{rep}} = 100$ µs, the sample below gives about 3.1 hours for the full restart, 0.40 hours windowed and 0.02 hours (71 s) online. The full restart is dominated by evolution steps, the windowed one by per-run overhead, and the online one by measurement. Change the assumed times to your device's; the structure of the comparison rarely changes."
+      "text": "Step 3. Evaluate with the device times. The sample assumes $T=1000$, $S=10^4$, $w=20$, $t_{\\text{step}}=2\\ \\mu$s, $t_{\\text{meas}}=5\\ \\mu$s and $t_{\\text{rep}}=100\\ \\mu$s. These are assumptions, not data: replace them with your device's. Output from an actual run:"
     },
     {
       "type": "code",
@@ -33,17 +80,81 @@
       "source": "# Cost of getting reservoir features for T inputs when each feature vector needs S shots.\nT, S, w = 1000, 10_000, 20          # inputs, shots per feature vector, memory window (steps)\nt_step, t_meas = 2e-6, 5e-6          # assumed: one input step (gates), one readout + reset, in seconds\nrep = 100e-6                         # assumed: overhead per circuit run (repetition delay, compile, etc.)\nprotocols = {\n    \"full restart\":     dict(runs=S * T, steps=S * T * (T + 1) // 2, meas=S * T),\n    \"windowed restart\": dict(runs=S * T, steps=S * T * w,            meas=S * T),\n    \"online (mid-circuit / weak)\": dict(runs=S, steps=S * T,          meas=S * T),\n}\nfor name, c in protocols.items():\n    secs = c[\"runs\"] * rep + c[\"steps\"] * t_step + c[\"meas\"] * t_meas\n    print(f\"{name:28s} runs {c['runs']:.1e}  evolution steps {c['steps']:.1e}  wall clock ~ {secs/3600:8.2f} h\")\n"
     },
     {
+      "type": "list",
+      "items": [
+        "Full restart: $10^7$ runs, $5\\times10^9$ evolution steps, about 3.07 hours.",
+        "Windowed restart: $10^7$ runs, $2\\times10^8$ steps, about 0.40 hours.",
+        "Online: $10^4$ runs, $10^7$ steps, about 0.02 hours (71 s)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Read which term dominates. In the full restart the evolution steps do: $5\\times10^{9}\\times2\\ \\mu$s $=10{,}000$ s, nearly all of 3.07 hours. In the windowed restart the run overhead does: $10^7\\times100\\ \\mu$s $=1000$ s of the 1450 s total. In the online protocol the measurements do: $10^7\\times5\\ \\mu$s $=50$ s of 71 s. Change the assumed times and the structure of the comparison rarely changes; the ranking is robust, the absolute times are not."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Quoting the gate time of a circuit as the cost of a run. On cloud hardware the per-run overhead is often far larger than the circuit itself.",
+        "Forgetting the washout. Washout inputs are also processed (and, in a restart protocol, each window is a short washout), so they count in $T$ for steps, though not necessarily as outputs.",
+        "Counting $S$ as the number of runs when the protocol needs $S$ shots at each of $T$ output times."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which protocol is faster",
+      "text": "$S=5000$ and $T=2000$. Windowed restart with $w=10$ and per-run overhead $50\\ \\mu$s (ignore step and readout time), against an online protocol with $5\\ \\mu$s per step (ignore run overhead). Which is faster?",
+      "hint": "Multiply each count by its time.",
+      "solution": [
+        "Restart: $S\\,T=10^7$ runs at $50\\ \\mu$s $=500$ s.",
+        "Online: $S\\,T=10^7$ steps at $5\\ \\mu$s $=50$ s.",
+        "The online protocol is 10 times faster."
+      ],
+      "answer": "Online: 50 s against 500 s."
+    },
+    {
       "type": "heading",
       "level": 2,
       "text": "How many shots does a task need?"
     },
     {
-      "type": "prose",
-      "text": "The useful precision is set by how much each feature varies with the inputs. If feature $i$ has temporal standard deviation $\\Sigma_i$ (its signal) and shot noise $\\sigma_i \\approx \\sqrt{(1-\\bar{x}_i^2)/S}$, the per-feature signal-to-noise ratio is $\\Sigma_i\\sqrt{S}/\\sqrt{1-\\bar{x}_i^2}$. For the 4-qubit, 5-virtual-node reservoir the mean $\\Sigma_i$ is 0.23; asking for noise at most 10% of that ($\\sigma\\le 0.023$) needs $S\\ge 1/0.023^2\\approx 1900$ shots in the worst case $\\bar{x}=0$."
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "How much SNR a task needs depends on how deep into the feature space its solution lies. Recalling the last input uses large, robust feature differences; recalling an input 8 steps back, or computing a high-degree nonlinear function, uses small differences combined with large weights, so its error grows like $\\sigma^2\\Vert w\\Vert^2$. The plot below shows this directly: the memory function at modest shot counts keeps the short delays almost intact and loses the long ones."
+      "text": "The cost model took $S$ as given. What fixes $S$ is what the task needs. Too few shots and the readout sees noise; too many and you pay for precision the task cannot use. We want a rule that connects $S$ to the task."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. A feature $i$ moves with the inputs. Its temporal standard deviation $\\Sigma_i$ is the part that can carry information. Its shot noise is $\\sigma_i=\\sqrt{(1-\\bar x_i^2)/S}$. The per-feature signal-to-noise ratio is $\\mathrm{SNR}_i=\\Sigma_i/\\sigma_i$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Fix a target: noise at most a fraction $\\phi$ of the signal, $\\sigma_i\\le\\phi\\,\\Sigma_i$. Then $(1-\\bar x_i^2)/S\\le\\phi^2\\Sigma_i^2$, giving $S\\ge(1-\\bar x_i^2)/(\\phi\\Sigma_i)^2$, and at worst (for $\\bar x_i=0$)"
+    },
+    {
+      "type": "math",
+      "tex": "S \\;\\ge\\; \\frac{1}{\\phi^{2}\\,\\Sigma^{2}}",
+      "caption": "Shots needed for noise at most a fraction phi of the temporal spread Sigma of a feature."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Example: the 4-qubit, 5-virtual-node reservoir has mean $\\Sigma=0.23$. For $\\phi=0.1$ (noise at 10% of the signal, $\\sigma\\le0.023$): $S\\ge1/(0.01\\times0.0529)=1890$. The previous page's sample, with $S=1000$, gives memory capacity 2.87 against 3.84 exact; at 1900 shots the capacity recovers part of that. So a phi of 0.1 is the order at which the loss starts to be mild; it is not a sharp threshold."
+    },
+    {
+      "type": "prose",
+      "text": "A second, more demanding requirement comes from the task. How much SNR a task needs depends on how deep into the feature space its solution lies. Recalling the last input uses large, robust feature differences. Recalling an input 8 steps back, or computing a high-degree nonlinear function, uses small differences combined with large weights, so its error grows like $\\sigma^2\\Vert w\\Vert^2$ (see Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action)). The widget below shows this directly: at modest shot counts the memory function keeps the short delays almost intact and loses the long ones."
     },
     {
       "type": "widget",
@@ -106,7 +217,57 @@
     },
     {
       "type": "prose",
-      "text": "Try: start at 300 shots, note MC, and step through 1000, 3000, 10000, 30000. (MC goes about 2.6, 3.3, 3.8, 4.3, 4.6, against 5.1 exact.) Then compare 4 qubits with 5: for this draw of couplings the 5-qubit reservoir is no better even with exact features (MC 4.8 against 5.1), and at 1000 shots it falls further behind (2.8 against 3.3), because each extra feature also brings its own noise. More qubits do not guarantee more usable capacity; on hardware the right reservoir size is the one whose features you can afford to estimate."
+      "text": "Try this. (1) Start at 300 shots and note MC $=2.63$, with delay 1 at 0.98 and delay 6 at 0.15. Step the shots through 1000, 3000, 10000, 30000: MC is 3.33, 3.84, 4.29, 4.63, against 5.10 exact. (2) At 300 shots compare 4 and 5 qubits: MC 2.63 against 2.05. For this draw of couplings the 5-qubit reservoir is no better even with exact features (4.78 against 5.10), and the gap widens with noise (2.77 against 3.33 at 1000 shots), because each extra feature brings its own noise. (3) Return to 4 qubits and raise V from 1 to 10 at 1000 shots: MC 1.78, 2.51, 3.33, 3.73 for $V=1,2,5,10$. More virtual nodes help even with noise, but by less than with exact features (2.14 to 6.16). More qubits do not guarantee more usable capacity; on hardware the right reservoir size is the one whose features you can afford to estimate."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Which features to spend shots on"
+    },
+    {
+      "type": "prose",
+      "text": "A natural idea: measure SNR for each feature and keep only those above a threshold. The next sample tests it on the same 4-qubit reservoir. It computes the per-feature SNR at $S=100$ and $1000$, keeps features with SNR above 3, and compares the memory capacity with the full 20 features (ridge parameter $\\lambda=1$, five noise draws averaged). It also tabulates the cost of exact density-matrix simulation used in a later section."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nexec(open(\"hw_shots_memory.py\").read().split(\"rng = np.random\")[0])     # same 4-qubit, V = 5 reservoir and mc() as before\nrng = np.random.default_rng(0); s = rng.uniform(0, 1, 1400)\nF = features(s)                                                          # 20 exact features\nSigma = F.std(axis=0)                                                    # temporal spread of each feature\nprint(\"features sorted by temporal spread Sigma_i (largest first):\")\nprint(\"  \", \" \".join(f\"{v:.2f}\" for v in np.sort(Sigma)[::-1]))\nfor S in [100, 1000]:\n    sigma_noise = np.sqrt((1 - F**2).mean(0) / S)\n    snr = Sigma / sigma_noise\n    vals_all, vals_sel, n_keep = [], [], []\n    for rep in range(5):\n        Fn = F + rng.normal(size=F.shape) * np.sqrt((1 - F**2) / S)\n        keep = snr > 3.0\n        vals_all.append(mc(Fn, s, lam=1.0))\n        vals_sel.append(mc(Fn[:, keep], s, lam=1.0)); n_keep.append(keep.sum())\n    print(f\"S = {S:4d}: per-feature SNR from {snr.min():.1f} to {snr.max():.1f}; keep SNR > 3 -> {n_keep[0]} of 20 features; \"\n          f\"MC all features {np.mean(vals_all):.2f}, MC selected {np.mean(vals_sel):.2f}\")\n# classical simulation cost of exact density-matrix simulation\nprint(\"qubits | numbers in rho (4^n) | memory (complex128) | operations per input step (~8^n)\")\nfor n in [5, 8, 10, 12, 15]:\n    mem = 4**n * 16\n    print(f\"{n:6d} | {4**n:20.3e} | {mem/1e6 if mem < 1e9 else mem/1e9:9.1f} {'MB' if mem < 1e9 else 'GB'}        | {8.0**n:.2e}\")\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Temporal spreads of the 20 features: from 0.32 down to 0.18.",
+        "$S=100$: per-feature SNR from 1.8 to 3.4; only 2 of 20 features exceed 3. MC with all 20: 1.98. MC with those 2: 0.26.",
+        "$S=1000$: SNR from 5.8 to 10.7; all 20 kept; MC 2.87 either way."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The filter hurts badly: at 100 shots, throwing away the 18 features that are individually noisy cuts capacity from 1.98 to 0.26. The readout does not use features one at a time; it combines many noisy features, and the noise averages while the shared signal adds up. So per-feature SNR is a guide to the shots you need, but not a rule for deleting features. Select features (and the ridge parameter) by validation score on data with the planned shot noise."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Setting $S$ from the average feature and forgetting the weakest feature the task depends on. Long delays and high-degree nonlinear functions live in the small differences between features, and need the precision of the smallest $\\Sigma_i$ that the solution uses.",
+        "Assuming that a tenfold increase in shots gives a tenfold better result. Error falls as $1/\\sqrt S$, so ten times the shots cuts the noise by $\\sqrt{10}=3.2$; in the widget, from 1000 to 10000 shots the capacity rises from 3.33 to 4.29, not tenfold anything.",
+        "Reading the exact-feature capacity of a larger reservoir as what the hardware will deliver. At a fixed number of shots the extra features carry extra noise, and the capacity can fall (5 qubits against 4 at 300 shots)."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: shots from a target",
+      "text": "A feature has temporal spread $\\Sigma=0.05$ and mean near zero. How many shots make the shot noise one fifth of the spread?",
+      "hint": "At worst $\\sigma=1/\\sqrt S$.",
+      "solution": [
+        "Noise target $\\sigma=0.05/5=0.01$.",
+        "$S\\ge1/\\sigma^2=1/10^{-4}=10{,}000$."
+      ],
+      "answer": "$S\\ge10{,}000$."
     },
     {
       "type": "heading",
@@ -114,8 +275,41 @@
       "text": "Features per shot"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "A computational-basis snapshot of $n$ qubits gives estimates of all $2^n - 1$ diagonal Pauli expectation values at once. One- and two-body correlators ($n + n(n-1)/2$ features) are the usual choice. Higher-order correlators of a well-mixed reservoir are typically exponentially small in their weight, so their SNR is poor at any affordable $S$; Xiong and coauthors (2023) list global measurements, together with reservoir randomness, hardware noise and entanglement, among the sources of exponential concentration of measured observables (see Concentration and Scalability (#/qrc/theory/concentration-and-scalability)). Off-diagonal observables need extra measurement bases: classical shadows (randomised single-qubit Pauli bases; Huang, Kueng and Preskill 2020) estimate any $M$ Pauli observables of weight at most $k$ to precision $\\epsilon$ with of order $3^k\\log M/\\epsilon^2$ snapshots (general $k$-local observables cost up to $4^k$ instead of $3^k$), which can be cheaper than measuring each basis separately when many low-weight observables are wanted."
+      "text": "A shot is expensive, so it matters how many numbers each shot yields. The answer depends on which observables you ask for, and it is much better than it first appears for some and worse for others."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea and the maths"
+    },
+    {
+      "type": "prose",
+      "text": "A computational-basis snapshot of $n$ qubits is a bitstring $b$. From it every diagonal Pauli operator (a product of $Z$s on a subset of qubits) has a value, $\\pm1$, found by multiplying the right bits. There are $2^n-1$ such operators besides the identity. So a single batch of shots gives estimates of all $2^n-1$ diagonal Pauli expectation values at once. The usual choice is the one- and two-body correlators, $n+\\binom n2$ of them: for $n=8$ that is $8+28=36$ of the $255$."
+    },
+    {
+      "type": "prose",
+      "text": "Why not use all $255$? Higher-order correlators of a well-mixed reservoir are typically exponentially small in their weight, so their SNR is poor at any affordable $S$. Xiong and coauthors (2023) list global measurements, together with reservoir randomness, hardware noise and entanglement, among the sources of exponential concentration of measured observables (Concentration and Scalability (#/qrc/theory/concentration-and-scalability))."
+    },
+    {
+      "type": "prose",
+      "text": "Observables outside the $Z$ basis ($\\langle X_i\\rangle$, say) need a basis rotation before measuring, so they need a separate batch of shots. Classical shadows (Huang, Kueng and Preskill 2020) use randomised single-qubit Pauli bases and estimate any $M$ Pauli observables of weight at most $k$ to precision $\\epsilon$ with a number of snapshots of order $3^k\\log M/\\epsilon^2$ (general $k$-local observables cost up to $4^k$ instead of $3^k$). When many low-weight observables are wanted, this can be cheaper than measuring each basis separately. The constant factors matter in practice and I have not computed them here."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: features from a batch",
+      "text": "With $n=6$ qubits measured in the computational basis, how many one- and two-body $Z$ correlators does one batch of shots give, and how many diagonal Pauli expectation values in total?",
+      "hint": "$\\binom n2=n(n-1)/2$.",
+      "solution": [
+        "$6+\\binom62=6+15=21$.",
+        "$2^6-1=63$."
+      ],
+      "answer": "21; 63."
     },
     {
       "type": "heading",
@@ -123,8 +317,96 @@
       "text": "Comparing with a classical simulation"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "Exact density-matrix simulation of $n$ qubits stores $4^n$ complex numbers and an input step costs of order $8^n$ operations as dense matrix products, so 5 qubits (as on these pages) is trivial, 12 qubits costs about $1.7\\times 10^7$ numbers (some 270 MB in double-precision complex) and $\\sim 7\\times10^{10}$ operations per step, and by about 15 qubits (17 GB, $\\sim 4\\times 10^{13}$ operations per step) dense density-matrix simulation becomes impractical for long series. But this is only an upper bound on classical cost: the relevant comparison is with the best classical reservoir of similar trainable size and the same data, and with simulation methods that exploit the structure (low entanglement, few measured observables, noise that makes the state nearly classical). A hardware QRC is worth its cost only if it beats those, at equal shot-limited accuracy. See Quantum Advantage (#/qrc/theory/quantum-advantage)."
+      "text": "A hardware experiment is worth its cost only if a classical computer cannot do the same cheaper. The first step of that comparison is the cost of simulating the reservoir exactly, which is easy to bound."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths"
+    },
+    {
+      "type": "prose",
+      "text": "An $n$-qubit density matrix has $2^n\\times2^n=4^n$ complex entries. In double precision each complex number takes 16 bytes. One input step multiplies the density matrix by a unitary on both sides: two products of $2^n\\times2^n$ matrices, each needing about $(2^n)^3=8^n$ complex multiplications. So memory is $16\\cdot4^n$ bytes and operations per step are of order $8^n$. The last part of the sample above prints the table:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$n=5$ (these pages): 1024 numbers, trivial; $3\\times10^4$ operations per step.",
+        "$n=8$: $6.6\\times10^4$ numbers (1 MB), $1.7\\times10^7$ operations.",
+        "$n=10$: $10^6$ numbers (17 MB), $10^9$ operations.",
+        "$n=12$: $1.7\\times10^7$ numbers (268 MB), $6.9\\times10^{10}$ operations per step.",
+        "$n=15$: $1.1\\times10^9$ numbers (17 GB), $3.5\\times10^{13}$ operations per step. Dense density-matrix simulation of a long series is impractical from here."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "But this is only an upper bound on the classical cost. The relevant comparison is with the best classical reservoir of similar trainable size and the same data (an echo state network with the same number of features costs almost nothing), and with simulation methods that exploit structure: low entanglement, few measured observables, or noise that makes the state nearly classical. A hardware QRC is worth its cost only if it beats those, at equal shot-limited accuracy. Quantum Advantage (#/qrc/theory/quantum-advantage) takes the question up."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Budgeting washout, training and test"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The cost model counted $T$ inputs as if every one of them needed features. In a real experiment they do not, and knowing which do saves real time."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "Take the memory experiment: 200 washout inputs, 800 training inputs and 400 test inputs, $T=1400$ in all."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. In a restart protocol you only need to measure at the output times that the readout will use: the 800 training and 400 test times, 1200 in all. The washout times are never measured, so they do not need shots. (A single long trajectory needs the washout so that the reservoir has forgotten its start; a windowed restart replaces that washout by the window itself.)"
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. For the windowed restart with $w=35$ the number of runs is $S\times1200=1.2\times10^6$ and the number of evolution steps is about $1200\\,S\\,w = 4.2\times10^{7}$, instead of $1.4\times10^6$ runs and $4.9\times10^7$ steps if you measured every time. Time with the device of the previous section: $120+84+6=210$ s against 245 s, a saving of 14%."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. In an online protocol the washout inputs cannot be skipped: the run has to pass through them so that the state is at the right place when the training inputs arrive. They cost steps but, if you do not record the outcomes, no measurement time. Here that saves $200/1400$ of the measurement term only."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. The test inputs are the part you must not shorten: the score you report is only as precise as the test set is large. A test NMSE estimated from 400 inputs has a relative uncertainty of order $\\sqrt{2/400}=7\\%$ if the errors are roughly Gaussian, so differences of a few percent between two reservoirs are not detectable at this size."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Drift and re-training"
+    },
+    {
+      "type": "prose",
+      "text": "The weights are fixed once training is done, but the device is not. If the effective Hamiltonian or noise drifts on a time scale of an hour, a run of 35 minutes already spans a good part of it, and a readout trained at the start meets slightly different features at the end. Two remedies: interleave training and test inputs so both see the same drift (the test score then reflects the average device), or re-train periodically on fresh data, which costs the training share of the run again. For the example, the training share is $800/1400=57\\%$ of a run; re-training every 30 minutes would roughly double the run time of the windowed restart. This is a cost that does not appear in the simulation at all, and it is one of the reasons the stability item of the platform checklist matters."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: skipping the washout",
+      "text": "A windowed restart has $S=500$ shots, window $w=20$, with 100 washout, 400 training and 200 test inputs. How many runs and evolution steps are needed if only the 600 training and test times are measured, and how many if all 700 are?",
+      "hint": "Count one run per measured time and shot, each $w$ steps long.",
+      "solution": [
+        "Measured times only: runs $=500\\times600=3\\times10^5$; steps $\\approx S\\,N\\,w=500\\times600\\times20=6\\times10^6$.",
+        "All times: runs $=500\\times700=3.5\\times10^5$; steps $=500\\times700\\times20=7\\times10^6$.",
+        "Saving: one seventh of the runs and steps."
+      ],
+      "answer": "Runs: 300,000 against 350,000; steps about $6\\times10^6$ against $7\\times10^6$."
     },
     {
       "type": "heading",
@@ -134,26 +416,68 @@
     {
       "type": "list",
       "items": [
-        "Estimate the memory window $w$ from simulation and pick the protocol: online if $T\\gg w$ and mid-circuit measurement is available.",
-        "Estimate the temporal spread $\\Sigma_i$ of each candidate feature in simulation and drop features whose $\\Sigma_i$ is below the noise you can afford.",
+        "Estimate the memory window $w$ from simulation (the contraction rate of Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points)) and pick the protocol: online if $T\\gg w$ and mid-circuit measurement is available.",
+        "Estimate the temporal spread $\\Sigma_i$ of each candidate feature in simulation, and use it to pick $S$ with $S\\ge1/(\\phi^2\\Sigma^2)$. Do not discard features on SNR alone; check by validation.",
         "Set the ridge parameter by cross-validation on features with simulated shot noise at the planned $S$.",
-        "Budget washout as well as training and test inputs: washout costs shots too in restart protocols (each window is a short washout) and in online ones.",
-        "Interleave training and test data across calibration drift, or re-train periodically."
+        "Budget the washout as well as training and test inputs: washout costs steps in restart protocols (each window is a short washout) and in online ones.",
+        "Interleave training and test data across calibration drift, or re-train periodically.",
+        "Write down the cost model with your device's real times before running, and keep the printout next to the results."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Budget the 4-qubit, V = 5 memory experiment on a device with $t_{\\text{rep}}=100\\ \\mu$s, $t_{\\text{step}}=2\\ \\mu$s and $t_{\\text{meas}}=5\\ \\mu$s. The task has $T=1400$ inputs and you want $S=1000$ shots."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Full restart: $N_{\\text{runs}}=1.4\\times10^6$, $N_{\\text{steps}}=1000\\times1400\\times1401/2=9.81\\times10^8$, $N_{\\text{meas}}=1.4\\times10^6$. Time: $140+1961+7=2108$ s, 0.59 hours."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Windowed restart with $w=35$ (from the contraction rate $0.82$ of the earlier page): steps $4.9\\times10^7$, time $140+98+7=245$ s. The run overhead (140 s) is now the largest term."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Online with weak measurement at $\\sigma=3$: the shots grow by $1+\\sigma^2=10$ at $\\langle Z\\rangle\\approx0$, so $R=10{,}000$ runs. Steps $R\\,T=1.4\\times10^7$ ($28$ s), measurements $1.4\\times10^7$ ($70$ s), run overhead $1$ s: 99 s in total."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. So the same job takes 35 minutes, 4 minutes or under 2 minutes, depending on the protocol, and the three protocols give different reservoirs (the restart is the ideal model; the weak-measurement one has $c=0.946$ dephasing per step). On a device with 10 ms of overhead per run the restarts would take $1.4\\times10^6\\times0.01=14{,}000$ s of overhead alone, nearly four hours, and the online protocol still only 100 s. The ranking depends on the device times; the cost model tells you which."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Wall-clock time is runs $\\times$ run overhead plus steps $\\times$ step time plus measurements $\\times$ readout time. Find the dominant term before optimising anything.",
+        "Full restart is dominated by steps, windowed restart by run overhead, online protocols by measurement time (in the example: 3.07 h, 0.40 h, 71 s).",
+        "Shots follow from the feature's spread: $S\\ge1/(\\phi^2\\Sigma^2)$ for noise at a fraction $\\phi$ of the spread; old inputs need more.",
+        "One computational-basis batch yields all $2^n-1$ diagonal Pauli expectations, but one- and two-body correlators are the usual choice, since high-order ones are tiny.",
+        "Do not filter features by individual SNR: in the example it cut MC from 1.98 to 0.26 at 100 shots.",
+        "Exact simulation costs $16\\cdot4^n$ bytes and $\\sim8^n$ operations; it bounds, but does not settle, the classical cost."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
       "title": "Wall clock for two protocols",
-      "text": "$S = 5000$, $T = 2000$, windowed restart with $w = 10$, per-run overhead 50 µs (ignore step and measurement time) against an online protocol with 5 µs per step (ignore run overhead). Which is faster, and by how much?",
-      "hint": "Each protocol has one dominant term here.",
+      "text": "$S=5000$, $T=2000$. Windowed restart with $w=10$ and per-run overhead $50\\ \\mu$s (ignore step and measurement time) against an online protocol with $5\\ \\mu$s per step (ignore run overhead). Which is faster, and by how much?",
+      "hint": "Count runs for one, steps for the other.",
       "solution": [
-        "Restart: $S\\,T = 10^7$ runs at 50 µs $= 500$ s.",
-        "Online: $S\\,T = 10^7$ steps at 5 µs $= 50$ s.",
+        "Restart: $S\\,T=10^7$ runs at $50\\ \\mu$s $=500$ s.",
+        "Online: $S\\,T=10^7$ steps at $5\\ \\mu$s $=50$ s.",
         "The online protocol is 10 times faster here."
       ],
       "answer": "Online: 50 s against 500 s."
@@ -162,23 +486,62 @@
       "type": "problem",
       "title": "Shot budget from feature spread",
       "text": "Your features vary over time with standard deviation 0.15 and have means near 0. How many shots make the shot noise one fifth of the signal?",
-      "hint": "$\\sigma = \\sqrt{(1-x^2)/S}$ with $x\\approx 0$.",
+      "hint": "$\\sigma=1/\\sqrt S$ at worst.",
       "solution": [
-        "Target noise $0.15/5 = 0.03$.",
-        "$S \\ge (1 - 0)/0.03^2 \\approx 1111$, so about 1100 shots."
+        "Target noise $0.15/5=0.03$.",
+        "$S\\ge1/0.03^2=1111$, so about 1100 shots."
       ],
       "answer": "About 1100 shots."
     },
     {
       "type": "problem",
       "title": "Correlators from one batch",
-      "text": "With $n = 8$ qubits measured in the computational basis, how many one- and two-body $Z$-correlators does each batch of shots give, and how many distinct diagonal Pauli expectations in total?",
-      "hint": "Each non-identity product of $Z$s is one diagonal Pauli.",
+      "text": "With $n=8$ qubits measured in the computational basis, how many one- and two-body $Z$ correlators does each batch of shots give, and how many distinct diagonal Pauli expectations in total?",
+      "hint": "$\\binom82=28$.",
       "solution": [
-        "One- and two-body: $8 + \\binom{8}{2} = 8 + 28 = 36$.",
-        "All diagonal Paulis except the identity: $2^8 - 1 = 255$."
+        "One- and two-body: $8+\\binom82=8+28=36$.",
+        "All diagonal Paulis except the identity: $2^8-1=255$."
       ],
       "answer": "36, out of 255 in total."
+    },
+    {
+      "type": "problem",
+      "title": "Simulation cost",
+      "text": "How much memory does a dense density matrix of 13 qubits need in double-precision complex numbers, and about how many operations does one input step cost?",
+      "hint": "$16\\cdot4^n$ bytes and $8^n$ operations.",
+      "solution": [
+        "Entries: $4^{13}=67{,}108{,}864$.",
+        "Memory: $16\\times6.7\\times10^7=1.07\\times10^9$ bytes, about 1.1 GB.",
+        "Operations: $8^{13}=5.5\\times10^{11}$."
+      ],
+      "answer": "About 1.1 GB and $5.5\\times10^{11}$ operations per step."
+    },
+    {
+      "type": "problem",
+      "title": "Where does the time go?",
+      "text": "A device has $t_{\\text{rep}}=10$ ms, $t_{\\text{step}}=1\\ \\mu$s and $t_{\\text{meas}}=1\\ \\mu$s. For windowed restart with $T=1000$, $S=1000$, $w=30$, compute each of the three terms and the total.",
+      "hint": "Compute $N_{\\text{runs}}t_{\\text{rep}}$ first.",
+      "solution": [
+        "Runs: $S\\,T=10^6$; $10^6\\times0.01=10^4$ s.",
+        "Steps: $S\\,T\\,w=3\\times10^7$; $\\times1\\ \\mu$s $=30$ s.",
+        "Measurements: $10^6\\times1\\ \\mu$s $=1$ s.",
+        "Total about $10{,}031$ s, 2.8 hours; run overhead is 99.7% of it."
+      ],
+      "answer": "10,000 s + 30 s + 1 s: dominated by run overhead."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Analog Platforms (#/qrc/hardware/analog-platforms) gives the repetition rates that fill in $t_{\\text{rep}}$ for each platform.",
+        "Concentration and Scalability (#/qrc/theory/concentration-and-scalability) explains why high-order correlators and large systems need exponentially many shots.",
+        "Hands-on Implementation (#/qrc/theory/hands-on-implementation) runs a complete small experiment with a shot budget.",
+        "Quantum Advantage (#/qrc/theory/quantum-advantage) asks when the cost of hardware is repaid."
+      ]
     },
     {
       "type": "heading",
