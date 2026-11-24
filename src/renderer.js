@@ -851,6 +851,7 @@ const BLOCK_RENDERERS = {
   widget: renderWidgetBlock,
   problem: renderProblemBlock,
   math: renderMathBlock,
+  table: renderTableBlock,
 };
 
 /**
@@ -973,6 +974,47 @@ function renderListBlock(block, mountEl) {
     list.appendChild(richEl("li", undefined, item));
   }
   container.appendChild(list);
+  mountEl.appendChild(container);
+}
+
+/**
+ * Render a `table` block: `block.columns` (header cells) and `block.rows`
+ * (arrays of cells) as a `<table>`, with an optional `block.caption`. Every
+ * cell is rich text, so `$...$` formulas render as MathML; nothing is parsed
+ * as HTML. The table scrolls sideways inside its container on a narrow screen.
+ * Non-string cells render empty, so one bad cell never breaks the table.
+ *
+ * @param {ContentBlock} block
+ * @param {HTMLElement} mountEl
+ * @returns {void}
+ */
+function renderTableBlock(block, mountEl) {
+  const container = blockContainer("table");
+  const table = el("table", "data-table");
+  if (block && typeof block.caption === "string" && block.caption.length > 0) {
+    table.appendChild(richEl("caption", undefined, block.caption));
+  }
+  const columns = block && Array.isArray(block.columns) ? block.columns : [];
+  if (columns.length > 0) {
+    const head = el("thead");
+    const tr = el("tr");
+    for (const c of columns) {
+      const th = richEl("th", undefined, typeof c === "string" ? c : "");
+      th.setAttribute("scope", "col");
+      tr.appendChild(th);
+    }
+    head.appendChild(tr);
+    table.appendChild(head);
+  }
+  const body = el("tbody");
+  for (const row of block && Array.isArray(block.rows) ? block.rows : []) {
+    if (!Array.isArray(row)) continue;
+    const tr = el("tr");
+    for (const cell of row) tr.appendChild(richEl("td", undefined, typeof cell === "string" ? cell : ""));
+    body.appendChild(tr);
+  }
+  table.appendChild(body);
+  container.appendChild(table);
   mountEl.appendChild(container);
 }
 

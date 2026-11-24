@@ -198,6 +198,20 @@ describe("renderer", () => {
       expect(p.textContent).toBe("Hello world");
     });
 
+    it("table → .block--table with a header row, body rows and a caption", () => {
+      const m = mount();
+      renderBlock({ type: "table", columns: ["A", "B"], rows: [["1", "2"], ["3", 4]], caption: "Cap" }, m);
+      const block = m.children[0];
+      expect(hasClass(block, "block--table")).toBe(true);
+      const table = findTag(block, "table");
+      expect(table.tagName).toBe("TABLE");
+      expect(findTag(table, "caption").textContent).toBe("Cap");
+      expect(findTag(table, "th").textContent).toBe("A");
+      const body = findTag(table, "tbody");
+      expect(body.children.length).toBe(2);
+      expect(body.children[1].children[1].textContent).toBe(""); // a non-string cell renders empty
+    });
+
     it("heading → h2..h4 chosen by `level`", () => {
       const m2 = mount();
       renderBlock({ type: "heading", level: 2, text: "H2" }, m2);

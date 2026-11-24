@@ -280,6 +280,7 @@ literally and never interpreted as HTML.
 | `widget`  | `widget` (a `Widget_Spec`, §3.4) | Delegated to the widget registry; see §7. |
 | `problem` | `title` (optional), `text`, `hint` (optional string), `solution` (string or string[], one paragraph each), `answer` (optional short final result) | A practice question. The hint and solution are hidden in native `<details>` reveals ("Show hint", "Show solution") so the reader opens them only when ready. Used by the Analog Design topic. |
 | `math`    | `tex`, `caption` (optional)    | A display formula on its own line: `tex` is TeX without `$` (see **Formulas** below). |
+| `table`   | `columns` (string[]), `rows` (string[][]), `caption` (optional) | A reference table. Every cell is rich text, so `$...$` formulas render; it scrolls sideways on a narrow screen. Used by the transform tables pages (`math/*/tables`). |
 
 #### Formulas
 
