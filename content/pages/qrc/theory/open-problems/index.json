@@ -5,17 +5,202 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Theory"
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "This page is a map of what is not yet known. It is most useful after you have met the main objects of the shelf: the reservoir and its readout (What Is Reservoir Computing? (#/qrc/start/what-is-reservoir-computing), A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand)), the echo state property (The Echo State Property (#/qrc/foundations/echo-state-property)), memory and capacity (Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)), and the results of the other theory pages (Expressivity and Universality (#/qrc/theory/expressivity-and-universality), Concentration and Scalability (#/qrc/theory/concentration-and-scalability), Quantum Advantage (#/qrc/theory/quantum-advantage)). Every problem below is described in the same way: what the question is, what is already known, a small calculation that shows why it is hard, and what an answer would look like. None of them is a research-level prerequisite; they are written so that a reader who has followed the shelf can see where to start."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
     },
     {
       "type": "list",
       "items": [
-        "Sharp echo state conditions. Strict contractivity of every $\\mathcal{T}_s$ in some norm is sufficient, and Martínez-Peña and Ortega give a necessary and sufficient condition in Bloch-vector coordinates under standard hypotheses. But practical reservoirs are often not strictly contractive in any one step and forget only over several, and their condition is not easy to evaluate for a given device. A computable, tight criterion for a given Hamiltonian, encoding and noise model is open.",
-        "Capacity with shots. Information-processing capacity is well defined for exact features. How it scales with $n$ at fixed shot budget $S$, and which dynamics maximise $N_{\\text{eff}}(S)$, is largely unknown beyond numerics.",
-        "The role of the dynamical regime. Numerics show performance peaking near the transition between localized and ergodic regimes (Martínez-Peña and co-authors). Whether that is a general principle (an edge-of-chaos analogue for quantum systems) or specific to the models studied is open.",
-        "Encoding theory. The function class is fixed by how $\\mathcal{T}_s$ depends on $s$. A systematic theory of encodings for time series, comparable to the Fourier-spectrum picture for parameterised circuits, would tell designers which encoding a task needs.",
-        "Avoiding concentration with expressivity. Concentration rules out generic scrambling, while simulability rules out the easiest structured dynamics. Which reservoirs sit between the two, hard to simulate and still with input-sensitive local features, is the central theoretical question for any advantage."
+        "State each major open problem of quantum reservoir computing in a sentence, and say what is known about it.",
+        "Explain why a one-step contraction test can be inconclusive for an input-driven system, with a numerical example.",
+        "Describe the trade-offs between online measurement protocols, and why 'which observables to read' is an optimisation problem.",
+        "Tell a convincing experiment from an unconvincing one: scaling studies, tasks with a reason to be quantum, baselines and noise engineering.",
+        "Choose and set up a small research question that the code of Hands-on Implementation (#/qrc/theory/hands-on-implementation) can answer."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How to read an open problem"
+    },
+    {
+      "type": "prose",
+      "text": "An open problem is not a vague unease. It has a definite question, a known part, and a reason it resists the obvious methods. A useful habit is to ask four things of each one: what exactly would count as a solution (a theorem, a bound, an algorithm, an experiment)? What is the best known partial result? What is the smallest case where the difficulty already shows up, so that a laptop can examine it? And what would change in practice if it were solved? The sections below follow that pattern, grouped into theory, measurement and learning, and experiments."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Theory"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Sharp conditions for the echo state property"
+    },
+    {
+      "type": "prose",
+      "text": "The question. For a reservoir $\\rho_k = \\mathcal{T}_{s_k}(\\rho_{k-1})$, the echo state property (The Echo State Property (#/qrc/foundations/echo-state-property)) says that two copies fed the same inputs converge, whatever their initial states. What simple, checkable condition on the family of channels $\\{\\mathcal{T}_s\\}$ guarantees it, and which conditions are also necessary?"
+    },
+    {
+      "type": "prose",
+      "text": "What is known. A sufficient condition is strict contractivity of every $\\mathcal{T}_s$ in some norm: if $\\Vert\\mathcal{T}_s(X)\\Vert \\le \\lambda\\Vert X\\Vert$ with $\\lambda < 1$ for all traceless $X$ and all $s$, then the distance between two copies shrinks at least as $\\lambda^k$. Martínez-Peña and Ortega give a necessary and sufficient condition in Bloch-vector coordinates under standard hypotheses, and the contraction theory of Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points) collects the tools. But practical reservoirs are often not strictly contractive in any one step; they forget only over several steps, and their condition is not easy to evaluate for a given device."
+    },
+    {
+      "type": "prose",
+      "text": "Why it is hard: the input changes the map at every step. A map that contracts when used alone can fail to contract when different maps alternate. A small toy shows it (this is a model of the difference between two histories, a pair of real $2\\times2$ matrices, not a quantum channel). Take $A_0$ with row 1 equal to $(0.5, c)$ and row 2 equal to $(0, 0.5)$, and $A_1$ with row 1 equal to $(0.5, 0)$ and row 2 equal to $(c, 0.5)$. Each is triangular with eigenvalues $0.5, 0.5$, so applied repeatedly on its own each shrinks vectors like $0.5^k$ (times a factor $k$). Now let the input choose which one acts at each step, and look at the worst product of $k$ of them."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# Two small numerical illustrations for the open problems page.\nimport numpy as np\nfrom itertools import product\nfrom qrc_th_common import *\n\n# (a) Each map contracts when used alone, yet switching between two of them can blow up.\ndef pair(c):\n    return np.array([[0.5, c], [0.0, 0.5]]), np.array([[0.5, 0.0], [c, 0.5]])\ndef worst_rate(mats, k):\n    best = 0.0\n    for bits in product((0, 1), repeat=k):\n        P = np.eye(2)\n        for b in bits: P = mats[b] @ P\n        best = max(best, np.linalg.norm(P, 2))\n    return best, best ** (1 / k)\nfor c in (0.3, 1.0):\n    mats = pair(c)\n    print(f\"(a) c = {c}: spectral radius of each map {max(abs(np.linalg.eigvals(mats[0]))):.2f}; \"\n          f\"worst product of k maps, per-step rate:\")\n    print(\"    \" + \"  \".join(f\"k={k}: {worst_rate(mats, k)[1]:.3f}\" for k in (1, 2, 4, 8)))\n\n# (b) One set of computational-basis shots gives every Z-type correlator at once.\nn, S = 4, 1000\ns = np.random.default_rng(101).uniform(0, 1, 300)\nF, rho = run(s, n=n, V=1)\np = np.real(np.diag(rho)).copy(); p /= p.sum()\nrng = np.random.default_rng(8)\nshots = rng.choice(2**n, size=S, p=p)\nbits = (shots[:, None] >> np.arange(n - 1, -1, -1)) & 1\nspins = 1 - 2 * bits                                           # +-1 per qubit, qubit 1 first\nerrs = []\nfor mask in product((0, 1), repeat=n):\n    if sum(mask) == 0: continue\n    zvals = np.array([np.prod(sp[np.array(mask, bool)]) for sp in spins])\n    exact = sum(p[a] * np.prod((1 - 2 * ((a >> np.arange(n - 1, -1, -1)) & 1))[np.array(mask, bool)]) for a in range(2**n))\n    errs.append(abs(zvals.mean() - exact))\nprint(\"(b) %d qubits, %d shots: %d Z-type features from the same bitstrings; rms error %.4f (1/sqrt(S) = %.4f)\"\n      % (n, S, len(errs), np.sqrt(np.mean(np.square(errs))), 1 / np.sqrt(S)))\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "(a) c = 0.3: spectral radius of each map 0.50; worst product of k maps, per-step rate:\n    k=1: 0.672  k=2: 0.672  k=4: 0.672  k=8: 0.672\n(a) c = 1.0: spectral radius of each map 0.50; worst product of k maps, per-step rate:\n    k=1: 1.207  k=2: 1.207  k=4: 1.207  k=8: 1.207\n(b) 4 qubits, 1000 shots: 15 Z-type features from the same bitstrings; rms error 0.0325 (1/sqrt(S) = 0.0316)\n"
+    },
+    {
+      "type": "prose",
+      "text": "Part (a) of the output reads: with $c = 0.3$ the worst per-step rate over all products is 0.672, below 1: the inputs cannot make the difference grow. With $c = 1.0$ each matrix has spectral radius 0.5, yet there is a sequence of switches along which the difference grows by 1.207 per step. A test applied to each map individually (the spectral radius) says 'stable' both times, and is right once and wrong once. The quantity that decides is the joint spectral radius of the whole family, the worst growth rate over all products. Computing it is hard in general: Blondel and Tsitsiklis showed that deciding whether all products of a pair of matrices stay bounded (equivalently, whether the joint spectral radius is at most 1) is undecidable in general, and good approximations are expensive. Hence the open problem. A computable, tight criterion for a given Hamiltonian, encoding and noise model, one that does not require checking all input sequences, would be a major step."
+    },
+    {
+      "type": "prose",
+      "text": "What an answer looks like: a bound computable from the Hamiltonian's spectrum or from a convex program, that is tight for the spin reservoirs of this shelf and certifies a washout length; or a counterexample family showing that no cheap criterion exists."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: one-step test",
+      "text": "The matrix $A$ with rows $(0.5, 1)$ and $(0, 0.5)$ has both eigenvalues equal to 0.5. Can its largest singular value be above 1, and does that contradict stability under repeated application?",
+      "hint": "Compute $A^\\top A$ and its largest eigenvalue; then recall that the long-run behaviour of $A^k$ is set by the eigenvalues.",
+      "solution": [
+        "The largest singular value of $A$ is $\\sqrt{\\lambda_{\\max}(A^\\top A)}$. $A^\\top A$ has rows $(0.25, 0.5)$ and $(0.5, 1.25)$, whose trace is 1.5 and determinant 0.0625, so its eigenvalues are $0.75 \\pm \\sqrt{0.5625 - 0.0625} = 0.75 \\pm 0.7071$; the largest is $1.457$ and its square root is $1.207$ (the sample's one-step rate for $c = 1$).",
+        "A one-step norm above 1 only says the vector may grow for a step. Repeated application gives $A^k$ with eigenvalue 0.5 each time, so $A^k \\to 0$: the matrix is stable but not contractive in the Euclidean norm.",
+        "So a failed one-step test proves nothing; the spectral radius (or a different norm) is the right test for a single fixed map."
+      ],
+      "answer": "Yes (1.207); no"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Capacity at a fixed shot budget"
+    },
+    {
+      "type": "prose",
+      "text": "The question. Information-processing capacity (Expressivity and Universality (#/qrc/theory/expressivity-and-universality), Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)) is well defined for exact features: total capacity at most the number of independent features. With $S$ shots per feature the relevant number is an effective count $N_{\\text{eff}}(S)$ (Concentration and Scalability (#/qrc/theory/concentration-and-scalability)). How does it scale with the number of qubits $n$ at fixed $S$, and which dynamics maximise it?"
+    },
+    {
+      "type": "prose",
+      "text": "What is known. Numerics only. For the 4-qubit, $V = 5$ reservoir of the Hands-on page, the covariance-based estimate gave $N_{\\text{eff}} = 2.1$ at $S = 10$, $5.3$ at 100, 10.7 at 1000 and 15.8 at $10^4$ out of 20. Whether the same curve at 10 or 20 qubits keeps growing, saturates or collapses is unknown beyond small systems, because the dense simulation that produced it does not scale and no theory predicts the shape of the covariance spectrum. The spectrum was approximately geometric (variances falling by a factor of 5 to 10 per direction); if that holds at scale, shots buy features only logarithmically. A theory that gives the spectrum from the Hamiltonian and the encoding would answer the question."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The role of the dynamical regime"
+    },
+    {
+      "type": "prose",
+      "text": "The question. Does performance peak near a transition between regimes, the way classical echo state networks perform best near the edge of stability, and is there a quantum version of that principle? Numerics show performance peaking near the transition between localized and ergodic regimes (Martínez-Peña and co-authors), and the plot below, memory capacity against the field $h$ for a disordered reservoir, shows the same picture in the model of this shelf."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Memory capacity across the field strength",
+        "params": [
+          {
+            "key": "qubits",
+            "label": "Qubits",
+            "control": "range",
+            "min": 2,
+            "max": 4,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "W",
+            "label": "Disorder W",
+            "control": "range",
+            "min": 0,
+            "max": 50,
+            "step": 0.5,
+            "default": 1
+          },
+          {
+            "key": "dt",
+            "label": "Evolution time per input Δt",
+            "control": "range",
+            "min": 0.5,
+            "max": 30,
+            "step": 0.5,
+            "default": 10
+          },
+          {
+            "key": "V",
+            "label": "Virtual nodes V",
+            "control": "range",
+            "min": 1,
+            "max": 5,
+            "step": 1,
+            "default": 3
+          },
+          {
+            "key": "realizations",
+            "label": "Disorder draws averaged",
+            "control": "range",
+            "min": 1,
+            "max": 4,
+            "step": 1,
+            "default": 2
+          }
+        ],
+        "config": {
+          "sim": "qrc-phase",
+          "xLabel": "log10 h",
+          "yLabel": "memory capacity (delays 1 to 8)"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try this. With 4 qubits, $W = 1$ and $\\Delta t = 10$, find where along the $\\log_{10} h$ axis the memory capacity is largest: the middle of the range beats both the very small and very large fields. Raise the disorder $W$ to 20 or more and see that the high-field end changes character. Then change $\\Delta t$ to 3 and see how the whole curve moves; compare with the discussion in Dynamical Regimes (#/qrc/models/dynamical-regimes). Whether the peak is a general principle (an edge-of-chaos analogue for quantum systems) or specific to the models studied is open."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Encoding theory"
+    },
+    {
+      "type": "prose",
+      "text": "The question. The function class a reservoir can form is fixed by how $\\mathcal{T}_s$ depends on $s$ (Expressivity and Universality (#/qrc/theory/expressivity-and-universality)). For the reset encoding it is $\\{1, s, \\sqrt{s(1-s)}\\}$ per input and $\\{2r+1\\}$ functions after $r$ uploads, a result we derived and checked numerically (ranks 3, 5, 7, 9, 11). Angle encodings give Fourier series. But an encoding through the Hamiltonian, $e^{-i(H_0 + sH_1)\\tau}$, has a function class that involves the eigenvalue differences of $H_0 + sH_1$, which themselves depend on $s$. A systematic theory of encodings for time series, comparable to the Fourier-spectrum picture for parameterised circuits (Schuld, Sweke and Meyer), would tell designers which encoding a task needs, and what the price is in qubits or time. At present each encoding is analysed by hand."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Avoiding concentration without being simulable"
+    },
+    {
+      "type": "prose",
+      "text": "The question. Concentration (Concentration and Scalability (#/qrc/theory/concentration-and-scalability)) rules out generic scrambling; simulability (Quantum Advantage (#/qrc/theory/quantum-advantage)) rules out the easiest structured dynamics (free fermions, Gaussian states, low entanglement). Which reservoirs sit between the two, hard to simulate and still with input-sensitive local features? The measured spread of the sample reservoir at 8 qubits (about 0.14 against the Haar value 0.062) shows that the reset mechanism helps; whether it keeps the spread polynomial in $1/n$ at large $n$ while the dynamics remain classically hard is the central theoretical question for any advantage. A positive answer would be a family of reservoirs with a proof of both properties; a negative one would be a theorem that input-sensitive dynamics are always classically simulable."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which regime?",
+      "text": "A reservoir has a Hamiltonian of nearest-neighbour $XX$ couplings and $Z$ fields on a chain. Is it a candidate for 'hard to simulate and input-sensitive'?",
+      "hint": "Think about which Hamiltonians map to free fermions.",
+      "solution": [
+        "The Jordan–Wigner transformation turns a nearest-neighbour $XX$ plus $Z$ chain into quadratic fermion operators.",
+        "Its unitary dynamics is then simulated by a $2n \\times 2n$ matrix, as the free-fermion sample on the Quantum Advantage page shows (200 qubits in about 0.26 s).",
+        "So it can be a useful reservoir but gives no complexity argument; non-local couplings or a non-Gaussian input step are needed."
+      ],
+      "answer": "No; it maps to free fermions"
     },
     {
       "type": "heading",
@@ -23,12 +208,43 @@
       "text": "Measurement and learning"
     },
     {
-      "type": "list",
-      "items": [
-        "Online learning without restarts. Weak measurements, partial readout and rewinding each trade memory, signal and back-action differently (Mujal and co-authors; Yasuda and co-authors). An optimal protocol for a given task and device is not known.",
-        "Measurement as a resource. Mid-circuit measurements with feed-forward add nonlinearity and dissipation; how to design them as part of the reservoir rather than as a cost is just starting to be explored.",
-        "Choosing observables. Random Pauli sets, classical shadows and correlators all trade shot cost against feature diversity; which set to read for a given shot budget is an open optimisation problem."
-      ]
+      "type": "heading",
+      "level": 3,
+      "text": "Online learning without restarts"
+    },
+    {
+      "type": "prose",
+      "text": "The question. A projective measurement of the reservoir destroys the state. The faithful protocol restarts for every time step, costing $S\\,T(T+1)/2$ reservoir steps for a series of length $T$ (Concentration and Scalability (#/qrc/theory/concentration-and-scalability)). Weak measurements, partial readout and rewinding each trade memory, signal and back-action differently (Mujal and co-authors; Yasuda and co-authors; see Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Online Measurement Protocols (#/qrc/hardware/online-protocols)). What is the optimal protocol for a given task and device, and what is the best trade-off curve between signal, memory and cost? Even a toy case shows the structure: measure only some qubits and keep the rest running, so features from the measured qubits are available at every step but the rest of the state is only partly disturbed. How the information about the past degrades with the strength of the measurement is the quantity to optimise, and there is no general answer."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Measurement as a resource"
+    },
+    {
+      "type": "prose",
+      "text": "Mid-circuit measurements with feed-forward add nonlinearity and dissipation. For example, measure qubit 1, and condition the next input on the result; the dependence of the state on the input is then no longer a fixed finite polynomial in the way Expressivity and Universality (#/qrc/theory/expressivity-and-universality) describes. How to design these measurements as part of the reservoir rather than as a cost is only starting to be explored. The cost side is accounted in Resource Accounting (#/qrc/hardware/resource-accounting)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Choosing observables"
+    },
+    {
+      "type": "prose",
+      "text": "The question. Which set of observables to read for a given shot budget? One set of computational-basis shots gives every $Z$-type string at once, $2^n - 1$ of them, but they are not independent, and they miss all features that need other bases. The next part of the sample shows what one set of shots does: 4 qubits, 1000 shots, 15 features estimated from the same bitstrings, with root-mean-square error 0.0325 against $1/\\sqrt{S} = 0.0316$. The shot cost per feature is unchanged by reading more of them from the same shots (the errors are correlated but each is of the same size). But Pauli strings in other bases need new measurement settings, each with its own shots. Random Pauli sets, classical shadows and correlators all trade shot cost against feature diversity, and choosing the best set for a given budget and reservoir is an open optimisation problem (the effective-number formula $N_{\\text{eff}}(S)$ of Concentration and Scalability (#/qrc/theory/concentration-and-scalability) is one objective you could optimise)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: features from one set of shots",
+      "text": "A 5-qubit reservoir is measured in the computational basis only. How many non-identity $Z$-type Pauli strings can be estimated from those shots, and why are they not 31 independent new features?",
+      "hint": "Count the choices of which qubits appear in the string.",
+      "solution": [
+        "A $Z$-type string is $Z^{a_1}\\otimes\\cdots\\otimes Z^{a_5}$ with each $a_i \\in \\{0,1\\}$, excluding all zeros: $2^5 - 1 = 31$.",
+        "All of them are linear functions of the $2^5 = 32$ outcome probabilities, which sum to 1, so at most 31 are independent, and the estimates share the same shots.",
+        "They are not independent noisy measurements: the errors are correlated, and the whole set only reaches the diagonal of $\\rho$, never its coherences."
+      ],
+      "answer": "31; they are functions of the same $2^5 - 1 = 31$ probabilities"
     },
     {
       "type": "heading",
@@ -36,18 +252,72 @@
       "text": "Experiments"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Scaling studies"
+    },
+    {
+      "type": "prose",
+      "text": "Most experiments show one system size. Accuracy and cost as functions of $n$, on the same platform and task, at realistic shot counts, would show whether there is a trend worth chasing. Without such curves one cannot tell a reservoir that improves with size from one that merely works. The numbers of this shelf give a prediction to test: if features concentrate like Haar states, the shots to keep a fixed resolution grow as $2^n$; if the reset mechanism keeps the spread constant, as the sample at $n \\le 8$ suggests, the cost is flat. An experiment that measures the spread of features against $n$ on hardware is cheap and informative."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Tasks with a reason to be quantum"
+    },
+    {
+      "type": "prose",
+      "text": "Quantum-data tasks (Quantum Data Tasks (#/qrc/models/quantum-data-tasks): classifying states, estimating entanglement, processing sensor outputs without tomography) and physically generated time series are the most plausible places for an advantage. Benchmarks such as NARMA (Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks)) are useful for debugging but are solvable by small polynomial models: our sample reached 0.002 with 52 monomials. The open problem is to find, or to construct, a task whose natural classical solution is expensive and whose structure the reservoir's dynamics matches."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Standard benchmarks and baselines"
+    },
+    {
+      "type": "prose",
+      "text": "The field lacks an agreed suite with fixed data, splits, shot budgets and classical baselines; results are hard to compare across papers. A suite would specify the series, the washout, the metric, the shot count and a list of baselines (linear, polynomial, tuned echo state network) so that a quantum result is read against the same table every time."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Noise as part of the design"
+    },
+    {
+      "type": "prose",
+      "text": "Results suggest that some noise helps (Kubota and co-authors; Sannia and co-authors; Dissipation as a Resource (#/qrc/models/dissipation-as-resource)). The damping sample of the Hands-on page is a small example: memory capacity stayed near 3.8 to 3.9 for amplitude damping up to 0.1 per sub-step and fell to 2.6 at 0.3, for one seed. Engineering device noise to set the memory time, instead of minimising it, is an open hardware question: it asks for noise that is repeatable and calibrated, not merely small."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A short research plan you could run"
+    },
+    {
+      "type": "prose",
+      "text": "Here is a way to turn this page into work. The code of Hands-on Implementation (#/qrc/theory/hands-on-implementation) is enough for each of the following, and each answers an open question on a small scale."
+    },
+    {
       "type": "list",
       "items": [
-        "Scaling studies. Most experiments show one system size. Accuracy and cost as functions of $n$, on the same platform and task, at realistic shot counts, would show whether there is a trend worth chasing.",
-        "Tasks with a reason to be quantum. Quantum-data tasks (classifying states, estimating entanglement, processing sensor outputs without tomography) and physically generated time series are the most plausible places for an advantage; benchmarks like NARMA are useful for debugging but solvable by small polynomial models.",
-        "Standard benchmarks and baselines. The field lacks an agreed suite with fixed data, splits, shot budgets and classical baselines; results are hard to compare across papers.",
-        "Noise as part of the design. Results suggest that some noise helps (Kubota and co-authors; Sannia and co-authors). Engineering device noise to set the memory time, instead of minimising it, is an open hardware question."
+        "Spread against size. Extend the spread sample to 10 qubits using trajectories, with several seeds, and fit the decay. Is it $2^{-n/2}$, a power law in $n$, or flat?",
+        "Effective features against size. Compute $N_{\\text{eff}}(S)$ for $n = 3, 4, 5, 6$ at fixed $V$ and $S$ and see whether it saturates.",
+        "Draw dependence. Plot the NMSE distribution over 100 random Hamiltonians for NARMA2 and ask what property of the Hamiltonian (spectral gap, energy spread, parity-sector structure) predicts the good draws.",
+        "Switching stability. For the 4-qubit reservoir, estimate the worst-case contraction over a few thousand input sequences of length 20 and compare it with the average contraction of 0.82 per step.",
+        "A baseline suite. Implement the baselines of Quantum Advantage (#/qrc/theory/quantum-advantage) as functions with a common interface, run them on several tasks and write the table a paper should show."
       ]
+    },
+    {
+      "type": "prose",
+      "text": "Each takes an afternoon to start, and each gives a number that can be compared with the claims in the literature. State the number, the seed and the assumptions, and say what would change your mind."
     },
     {
       "type": "heading",
       "level": 2,
       "text": "Self-test across the shelf"
+    },
+    {
+      "type": "prose",
+      "text": "These problems cover the whole shelf rather than this page. They are meant to be answered without looking, then checked."
     },
     {
       "type": "problem",
@@ -89,13 +359,49 @@
       "answer": "about 1600"
     },
     {
+      "type": "problem",
+      "title": "Washout from contraction",
+      "text": "A reservoir contracts by 0.9 per step. How many steps of washout reduce the initial-state dependence to $10^{-4}$?",
+      "hint": "Solve $0.9^k = 10^{-4}$ with logarithms.",
+      "solution": [
+        "$0.9^k \\le 10^{-4}$ means $k \\ge \\ln 10^{4}/(-\\ln 0.9) = 9.21/0.1054 = 87.4$.",
+        "So 88 steps."
+      ],
+      "answer": "88 steps"
+    },
+    {
+      "type": "problem",
+      "title": "Counting the budget",
+      "text": "A 3-qubit reservoir read at $V = 25$ sub-steps through $\\langle Z_i\\rangle$ (75 features). Can all features be linearly independent?",
+      "solution": [
+        "The rank bound is $4^3 - 1 = 63$ independent features.",
+        "$75 > 63$, so at least 12 of the 75 are linearly dependent on the others."
+      ],
+      "answer": "No: at most 63 are independent"
+    },
+    {
       "type": "heading",
       "level": 2,
-      "text": "Further reading"
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Sharp echo-state conditions: a one-step norm test can fail while the system is stable, and switching between inputs can destabilise maps that are each stable; the joint spectral radius is the right but hard quantity.",
+        "Capacity at a fixed shot budget, the role of the dynamical regime and a theory of encodings are theory problems with numerics but no theorems.",
+        "The central theoretical question for advantage is a reservoir that avoids concentration yet is hard to simulate.",
+        "Measurement protocols, measurement as a resource and the choice of observables are open optimisation problems.",
+        "Experiments need scaling studies, tasks with a reason to be quantum, a shared benchmark suite with baselines, and noise treated as a design variable."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
     },
     {
       "type": "prose",
-      "text": "For a broad review start with Mujal and co-authors (2021); for the original proposal Fujii and Nakajima (2017); for universality Chen and Nurdin (2019) and Nokkala and co-authors (2021); for concentration Xiong and co-authors (2023); for measurement, Mujal and co-authors (2023)."
+      "text": "The problems above sit on the results of Expressivity and Universality (#/qrc/theory/expressivity-and-universality), Concentration and Scalability (#/qrc/theory/concentration-and-scalability) and Quantum Advantage (#/qrc/theory/quantum-advantage), and all of them can be probed with the code of Hands-on Implementation (#/qrc/theory/hands-on-implementation). For the hardware side see Online Measurement Protocols (#/qrc/hardware/online-protocols) and Analog Platforms (#/qrc/hardware/analog-platforms). For a broad review start with Mujal and co-authors (2021); for the original proposal Fujii and Nakajima (2017); for universality Chen and Nurdin (2019) and Nokkala and co-authors (2021); for concentration Xiong and co-authors (2023); for measurement, Mujal and co-authors (2023)."
     },
     {
       "type": "heading",
@@ -118,7 +424,9 @@
         "W. Xiong, G. Facelli, M. Sahebi, O. Agnel, T. Chotibut, S. Thanasilp and Z. Holmes, On fundamental aspects of quantum extreme learning machines, arXiv:2312.15124 (2023)",
         "S. Ghosh, A. Opala, M. Matuszewski, T. Paterek and T. C. H. Liew, Quantum reservoir processing, npj Quantum Inf. 5, 35 (2019)",
         "M. Kornjača et al., Large-scale quantum reservoir learning with an analog quantum computer, arXiv:2407.02553 (2024)",
-        "M. Lukoševičius and H. Jaeger, Reservoir computing approaches to recurrent neural network training, Comput. Sci. Rev. 3, 127 (2009)"
+        "M. Lukoševičius and H. Jaeger, Reservoir computing approaches to recurrent neural network training, Comput. Sci. Rev. 3, 127 (2009)",
+        "M. Schuld, R. Sweke and J. J. Meyer, Effect of data encoding on the expressive power of variational quantum-machine-learning models, Phys. Rev. A 103, 032430 (2021)",
+        "V. D. Blondel and J. N. Tsitsiklis, The boundedness of all products of a pair of matrices is undecidable, Systems & Control Letters 41, 135 (2000)"
       ]
     }
   ]

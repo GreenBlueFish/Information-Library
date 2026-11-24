@@ -5,11 +5,44 @@
     {
       "type": "heading",
       "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "This page is code. It assumes the picture of a quantum reservoir from A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand) (a two-qubit version worked by hand) and the training pipeline of Training, Testing and Measuring Error (#/qrc/start/training-and-testing) and Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge). From the Quantum Mechanics shelf you need tensor products and Kronecker products (Composite Systems and Tensor Products (#/quantum/many-body/composite-systems), Linear Algebra for Quantum Mechanics (#/quantum/foundations/linear-algebra)), Pauli operators (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)), the Schrödinger equation $U = e^{-iHt}$ (The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation)) and the partial trace (Entanglement and Reduced States (#/quantum/many-body/entanglement)). You do not need to have read the other theory pages, though Expressivity and Universality (#/qrc/theory/expressivity-and-universality) and Concentration and Scalability (#/qrc/theory/concentration-and-scalability) explain what some of the numbers below mean."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Write a complete quantum reservoir simulator in about 60 lines of numpy and explain what each line does physically.",
+        "Check a simulator against properties it must have (Hermiticity, unitarity, trace, symmetries, contraction), and say what a failing check points to.",
+        "Measure memory capacity and NARMA2 error, with and without shot noise, and compare with classical baselines.",
+        "Run the experiment that shows what reset encoding can and cannot build, and the experiment that confirms the $1/(2^n+1)$ concentration law.",
+        "Extend the code: noise channels, quantum trajectories, correlator features, parameter sweeps."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
       "text": "What you will build"
     },
     {
       "type": "prose",
-      "text": "The model is the Fujii–Nakajima spin reservoir described in The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir): $n$ qubits with Hamiltonian $H = \\sum_{i<j} J_{ij} X_i X_j + \\sum_i (h + W_i) Z_i$, $J_{ij}$ uniform in $[-J/2, J/2]$, input $s_k \\in [0,1]$ written by resetting qubit 1 to $\\sqrt{1-s_k}\\vert 0\\rangle + \\sqrt{s_k}\\vert 1\\rangle$, then evolution for time $\\Delta t$ split into $V$ sub-steps, with $\\langle Z_i \\rangle$ read after each sub-step. The readout is ridge regression with a bias. It is the same model the interactive plots on this shelf run, written in about 60 lines."
+      "text": "The model is the Fujii–Nakajima spin reservoir described in The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir). There are $n$ qubits with Hamiltonian"
+    },
+    {
+      "type": "math",
+      "tex": "H = \\sum_{i<j} J_{ij} X_i X_j + \\sum_i (h + W_i) Z_i",
+      "caption": "$J_{ij}$ uniform in $[-J/2, J/2]$ (random all-to-all couplings), $h$ a uniform field, $W_i$ uniform in $[-W/2, W/2]$ (disorder; zero in most runs below)."
+    },
+    {
+      "type": "prose",
+      "text": "The input $s_k \\in [0,1]$ is written at step $k$ by resetting qubit 1 to $\\sqrt{1-s_k}\\vert 0\\rangle + \\sqrt{s_k}\\vert 1\\rangle$ (that is the reset encoding of Input Encoding (#/qrc/models/input-encoding)). Then the whole register evolves for a time $\\Delta t$, which is split into $V$ equal sub-steps; after each sub-step the $n$ expectation values $\\langle Z_i\\rangle$ are recorded, giving $nV$ features per input (the time multiplexing of Readout and Multiplexing (#/qrc/models/readout-and-multiplexing)). The readout is ridge regression with a bias. It is the same model the interactive plots on this shelf run, written in about 60 lines. In formulas, one input step with $V = 1$ is"
     },
     {
       "type": "math",
@@ -18,12 +51,12 @@
     },
     {
       "type": "prose",
-      "text": "All samples need only numpy. The four that follow import the shared module, so save it first as qrc_th_common.py next to them."
+      "text": "All samples need only numpy. The six that follow import a shared module, so save it first as qrc_th_common.py in the same folder; every output below is from an actual run (on a laptop, each under a second or two)."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "The shared module"
+      "text": "The shared module, piece by piece"
     },
     {
       "type": "code",
@@ -31,18 +64,97 @@
       "source": "# qrc_th_common.py: the pieces shared by the hands-on samples (save next to them)\nimport numpy as np\n\nX = np.array([[0, 1], [1, 0]], dtype=complex)\nZ = np.array([[1, 0], [0, -1]], dtype=complex)\n\ndef op(single, i, n):\n    out = np.array([[1.0 + 0j]])\n    for k in range(n):\n        out = np.kron(out, single if k == i else np.eye(2))\n    return out\n\ndef hamiltonian(n, J=1.0, h=1.0, W=0.0, seed=1):\n    rng = np.random.default_rng(seed)\n    H = np.zeros((2**n, 2**n), dtype=complex)\n    for i in range(n):\n        for j in range(i + 1, n):\n            H += rng.uniform(-J / 2, J / 2) * op(X, i, n) @ op(X, j, n)\n    for i in range(n):\n        H += (h + rng.uniform(-W / 2, W / 2)) * op(Z, i, n)\n    return H\n\ndef propagator(H, t):\n    E, V = np.linalg.eigh(H)\n    return V @ np.diag(np.exp(-1j * E * t)) @ V.conj().T\n\ndef inject(rho, s):\n    \"\"\"rho -> |psi(s)><psi(s)| (x) Tr_1 rho with |psi(s)> = sqrt(1-s)|0> + sqrt(s)|1>.\"\"\"\n    D = rho.shape[0]\n    r4 = rho.reshape(2, D // 2, 2, D // 2)\n    rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n    psi = np.array([np.sqrt(1 - s), np.sqrt(s)])\n    return np.kron(np.outer(psi, psi), rest)\n\ndef run(s, n=4, h=1.0, W=0.0, dt=10.0, V=1, seed=1, rho0=None):\n    \"\"\"Feed inputs s; return features <Z_i> after each of V sub-steps (n*V per input).\"\"\"\n    D = 2**n\n    U = propagator(hamiltonian(n, h=h, W=W, seed=seed), dt / V)\n    Zd = [np.real(np.diag(op(Z, i, n))) for i in range(n)]\n    rho = np.eye(D) / D if rho0 is None else rho0\n    feats = []\n    for x in s:\n        rho = inject(rho, x)\n        f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T\n            d = np.real(np.diag(rho))\n            f += [z @ d for z in Zd]\n        feats.append(f)\n    return np.array(feats), rho\n\ndef ridge_fit(F, y, lam=1e-6):\n    A = np.hstack([F, np.ones((len(F), 1))])\n    return np.linalg.solve(A.T @ A + lam * np.eye(A.shape[1]), A.T @ y)\n\ndef ridge_predict(w, F):\n    return np.hstack([F, np.ones((len(F), 1))]) @ w\n\ndef nmse(pred, y):\n    return np.mean((pred - y) ** 2) / np.var(y)\n"
     },
     {
-      "type": "list",
-      "items": [
-        "op builds $\\sigma$ on qubit $i$ with Kronecker products; qubit 0 is the leftmost factor, the one the input resets.",
-        "inject computes $\\operatorname{Tr}_1\\rho$ by reshaping $\\rho$ to a $2 \\times D/2 \\times 2 \\times D/2$ tensor and summing the two diagonal blocks, then tensors on the new input state. This is the whole nonlinearity of the model.",
-        "run returns an array of shape $(T, nV)$; features are read from the diagonal of $\\rho$, since $\\langle Z_i\\rangle$ depends only on populations.",
-        "ridge_fit solves $(A^\\top A + \\lambda I)w = A^\\top y$ with a column of ones for the bias; $\\lambda = 10^{-6}$ is small because the features are few and well scaled."
-      ]
+      "type": "prose",
+      "text": "Here is what each function does and why it is written that way."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "op: one qubit's operator inside the big space"
+    },
+    {
+      "type": "prose",
+      "text": "The state space of $n$ qubits is the tensor product of $n$ two-dimensional spaces, and an operator that acts on qubit $i$ only is $I \\otimes \\cdots \\otimes \\sigma \\otimes \\cdots \\otimes I$ with $\\sigma$ in the $i$th slot (Composite Systems and Tensor Products (#/quantum/many-body/composite-systems)). In code that is a chain of Kronecker products, np.kron. The loop starts from the one-by-one matrix $[1]$ and multiplies in $\\sigma$ at position $i$ and the $2\\times2$ identity elsewhere. Indexing is from 0 here and qubit 0 is the leftmost factor, matching the shelf convention that the leftmost factor is qubit 1: the code's qubit 0 is the page's qubit 1, the one the input resets. A dimension check: for $n = 4$ the result is $16 \\times 16$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "hamiltonian: the couplings and fields"
+    },
+    {
+      "type": "prose",
+      "text": "The two loops add the $\\binom{n}{2}$ coupling terms $J_{ij}X_iX_j$ (random numbers from a seeded generator so that a run can be repeated: the seed picks the reservoir) and the $n$ field terms. The product op(X,i,n) @ op(X,j,n) is $X_iX_j$ because operators on different qubits commute and each is an $n$-qubit matrix. For $n = 4$ there are 6 couplings and 4 fields. Reproducibility matters: a result about 'the reservoir' is a result about one random draw unless you average over seeds (the previous page's seed sample showed a factor 2.5 between draws)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "propagator: exponentiating H"
+    },
+    {
+      "type": "prose",
+      "text": "The Hamiltonian is Hermitian, so np.linalg.eigh gives real energies $E$ and an orthogonal-type matrix $V$ of eigenvectors with $H = V\\,\\mathrm{diag}(E)\\,V^\\dagger$. Then $e^{-iHt} = V\\,\\mathrm{diag}(e^{-iEt})\\,V^\\dagger$ because a function of a diagonalisable matrix is applied to its eigenvalues (Linear Algebra for Quantum Mechanics (#/quantum/foundations/linear-algebra)). This is exact (no Trotter error), costs one diagonalisation per reservoir and then each step is just two matrix multiplications."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "inject: the whole nonlinearity"
+    },
+    {
+      "type": "prose",
+      "text": "The state $\\rho$ is a $D \\times D$ matrix with $D = 2^n$. The partial trace over qubit 1 is a sum over that qubit's two basis values of the matching diagonal blocks. Reshaping $\\rho$ to a four-index array of shape $(2, D/2, 2, D/2)$ makes the indices read (qubit 1 row, rest row, qubit 1 column, rest column), because qubit 1 is the leftmost factor and so varies slowest. Then rest = r4[0,:,0,:] + r4[1,:,1,:] sums the two diagonal blocks in qubit 1, which is exactly $\\operatorname{Tr}_1\\rho$. Finally np.kron(np.outer(psi, psi), rest) builds $\\vert\\psi(s)\\rangle\\langle\\psi(s)\\vert \\otimes \\operatorname{Tr}_1\\rho$. A tiny example you can check by eye uses two qubits, qubit 1 in $\\vert 1\\rangle$ and qubit 2 in $(\\vert 0\\rangle + \\vert 1\\rangle)/\\sqrt2$:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# What inject() does, on two qubits you can read by eye.\nimport numpy as np\nfrom qrc_th_common import *\n\n# qubit 1 in |1>, qubit 2 in the superposition (|0> + |1>)/sqrt(2): a product state, written as a 4x4 density matrix\nq1 = np.array([0, 1.0]); q2 = np.array([1, 1]) / np.sqrt(2)\npsi = np.kron(q1, q2)\nrho = np.outer(psi, psi).astype(complex)\nprint(\"rho (real part):\\n\", np.round(rho.real, 2))\n\nr4 = rho.reshape(2, 2, 2, 2)                     # indices (qubit1 row, qubit2 row, qubit1 column, qubit2 column)\nrest = r4[0, :, 0, :] + r4[1, :, 1, :]            # sum over qubit 1: the partial trace\nprint(\"Tr_1 rho =\\n\", np.round(rest.real, 2), \" (this is |q2><q2|)\")\n\nnew = inject(rho, 0.25)\nprint(\"after inject(rho, s=0.25), qubit 1 holds sqrt(0.75)|0> + sqrt(0.25)|1>:\")\nprint(\"  <Z1> =\", round(float(np.real(np.trace(new @ op(Z, 0, 2)))), 4), \" expected 1 - 2*0.25 =\", 1 - 2 * 0.25)\nprint(\"  <Z2> =\", round(float(np.real(np.trace(new @ op(Z, 1, 2)))), 4), \" (qubit 2 untouched: still 0)\")\nprint(\"  trace =\", round(float(np.real(np.trace(new))), 6))\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "rho (real part):\n [[0.  0.  0.  0. ]\n [0.  0.  0.  0. ]\n [0.  0.  0.5 0.5]\n [0.  0.  0.5 0.5]]\nTr_1 rho =\n [[0.5 0.5]\n [0.5 0.5]]  (this is |q2><q2|)\nafter inject(rho, s=0.25), qubit 1 holds sqrt(0.75)|0> + sqrt(0.25)|1>:\n  <Z1> = 0.5  expected 1 - 2*0.25 = 0.5\n  <Z2> = 0.0  (qubit 2 untouched: still 0)\n  trace = 1.0\n"
+    },
+    {
+      "type": "prose",
+      "text": "The reduced state of qubit 2 comes out as the matrix with all four entries 0.5, which is $\\vert +\\rangle\\langle +\\vert$ as it should be. After injecting $s = 0.25$ the expectation $\\langle Z_1\\rangle = 1 - 2s = 0.5$, qubit 2 is untouched and the trace is still 1."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "run: the loop over inputs"
+    },
+    {
+      "type": "prose",
+      "text": "run starts from the maximally mixed state $I/D$ unless told otherwise, then for each input applies inject, then $V$ sub-steps of $\\rho \\mapsto U\\rho U^\\dagger$ with $U = e^{-iH\\Delta t/V}$ and records the features. It reads them from the diagonal of $\\rho$: $\\langle Z_i\\rangle = \\sum_a z_i(a)\\rho_{aa}$ where $z_i(a) = \\pm 1$ is the value of $Z_i$ on basis state $a$, because $Z$ is diagonal in the computational basis. So only populations are needed, never the off-diagonal entries. The returned array has shape $(T, nV)$, one row per input."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "ridge_fit, ridge_predict, nmse: the readout"
+    },
+    {
+      "type": "prose",
+      "text": "ridge_fit appends a column of ones (the bias) to the feature matrix $F$ to make $A$, then solves the normal equations of ridge regression, $(A^\\top A + \\lambda I)w = A^\\top y$ (Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge)). The value $\\lambda = 10^{-6}$ is small because there are few features and they are well scaled; with many noisy features a larger $\\lambda$ chosen on a validation split is better. nmse is the mean squared error divided by the variance of the target, so predicting the mean scores 1 (Training, Testing and Measuring Error (#/qrc/start/training-and-testing))."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: dimensions",
+      "text": "For $n = 5$ qubits, what are the shapes of the Hamiltonian, of the density matrix, of the reshaped array inside inject, and of the feature array returned by run for 300 inputs with $V = 4$?",
+      "hint": "Dimension $D = 2^n$; features per input are $nV$.",
+      "solution": [
+        "$D = 2^5 = 32$, so $H$ and $\\rho$ are $32 \\times 32$.",
+        "inject reshapes to $(2, D/2, 2, D/2) = (2, 16, 2, 16)$.",
+        "Features per input are $nV = 5 \\times 4 = 20$, so run returns $(300, 20)$."
+      ],
+      "answer": "$32\\times32$; $32\\times32$; $(2, 16, 2, 16)$; $(300, 20)$"
     },
     {
       "type": "heading",
       "level": 2,
       "text": "Check the Hamiltonian and propagator"
+    },
+    {
+      "type": "prose",
+      "text": "Never trust a simulator you have not tested against things you know. Before using the module, this script builds the Hamiltonian with its own copy of the helpers and tests four properties that every correct reservoir Hamiltonian must have."
     },
     {
       "type": "code",
@@ -51,12 +163,29 @@
     },
     {
       "type": "prose",
-      "text": "Output of the run: dimension 16; Hermitian True; unitary True; energy range $-4.140$ to $4.156$; parity $Z_1Z_2Z_3Z_4$ conserved True. The last line is worth noticing. Both $X_iX_j$ and $Z_i$ commute with the global parity $\\prod_i Z_i$, so the unitary part never mixes the even and odd sectors; it is the reset injection, whose input state $\\sqrt{1-s}\\vert 0\\rangle + \\sqrt{s}\\vert 1\\rangle$ straddles both parities of qubit 1, that couples them. Symmetries like this one cut the reachable feature space and are the first thing to check in any reservoir Hamiltonian."
+      "text": "Output of the run:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "dimension: 16\nHermitian: True\nunitary: True\nenergy range: -4.140 to 4.156\nparity Z1Z2Z3Z4 conserved: True\n"
+    },
+    {
+      "type": "prose",
+      "text": "The dimension is $2^4 = 16$. $H$ is Hermitian, a necessary condition for real energies; $U$ is unitary, so probabilities will be conserved; the energies span $-4.140$ to $4.156$, a scale to compare with $\\Delta t = 10$ (the phases accumulated in one step are of order tens of radians, so the dynamics are far from perturbative). The last line deserves attention: the global parity $Z_1Z_2Z_3Z_4$ commutes with $H$. The reason is simple. $Z_i$ terms are diagonal, so they commute with a diagonal operator. $X_iX_j$ flips bits $i$ and $j$, changing the number of 1s by $-2$, 0 or $+2$, so the parity of the number of 1s is unchanged. Hence the unitary part never mixes the even and odd sectors (Symmetries and Conservation (#/quantum/dynamics/symmetries-and-conservation)). It is the reset injection, whose input state $\\sqrt{1-s}\\vert 0\\rangle + \\sqrt{s}\\vert 1\\rangle$ straddles both parities of qubit 1, that couples them. Symmetries like this one cut the reachable feature space and are the first thing to check in any reservoir Hamiltonian."
+    },
+    {
+      "type": "callout",
+      "text": "Failing checks tell you where to look. Not Hermitian: a typo in the coupling loop (j in range(i+1, n) must give each pair once). Not unitary: eigh was given a non-Hermitian matrix, or the exponent has the wrong sign or a missing factor of $i$. Parity not conserved: a field term was built with $X$ instead of $Z$. Always test before building anything on top."
     },
     {
       "type": "heading",
       "level": 2,
       "text": "The reservoir map and the echo state property"
+    },
+    {
+      "type": "prose",
+      "text": "The echo state property (The Echo State Property (#/qrc/foundations/echo-state-property)) says that the state forgets where it started. We can measure that directly: start two copies in orthogonal states, feed them the same inputs, and track their trace distance $\\frac12\\Vert a - b\\Vert_1$, which is 1 for orthogonal states and 0 for equal ones (Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels)). The script uses $\\vert 0000\\rangle$ and $\\vert 1111\\rangle$ and 30 random inputs."
     },
     {
       "type": "code",
@@ -74,12 +203,32 @@
     },
     {
       "type": "prose",
-      "text": "Two copies started in orthogonal states, $\\vert 0000\\rangle$ and $\\vert 1111\\rangle$ (trace distance 1), and fed the same inputs forget where they began: the trace distance falls to $3.4 \\times 10^{-3}$ after 30 steps, an average contraction factor of $(3.42\\times10^{-3})^{1/29} \\approx 0.82$ per step. That is the echo state property, measured. The trace stays 1 to six decimals, so the map is trace preserving as it should be. Small inputs ($s = 0.041$) leave qubit 1 near $\\vert 0\\rangle$ and push $\\langle Z_1\\rangle$ up; the other qubits follow through the couplings."
+      "text": "Two copies started in orthogonal states (trace distance 1) and fed the same inputs forget where they began: the trace distance falls to $3.4 \\times 10^{-3}$ after 30 steps, an average contraction factor of $(3.42\\times10^{-3})^{1/29} \\approx 0.82$ per step. That is the echo state property, measured. The trace stays 1 to six decimals, so the map is trace preserving as it should be. Small inputs ($s = 0.041$) leave qubit 1 near $\\vert 0\\rangle$ and push $\\langle Z_1\\rangle$ up; the other qubits follow through the couplings."
+    },
+    {
+      "type": "prose",
+      "text": "The contraction is the reset at work: qubit 1 is overwritten every step, and the information that was in it can only survive by having been copied into the others through the couplings, and then it is diluted by each new input. This is a different mechanism from the Lindblad damping of Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics), and the amount of forgetting is controlled by $\\Delta t$ and $h$, not by an explicit rate. How the washout length follows from the contraction factor is worked out in the first problem below."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: trace distance between orthogonal states",
+      "text": "What is the trace distance between $\\vert 0000\\rangle\\langle 0000\\vert$ and $\\vert 1111\\rangle\\langle 1111\\vert$, and why does it have to be 1 at step 0?",
+      "hint": "Trace distance is $\\frac12\\Vert a - b\\Vert_1$, the sum of absolute eigenvalues of $a - b$, halved.",
+      "solution": [
+        "The difference of the two density matrices is diagonal with entries $+1$ and $-1$ (all else 0).",
+        "Its trace norm is $1 + 1 = 2$, and half of it is 1.",
+        "Orthogonal pure states are perfectly distinguishable, which is what a trace distance of 1 means."
+      ],
+      "answer": "1"
     },
     {
       "type": "heading",
       "level": 2,
       "text": "Memory function and shot noise"
+    },
+    {
+      "type": "prose",
+      "text": "The memory function $r^2(d)$ asks how well a ridge readout can reproduce the input $d$ steps back, scored as a squared correlation $r^2$ on test data (Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)). The memory capacity is $\\mathrm{MC} = \\sum_{d \\ge 1} r^2(d)$. In the script, 200 inputs are washout, 1000 are for training and 500 for testing; a different readout is trained for each delay. The second half of the script adds shot noise: each feature is replaced by a Gaussian approximation to the average of $S$ single-shot $\\pm1$ outcomes, with standard deviation $\\sqrt{(1 - \\langle Z\\rangle^2)/S}$ (Concentration and Scalability (#/qrc/theory/concentration-and-scalability))."
     },
     {
       "type": "code",
@@ -105,12 +254,28 @@
     },
     {
       "type": "prose",
-      "text": "The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) page has the same experiment as an interactive plot (qrc-memory), where you can vary $h$, $\\Delta t$ and the number of qubits."
+      "text": "The The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) page has the same experiment as an interactive plot (qrc-memory), where you can vary $h$, $\\Delta t$ and the number of qubits."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: reading the memory table",
+      "text": "At $V = 5$ the run gives $r^2(0) = 1.00$ and $r^2(1) = 0.95$. What does $r^2(0) = 1$ mean and why is it not counted in MC?",
+      "hint": "Memory means information from earlier than now.",
+      "solution": [
+        "$d = 0$ asks the readout to reproduce the input that was just written. The reset puts it into qubit 1, then evolution mixes it into the features, so a linear readout recovers it almost exactly.",
+        "MC is defined as the sum over delays $d \\ge 1$ (what is remembered, not what is just seen), so the trivial $d = 0$ term is left out.",
+        "$r^2(1) = 0.95$ means 95 per cent of the variance of the input one step back is recovered."
+      ],
+      "answer": "The current input is recalled perfectly; MC starts at $d = 1$"
     },
     {
       "type": "heading",
       "level": 2,
       "text": "NARMA2 against classical baselines"
+    },
+    {
+      "type": "prose",
+      "text": "Memory is a linear task. NARMA2 (Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks)) needs memory and nonlinearity at once: $y_t = 0.4\\,y_{t-1} + 0.4\\,y_{t-1}y_{t-2} + 0.6\\,u_{t-1}^3 + 0.1$ with $u = s/2 \\in [0, 0.5]$ (the second-order NARMA of Atiya and Parlos). Reading the recurrence: each output is 0.4 times the last output, plus a product of the last two outputs, plus the cube of the previous input, plus a constant. The script scores several readouts on the same series and also two classical baselines: a linear readout of the last 20 raw inputs, and a polynomial readout (the last $k$ inputs, all their pairwise products including squares, and their cubes) in the spirit of next-generation reservoir computing."
     },
     {
       "type": "code",
@@ -128,7 +293,7 @@
     },
     {
       "type": "prose",
-      "text": "NARMA2 here is $y_t = 0.4\\,y_{t-1} + 0.4\\,y_{t-1}y_{t-2} + 0.6\\,u_{t-1}^3 + 0.1$ with $u = s/2 \\in [0, 0.5]$ (the second-order NARMA of Atiya and Parlos). Three lessons. The reservoir beats a linear memory of raw inputs (0.121 against 0.157 at 20 features), so its nonlinearity is doing work. Doubling the virtual nodes halves the error (0.057), and squaring the 20 features does as well (0.055), so feature count, not the quantum dynamics as such, is the binding constraint at this size. And a polynomial of the last 8 inputs reaches 0.002, about thirty times better than the 40-feature reservoir, because it builds the target's own monomials directly. See Quantum Advantage (#/qrc/theory/quantum-advantage) for what that does and does not imply."
+      "text": "Three lessons. The reservoir beats a linear memory of raw inputs (0.121 against 0.157 at 20 features), so its nonlinearity is doing work. Doubling the virtual nodes halves the error (0.057), and squaring the 20 features does as well (0.055), so feature count, not the quantum dynamics as such, is the binding constraint at this size. And a polynomial of the last 8 inputs reaches 0.002, about thirty times better than the 40-feature reservoir, because it builds the target's own monomials directly. See Quantum Advantage (#/qrc/theory/quantum-advantage) for what that does and does not imply."
     },
     {
       "type": "widget",
@@ -202,12 +367,16 @@
     },
     {
       "type": "prose",
-      "text": "The plot runs the same model in your browser (its random draws differ from numpy's, so numbers differ in the second digit). Raise $V$ from 5 to 10 to see the NMSE fall roughly by half, as in the table; then set shots to 1000 to see how much of that survives measurement."
+      "text": "Try this. The plot runs the same model in your browser (its random draws differ from numpy's, so numbers differ in the second digit). With NARMA2 and 4 qubits at $V = 5$ note the NMSE in the label; raise $V$ to 10 and see it fall by roughly half, as in the table. Then set shots to 1000 to see how much of that survives measurement. Switch the task to recall $s(k-3)$ and lower $V$ to 1: the recall fails, since a delay of 3 needs the sub-step features. Finally set $\\Delta t$ to 0.5: with almost no evolution between inputs the reservoir barely mixes and everything gets worse."
     },
     {
       "type": "heading",
       "level": 2,
       "text": "Expressivity check: what reset encoding can and cannot build"
+    },
+    {
+      "type": "prose",
+      "text": "The previous pages (Expressivity and Universality (#/qrc/theory/expressivity-and-universality)) argued that reset encoding writes $s$ only through the three functions $1$, $s$, $\\sqrt{s(1-s)}$ at each step. That has a testable consequence: the square $s_k^2$ is not in that span, so no reservoir of this kind can recover it exactly, whatever its size. The script first computes the best possible fit of $s^2$ inside the span, using $s$ and $\\sqrt{s(1-s)}$ as the only features. Then it asks the 4-qubit, $V = 10$ reservoir for $s_k$, $s_k^2$ and the cross-time product $s_ks_{k-1}$. Finally it checks the concentration law: the variance of $\\langle Z_1\\rangle$ over 4000 Haar-random states for $n = 2, 4, 6, 8$ against $1/(2^n+1)$ (Concentration and Scalability (#/qrc/theory/concentration-and-scalability))."
     },
     {
       "type": "code",
@@ -237,18 +406,127 @@
       "text": "Extending the code"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Noise: amplitude damping"
+    },
+    {
+      "type": "prose",
+      "text": "The Lindblad treatment of Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics) is the continuous-time version. A discrete-time shortcut is to apply a Kraus channel after every sub-step. Amplitude damping on one qubit with probability $\\gamma$ has two Kraus operators, $K_0 = \\vert 0\\rangle\\langle 0\\vert + \\sqrt{1-\\gamma}\\,\\vert 1\\rangle\\langle 1\\vert$ and $K_1 = \\sqrt{\\gamma}\\,\\vert 0\\rangle\\langle 1\\vert$, and maps $\\rho \\mapsto K_0\\rho K_0^\\dagger + K_1\\rho K_1^\\dagger$. The sample applies it to every qubit after every sub-step for four values of $\\gamma$ and recomputes the memory capacity of the $V = 5$ reservoir."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# Extension: amplitude damping (gamma per input step on every qubit) and the memory capacity.\nimport numpy as np\nfrom qrc_th_common import *\n\ndef damping_kraus(g):\n    K0 = np.array([[1, 0], [0, np.sqrt(1 - g)]], dtype=complex)\n    K1 = np.array([[0, np.sqrt(g)], [0, 0]], dtype=complex)\n    return [K0, K1]\n\ndef run_damped(s, n=4, V=5, dt=10.0, g=0.0, seed=1):\n    D = 2**n\n    U = propagator(hamiltonian(n, seed=seed), dt / V)\n    Zd = [np.real(np.diag(op(Z, i, n))) for i in range(n)]\n    ks = [[op(K, i, n) for K in damping_kraus(g)] for i in range(n)]\n    rho = np.eye(D, dtype=complex) / D\n    feats = []\n    for x in s:\n        rho = inject(rho, x)\n        f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T\n            if g > 0:\n                for i in range(n):\n                    rho = sum(K @ rho @ K.conj().T for K in ks[i])\n            d = np.real(np.diag(rho))\n            f += [z @ d for z in Zd]\n        feats.append(f)\n    return np.array(feats)\n\nwashout, train, test = 200, 1000, 500\nT = washout + train + test\ns = np.random.default_rng(101).uniform(0, 1, T)\ndef mc(F, dmax=12):\n    tot = 0\n    for d in range(1, dmax + 1):\n        w = ridge_fit(F[washout:washout + train], s[washout - d:washout + train - d])\n        p = ridge_predict(w, F[washout + train:])\n        tot += np.corrcoef(p, s[washout + train - d:T - d])[0, 1] ** 2\n    return tot\nfor g in (0.0, 0.02, 0.1, 0.3):\n    print(f\"gamma = {g:4.2f} per sub-step: MC(d=1..12) = {mc(run_damped(s, g=g)):.2f}\")\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "gamma = 0.00 per sub-step: MC(d=1..12) = 3.86\ngamma = 0.02 per sub-step: MC(d=1..12) = 3.78\ngamma = 0.10 per sub-step: MC(d=1..12) = 3.90\ngamma = 0.30 per sub-step: MC(d=1..12) = 2.59\n"
+    },
+    {
+      "type": "prose",
+      "text": "Capacity does not fall off a cliff. It stays at about 3.8 to 3.9 for $\\gamma$ up to 0.1 per sub-step and drops to 2.6 at 0.3. For these settings (one seed, so I would not read anything into the small differences between 3.78, 3.86 and 3.90) a modest amount of damping costs nothing and the reservoir already forgets by the reset; large damping pulls every feature towards the fixed point and the signal shrinks, as the signal-loss formula of Concentration and Scalability (#/qrc/theory/concentration-and-scalability) predicts. Which damping helps is a design question studied in the Dissipation as a Resource page."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Quantum trajectories for larger systems"
+    },
+    {
+      "type": "prose",
+      "text": "Dense density matrices are fine up to about 8 qubits here (a density matrix has $4^n$ numbers: 65 536 at $n = 8$). Beyond that replace $U\\rho U^\\dagger$ by a state vector. The reset is a measure-and-prepare step, so keep a pure state, at each input measure qubit 1 in the computational basis with the Born probabilities, keep the conditional state of the rest, prepare $\\vert\\psi(s)\\rangle$ on qubit 1, evolve, and average the features over $M$ trajectories. The sample runs 6 qubits both ways."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# Quantum trajectories: replace the density matrix by a state vector. The reset on qubit 1 is a measure-and-prepare\n# step, so averaging over the random outcomes of that measurement reproduces the density-matrix features.\nimport numpy as np\nfrom qrc_th_common import *\n\nn, T = 6, 40\nrng = np.random.default_rng(3)\ns = rng.uniform(0, 1, T)\nrho0 = np.zeros((2**n, 2**n), complex); rho0[0, 0] = 1  # both methods start in |00...0>\nexact, _ = run(s, n=n, V=1, rho0=rho0)                  # density-matrix reference, shape (T, n)\nU = propagator(hamiltonian(n), 10.0)\nzs = [np.real(np.diag(op(Z, i, n))) for i in range(n)]\nD = 2**n\n\ndef trajectory(rng):\n    psi = np.zeros(D, complex); psi[0] = 1\n    out = []\n    for x in s:\n        a = psi.reshape(2, D // 2)                      # axis 0 = qubit 1\n        p1 = np.sum(np.abs(a[1]) ** 2)                  # probability that measuring qubit 1 gives 1\n        k = 1 if rng.random() < p1 else 0               # random outcome: this is the \"measure\" half of the reset\n        rest = a[k] / np.linalg.norm(a[k])              # post-measurement state of qubits 2..n\n        new = np.sqrt(1 - x) * np.kron([1, 0], rest) + np.sqrt(x) * np.kron([0, 1], rest)   # the \"prepare\" half\n        psi = U @ new\n        pr = np.abs(psi) ** 2\n        out.append([z @ pr for z in zs])\n    return np.array(out)\n\nprint(\"state vector: %d numbers; density matrix: %d numbers\" % (D, D * D))\nfor M in (10, 100, 1000):\n    avg = np.mean([trajectory(rng) for _ in range(M)], axis=0)\n    err = np.abs(avg - exact)\n    print(f\"M = {M:4d} trajectories: rms error of the features = {np.sqrt(np.mean(err**2)):.4f}   (1/sqrt(M) = {1/np.sqrt(M):.4f})\")\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "state vector: 64 numbers; density matrix: 4096 numbers\nM =   10 trajectories: rms error of the features = 0.0440   (1/sqrt(M) = 0.3162)\nM =  100 trajectories: rms error of the features = 0.0143   (1/sqrt(M) = 0.1000)\nM = 1000 trajectories: rms error of the features = 0.0060   (1/sqrt(M) = 0.0316)\n"
+    },
+    {
+      "type": "prose",
+      "text": "The trajectory average approaches the exact features as $M$ grows, with a state vector of 64 numbers instead of a matrix of 4096. This is also a model of what a device does: each shot is one trajectory."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Other extensions"
+    },
+    {
       "type": "list",
       "items": [
-        "Correlator features: add $\\langle Z_iZ_j\\rangle$ from the same diagonal, $\\sum_a z_i(a)z_j(a)\\rho_{aa}$; they come from the same measured bitstrings at no extra shot cost.",
-        "Noise: apply a dephasing or amplitude-damping channel after each sub-step (Kraus operators on each qubit) and compare memory capacity; see Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics).",
-        "Larger systems: the dense code is fine to about 8 qubits. Beyond that, replace $U\\rho U^\\dagger$ with quantum trajectories: keep a state vector, at each input measure qubit 1 in the computational basis (random outcome), discard it, prepare $\\vert\\psi(s)\\rangle$, evolve, and average features over trajectories.",
-        "Hyperparameter sweeps: loop over $h$, $W$ and $\\Delta t$ with several seeds and plot MC; compare with Dynamical Regimes (#/qrc/models/dynamical-regimes)."
+        "Correlator features: add $\\langle Z_iZ_j\\rangle$ from the same diagonal, $\\sum_a z_i(a)z_j(a)\\rho_{aa}$. They come from the same measured bitstrings at no extra shot cost, giving $n(n-1)/2$ more features per sub-step (6 more for $n = 4$).",
+        "Hyperparameter sweeps: loop over $h$, $W$ and $\\Delta t$ with several seeds and plot MC; compare with Dynamical Regimes (#/qrc/models/dynamical-regimes).",
+        "Spatial multiplexing: run several independent reservoirs on the same input and concatenate their features.",
+        "A different encoding: replace the reset by a rotation $e^{-i\\theta s X/2}$ on a qubit that is not reset, and see how the memory function changes (Input Encoding (#/qrc/models/input-encoding))."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Mistakes that cost an afternoon"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Splitting the series wrongly. In these scripts the reservoir runs once over the whole series and the split is made afterwards on the feature rows, so the state is continuous across the boundary. If you instead restart the reservoir at the start of the test set, the first test steps are contaminated by the start-up transient and need their own washout.",
+        "Qubit order. If you build $Z_1$ with the wrong Kronecker order, the injected qubit and the first feature are different qubits and the memory function looks odd (an early delay is recalled worse than a later one). The inject demo above is the quick test.",
+        "Normalising features. A ridge readout with a fixed $\\lambda$ is sensitive to feature scale; standardise or check the spread of each column before comparing runs.",
+        "Comparing exact and noisy runs with different random draws. Fix the seed of the noise too, or average over several, otherwise differences of 0.1 in MC are noise.",
+        "Forgetting the bias column: features $\\langle Z\\rangle$ rarely average to zero, and without the constant the readout is biased."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. You want to find out whether a 5-qubit reservoir with $V = 4$ can recall the input three steps back at $r^2 > 0.5$ under 1000 shots per feature, and how long the washout must be. Plan the experiment from the pieces above."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Feature count: $nV = 5 \\times 4 = 20$; array shape $(T, 20)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Washout. The trace-distance sample gave a contraction factor of about 0.826 per step for the 4-qubit reservoir (assume the 5-qubit one is similar). To get below $10^{-6}$ starting from distance 1 takes $\\ln 10^6/(-\\ln 0.826) = 72$ steps; use 100 to be safe (the samples use 200)."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Shots. Use the Gaussian noise model of the memory sample: add to each feature $F$ noise of standard deviation $\\sqrt{(1-F^2)/S}$ with $S = 1000$. Fit the delay-3 readout on the noisy features and score $r^2$ on a held-out test set of 500 or more points."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Compare with the exact result at the same $V$ (for the 4-qubit reservoir at $V = 5$: $r^2(3) = 0.67$ exact), and with the one-seed caveat: repeat for 8 seeds and report the mean and spread. If $r^2(3)$ with noise is above 0.5 for most seeds the answer is yes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The model in 60 lines: op (Kronecker products), hamiltonian, propagator (eigh), inject (reshape and partial trace), run, ridge.",
+        "Test the simulator: Hermitian, unitary, trace 1, parity conserved, two copies converging.",
+        "The reservoir forgets at about 0.82 per step in the sample; a washout of 70 to 75 steps erases the start to $10^{-6}$.",
+        "Virtual nodes multiply features: $V = 5$ raised MC from 1.47 to 3.86; shot noise at 100 shots takes it back to 1.94.",
+        "NARMA2: the reservoir beats a linear lag readout but a polynomial readout of the last 8 inputs (0.002) beats a 40-feature reservoir (0.057) by a factor thirty.",
+        "Reset encoding cannot make $s^2$ exactly: the floor is NMSE 0.0018 to 0.0020.",
+        "Haar-state variance of $\\langle Z_1\\rangle$ matches $1/(2^n+1)$.",
+        "Dense simulation works to about 8 qubits here; trajectories scale further and mimic the device's shots."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
@@ -257,9 +535,9 @@
       "solution": [
         "Factor per step: $(3.42\\times10^{-3}/2.30\\times10^{-2})^{1/10} = (0.1487)^{0.1} \\approx 0.826$.",
         "From $3.42\\times10^{-3}$ to $10^{-6}$ is a factor $3420$, so $k = \\ln 3420 / (-\\ln 0.826) \\approx 8.14/0.191 \\approx 43$ more steps.",
-        "So a washout of about 70 to 75 steps erases the initial state to $10^{-6}$; the samples use 200."
+        "So a washout of about 73 steps erases the initial state to $10^{-6}$; the samples use 200."
       ],
-      "answer": "about 0.83 per step; about 43 more steps (step $\\approx$ 73)"
+      "answer": "about 0.826 per step; about 43 more steps (step $\\approx$ 73)"
     },
     {
       "type": "problem",
@@ -271,6 +549,37 @@
         "NARMA2 needs $u_{t-1}^3$ and $y_{t-1}y_{t-2}$, higher-degree terms that the squares supply or approximate much better."
       ],
       "answer": "Higher per-input degree (a polynomial readout is a two-copy reservoir)"
+    },
+    {
+      "type": "problem",
+      "title": "Memory of the dense simulation",
+      "text": "At $n = 8$ qubits the density matrix has $256 \\times 256$ complex entries. How many bytes is one copy, and how many for a state vector of the same system?",
+      "solution": [
+        "Density matrix: $256^2 = 65{,}536$ entries at 16 bytes each, $1{,}048{,}576$ bytes = 1 MiB.",
+        "State vector: 256 entries at 16 bytes = 4096 bytes = 4 KiB.",
+        "A factor of $2^8 = 256$. The ratio $2^n$ is the reason trajectories scale to larger $n$ at the price of averaging over many of them."
+      ],
+      "answer": "1 MiB against 4 KiB"
+    },
+    {
+      "type": "problem",
+      "title": "Counting features",
+      "text": "A reservoir with 5 qubits is read after each of $V = 8$ sub-steps through $\\langle Z_i\\rangle$ and all pairwise $\\langle Z_iZ_j\\rangle$. How many features per input, and is it below the rank bound $4^5 - 1$?",
+      "solution": [
+        "Per sub-step: 5 single-qubit features plus $\\binom{5}{2} = 10$ pair correlators, 15.",
+        "Over 8 sub-steps: $15 \\times 8 = 120$.",
+        "The rank bound is $4^5 - 1 = 1023$, so 120 is far below it (though the reachable set may be smaller still because of the parity symmetry)."
+      ],
+      "answer": "120 features; below 1023"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "prose",
+      "text": "Every claim in the other theory pages can be reproduced with this code: the span structure and the capacity budget of Expressivity and Universality (#/qrc/theory/expressivity-and-universality), the concentration law and the shot cost of Concentration and Scalability (#/qrc/theory/concentration-and-scalability), and the baselines of Quantum Advantage (#/qrc/theory/quantum-advantage). The model is the one the interactive plots across the shelf run (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir), Dynamical Regimes (#/qrc/models/dynamical-regimes)). Open questions where the code can be used as a starting point are listed in Open Problems (#/qrc/theory/open-problems)."
     },
     {
       "type": "heading",
@@ -286,7 +595,8 @@
         "H. Jaeger, Short term memory in echo state networks, GMD Report 152 (2002)",
         "J. Dambre, D. Verstraeten, B. Schrauwen and S. Massar, Information processing capacity of dynamical systems, Sci. Rep. 2, 514 (2012)",
         "P. Mujal, R. Martínez-Peña, G. L. Giorgi, M. C. Soriano and R. Zambrini, Time-series quantum reservoir computing with weak and projective measurements, npj Quantum Inf. 9, 16 (2023)",
-        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary ed., Cambridge University Press (2010)"
+        "M. A. Nielsen and I. L. Chuang, Quantum Computation and Quantum Information, 10th anniversary ed., Cambridge University Press (2010)",
+        "H.-P. Breuer and F. Petruccione, The Theory of Open Quantum Systems, Oxford University Press (2002)"
       ]
     }
   ]
