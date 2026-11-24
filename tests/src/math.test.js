@@ -67,6 +67,34 @@ describe("math › MathML", () => {
   });
 });
 
+describe("math › matrices", () => {
+  it("draws pmatrix, bmatrix and vmatrix as an mtable inside fences", () => {
+    const h = html("\\begin{pmatrix} 2 & 1 \\\\ 1 & 2 \\end{pmatrix}");
+    expect(h.includes("<mtable")).toBe(true);
+    expect((h.match(/<mtr>/g) || []).length).toBe(2);
+    expect((h.match(/<mtd>/g) || []).length).toBe(4);
+    expect(h.includes('fence="true">(</mo>')).toBe(true);
+    expect(html("\\begin{bmatrix} 1 \\\\ -1 \\end{bmatrix}").includes(">[</mo>")).toBe(true);
+    expect(html("\\begin{vmatrix} a & b \\\\ c & d \\end{vmatrix}").includes(">|</mo>")).toBe(true);
+    expect(html("\\begin{matrix} a & b \\end{matrix}").includes("<mo")).toBe(false);
+  });
+  it("draws cases with a left brace and left-aligned columns", () => {
+    const h = html("f = \\begin{cases} 1 & x > 0 \\\\ 0 & \\text{otherwise} \\end{cases}");
+    expect(h.includes('columnalign="left"')).toBe(true);
+    expect(h.includes(">{</mo>")).toBe(true);
+  });
+  it("ignores a trailing \\\\ and keeps cells with fractions and scripts", () => {
+    const h = html("\\begin{pmatrix} \\frac{1}{2} & x_1 \\\\ \\end{pmatrix}");
+    expect((h.match(/<mtr>/g) || []).length).toBe(1);
+    expect(h.includes("<mfrac>")).toBe(true);
+  });
+  it("rejects unknown, unclosed or mismatched environments", () => {
+    for (const bad of ["\\begin{foo} 1 \\end{foo}", "\\begin{pmatrix} 1 & 2", "\\begin{pmatrix} 1 \\end{bmatrix}", "\\end{pmatrix}", "a \\\\ b"]) {
+      expect(() => parseTex(bad)).toThrow(TexError);
+    }
+  });
+});
+
 describe("math › appendRichText", () => {
   it("sets text without formulas as plain text", () => {
     const p = document.createElement("p");

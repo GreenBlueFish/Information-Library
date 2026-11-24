@@ -301,6 +301,10 @@ sign as `\$`. `code` blocks are never touched.
   `\int`, `\prod` with limits; `\left( ... \right)` for tall brackets.
 - Words and units: `\text{ mV}`, `\mathrm{GBW}`; spaces `\,` `\;` `\quad`.
 - Accents: `\hat{x}`, `\bar{x}`, `\tilde{x}`, `\dot{x}`, `\vec{x}`.
+- Matrices: `\begin{pmatrix} a & b \\ c & d \end{pmatrix}`, also `bmatrix`
+  (square brackets), `vmatrix` (determinant bars), `Vmatrix`, `Bmatrix`, plain
+  `matrix`, and `cases` for piecewise definitions. Cells split on `&`, rows on
+  `\\` (the only place `\\` is allowed).
 
 Anything else (an unknown command, `\\` line breaks, unbalanced braces) shows
 as red source text on the page, and `tests/src/math.test.js` fails, naming the
@@ -729,6 +733,26 @@ convolves two preset sequences (`SEQUENCES`) and shows flip and slide, the
 multiplication table and the output; its keys are `x`, `h` and `n`. Tests:
 `tests/src/widgets/convolution.test.js` checks the integral against closed
 forms. Generator: `projects/push/convolution-gen` in the Hive that wrote them.
+
+### 7.7 The eigenvalue widgets
+
+`eigen-plane` (`src/widgets/types/eigen-plane.js`, maths in
+`src/widgets/sims/eigen.js`, example page `math/eigenvalues`) shows a 2×2
+matrix acting on the plane: the unit circle and its image ellipse, the image of
+the unit square, a probe v and Av, the eigen-directions labelled with λ, and
+the directions of A^k v as numbered dots. Beside it, the parts of Av along and
+across v as v turns (the sideways part is zero at an eigen-direction) and the
+characteristic polynomial. Next step ▶ walks through eight steps; Sweep v
+turns the probe. Its `params` keys, in order, are `matrix` (a name in
+`MATRIX2_OPTIONS`; the last, `CUSTOM2`, uses the sliders), `a`, `b`, `c`, `d`
+(the entries, −5 to 5), `theta` (degrees) and `k` (powers, 0 to 10). A preset
+sets the sliders; moving a slider switches to the custom option. `eigen-3d`
+does the same for a 3×3 matrix in space: the unit sphere and its image, real
+eigen-directions, a disc for a plane of eigenvectors (blue) or for the plane a
+complex pair turns (amber), the cubic, and the numbers; keys `matrix` (a name
+in `MATRIX3_OPTIONS`), `around`, `up` (the probe's direction), `k`, `azimuth`,
+`elevation`. Adding a preset is one line in `MATRICES2` or `MATRICES3`. Tests:
+`tests/src/widgets/eigen.test.js` checks every eigenpair against Av = λv.
 
 ## 8. Optional: serving over a static server (the `file://` tip)
 

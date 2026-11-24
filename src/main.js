@@ -123,6 +123,8 @@ import "./widgets/types/s-surface.js";
 import "./widgets/types/fourier-3d.js";
 import "./widgets/types/fft-butterfly.js";
 import "./widgets/types/convolution-3d.js";
+import "./widgets/types/eigen-plane.js";
+import "./widgets/types/eigen-3d.js";
 import "./widgets/types/conv-sequence.js";
 
 /**
