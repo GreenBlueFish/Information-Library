@@ -1,88 +1,129 @@
 {
   "title": "Reservoir Computing Foundations",
-  "intro": "Reservoir computing trains only a linear readout on the states of a fixed, driven dynamical system; everything quantum reservoir computing does is this recipe with a quantum system as the reservoir. This topic sets out the classical theory that the quantum pages lean on: echo state networks, the echo state property, memory and processing capacity, physical reservoirs and the benchmark tasks.",
+  "intro": "Reservoir computing trains only a linear readout on the states of a fixed, driven dynamical system; everything quantum reservoir computing does is this recipe with a quantum system as the reservoir. This chapter makes the classical theory exact: echo state networks, the echo state property, memory and processing capacity, physical reservoirs and the benchmark tasks.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "The recipe in one equation pair"
+      "text": "What this chapter is about"
     },
     {
       "type": "prose",
-      "text": "A reservoir is a driven dynamical system with state $x_k$, fed an input sequence $u_k$ one step at a time. Only the readout is learned:"
+      "text": "Quantum reservoir computing is an old idea in a new material. The old idea, reservoir computing, says that a fixed dynamical system, driven by an input stream and left untrained, can serve as the memory and the nonlinear mixing stage of a learning machine, provided you train a simple linear readout on what it does. The new material is a quantum system: a few qubits, a spin ensemble, a bath of photons. Before the quantum pages can say anything precise, the classical idea has to be understood properly, and that is this chapter's job."
+    },
+    {
+      "type": "prose",
+      "text": "The chapter assumes you have read Getting Started (#/qrc/start), which taught the machine learning from zero and ended with a quantum reservoir computed by hand. Here the same ideas are made exact. Each page answers one question that the quantum chapters keep asking: what is the standard model and what are its knobs? when does a driven system forget its start? how much can it remember and compute? which real devices have been used? and how do you score the result honestly?"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Read it in this order"
+    },
+    {
+      "type": "prose",
+      "text": "The five pages build on each other, though the last two can be read in either order. Each page has the same shape: what you need first, what you will be able to do, full sections with worked examples, checks as you go, a worked problem that ties the page together, key points, problems with solutions, and sources. Allow about 90 minutes to two hours per page if you work the examples and run the code; about five to ten hours for the chapter."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The pages"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Echo State Networks (#/qrc/foundations/echo-state-networks): the canonical reservoir. The update rule built unit by unit and worked by hand, ridge regression seen three ways (normal equations, singular values, dual form), the five hyperparameters and what each does to memory and nonlinearity, a complete network on NARMA10 (NMSE 0.154 with 50 units, 0.081 with 200, against 0.680 for linear regression), and teacher forcing for generation.",
+        "The Echo State Property (#/qrc/foundations/echo-state-property): why a reservoir must forget its starting state, the proof that a tanh network with $\\sigma_{\\max}<1$ does, why the spectral radius is the practical criterion although it is not a proof, how strong inputs rescue a network with $\\rho>1$, how to measure forgetting with a Lyapunov exponent, and why a unitary quantum system can never forget.",
+        "Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity): the memory function computed exactly for one unit, the proof that memory capacity cannot exceed the number of independent features, information processing capacity with Legendre polynomials, the memory-nonlinearity trade-off with measured tables, and how finite data and noise bias estimates.",
+        "Physical Reservoirs (#/qrc/foundations/physical-reservoirs): the checklist for a physical reservoir, a simulated ripple tank in which the sensor supplies the nonlinearity, virtual nodes built from a single delay-loop node by hand, and the engineering limits (bandwidth, noise, partial observation) that become harsher for quantum devices.",
+        "Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks): the evaluation protocol, metrics and their traps, the standard tasks (memory, NARMA, parity, Mackey-Glass, channel equalisation), and the ladder of baselines a result must climb."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The key equations"
+    },
+    {
+      "type": "prose",
+      "text": "These are the relations the chapter builds up to. Each page derives its own; here they are in one place."
     },
     {
       "type": "math",
-      "tex": "x_k = F(x_{k-1}, u_k), \\qquad \\hat y_k = W_{\\mathrm{out}}\\,[x_k; 1]",
-      "caption": "The reservoir map $F$ is fixed (random, or set by physics). Only $W_{\\mathrm{out}}$ is trained."
+      "tex": "x_k = (1-a)\\,x_{k-1} + a\\tanh\\left(Wx_{k-1} + w_{\\mathrm{in}}u_k + b\\right)",
+      "caption": "The reservoir: state update with leak rate $a$, fixed random weights, input $u_k$."
+    },
+    {
+      "type": "math",
+      "tex": "W_{\\mathrm{out}}^{\\top} = \\left(Z^{\\top}Z + \\lambda I\\right)^{-1}Z^{\\top}Y",
+      "caption": "The only learning: ridge regression on the recorded features $Z$, the targets $Y$."
+    },
+    {
+      "type": "math",
+      "tex": "\\Vert x_k - x_k'\\Vert \\le \\sigma_{\\max}(W)^k\\,\\Vert x_0 - x_0'\\Vert",
+      "caption": "Forgetting: two copies fed the same input converge if $\\sigma_{\\max}(W)<1$; the echo state property in its provable form."
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{MC}_d = \\frac{\\operatorname{cov}^2(\\hat y^{(d)}_k, u_{k-d})}{\\operatorname{var}(\\hat y^{(d)}_k)\\operatorname{var}(u_k)}, \\qquad \\mathrm{MC}\\le N",
+      "caption": "Memory capacity: the sum over delays of how well the input $d$ steps ago can be read out, at most the number of independent features."
+    },
+    {
+      "type": "math",
+      "tex": "C_{\\mathrm{tot}} = \\sum_{z} C[z] \\le N",
+      "caption": "Information processing capacity: the same budget shared among memory and nonlinear functions of the past."
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{NMSE} = \\frac{\\langle(\\hat y_k-y_k)^2\\rangle}{\\operatorname{var}(y_k)}",
+      "caption": "The score: 0 is perfect, 1 is no better than the average."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How this chapter connects to the quantum ones"
     },
     {
       "type": "prose",
-      "text": "Because $\\hat y_k$ is linear in the trained weights, training is a least-squares problem with a closed-form solution: no backpropagation through time, no vanishing gradients, no local minima. The price is that the reservoir has to supply, by itself, the features a linear map needs: a fading trace of past inputs (memory) and nonlinear functions of them (processing). The whole field is about which systems $F$ supply good features, and how to read them out cheaply."
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Three ingredients"
+      "text": "Every classical idea here has a quantum counterpart, and the later chapters are largely about how the counterpart behaves differently."
     },
     {
       "type": "list",
       "items": [
-        "Fading memory, formalised as the echo state property: after a washout the state depends only on the recent inputs, not on the initial state. Without it the same input gives different outputs on different runs, and the readout cannot generalise.",
-        "Richness (separation): different input histories must map to linearly distinguishable states, and the state must contain nonlinear functions of the inputs. The information processing capacity counts this, and is bounded by the number of linearly independent state variables you read.",
-        "A readable state: you must be able to measure enough of $x_k$, with enough precision, at the rate the inputs arrive. For physical reservoirs this is often the binding constraint, and for quantum reservoirs it is the central one, because a quantum state can only be read through repeated measurements."
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "What changes when the reservoir is quantum"
-    },
-    {
-      "type": "prose",
-      "text": "In quantum reservoir computing the state is a density matrix $\\rho_k$ of $n$ qubits, the map is a completely positive trace-preserving channel $\\rho_k = \\mathcal{T}_{u_k}(\\rho_{k-1})$, and the features are expectation values $x_k^{(i)} = \\operatorname{Tr}(O_i \\rho_k)$. Each classical idea on this topic has a quantum counterpart:"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Echo state property becomes contractivity of the input-driven channel: a unitary alone never forgets, so a quantum reservoir needs dissipation (a reset, a measurement or coupling to an environment).",
-        "The number of reservoir units $N$ becomes the number of independent observables you read, which can in principle reach $4^n-1$ for $n$ qubits, but each costs measurement shots.",
-        "Virtual nodes from delay-line photonics reappear as sampling the quantum system several times between inputs.",
-        "Benchmarks (short-term memory, NARMA, parity, Mackey-Glass) are the same, so classical baselines are directly comparable."
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Notation used across the shelf"
-    },
-    {
-      "type": "list",
-      "items": [
-        "$u_k$ or $s_k$: the scalar input at step $k$ (quantum pages use $s_k \\in [0,1]$ because it sets a qubit amplitude).",
-        "$x_k \\in \\mathbb{R}^N$: the feature vector read at step $k$ (reservoir state for an ESN, expectation values for a quantum reservoir).",
-        "$y_k$: target, $\\hat y_k$: readout prediction; washout, train and test windows are consecutive blocks of one input stream.",
-        "$\\mathrm{MC}$: linear memory capacity; $C_{\\mathrm{tot}}$: total information processing capacity; NMSE: mean squared error divided by the target variance."
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Pages in this topic"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Echo State Networks (#/qrc/foundations/echo-state-networks): the canonical reservoir, its update rule, hyperparameters and ridge-regression readout.",
-        "The Echo State Property (#/qrc/foundations/echo-state-property): when a driven system forgets its initial state, the sufficient and necessary conditions, and the role of the input.",
-        "Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity): the linear memory function, the bound $\\mathrm{MC} \\le N$, information processing capacity and the memory-nonlinearity trade-off.",
-        "Physical Reservoirs (#/qrc/foundations/physical-reservoirs): computing with buckets, lasers, spin oscillators and soft bodies; delay lines and virtual nodes.",
-        "Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks): the tasks QRC papers report, how to evaluate fairly, and the baselines to beat."
+        "The state $x_k\\in\\mathbb{R}^N$ becomes a density matrix $\\rho_k$, and the update becomes a completely positive trace-preserving map $\\rho_k = \\mathcal{T}_{u_k}(\\rho_{k-1})$ (Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels)). The features are expectation values $\\operatorname{Tr}(O_i\\rho_k)$.",
+        "The echo state property becomes contractivity of that map. A unitary alone never forgets, so a quantum reservoir needs a reset, a measurement or a bath (Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points), Dissipation as a Resource (#/qrc/models/dissipation-as-resource)).",
+        "The number of units $N$ becomes the number of independent observables you can read, in principle $4^n-1$ for $n$ qubits, but each costs measurement shots (Readout and Multiplexing (#/qrc/models/readout-and-multiplexing), Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action)).",
+        "The virtual nodes of a delay loop reappear as $V$ samples of the quantum system between inputs.",
+        "The benchmarks are the same, so classical baselines are directly comparable, and the baseline rules of Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks) apply with full force.",
+        "The state of a quantum reservoir lives in a space that grows as $2^n$ for $n$ qubits. Whether this large space is an asset or a liability for learning is the subject of Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
       ]
     },
     {
       "type": "callout",
-      "text": "If you already know ESNs well, read the echo state property and capacity pages anyway: the quantum pages use the contraction picture and the capacity bound constantly."
+      "text": "If you already know echo state networks well, still read the echo state property and capacity pages: the quantum chapters use the contraction picture and the capacity bound constantly."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A map of notation"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$u_k$ or $s_k$: the scalar input at step $k$ (the quantum pages use $s_k\\in[0,1]$ because it sets a qubit amplitude).",
+        "$x_k\\in\\mathbb{R}^N$: the feature vector read at step $k$ (the reservoir state for an ESN, expectation values for a quantum reservoir).",
+        "$y_k$ is the target and $\\hat y_k$ the readout's prediction; washout, training and test windows are consecutive blocks of one input stream.",
+        "MC is the linear memory capacity, $C_{\\mathrm{tot}}$ the total information processing capacity, NMSE the mean squared error divided by the target variance."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "After this chapter"
+    },
+    {
+      "type": "prose",
+      "text": "The next chapter, Open Quantum Systems Toolkit (#/qrc/open-systems), builds the mathematics of density matrices, channels and measurement that turns the classical echo state property into its quantum form. Then Quantum Reservoir Models (#/qrc/models) puts the pieces together into working quantum reservoirs, starting with The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)."
     },
     {
       "type": "heading",

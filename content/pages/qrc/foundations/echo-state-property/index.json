@@ -1,51 +1,260 @@
 {
   "title": "The Echo State Property",
-  "intro": "A reservoir has the echo state property when its state, after enough input, is a function of the input history alone and not of where it started. It is what makes a reservoir a well-defined filter that a readout can learn, and its quantum form, contractivity of the input-driven channel, decides which quantum systems can be reservoirs at all.",
+  "intro": "A reservoir has the echo state property when its state, after enough input, is a function of the input history alone and not of where it started. This lesson proves when a tanh network forgets, shows why the spectral radius and the largest singular value tell different stories, measures forgetting with Lyapunov exponents, and explains why a quantum reservoir needs dissipation to forget at all.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Definition"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "Let $F$ be the reservoir map and let the inputs come from a compact set $U$. $F$ has the echo state property (Jaeger 2001) if for every left-infinite input sequence $(\\dots, u_{-1}, u_0)$ there is exactly one state sequence compatible with it. Equivalent working forms:"
-    },
-    {
-      "type": "list",
-      "items": [
-        "State forgetting: for any two initial states $x_0, x_0'$ and any input sequence, $\\Vert x_k - x_k' \\Vert \\to 0$ as $k \\to \\infty$.",
-        "Uniform contraction: there is a null sequence $\\delta_k \\to 0$ with $\\Vert x_k - x_k'\\Vert \\le \\delta_k$ for all inputs and all starts."
-      ]
-    },
-    {
-      "type": "prose",
-      "text": "With the property, the reservoir defines a filter $u \\mapsto x_k = H(u_k, u_{k-1}, \\dots)$, and the readout learns a function of that filter. Without it, the state also encodes the arbitrary initial condition, two runs of the same input give different features, and a readout trained on one run fails on the next."
+      "text": "Read Echo State Networks (#/qrc/foundations/echo-state-networks) first: this page uses its update rule, the spectral radius and the idea of a washout. For the quantum section it helps to have seen Mixed States (#/quantum/many-body/mixed-states) on the Quantum Mechanics shelf, but the section says what it needs."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Conditions for tanh networks"
-    },
-    {
-      "type": "prose",
-      "text": "Write $x_k = \\tanh(W x_{k-1} + W_{\\mathrm{in}}u_k)$ (leak rate 1, no bias for clarity). tanh is 1-Lipschitz, so for two states driven by the same input"
-    },
-    {
-      "type": "math",
-      "tex": "\\Vert x_k - x_k' \\Vert \\le \\Vert W (x_{k-1}-x_{k-1}') \\Vert \\le \\sigma_{\\max}(W)\\,\\Vert x_{k-1}-x_{k-1}'\\Vert"
+      "text": "What you will be able to do"
     },
     {
       "type": "list",
       "items": [
-        "Sufficient: $\\sigma_{\\max}(W) < 1$ (largest singular value). The map is then a contraction for every input, and the gap shrinks at least as $\\sigma_{\\max}^k$. A less strict sufficient condition uses a diagonally scaled norm, $\\inf_D \\sigma_{\\max}(DWD^{-1}) < 1$ over positive diagonal $D$ (Buehner and Young 2006).",
-        "Necessary for the zero input: $\\rho(W) < 1$. If $\\rho(W)>1$ the origin is an unstable fixed point of the undriven network, so with $u \\equiv 0$ several state sequences coexist.",
-        "In practice: $\\rho(W) < 1$ is what everyone uses, although Yildiz, Jaeger and Kiebel (2012) gave explicit examples where it is not sufficient for every input. Because $\\rho(W) \\le \\sigma_{\\max}(W)$ and the gap is often large for non-normal random matrices, the sufficient condition is far too strict; a random $100\\times100$ matrix scaled to $\\rho = 0.8$ has $\\sigma_{\\max} \\approx 1.5$ and still forgets its initial state."
+        "State the echo state property in plain words and in symbols, and say what goes wrong for a reservoir that lacks it.",
+        "Prove that a tanh network with largest singular value below 1 forgets its starting state, and compute how many washout steps that guarantees.",
+        "Explain why the spectral radius and the largest singular value of the same matrix can differ a lot, and which one means what.",
+        "Estimate a conditional Lyapunov exponent for a driven network and read its sign.",
+        "Explain why a closed quantum system cannot be a reservoir and what is needed instead."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why a reservoir must forget"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Imagine you build a reservoir, train a readout on one run, and then use it on a fresh run with a different input. You switch the reservoir on, it starts from whatever state it happens to be in, and you feed it the new input. For the readout to work, the features it sees must depend on the input you gave it. If they also depended strongly on where the reservoir happened to start, the readout would be fed a mixture of the input and an accident of switching on, and no fixed set of weights could undo that."
+    },
+    {
+      "type": "prose",
+      "text": "A concrete case makes the stakes clear. Suppose two copies of the same reservoir are started in different states and fed the identical input sequence. If after a while they are in the same state, the state is a function of the input alone and the readout is well defined. If they stay apart, the same input has produced two different feature sequences, so the readout trained on one copy will disagree with the other. Whether a reservoir has this forgetting property is a yes-or-no question about the reservoir that must be answered before any training makes sense."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "The echo state property says: after enough input, the reservoir's state is determined by the recent input and not by the starting state. The name comes from the picture of the state as an echo of the input history. A good echo of a spoken sentence does not depend on how still the room was before you spoke, as long as you wait a moment. An everyday comparison: a ball rolling in a bowl with friction comes to rest at the bottom whichever way you let it go, so its final position tells you nothing about its release. A ball on a table with two dents has two possible final places, and where it ends depends on the start. A reservoir with the echo state property is a bowl; one without it has several dents. The picture breaks in one important way: the reservoir is driven, so the bowl itself moves with the input. The correct statement is that the moving bowl pulls every starting state along the same path."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The definition"
+    },
+    {
+      "type": "prose",
+      "text": "Let the reservoir be $x_k = F(x_{k-1}, u_k)$ with inputs from a bounded set. It has the echo state property if for every input sequence, any two starting states $x_0$ and $x_0'$ produce state sequences with"
+    },
+    {
+      "type": "math",
+      "tex": "\\Vert x_k - x_k' \\Vert \\to 0 \\quad (k \\to \\infty)",
+      "caption": "$\\Vert\\cdot\\Vert$ is the ordinary length of a list of numbers (the square root of the sum of squares). The same input sequence drives both copies."
+    },
+    {
+      "type": "prose",
+      "text": "Jaeger's original definition is stated for input sequences extending infinitely far into the past: for each such sequence there is exactly one state sequence consistent with the dynamics. The two statements agree for the networks on this shelf, and the second is the one you can test. A stronger, uniform version asks that the gap be bounded by a single sequence $\\delta_k \\to 0$ that works for every input and every starting pair; then the number of washout steps needed can be stated once and for all."
+    },
+    {
+      "type": "prose",
+      "text": "What the property buys: the reservoir defines a filter $u \\mapsto x_k = H(u_k, u_{k-1}, \\dots)$, a rule turning the history of inputs into a state, with no reference to the starting state. The readout learns a function of that filter. Without the property the state also encodes the arbitrary initial condition; two runs of the same input give different features and a readout trained on one fails on the next."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A one-unit example"
+    },
+    {
+      "type": "prose",
+      "text": "Take a single unit $x_k = \\tanh(0.8\\,x_{k-1} + u_k)$ and inputs $0.5, -0.3, 0.9, 0.1, -0.7, 0.4$. Start one copy at $x_0 = 1$ and the other at $x_0' = -1$, a gap of 2. Step 1: $\\tanh(0.8 + 0.5) = 0.8617$ and $\\tanh(-0.8 + 0.5) = -0.2913$, a gap of 1.153. Step 2: $\\tanh(0.8 \\times 0.8617 - 0.3) = 0.3708$ and $\\tanh(0.8 \\times (-0.2913) - 0.3) = -0.4877$, gap 0.8585. Continuing: the gaps are 0.363, 0.202, 0.150, 0.116. They fall at every step, and always at least as fast as the guaranteed $0.8^k \\times 2$ (1.6, 1.28, 1.02, 0.82, 0.66, 0.52), as the next section proves. After six steps the two copies, which started at opposite ends, differ by 0.12 and are still approaching one another."
+    },
+    {
+      "type": "prose",
+      "text": "Now keep the same unit but strengthen the self-connection to 1.5, and switch the input off. Solving $x = \\tanh(1.5x)$ gives three fixed points: $0$, $+0.8586$ and $-0.8586$. Start at $+0.1$ and the state climbs to $+0.8586$; start at $-0.1$ and it goes to $-0.8586$. The final state is a memory of the starting state that never fades, and there is no echo state property. This is the two-dent table. Now drive the same unit with strong input $u_k = \\pm 2$ (random signs). Starting at $+0.9$ and $-0.9$, the gap is 0.43 after one step, 0.35 after two, 0.006 after three and $3\\times10^{-5}$ after four, below $10^{-9}$ after ten. The strong input pushes the unit into the flat part of tanh and both copies are pulled to the same trajectory. The echo state property is a property of the reservoir and the input together."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: two dents",
+      "text": "For $x_k = \\tanh(a\\,x_{k-1})$ with no input, for which $a$ is $x = 0$ the only fixed point? (Hint: look at the slope of tanh at 0.)",
+      "hint": "A fixed point satisfies $x = \\tanh(ax)$; compare the slope $a$ at the origin with the slope 1 of the line $y = x$.",
+      "solution": [
+        "Near zero $\\tanh(ax) \\approx ax$. If $a>1$ the map pushes small values outwards, so $0$ is unstable and the state must settle somewhere else: two new fixed points appear (for $a = 1.5$ they are $\\pm 0.8586$).",
+        "If $a<1$, $|\\tanh(ax)| \\le a|x| < |x|$ for every $x \\ne 0$, so the state shrinks towards 0 and 0 is the only fixed point.",
+        "For $a = 1$ the shrinking is only marginal (it is very slow, like $x^3$), but 0 is still the only fixed point."
+      ],
+      "answer": "$a \\le 1$ (for $a<1$ certainly; at $a=1$ it is marginal)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When can we prove it? Contraction"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "We want a test that can be applied to a reservoir without running it forever. The cleanest is the contraction argument: if every step brings any two states closer, whatever the input, they must converge."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Write the leak-free network without bias as $x_k = \\tanh(Wx_{k-1} + w_{\\mathrm{in}}u_k)$ and take two copies $x_k$ and $x_k'$ driven by the same input. The input part is identical in both and is the same number added to each. Two facts are needed."
+    },
+    {
+      "type": "list",
+      "items": [
+        "tanh does not stretch differences: for any two numbers, $|\\tanh p - \\tanh q| \\le |p - q|$ (its slope is at most 1). It acts entry by entry, so the length of the difference of two lists cannot grow when tanh is applied.",
+        "For a table $W$, the length of $Wd$ is at most $\\sigma_{\\max}(W)$ times the length of $d$, where $\\sigma_{\\max}$ is the largest singular value of $W$: the largest factor by which $W$ can stretch any list in one step."
       ]
     },
     {
       "type": "prose",
-      "text": "The input matters. Manjunath and Jaeger (2013) showed the property is really a property of the system together with its input process: a strong input drives the units into saturation, where $\\tanh' \\ll 1$, and the effective Jacobian $\\mathrm{diag}(1-x_k^2)\\,W$ contracts even when $W$ alone does not. The run below shows both effects:"
+      "text": "Chain them. The difference of the two pre-activations is $(Wx_{k-1} + w_{\\mathrm{in}}u_k) - (Wx_{k-1}' + w_{\\mathrm{in}}u_k) = W(x_{k-1}-x_{k-1}')$, because the input part cancels. Then"
+    },
+    {
+      "type": "math",
+      "tex": "\\Vert x_k - x_k'\\Vert \\le \\Vert W(x_{k-1}-x_{k-1}')\\Vert \\le \\sigma_{\\max}(W)\\,\\Vert x_{k-1}-x_{k-1}'\\Vert",
+      "caption": "First inequality: tanh does not stretch. Second: the definition of $\\sigma_{\\max}$."
+    },
+    {
+      "type": "prose",
+      "text": "Apply this at every step: $\\Vert x_k - x_k'\\Vert \\le \\sigma_{\\max}^{\\,k}\\,\\Vert x_0 - x_0'\\Vert$. If $\\sigma_{\\max}<1$ the right side goes to zero for every input sequence, so the network has the echo state property, and the guarantee is uniform: the gap falls at least as fast as $\\sigma_{\\max}^k$. A slightly weaker sufficient condition scales the coordinates before measuring (a positive diagonal $D$ with $\\sigma_{\\max}(DWD^{-1})<1$, Buehner and Young 2006); it is easier to satisfy but the idea is the same."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: how long a washout?"
+    },
+    {
+      "type": "prose",
+      "text": "A network has $\\sigma_{\\max}(W) = 0.7$ and two starting states differing by $\\Vert x_0 - x_0' \\Vert = 8.23$ (the sample below produces this). How many steps guarantee a gap below $10^{-3}$?"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The bound is $0.7^k \\times 8.23$.",
+        "Step 2. Need $0.7^k \\times 8.23 \\le 10^{-3}$, i.e. $0.7^k \\le 1.215\\times10^{-4}$.",
+        "Step 3. Take logs: $k \\ge \\ln(1.215\\times10^{-4})/\\ln 0.7 = (-9.016)/(-0.3567) = 25.3$, so 26 steps, which is what the sample prints."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# How many washout steps are enough? Distance between two copies, against the guaranteed bound sigma_max^k * gap0.\nr = np.random.default_rng(3)\nN = 100\nW = r.normal(size=(N, N)); W *= 0.7 / np.linalg.norm(W, 2)     # scale so sigma_max = 0.7 (so rho is much smaller)\nprint(\"sigma_max =\", round(np.linalg.norm(W, 2), 3), \" spectral radius =\", round(max(abs(np.linalg.eigvals(W))), 3))\nw_in = r.uniform(-1, 1, N); u = r.uniform(-1, 1, 200)\nx = r.uniform(-1, 1, N); z = r.uniform(-1, 1, N)\ngap0 = np.linalg.norm(x - z)\nfor k in range(1, 41):\n    x = np.tanh(W @ x + w_in * u[k - 1]); z = np.tanh(W @ z + w_in * u[k - 1])\n    if k in (1, 5, 10, 20, 30, 40):\n        print(f\"k={k:2d}  gap = {np.linalg.norm(x - z):.2e}   guaranteed bound = {0.7**k * gap0:.2e}\")\nprint(\"steps needed for 1e-3 under the bound:\", int(np.ceil(np.log(1e-3 / gap0) / np.log(0.7))))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Real output: the 100-unit network (largest singular value 0.7, spectral radius only 0.391) has measured gaps $2.84$ after 1 step, $4.4\\times10^{-2}$ after 5, $2.1\\times10^{-4}$ after 10, $3.5\\times10^{-9}$ after 20 and about $10^{-16}$ (rounding level) after 40. The guaranteed bound is far above the actual gap ($0.23$ against $2.1\\times10^{-4}$ at step 10) because the bound uses the worst case at every step, while the real network contracts at its spectral radius on average and its saturating units shrink differences further. So the guaranteed washout (26 steps) is safe, and the real one is shorter. The rule of thumb: use the bound as the length you can always trust and look at the actual gap to see if you could shorten it."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Confusing the two numbers $\\rho(W)$ and $\\sigma_{\\max}(W)$. The next section shows they can be far apart.",
+        "Treating $\\sigma_{\\max}<1$ as necessary. It is only sufficient: most useful reservoirs break it and still forget.",
+        "Washing out too little: states that still depend on the start poison the training set."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: how many steps?",
+      "text": "A tanh network has $\\sigma_{\\max}(W) = 0.9$. The starting gap is at most 4. How many steps guarantee a gap below $10^{-2}$?",
+      "hint": "Take logarithms; both $\\ln 0.9$ and the log of the target are negative.",
+      "solution": [
+        "Need $0.9^k \\times 4 \\le 10^{-2}$, i.e. $0.9^k \\le 2.5\\times10^{-3}$.",
+        "$k \\ge \\ln(2.5\\times10^{-3})/\\ln 0.9 = (-5.99)/(-0.10536) = 56.9$.",
+        "So 57 steps."
+      ],
+      "answer": "$k \\ge 57$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Spectral radius against largest singular value"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The ESN page told you to set the spectral radius $\\rho(W)$ below 1. The proof above uses a different number, $\\sigma_{\\max}(W)$. Which one is right? Both are, for different jobs, and for the random tables used in reservoirs they differ a lot."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A two-by-two example"
+    },
+    {
+      "type": "prose",
+      "text": "Take $W$ with row 1 equal to $(0, 2)$ and row 2 equal to $(0.1, 0)$. Consider the linear network $x_k = Wx_{k-1} + w u_k$; the difference of two copies obeys $d_k = Wd_{k-1}$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Eigenvalues. $\\lambda^2 - 0.2 = 0$, so $\\lambda = \\pm\\sqrt{0.2} = \\pm 0.447$ and $\\rho(W) = 0.447$.",
+        "Singular values. $W^{\\top}W$ has diagonal entries $0.01$ and $4$, so the singular values are $0.1$ and $2$ and $\\sigma_{\\max} = 2$.",
+        "What the network does. One step can stretch a difference by up to 2 (start with $d = (0,1)$: $Wd = (2, 0)$, length 2). But $W^2 = 0.2\\,I$ (the identity table times 0.2), so after any two steps every difference has shrunk by exactly 0.2. Over long times the gap shrinks by $0.447$ per step on average: the network forgets, even though the sufficient condition ($\\sigma_{\\max}<1$) fails."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# Spectral radius against largest singular value for W = [[0, 2], [0.1, 0]].\nW = np.array([[0.0, 2.0], [0.1, 0.0]])\nprint(\"eigenvalues:\", np.round(np.linalg.eigvals(W), 4), \" spectral radius =\", round(max(abs(np.linalg.eigvals(W))), 4))\nprint(\"singular values:\", np.round(np.linalg.svd(W, compute_uv=False), 4))\nprint(\"W @ W =\\n\", np.round(W @ W, 4))\n# difference of two copies of the LINEAR network x_k = W x_{k-1} (same input cancels)\nfor start in ([1.0, 0.0], [0.0, 1.0]):\n    d = np.array(start)\n    print(\"starting difference\", start)\n    for k in range(1, 7):\n        d = W @ d\n        print(f\"  step {k}: |difference| = {np.linalg.norm(d):.5f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "The real output shows the zigzag: starting from $(1,0)$ the lengths are $0.1, 0.2, 0.02, 0.04, 0.004, 0.008$, never exceeding the start after the first step; starting from $(0,1)$ they are $2, 0.2, 0.4, 0.04, 0.08, 0.008$. Every two steps the length is exactly 0.2 times as large. This is typical of a random table: it can stretch in one step and recover in the next, because stretched directions are not the ones that get stretched again."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What each number guarantees"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\sigma_{\\max}(W)<1$: contraction at every single step for every input. Sufficient for the property; a hard, uniform guarantee.",
+        "$\\rho(W)<1$: the undriven linear network forgets in the long run. It is necessary for the zero input in the following sense: if $\\rho(W)>1$ the origin is unstable, and for an input that stays zero (or near zero) several state sequences coexist, as in the $a = 1.5$ example. It is not sufficient for every input in general (Yildiz, Jaeger and Kiebel 2012 gave explicit counterexamples), but for practical random networks everybody uses it.",
+        "The gap between the two is large for random Gaussian tables. A $100 \\times 100$ table scaled to $\\rho = 0.9$ has $\\sigma_{\\max} = 1.73$ (see the sample on Echo State Networks (#/qrc/foundations/echo-state-networks)), so the sufficient condition would force $\\rho$ below about 0.5 and throw away most of the memory."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The input matters"
+    },
+    {
+      "type": "prose",
+      "text": "Manjunath and Jaeger (2013) showed that the property belongs to the pair (reservoir, input process). A strong input drives units into the flat parts of tanh, where its slope $1 - x^2$ is small. Then the effective one-step stretching is not $W$ but $\\mathrm{diag}(1-x_k^2)\\,W$, the table with row $i$ multiplied by the slope of unit $i$. For the unit with strength $1.5$ at $x \\approx 0.96$ (which tanh reaches for input 2) the slope is $1-\\tanh^2 2 = 0.0707$, so the effective feedback is $1.5 \\times 0.0707 = 0.106$, strongly contracting even though $1.5>1$. This is the effect seen in the one-unit example above. The sample runs 100-unit networks with weak and strong input:"
     },
     {
       "type": "code",
@@ -54,16 +263,63 @@
     },
     {
       "type": "prose",
-      "text": "Output: at $\\rho(W)=0.8$ ($\\sigma_{\\max} = 1.51$) the gap after 200 steps is at rounding level ($10^{-16}$) for either input scale. At $\\rho(W) = 1.1$ a weak input (0.1) leaves a gap of 0.58, but a strong input (2.0) brings it to $10^{-15}$. At $\\rho(W)=1.5$ a strong input still pulls it down to $8\\times 10^{-7}$, slowly."
+      "text": "Real output: at $\\rho = 0.8$ ($\\sigma_{\\max} = 1.51$, so the sufficient condition fails) the gap after 200 steps is at rounding level ($10^{-16}$) for either input scale. At $\\rho = 1.1$ a weak input (0.1) leaves a gap of 0.58 but a strong input (2.0) closes it to $10^{-15}$. At $\\rho = 1.5$ weak input leaves a gap of 6.1, i.e. the copies never agree; strong input still closes it, to $8\\times10^{-7}$, slowly. Practical advice: if a task needs strong inputs, a spectral radius a little above 1 may be fine; if it needs weak inputs, stay below 1."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which number?",
+      "text": "A $100\\times 100$ random network has $\\rho(W) = 0.9$ and $\\sigma_{\\max}(W) = 1.7$. Can you conclude that it has the echo state property from the contraction proof above? What can you say?",
+      "hint": "Which of the two numbers does the proof use?",
+      "solution": [
+        "The proof gives a gap bound $1.7^k$ which grows, so it guarantees nothing.",
+        "$\\rho<1$ means the linearised undriven network forgets, which is the usual working criterion; the check is to run two copies and watch the gap, as in the sample above."
+      ],
+      "answer": "No; the proof needs $\\sigma_{\\max}<1$. In practice it almost certainly forgets, but test it."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Dynamical view: Lyapunov exponents and generalised synchronisation"
+      "text": "The dynamical view: Lyapunov exponents"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "The rate of forgetting is the largest conditional Lyapunov exponent $\\lambda_1 = \\lim_{k\\to\\infty}\\frac{1}{k}\\ln\\Vert J_k J_{k-1}\\cdots J_1 v\\Vert$, with $J_k$ the Jacobian of the driven map along the trajectory. $\\lambda_1<0$ means two copies driven by the same input synchronise: the state becomes a function of the input (generalised synchronisation). The echo state property is this condition holding for the input class of interest. The edge-of-chaos heuristic says performance often peaks for $\\lambda_1$ slightly below 0, where memory is longest; it is a rule of thumb, not a theorem, and fails on tasks that need only recent inputs."
+      "text": "Contraction at every step is too strict, and the spectral radius ignores the input. A better measure is the average rate at which a tiny difference grows or shrinks along the actual trajectory. It is the conditional Lyapunov exponent."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea and the formula"
+    },
+    {
+      "type": "prose",
+      "text": "Start two copies a tiny distance apart. At each step the difference is multiplied approximately by the Jacobian of the step, the table of slopes of the update: for the tanh network it is $J_k = \\mathrm{diag}(1-x_k^2)\\,W$, with the slopes evaluated at the current state. After $n$ steps a tiny difference $v$ becomes $J_n\\cdots J_1 v$. Its average exponential growth rate per step is"
+    },
+    {
+      "type": "math",
+      "tex": "\\lambda_1 = \\lim_{n\\to\\infty} \\frac{1}{n}\\ln \\Vert J_n J_{n-1}\\cdots J_1\\, v\\Vert",
+      "caption": "Averaged over the input sequence. $\\lambda_1<0$: differences shrink, the state becomes a function of the input. $\\lambda_1>0$: differences grow."
+    },
+    {
+      "type": "prose",
+      "text": "The word conditional means the exponent is measured with the input held fixed (conditioned on it). When $\\lambda_1<0$ the two copies synchronise, a phenomenon known as generalised synchronisation: the state becomes a function of the input. The echo state property is this condition for the class of inputs you care about. The product of many tables grows or shrinks exponentially so the number would overflow; the standard trick (Benettin's method) is to renormalise the difference to length one after every step and add up the logs of the stretch factors. The sample does exactly this."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# Largest conditional Lyapunov exponent of a driven tanh network: push a tiny perturbation along the\n# trajectory, measure its growth per step, and renormalise (Benettin's method).\ndef lyap(radius, in_scale, N=100, steps=3000, seed=0):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N)); W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-1, 1, N) * in_scale\n    u = r.uniform(-1, 1, steps)\n    x = r.uniform(-1, 1, N); v = r.normal(size=N); v /= np.linalg.norm(v)\n    total = 0.0\n    for t in range(steps):\n        pre = W @ x + w_in * u[t]\n        x = np.tanh(pre)\n        v = (1 - x**2) * (W @ v)           # Jacobian of the step applied to the perturbation\n        n = np.linalg.norm(v); total += np.log(n); v /= n\n    return total / steps\nfor radius, s in ((0.5, 0.5), (0.9, 0.5), (0.99, 0.1), (1.1, 0.1), (1.5, 0.1), (1.1, 2.0), (1.5, 2.0)):\n    l = lyap(radius, s)\n    print(f\"rho={radius:4.2f} input scale {s:3.1f}: lambda_1 = {l:+.3f} per step\" + (\"   -> contracts, forgets\" if l < 0 else \"   -> does NOT forget\"))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Real output: $\\rho = 0.5$, input scale 0.5: $\\lambda_1 = -0.710$ per step. $\\rho = 0.9$, input 0.5: $-0.149$. $\\rho = 0.99$, input 0.1: $-0.019$. $\\rho = 1.1$, input 0.1: $-0.004$ (barely contracting). $\\rho = 1.5$, input 0.1: $+0.009$, so no forgetting. $\\rho = 1.1$, input 2.0: $-0.249$. $\\rho = 1.5$, input 2.0: $-0.085$. Two lessons. First, a few of the cases with $\\rho>1$ do forget, in line with the previous sample. Second, $\\lambda_1 = -0.004$ means the gap falls only by $e^{-0.004} = 0.996$ per step, so it takes about 250 steps to fall by $e$: contraction with a very long washout, practically close to no forgetting. The sign is not the whole story; the size is the washout."
+    },
+    {
+      "type": "prose",
+      "text": "A well-known heuristic, the edge of chaos, says performance often peaks when $\\lambda_1$ is slightly below zero: memory is longest there. It is a rule of thumb rather than a theorem; it fails on tasks that need only the last few inputs, where a very negative $\\lambda_1$ (quick forgetting) is better."
     },
     {
       "type": "heading",
@@ -71,16 +327,26 @@
       "text": "Fading memory and universality"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "A filter $H$ has fading memory (Boyd and Chua 1985) if it is continuous with respect to a weighted norm $\\Vert u\\Vert_w = \\sup_{j\\ge 0} w_j\\,|u_{-j}|$ with $w_j \\to 0$: inputs far in the past can change the output only a little. Boyd and Chua proved that every time-invariant fading-memory filter on uniformly bounded inputs can be approximated uniformly by a finite Volterra series"
+      "text": "Forgetting is not only a nuisance to be controlled. It is half of what makes a reservoir a useful, learnable device. A precise form of the benefit is the following theorem."
+    },
+    {
+      "type": "prose",
+      "text": "A filter $H$, a rule turning an input history into an output, has fading memory (Boyd and Chua 1985) if inputs far in the past can change the output only a little. Formally it is continuous when inputs are compared with a norm that discounts the distant past, $\\Vert u\\Vert_w = \\sup_{j\\ge0} w_j|u_{-j}|$ with weights $w_j\\to0$. Boyd and Chua proved that every time-invariant fading-memory filter on bounded inputs can be approximated as closely as you like by a Volterra series:"
     },
     {
       "type": "math",
-      "tex": "y_k \\approx h_0 + \\sum_{i} h_1(i)\\,u_{k-i} + \\sum_{i,j} h_2(i,j)\\,u_{k-i}u_{k-j} + \\cdots"
+      "tex": "y_k \\approx h_0 + \\sum_{i} h_1(i)\\,u_{k-i} + \\sum_{i,j} h_2(i,j)\\,u_{k-i}u_{k-j} + \\cdots",
+      "caption": "A constant, plus weighted sums of past inputs, plus weighted sums of products of two past inputs, and so on."
     },
     {
       "type": "prose",
-      "text": "and Grigoryeva and Ortega (2018) proved that echo state networks with linear readouts are universal approximants of such filters. So a reservoir family is universal when it has the echo state property (so it is a fading-memory filter) and is rich enough to approximate the Volterra terms. Quantum reservoirs have been shown universal in this same sense (Chen and Nurdin 2019; Nokkala et al. 2021), as covered in Expressivity and Universality (#/qrc/theory/expressivity-and-universality)."
+      "text": "This is the picture to carry: a filter is a memory profile ($h_1$) plus a table of pair products ($h_2$) plus triple products. Grigoryeva and Ortega (2018) proved that echo state networks with linear readouts are universal approximants of such filters. In words: a reservoir family is universal when it forgets (so that its state is a fading-memory filter) and is rich enough that weighted sums of its features can reproduce all those product terms. What is meant by rich enough is the subject of Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity). Quantum reservoirs have been shown universal in this sense (Chen and Nurdin 2019; Nokkala et al. 2021): see Expressivity and Universality (#/qrc/theory/expressivity-and-universality)."
     },
     {
       "type": "heading",
@@ -89,7 +355,7 @@
     },
     {
       "type": "prose",
-      "text": "The plot drives two copies of the same 30-unit ESN from different random states with the same input and shows $\\log_{10}$ of the distance between them. At radius 0.5 the gap falls by about $10^{-14}$ in 40 steps; at 0.95 by about $10^{-5}$. At 1.2 it still falls (to about $10^{-2.6}$ after 60 steps): the input's saturation restores contraction. At 1.5 the gap stays of order one and the network never forgets. Switch the model to the quantum reservoir to see the same test on a 3-qubit spin reservoir, whose forgetting comes from resetting one qubit at every input; with the defaults its trace distance falls much more slowly, to about $10^{-1.5}$ after 60 steps."
+      "text": "The plot drives two copies of the same 30-unit network from different random states with the same input, and shows the base-10 logarithm of the distance between them (so $-3$ means a distance of 0.001). Note that the plot's weight scale is a Gaussian table with variance $1/N$ times the number you set, so it behaves like a spectral radius."
     },
     {
       "type": "widget",
@@ -161,13 +427,94 @@
       }
     },
     {
+      "type": "prose",
+      "text": "Try this. (1) Set the weight scale to 0.5: the log-distance reaches about $-14.5$ after 40 steps, the copies are identical to rounding error. (2) Set it to 0.95: about $-4.7$ after 40 steps and $-6.8$ after 60: slower, but still forgetting. (3) Set it to 1.2: the gap still falls, to about $-2.6$ after 60 steps; the input's saturation restores contraction. (4) Set it to 1.5: the log-distance stays near 0 (distance of order one): the network never forgets. (5) Switch the model to quantum reservoir (3 qubits, defaults) and compare: its log trace distance falls much more slowly, to about $-1.5$ after 60 steps, because its forgetting comes only from resetting one qubit per input. Set the evolution time to 1 and the fall is slower still."
+    },
+    {
       "type": "heading",
       "level": 2,
-      "text": "The quantum version, in one paragraph"
+      "text": "The quantum version"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "For a quantum reservoir $\\rho_k = \\mathcal{T}_{u_k}(\\rho_{k-1})$ the natural distance is the trace distance $D(\\rho,\\sigma) = \\tfrac12\\Vert\\rho-\\sigma\\Vert_1$, and every CPTP map is non-expansive in it. Unitary evolution preserves it exactly, so a closed quantum system never forgets and can never have the echo state property. Forgetting needs a strictly contractive channel: resetting an input qubit, measuring, or coupling to a bath. The quantum echo state property is then $\\sup_{u} D(\\mathcal{T}_{u_k}\\circ\\cdots\\circ\\mathcal{T}_{u_1}(\\rho), \\mathcal{T}_{u_k}\\circ\\cdots\\circ\\mathcal{T}_{u_1}(\\sigma)) \\to 0$; Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points) gives the tools to check it."
+      "text": "A quantum reservoir has a state that is a density matrix $\\rho_k$, the table describing the state of $n$ qubits when it is partly unknown (see Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels) and Mixed States (#/quantum/many-body/mixed-states)). Each step applies an input-dependent operation $\\mathcal{T}_{u_k}$: $\\rho_k = \\mathcal{T}_{u_k}(\\rho_{k-1})$. The question of forgetting is the same: do two different starting states, driven by the same inputs, end up together?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The ideas"
+    },
+    {
+      "type": "prose",
+      "text": "The natural distance between two density matrices is the trace distance $D(\\rho,\\sigma) = \\tfrac12\\Vert\\rho-\\sigma\\Vert_1$ (half the sum of the absolute values of the eigenvalues of $\\rho-\\sigma$). It is the largest difference in probability that any measurement can show between the two states: $D=0$ means identical, $D=1$ means perfectly distinguishable. Every legal quantum operation (a completely positive trace-preserving map) is non-expansive in it: it can shrink $D$ but never enlarge it. That is the quantum analogue of tanh not stretching."
+    },
+    {
+      "type": "prose",
+      "text": "The first consequence is a negative one. A closed quantum system evolves by a unitary operation, $\\rho \\to U\\rho U^{\\dagger}$, and the trace norm is unitarily invariant: $\\Vert U(\\rho-\\sigma)U^{\\dagger}\\Vert_1 = \\Vert\\rho-\\sigma\\Vert_1$. So two copies of a reservoir that only evolve unitarily keep exactly the same distance for ever: nothing is forgotten, and the echo state property is impossible. Forgetting needs an operation that really shrinks distances: resetting a qubit to a fixed state (this is how the input is written in the Fujii-Nakajima model), measuring, or coupling to a bath. The quantum echo state property is then that the distance between the outcomes tends to zero for any pair of starting states and any input sequence."
+    },
+    {
+      "type": "prose",
+      "text": "The sample shows both effects with two qubits ($H = 0.7\\,X_1X_2 + Z_1 + Z_2$, evolution time 3 between inputs). Two random starting states have trace distance 0.613. Evolving only unitarily, the distance remains 0.6130 for ever. With qubit 1 reset to $\\sqrt{1-s}\\,\\vert0\\rangle + \\sqrt{s}\\,\\vert1\\rangle$ at every step (the input $s$ random in $[0,1]$), the distance drops:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\n# Two-qubit toy reservoir: H = J X1X2 + h (Z1+Z2). Input s: qubit 1 is RESET to sqrt(1-s)|0> + sqrt(s)|1>, then evolve for dt.\n# Compare two different starting states fed the same inputs: unitary only (no reset) against with reset.\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1, -1]).astype(complex); I = np.eye(2, dtype=complex)\nH = 0.7 * np.kron(X, X) + 1.0 * (np.kron(Z, I) + np.kron(I, Z))\ndt = 3.0\nU = expm(-1j * H * dt)\ndef reset(rho, s):\n    # rho on qubits (1,2). Trace out qubit 1 and put the new state there: rho' = |phi><phi| (x) Tr_1 rho\n    r4 = rho.reshape(2, 2, 2, 2)\n    rho2 = np.einsum('ijik->jk', r4)\n    phi = np.array([np.sqrt(1 - s), np.sqrt(s)], complex)\n    return np.kron(np.outer(phi, phi.conj()), rho2)\ndef trace_distance(a, b): return 0.5 * np.abs(np.linalg.eigvalsh(a - b)).sum()\ndef random_state(seed):\n    g = np.random.default_rng(seed).normal(size=(4, 4)) + 1j * np.random.default_rng(seed + 100).normal(size=(4, 4))\n    r = g @ g.conj().T; return r / np.trace(r)\nrho_a, rho_b = random_state(1), random_state(2)\nra, rb = rho_a.copy(), rho_b.copy()\nua, ub = rho_a.copy(), rho_b.copy()\ninputs = np.random.default_rng(5).uniform(0, 1, 40)\nprint(\"step  unitary-only distance   with-reset distance\")\nprint(f\"   0  {trace_distance(ua, ub):.4f}                  {trace_distance(ra, rb):.4f}\")\nfor k, s in enumerate(inputs, start=1):\n    ua, ub = U @ ua @ U.conj().T, U @ ub @ U.conj().T                        # no input written, no reset\n    ra, rb = reset(ra, s), reset(rb, s)\n    ra, rb = U @ ra @ U.conj().T, U @ rb @ U.conj().T\n    if k in (1, 2, 3, 5, 10, 20, 40):\n        print(f\"{k:4d}  {trace_distance(ua, ub):.4f}                  {trace_distance(ra, rb):.2e}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Real output: with the reset the distance is $0.296$ after 1 step, $0.163$ after 2, $0.0676$ after 3, $0.0271$ after 5, $2.8\\times10^{-3}$ after 10, $7\\times10^{-5}$ after 20 and $4\\times10^{-8}$ after 40. The reset throws away qubit 1 at every step and only qubit 2 carries a memory of the start, which the coupling dilutes; the dilution rate depends on the Hamiltonian, which is why the field and evolution time matter on Dynamical Regimes (#/qrc/models/dynamical-regimes). The tools for proving such contraction are on Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: why unitary fails",
+      "text": "In the sample, would a stronger coupling $J$ in the Hamiltonian make the unitary-only copies converge?",
+      "hint": "Does the invariance argument depend on what $H$ is?",
+      "solution": [
+        "The evolution is $U = e^{-iHt}$ whatever $H$ is, and the trace norm is invariant under $U$.",
+        "So the distance stays at its initial value; only a reset, a measurement or an environment can change it."
+      ],
+      "answer": "No: any Hamiltonian gives a unitary, which keeps the distance constant."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "You are given a 100-unit tanh network with a Gaussian random table scaled to $\\rho = 1.05$ and need to decide whether to use it on an input that varies between $-0.1$ and $0.1$, and then on one that varies between $-2$ and $2$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Estimate $\\sigma_{\\max}$: for such random tables it is about $1.9\\rho \\approx 2$, so the sufficient contraction condition certainly fails. No proof is available.",
+        "Step 2. Run the Lyapunov sample with $\\rho = 1.05$ for both input scales. From the table above for $\\rho = 1.1$: weak input gives $\\lambda_1 \\approx -0.004$ to $-0.02$ (marginal), strong input gives about $-0.25$. Expect forgetting times of 50 to 250 steps for the weak input, about 4 steps for the strong one.",
+        "Step 3. Run two copies from different states for 500 steps (as in the gap sample) with the real input. For the weak input, decide the washout from where the gap reaches $10^{-6}$; for the strong input a washout of 20 is plenty.",
+        "Step 4. If the weak-input gap does not close, lower $\\rho$ to 0.9: the same run then closes in tens of steps."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The echo state property: two copies of the reservoir, started differently and fed the same input, converge. It is a property of the reservoir together with its input, and it is what makes the state a function of the input history.",
+        "A tanh network with $\\sigma_{\\max}(W)<1$ contracts at every step by at least $\\sigma_{\\max}$ and has the property for every input; the washout needed to reach gap $\\epsilon$ is $\\ln(\\epsilon/\\text{gap}_0)/\\ln\\sigma_{\\max}$.",
+        "$\\rho(W)<1$ is the working criterion and is necessary for zero input; $\\rho(W)\\le\\sigma_{\\max}(W)$ and the gap between them is large for random tables.",
+        "Strong input saturates tanh and adds contraction, so a network with $\\rho>1$ can still forget. Weak input leaves the network at its undriven behaviour.",
+        "The conditional Lyapunov exponent $\\lambda_1$ measures the average contraction along the real trajectory: negative means forgetting, and $|\\lambda_1|$ sets the washout length.",
+        "Fading memory plus richness gives universality: such filters are Volterra series, and echo state networks approximate all of them.",
+        "A unitary quantum system conserves trace distance and can never forget; quantum reservoirs need a reset, a measurement or an environment."
+      ]
     },
     {
       "type": "heading",
@@ -179,20 +526,20 @@
       "title": "Spectral radius against norm",
       "text": "Take $W$ with rows $(0, 2)$ and $(0.1, 0)$. Find $\\rho(W)$ and $\\sigma_{\\max}(W)$. Does a linear network $x_k = Wx_{k-1}+w u_k$ forget its initial state, and how fast?",
       "solution": [
-        "The characteristic polynomial is $\\lambda^2 - 0.2$, so $\\lambda = \\pm\\sqrt{0.2}$ and $\\rho(W) \\approx 0.447$.",
-        "$W^\\top W$ is diagonal with entries $0.01$ and $4$, so the singular values are 2 and 0.1: $\\sigma_{\\max} = 2$.",
-        "One step can stretch a difference by 2, but $W^2 = 0.2\\,I$, so every two steps the gap shrinks by exactly 0.2. The gap decays like $0.447^k$ on average: the network forgets, although the sufficient condition fails."
+        "The characteristic polynomial is $\\lambda^2 - 0.2$, so $\\lambda = \\pm\\sqrt{0.2}$ and $\\rho(W) = 0.447$.",
+        "$W^{\\top}W$ is diagonal with entries $0.01$ and $4$, so the singular values are $0.1$ and $2$: $\\sigma_{\\max} = 2$.",
+        "One step can stretch a difference by 2, but $W^2 = 0.2\\,I$, so every two steps the gap shrinks by exactly 0.2. It forgets, at about $0.447$ per step on average, although the sufficient condition fails."
       ],
-      "answer": "$\\rho \\approx 0.447$, $\\sigma_{\\max} = 2$; it forgets, by a factor 0.2 every two steps"
+      "answer": "$\\rho = 0.447$, $\\sigma_{\\max} = 2$; it forgets, by a factor 0.2 every two steps"
     },
     {
       "type": "problem",
       "title": "How long a washout?",
-      "text": "A tanh ESN has $\\sigma_{\\max}(W) = 0.8$ and the initial state gap is at most $\\Vert x_0 - x_0'\\Vert = 10$. How many washout steps guarantee the gap is below $10^{-3}$?",
+      "text": "A tanh network has $\\sigma_{\\max}(W) = 0.8$ and the starting gap is at most $\\Vert x_0 - x_0'\\Vert = 10$. How many washout steps guarantee the gap is below $10^{-3}$?",
       "hint": "Take logs of $0.8^k \\le 10^{-4}$.",
       "solution": [
-        "The Lipschitz bound gives $\\Vert x_k - x_k'\\Vert \\le 0.8^k \\times 10$.",
-        "Need $0.8^k \\le 10^{-4}$: $k \\ge 4/\\log_{10}(1/0.8) = 4/0.0969 \\approx 41.3$.",
+        "The bound is $\\Vert x_k - x_k'\\Vert \\le 0.8^k \\times 10$.",
+        "Need $0.8^k \\le 10^{-4}$: $k \\ge 4/\\log_{10}(1/0.8) = 4/0.09691 = 41.3$.",
         "So 42 steps suffice; in practice the gap closes faster because saturation shrinks the Jacobian."
       ],
       "answer": "42 steps"
@@ -200,13 +547,39 @@
     {
       "type": "problem",
       "title": "Why a unitary reservoir fails",
-      "text": "A quantum reservoir applies only input-dependent unitaries: $\\rho_k = U(u_k)\\rho_{k-1}U(u_k)^\\dagger$. Show that it cannot have the echo state property.",
+      "text": "A quantum reservoir applies only input-dependent unitaries: $\\rho_k = U(u_k)\\rho_{k-1}U(u_k)^{\\dagger}$. Show that it cannot have the echo state property.",
       "solution": [
-        "The trace norm is unitarily invariant: $\\Vert U(\\rho-\\sigma)U^\\dagger\\Vert_1 = \\Vert\\rho-\\sigma\\Vert_1$.",
+        "The trace norm is unitarily invariant: $\\Vert U(\\rho-\\sigma)U^{\\dagger}\\Vert_1 = \\Vert\\rho-\\sigma\\Vert_1$.",
         "So $D(\\rho_k,\\sigma_k) = D(\\rho_0,\\sigma_0)$ for every $k$ and every input sequence: two different starts never converge.",
-        "Any input-driven reservoir needs a non-unitary (strictly contractive) part."
+        "Any input-driven reservoir needs a non-unitary, strictly contractive part."
       ],
-      "answer": "trace distance is conserved, so nothing is forgotten"
+      "answer": "the trace distance is conserved, so nothing is forgotten"
+    },
+    {
+      "type": "problem",
+      "title": "Reading a Lyapunov exponent",
+      "text": "A driven network has $\\lambda_1 = -0.05$ per step. After how many steps does a small difference fall by a factor $10^{6}$?",
+      "hint": "Take the natural logarithm of $10^{-6}$.",
+      "solution": [
+        "A difference scales like $e^{\\lambda_1 k} = e^{-0.05k}$.",
+        "Need $e^{-0.05k} = 10^{-6}$, so $k = 6\\ln 10/0.05 = 13.8155/0.05 = 276$ steps.",
+        "So a washout of about 280 steps."
+      ],
+      "answer": "about 276 steps"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The washout rule is applied when you evaluate any reservoir, on Training, Testing and Measuring Error (#/qrc/start/training-and-testing) and Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks).",
+        "The memory capacity bound on Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity) assumes the property holds.",
+        "The quantum tools for contraction, including how to prove it for a given channel, are on Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points).",
+        "How dissipation controls the forgetting rate in spin reservoirs is on Dissipation as a Resource (#/qrc/models/dissipation-as-resource)."
+      ]
     },
     {
       "type": "heading",
@@ -216,7 +589,7 @@
     {
       "type": "list",
       "items": [
-        "H. Jaeger, The \"echo state\" approach to analysing and training recurrent neural networks, GMD Report 148, German National Research Center for Information Technology (2001)",
+        "H. Jaeger, The \\\"echo state\\\" approach to analysing and training recurrent neural networks, GMD Report 148, German National Research Center for Information Technology (2001)",
         "M. Buehner and P. Young, A tighter bound for the echo state property, IEEE Transactions on Neural Networks 17, 820 (2006)",
         "I. B. Yildiz, H. Jaeger and S. J. Kiebel, Re-visiting the echo state property, Neural Networks 35, 1 (2012)",
         "G. Manjunath and H. Jaeger, Echo state property linked to an input: exploring a fundamental characteristic of recurrent neural networks, Neural Computation 25, 671 (2013)",

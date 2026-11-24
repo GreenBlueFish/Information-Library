@@ -1,21 +1,83 @@
 {
   "title": "Benchmark Tasks and Evaluation",
-  "intro": "Reservoir papers, classical and quantum, report the same handful of tasks: short-term memory, NARMA, parity, Mackey-Glass and similar chaotic series, and channel equalisation. Knowing what each task demands, how to evaluate it fairly and which simple baseline it must beat is what lets you read a quantum reservoir result critically.",
+  "intro": "Reservoir papers, classical and quantum, report the same handful of tasks: short-term memory, NARMA, parity, Mackey-Glass and similar chaotic series, and channel equalisation. This lesson shows how to evaluate fairly, what each task demands, how to read the scores, and which simple baselines a quantum reservoir result must beat.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "Evaluation protocol"
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "Read Time Series and Prediction (#/qrc/start/time-series-and-prediction) and Training, Testing and Measuring Error (#/qrc/start/training-and-testing) from Getting Started (#/qrc/start) for time series, NMSE and the train, validation and test split. Then Echo State Networks (#/qrc/foundations/echo-state-networks) (the reservoir used in the samples), and, for the capacity vocabulary, Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
     },
     {
       "type": "list",
       "items": [
-        "One input stream, split in time: washout (discarded), training, optional validation, test. Never shuffle: the state at step $k$ depends on all earlier inputs.",
-        "Washout long enough for the initial state to be forgotten (several memory timescales; see the washout problem in The Echo State Property (#/qrc/foundations/echo-state-property)).",
-        "Hyperparameters (spectral radius, input scaling, $\\lambda$; for quantum: field, evolution time, number of virtual nodes) chosen on validation data, never on the test window.",
-        "Several random reservoirs (seeds) and several input streams; report the mean and spread. Single-seed differences of 10 to 20 percent in NMSE are common noise.",
-        "For physical and quantum reservoirs, state the measurement budget: shots per expectation value and whether the reported features are exact (simulated) or estimated."
+        "Set up a fair evaluation of a reservoir: the time split, washout, validation, several seeds, and the measurement budget.",
+        "Convert between NMSE, NRMSE and other reported scores, and spot a normalisation that flatters a result.",
+        "State, compute and explain the standard tasks: short-term memory, NARMA2 and NARMA10, parity, Mackey-Glass, channel equalisation.",
+        "Build the ladder of baselines a reservoir result must climb, and say what each rung rules out.",
+        "Read a quantum reservoir paper's headline number critically."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why benchmarks, and why they can mislead"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir has no single measure of quality. It is good or bad at a task. A research community that wants to compare methods therefore agrees on a small set of tasks, each chosen to demand one or two particular abilities, and everybody reports scores on the same few. The risk is that the number printed at the end of a paper hides how it was obtained: how much data, which baseline, how many random draws, how many measurements. The first half of this page is the evaluation protocol that makes a number trustworthy. The second half introduces the tasks, so that you can say what each one is testing."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The evaluation protocol"
+    },
+    {
+      "type": "list",
+      "items": [
+        "One input stream, split in time: washout (discarded), training, optional validation, test. Never shuffle: the state at step $k$ depends on all earlier inputs, and shuffling would leave test steps whose neighbours were in training, so the test score would be inflated.",
+        "A washout long enough for the initial state to be forgotten: several memory timescales. How to compute it is on The Echo State Property (#/qrc/foundations/echo-state-property), where a network with $\\sigma_{\\max}=0.7$ needed 26 steps to be sure of a $10^{-3}$ gap.",
+        "Hyperparameters (spectral radius, input scaling, ridge penalty $\\lambda$; for a quantum reservoir the field, the evolution time and the number of virtual nodes) chosen on validation data, never on the test window.",
+        "Several random reservoirs (seeds) and several input streams, reporting the mean and the spread.",
+        "For physical and quantum reservoirs, the measurement budget stated: shots per expectation value, and whether the reported features are exact (simulated) or estimated."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Why several seeds? The sample below runs the same 50-unit design on the same NARMA10 data with ten different random reservoirs:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# Seed-to-seed spread: the same ESN design (50 units) on the same NARMA10 data, 10 different random reservoirs.\ndef narma10(u):\n    y = np.zeros_like(u)\n    for t in range(9, len(u) - 1):\n        y[t + 1] = 0.3 * y[t] + 0.05 * y[t] * y[t - 9:t + 1].sum() + 1.5 * u[t - 9] * u[t] + 0.1\n    return y\ndef esn(u, N, seed, radius=0.9, in_scale=0.5):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N)); W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-in_scale, in_scale, N); x = np.zeros(N); X = np.zeros((len(u), N))\n    for t, ut in enumerate(u): x = np.tanh(W @ x + w_in * ut); X[t] = x\n    return X\ndef nmse(F, y, wash=200, ntr=3000, lam=1e-8):\n    A = np.hstack([F, np.ones((len(F), 1))])\n    w = np.linalg.solve(A[wash:ntr].T @ A[wash:ntr] + lam * np.eye(A.shape[1]), A[wash:ntr].T @ y[wash:ntr])\n    return np.mean((A[ntr:] @ w - y[ntr:]) ** 2) / np.var(y[ntr:])\nu = np.random.default_rng(0).uniform(0, 0.5, 4000); y = narma10(u)\nscores = np.array([nmse(esn(u, 50, s), y) for s in range(10)])\nprint(\"NMSE over 10 reservoir seeds:\", np.round(scores, 3))\nprint(f\"mean {scores.mean():.3f}, std {scores.std():.3f}, min {scores.min():.3f}, max {scores.max():.3f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Real output: the ten NMSE values run from 0.144 to 0.195, mean 0.164, standard deviation 0.016. A single draw can therefore be 12 percent better or 19 percent worse than the mean. A claim that one method beats another by 10 percent, from one seed each, is no claim at all: single-seed differences of 10 to 20 percent in NMSE are common noise."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: is it a win?",
+      "text": "Method A scores NMSE 0.15 and method B scores 0.17 on NARMA10, one reservoir draw each, using the ten-seed spread above (standard deviation about 0.016). Can you say A is better?",
+      "hint": "Compare the difference between the scores with the seed-to-seed spread.",
+      "solution": [
+        "The difference is $0.02$, only a little more than one standard deviation of the seed-to-seed spread (0.016).",
+        "Two draws of the same design can differ by that much. You would need many draws of each, then compare the means, taking into account the spread."
+      ],
+      "answer": "Not from this evidence."
     },
     {
       "type": "heading",
@@ -23,12 +85,60 @@
       "text": "Metrics"
     },
     {
-      "type": "math",
-      "tex": "\\mathrm{NMSE} = \\frac{\\langle(\\hat y_k - y_k)^2\\rangle}{\\operatorname{var}(y_k)}, \\qquad \\mathrm{NRMSE} = \\sqrt{\\mathrm{NMSE}}"
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "NMSE = 1 is what predicting the mean achieves, so anything near 1 has learned nothing. Some papers normalise by $\\langle y^2\\rangle$ instead of the variance, which makes results look better when the target has a large mean; check which. Classification tasks report accuracy or symbol error rate; capacity tasks report $\\mathrm{MC}$ or $C[z]$ (Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)). For autonomous forecasting of chaotic systems, report the valid time: how long the free-running prediction stays within a tolerance, in units of the Lyapunov time."
+      "text": "The same predictions can be scored in several ways, and the numbers look very different. You must know which one a paper reports."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "NMSE and friends"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{NMSE} = \\frac{\\langle(\\hat y_k - y_k)^2\\rangle}{\\operatorname{var}(y_k)}, \\qquad \\mathrm{NRMSE} = \\sqrt{\\mathrm{NMSE}}",
+      "caption": "The average squared error divided by the variance of the target (computed on the test window). The square root brings it back to the units of the target as a fraction of its spread."
+    },
+    {
+      "type": "prose",
+      "text": "NMSE = 1 is what predicting the average achieves, so anything near 1 has learned nothing; see Training, Testing and Measuring Error (#/qrc/start/training-and-testing). Some papers normalise by the mean square $\\langle y^2\\rangle$ rather than the variance. That makes results look far better whenever the target has a large mean, since $\\langle y^2\\rangle = \\mathrm{var}(y) + \\text{mean}^2$. The sample scores the same predictions four ways, for a target with mean 5 and spread 0.2:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# The same predictions scored four ways: NMSE (by variance), NMSE (by mean square), NRMSE, and correlation r^2.\nrng = np.random.default_rng(1)\ny = 5.0 + 0.2 * rng.normal(size=1000)            # a target with a large mean and a small spread\npred = y + 0.1 * rng.normal(size=1000)           # an honest but imperfect predictor\nmse = np.mean((pred - y) ** 2)\nprint(f\"MSE = {mse:.4f}\")\nprint(f\"NMSE (divide by variance)      = {mse / np.var(y):.3f}\")\nprint(f\"NMSE (divide by mean of y^2)   = {mse / np.mean(y ** 2):.5f}   <- looks wonderful\")\nprint(f\"NRMSE                          = {np.sqrt(mse / np.var(y)):.3f}\")\nprint(f\"squared correlation r^2        = {np.corrcoef(pred, y)[0, 1] ** 2:.3f}\")\n# a readout that is right up to scale and offset: NMSE hurts, r^2 forgives\npred2 = 0.5 * y + 3.0\nprint(f\"scaled and shifted copy: NMSE = {np.mean((pred2 - y) ** 2) / np.var(y):.3f}, r^2 = {np.corrcoef(pred2, y)[0, 1] ** 2:.3f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Real output: MSE 0.0105. NMSE by the variance 0.270 (NRMSE 0.520, an honest middling result); NMSE by the mean square 0.00042 (looks wonderful, and means almost nothing); squared correlation $r^2 = 0.795$. The last line shows the other direction: a copy that is right up to scale and offset ($0.5y + 3$) has NMSE 6.816 yet $r^2 = 1.000$. NMSE punishes a wrong scale; $r^2$ forgives it. That is why $r^2$ is the right score for memory capacity (a readout can always fix scale and offset) and NMSE for prediction."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Other scores"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Classification tasks report accuracy or symbol error rate.",
+        "Capacity tasks report $\\mathrm{MC}$ or $C[z]$ (Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)).",
+        "Autonomous forecasting of chaotic systems, where the trained network runs on its own, reports the valid time: how long the free-running prediction stays within a stated tolerance of the truth, usually in units of the Lyapunov time (the time for small differences to grow by a factor $e$). The count is meaningful because errors in a chaotic system grow exponentially no matter how good the model is."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: converting",
+      "text": "One paper reports NRMSE 0.15 on NARMA10, another NMSE 0.03. Which is better, if both normalise by the variance?",
+      "hint": "Square the NRMSE to compare like with like.",
+      "solution": [
+        "NMSE = NRMSE$^2$, so NRMSE 0.15 is NMSE $0.15^2 = 0.0225$.",
+        "$0.0225<0.03$, so the first paper's result is better. (Equivalently the second paper's NRMSE is $\\sqrt{0.03} = 0.173$.)"
+      ],
+      "answer": "The first: NMSE 0.0225 against 0.03."
     },
     {
       "type": "heading",
@@ -42,7 +152,7 @@
     },
     {
       "type": "prose",
-      "text": "Target $y_k = u_{k-d}$ for each delay $d$; the summed score is MC. It tests memory only. The quantum version is the default plot on the The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) page."
+      "text": "The target is $y_k = u_{k-d}$ for each delay $d$, scored by $r^2$ and summed to MC. The input is random, so only memory counts: no pattern, no nonlinearity. Its meaning, its bound and its measured behaviour are on Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity). The quantum version is the default plot on The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)."
     },
     {
       "type": "heading",
@@ -51,24 +161,37 @@
     },
     {
       "type": "prose",
-      "text": "Nonlinear autoregressive moving-average targets, introduced for recurrent-network training by Atiya and Parlos (2000). The order-$n$ form commonly used with input $u_k \\sim U[0, 0.5]$ is"
+      "text": "NARMA stands for nonlinear autoregressive moving average. A NARMA target is generated by a rule in which each new value depends on the target's own past values (the autoregressive part) and on past inputs (the moving-average part), in a nonlinear way. It was introduced for the training of recurrent networks by Atiya and Parlos (2000). The order-$n$ form commonly used, with input $u_k$ drawn uniformly from $[0,0.5]$, is"
     },
     {
       "type": "math",
       "tex": "y_{k+1} = 0.3\\,y_k + 0.05\\,y_k \\sum_{i=0}^{n-1} y_{k-i} + 1.5\\,u_{k-n+1}u_k + 0.1",
-      "caption": "NARMA10 is n = 10. Higher orders sometimes use smaller coefficients to stay bounded, and NARMA10 itself very occasionally diverges for some input draws."
+      "caption": "NARMA10 is $n = 10$. Higher orders sometimes use smaller coefficients to stay bounded, and NARMA10 itself very occasionally diverges for some input draws."
     },
     {
       "type": "prose",
-      "text": "and the second-order version used on many QRC pages is"
+      "text": "Read it term by term. $0.3\\,y_k$: the target decays towards zero. $0.05\\,y_k\\sum y$: a nonlinear feedback that couples the present to the last ten target values (this is the autoregressive memory, and it makes the real memory of the task much longer than ten steps). $1.5\\,u_{k-n+1}u_k$: a product of the current input and the input $n-1$ steps ago (needs memory and nonlinearity at once). $0.1$: a constant offset. The second-order version used on many quantum pages is"
     },
     {
       "type": "math",
-      "tex": "y_k = 0.4\\,y_{k-1} + 0.4\\,y_{k-1}y_{k-2} + 0.6\\,u_{k-1}^3 + 0.1"
+      "tex": "y_k = 0.4\\,y_{k-1} + 0.4\\,y_{k-1}y_{k-2} + 0.6\\,u_{k-1}^3 + 0.1",
+      "caption": "NARMA2: depends on two past outputs and a cubed input."
     },
     {
       "type": "prose",
-      "text": "NARMA needs memory of length $n$ and products of inputs and outputs. Fujii and Nakajima (2017) benchmarked their quantum reservoirs on NARMA tasks of several orders, and most QRC papers since report at least one. Reference points from this shelf's samples: a 50-unit ESN reaches NARMA10 NMSE 0.154 and a 200-unit ESN 0.081, against 0.680 for linear regression on ten lags."
+      "text": "Worked example, NARMA2 with $y_0 = y_1 = 0$ and inputs $u_1 = 0.5$, $u_2 = 0.1$, $u_3 = 0.4$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $y_2 = 0.4\\times0 + 0.4\\times0\\times0 + 0.6\\times0.5^3 + 0.1 = 0.075 + 0.1 = 0.175$.",
+        "Step 2. $y_3 = 0.4\\times0.175 + 0.4\\times0.175\\times0 + 0.6\\times0.1^3 + 0.1 = 0.07 + 0 + 0.0006 + 0.1 = 0.1706$.",
+        "Step 3. $y_4 = 0.4\\times0.1706 + 0.4\\times0.1706\\times0.175 + 0.6\\times0.4^3 + 0.1 = 0.06824 + 0.01194 + 0.0384 + 0.1 = 0.21858$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Fujii and Nakajima (2017) benchmarked their quantum reservoirs on NARMA tasks of several orders, and most quantum papers since report at least one. The ladder sample on the baselines section below gives reference scores for both tasks."
     },
     {
       "type": "heading",
@@ -77,7 +200,11 @@
     },
     {
       "type": "prose",
-      "text": "For random bits $b_k$, target $y_k = b_k \\oplus b_{k-1} \\oplus \\cdots \\oplus b_{k-n+1}$. In $\\pm1$ coding, $n$-bit parity is the product $\\prod_i u_{k-i}$, a degree-$n$ term: it isolates nonlinear memory. It also exposes symmetry: a tanh ESN with no bias produces only odd functions of the inputs, so it solves 1- and 3-bit parity (odd degree) and fails 2- and 4-bit parity completely."
+      "text": "For random bits $b_k$, the target is $y_k = b_k \\oplus b_{k-1}\\oplus\\cdots\\oplus b_{k-n+1}$: 1 if the number of ones among the last $n$ bits is odd. Coding bit 1 as $+1$ and bit 0 as $-1$ ($u = 2b-1$), $n$-bit parity is $y = \\tfrac12\\left(1 - (-1)^n\\prod_{i=0}^{n-1}u_{k-i}\\right)$: a degree-$n$ product, so the task isolates nonlinear memory of high degree (the capacity of degree $n$ in Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)). Check $n=2$ with bits $(1,0)$: $u = (+1,-1)$, product $-1$, $y = \\tfrac12(1 - (+1)(-1)) = 1$, correct since exactly one bit is 1."
+    },
+    {
+      "type": "prose",
+      "text": "Parity also exposes symmetry. A tanh network with no bias produces only odd functions of the inputs (see Echo State Networks (#/qrc/foundations/echo-state-networks)), so it can learn the parity of an odd number of bits (the product is odd) and none of the even ones. The last sample on this page shows exactly this: accuracy 1.000, 0.497, 1.000, 0.499 for 1 to 4 bits without bias, and 1.000 for all four with bias 0.5."
     },
     {
       "type": "heading",
@@ -87,11 +214,11 @@
     {
       "type": "math",
       "tex": "\\frac{dx}{dt} = \\beta\\frac{x(t-\\tau)}{1+x(t-\\tau)^{p}} - \\gamma x(t), \\qquad \\beta = 0.2,\\ \\gamma = 0.1,\\ p = 10,\\ \\tau = 17",
-      "caption": "Mackey and Glass (1977). With τ = 17 the attractor is chaotic."
+      "caption": "Mackey and Glass (1977). The right side depends on the value $\\tau$ time units ago: a delay differential equation. With $\\tau = 17$ the attractor is chaotic."
     },
     {
       "type": "prose",
-      "text": "Typical tasks: predict $x(t+h)$ from the past (open loop), or close the loop and generate. One step at unit sampling is nearly trivial (the series is smooth); difficulty grows with the horizon. The Lorenz system, the Santa Fe laser data and the Kuramoto-Sivashinsky equation (Pathak et al. 2018) are the other standard chaotic tests."
+      "text": "The equation was proposed as a model of blood-cell production, where the response to a shortage is delayed. Typical tasks: predict $x(t+h)$ from the past (open loop, each prediction uses the true past), or close the loop and generate (closed loop, see the generation sample on Echo State Networks (#/qrc/foundations/echo-state-networks)). One step ahead at unit sampling is nearly trivial, because the series is smooth; the difficulty grows with the horizon $h$. The Lorenz system, the Santa Fe laser data and the Kuramoto-Sivashinsky equation (Pathak et al. 2018) are the other standard chaotic tests."
     },
     {
       "type": "heading",
@@ -100,12 +227,16 @@
     },
     {
       "type": "prose",
-      "text": "Recover transmitted symbols from a signal distorted by a nonlinear channel with memory and noise; reported as symbol error rate against signal-to-noise ratio. Jaeger and Haas (2004) showed an ESN improving the symbol error rate of a nonlinear channel equaliser by about two orders of magnitude over earlier methods, which put reservoir computing on the map."
+      "text": "A signal sent through a communication channel is distorted: neighbouring symbols smear into each other (memory) and the channel's response may be nonlinear, with noise on top. The task is to recover the transmitted symbols from the received signal, reported as symbol error rate against signal-to-noise ratio. Jaeger and Haas (2004) showed an echo state network improving the symbol error rate of a nonlinear channel equaliser by about two orders of magnitude over earlier methods. That result is what put reservoir computing on the map."
     },
     {
       "type": "heading",
-      "level": 2,
+      "level": 3,
       "text": "All of them in one run"
+    },
+    {
+      "type": "prose",
+      "text": "The sample generates the Mackey-Glass series (Euler steps), trains an ESN to predict it 1, 20 and 50 steps ahead, and tests delayed parity with and without bias:"
     },
     {
       "type": "code",
@@ -114,25 +245,126 @@
     },
     {
       "type": "prose",
-      "text": "Output: Mackey-Glass NRMSE 0.0003 at 1 step ahead, 0.0141 at 20 and 0.0867 at 50. Without bias, parity accuracy is 1.000, 0.497, 1.000 and 0.499 for 1 to 4 bits; with bias 0.5 all four reach 1.000."
+      "text": "Real output: Mackey-Glass NRMSE 0.0003 at 1 step ahead, 0.0141 at 20 and 0.0867 at 50: a 300-fold growth of error with horizon. Parity accuracy without bias is 1.000, 0.497, 1.000 and 0.499 for 1 to 4 bits; with bias 0.5 all four are 1.000."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which task for which ability?",
+      "text": "You suspect a reservoir has plenty of memory but weak nonlinearity. Which tasks of this page would expose this, and which would not?",
+      "hint": "Which tasks can a purely linear reservoir solve?",
+      "solution": [
+        "A pure memory task (delay recall) is solved by a linear network, so it cannot reveal missing nonlinearity.",
+        "Parity of $n\\ge2$ bits needs a degree-$n$ product, and NARMA needs products of inputs and outputs: a linear reservoir fails both even if its memory is perfect."
+      ],
+      "answer": "Parity and NARMA expose it; short-term memory would not."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Baselines a quantum result should beat"
+      "text": "The baselines to beat"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A score is only informative next to the score of something simple. NMSE 0.08 on NARMA10 sounds impressive until you find that a 25-unit software network gets 0.44 and a linear fit gets 0.68; or sounds poor until you find that every method scores worse. The ladder below lists the rungs, from the cheapest, with what climbing each one shows."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The ladder, measured"
+    },
+    {
+      "type": "prose",
+      "text": "The sample computes the ladder for both NARMA tasks on the same data: the training mean, linear regression on the last $L$ inputs, a quadratic fit (all pair products of those lags, in the spirit of next-generation reservoir computing, Gauthier et al. 2021), and echo state networks of 25, 50 and 200 units."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom itertools import combinations_with_replacement\n# NARMA10 and NARMA2: the baseline ladder (mean, linear lags, quadratic lags, ESNs of two sizes).\ndef narma10(u):\n    y = np.zeros_like(u)\n    for t in range(9, len(u) - 1):\n        y[t + 1] = 0.3 * y[t] + 0.05 * y[t] * y[t - 9:t + 1].sum() + 1.5 * u[t - 9] * u[t] + 0.1\n    return y\ndef narma2(u):\n    y = np.zeros_like(u)\n    for t in range(2, len(u)):\n        y[t] = 0.4 * y[t - 1] + 0.4 * y[t - 1] * y[t - 2] + 0.6 * u[t - 1] ** 3 + 0.1\n    return y\ndef esn(u, N, seed=1, radius=0.9, in_scale=0.5):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N)); W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-in_scale, in_scale, N); x = np.zeros(N); X = np.zeros((len(u), N))\n    for t, ut in enumerate(u): x = np.tanh(W @ x + w_in * ut); X[t] = x\n    return X\ndef nmse(F, y, wash=200, ntr=3000, lam=1e-8):\n    A = np.hstack([F, np.ones((len(F), 1))])\n    w = np.linalg.solve(A[wash:ntr].T @ A[wash:ntr] + lam * np.eye(A.shape[1]), A[wash:ntr].T @ y[wash:ntr])\n    return np.mean((A[ntr:] @ w - y[ntr:]) ** 2) / np.var(y[ntr:])\ndef lags(u, L): return np.stack([np.roll(u, k) for k in range(L)], 1)\ndef quad(F):\n    cols = [F[:, i] * F[:, j] for i, j in combinations_with_replacement(range(F.shape[1]), 2)]\n    return np.hstack([F, np.stack(cols, 1)])\nu = np.random.default_rng(0).uniform(0, 0.5, 4000)\nfor name, y, L in ((\"NARMA10\", narma10(u), 10), (\"NARMA2\", narma2(u), 3)):\n    print(f\"{name}: target mean {y.mean():.3f}, std {y.std():.3f}, range {y.min():.3f} to {y.max():.3f}\")\n    print(f\"   predict the training mean:        NMSE = {np.mean((y[3000:] - y[200:3000].mean())**2) / np.var(y[3000:]):.3f}\")\n    print(f\"   linear on {L} lags:                 NMSE = {nmse(lags(u, L), y):.3f}\")\n    print(f\"   quadratic on {L} lags ({L + L*(L+1)//2} features): NMSE = {nmse(quad(lags(u, L)), y):.3f}\")\n    for N in (25, 50, 200): print(f\"   ESN with {N:3d} units:              NMSE = {nmse(esn(u, N), y):.3f}\")\nbad = 0\nfor seed in range(200):\n    y = narma10(np.random.default_rng(seed).uniform(0, 0.5, 1000))\n    bad += (not np.all(np.isfinite(y))) or np.abs(y).max() > 5\nprint(\"NARMA10 runs that blew up, out of 200 random input draws:\", bad)\n"
+    },
+    {
+      "type": "prose",
+      "text": "Real output (3000 training steps after a 200-step washout, 1000 test steps):"
     },
     {
       "type": "list",
       "items": [
-        "The mean (NMSE 1) and linear regression on the last $L$ inputs (memory without nonlinearity).",
-        "A polynomial on the last $L$ inputs, or next-generation reservoir computing (Gauthier et al. 2021): the same features a small quantum reservoir is known to produce (Expressivity and Universality (#/qrc/theory/expressivity-and-universality)).",
-        "An ESN with the same number of readout features as the quantum reservoir. A 5-qubit reservoir read through 25 observables should be compared with a 25-unit ESN, not a 500-unit one, and also with a 25-unit ESN plus the same measurement noise.",
+        "NARMA10. Training mean: 1.003. Linear on 10 lags: 0.680. Quadratic on 10 lags (65 features): 0.693. ESN with 25 units: 0.441; 50 units: 0.154; 200 units: 0.081.",
+        "NARMA2. Training mean: 1.001. Linear on 3 lags: 0.290. Quadratic on 3 lags (9 features): 0.139. ESN with 25 units: 0.204; 50 units: 0.156; 200 units: 0.011.",
+        "Of 200 random input draws of length 1000, one NARMA10 run blew up (the sample prints an overflow warning), so NARMA10 targets must be checked for divergence."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Notice three things. First, the quadratic fit on the last ten inputs does not help on NARMA10 (0.693 against 0.680), because the target depends on its own past through the feedback term, which gives it memory far longer than ten inputs: a short window cannot see everything that matters. (I did not test longer windows, so this is my interpretation.) Second, on NARMA2 the quadratic baseline with only 9 features (0.139) beats a 25-unit and a 50-unit ESN; a reservoir needs enough size to catch up with a good hand-made feature set. Third, the ESN at 200 units reaches 0.011 on NARMA2: with the right size it is clearly better than either baseline."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Which rungs, and why"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The mean (NMSE 1) and linear regression on the last $L$ inputs: memory without nonlinearity.",
+        "A polynomial on the last $L$ inputs, or next-generation reservoir computing: the very features a small quantum reservoir is known to produce (Expressivity and Universality (#/qrc/theory/expressivity-and-universality)).",
+        "A classical network with the same number of readout features as the quantum reservoir. A 5-qubit reservoir read through 25 observables should be compared with a 25-unit network, not with a 500-unit one, and also with a 25-unit network with the same measurement noise.",
         "The same quantum reservoir with the quantum part replaced by a classical stochastic model of equal dimension, where possible: it separates what is quantum from what is merely high-dimensional."
       ]
     },
     {
       "type": "callout",
-      "text": "A quick sanity check for any reported QRC result: is the task's NMSE far below what linear regression on recent inputs achieves, and were the features exact or estimated from a stated number of shots?"
+      "text": "A quick sanity check for any reported quantum reservoir result: is the NMSE far below what linear regression on recent inputs achieves, and were the features exact or estimated from a stated number of shots? If either is missing, the number says little."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which baseline?",
+      "text": "A paper reports a 6-qubit reservoir, read through 63 observables, beating a 20-unit ESN on NARMA10. What is wrong with the comparison?",
+      "hint": "Compare the number of features the readout sees.",
+      "solution": [
+        "The quantum reservoir gives the readout 63 features; the ESN gives it 20. A larger feature count helps regardless of the physics.",
+        "The fair comparison is an ESN with about 63 units (and, if the quantum features were estimated from shots, noise added to the ESN features too)."
+      ],
+      "answer": "The ESN has far fewer features than the quantum reservoir."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "You are asked to judge the claim: 'Our 4-qubit quantum reservoir reaches NARMA10 NMSE 0.12, beating classical methods.' Use this page to design the check."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Features. 4 qubits read through $\\langle Z_i\\rangle$ at $V$ virtual nodes gives $4V$ features. For $V = 5$ that is 20 features; the matching classical reservoir is a 20-unit ESN, which scores about 0.44 on the data of the sample (25 units) and so the claim needs to beat that, not the 200-unit result of 0.081.",
+        "Step 2. Baselines. Run the ladder on the same input stream: mean, linear on 10 lags (0.68), quadratic (0.69), ESN(20). Report them in a table with the claim.",
+        "Step 3. Evaluation. Ask for ten reservoir draws (random couplings) and the spread, as in the seed sample (standard deviation 0.016). Ask for the washout, the split and the validation procedure for $\\lambda$.",
+        "Step 4. Measurement. Ask whether 0.12 is for exact expectation values or for estimated ones, and with how many shots. From the memory page, 1000 shots reduced a memory capacity of 5.10 to 3.33; an NMSE can degrade as sharply.",
+        "Step 5. Verdict. The claim stands if it beats the 20-unit ESN and the baselines with the spread taken into account, at a stated shot count."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Evaluate with a time split (washout, training, validation, test), never shuffled; choose hyperparameters on validation data only; state the measurement budget.",
+        "Seed-to-seed spread is large: ten 50-unit ESNs on NARMA10 gave NMSE 0.144 to 0.195 (mean 0.164, std 0.016). Never compare single draws.",
+        "NMSE normalised by the variance is 1 for the mean predictor; normalising by the mean square can make a poor result look excellent (0.270 against 0.00042 in the sample). NRMSE is the square root of NMSE.",
+        "NARMA tests memory plus nonlinearity; parity tests high-degree nonlinear memory and exposes the odd symmetry of bias-free tanh; Mackey-Glass tests prediction horizon; channel equalisation tests robustness to nonlinear distortion and noise.",
+        "Baselines ladder: mean, linear lags, quadratic lags, equal-size classical reservoir with equal noise. A quantum result should be compared with the equal-feature rung.",
+        "On the same data, a 50-unit ESN got NARMA10 NMSE 0.154 against 0.680 for linear lags and 0.693 for quadratic lags."
+      ]
     },
     {
       "type": "heading",
@@ -144,8 +376,8 @@
       "title": "Converting metrics",
       "text": "One paper reports NRMSE 0.15 on NARMA10, another NMSE 0.03. Which is better?",
       "solution": [
-        "NMSE = NRMSE$^2$, so NRMSE 0.15 is NMSE 0.0225.",
-        "0.0225 < 0.03, so the first is better (if both normalise by the variance)."
+        "NMSE = NRMSE$^2$, so NRMSE 0.15 is NMSE $0.0225$.",
+        "$0.0225 < 0.03$, so the first is better (if both normalise by the variance)."
       ],
       "answer": "the first (NMSE 0.0225)"
     },
@@ -154,9 +386,9 @@
       "title": "One NARMA2 step",
       "text": "With $y_{k-1} = 0.2$, $y_{k-2} = 0.1$ and $u_{k-1} = 0.5$, compute the NARMA2 target $y_k$.",
       "solution": [
-        "$0.4 \\times 0.2 = 0.08$.",
-        "$0.4 \\times 0.2 \\times 0.1 = 0.008$.",
-        "$0.6 \\times 0.5^3 = 0.075$.",
+        "$0.4\\times0.2 = 0.08$.",
+        "$0.4\\times0.2\\times0.1 = 0.008$.",
+        "$0.6\\times0.5^3 = 0.075$.",
         "Sum with the constant: $0.08 + 0.008 + 0.075 + 0.1 = 0.263$."
       ],
       "answer": "0.263"
@@ -166,10 +398,45 @@
       "title": "Which degree?",
       "text": "In $\\pm1$ coding, what is the polynomial degree of 3-bit parity, and which capacity term from Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity) must the reservoir have to solve it?",
       "solution": [
-        "With $u = 2b - 1$ (bit 1 coded as $+1$), $y_k = \\tfrac12(1 + u_k u_{k-1} u_{k-2})$ in $\\{0,1\\}$ form, so the nonconstant part is the product of three distinct delayed inputs.",
+        "With $u = 2b-1$ (bit 1 coded as $+1$), $y_k = \\tfrac12(1 + u_ku_{k-1}u_{k-2})$ for $n=3$, so the non-constant part is a product of three distinct delayed inputs.",
         "Degree 3: it needs capacity in the basis function $P_1(u_k)P_1(u_{k-1})P_1(u_{k-2})$. A reservoir whose budget sits in degrees 1 and 2 cannot solve it, however large."
       ],
-      "answer": "degree 3, the term u(k)u(k−1)u(k−2)"
+      "answer": "degree 3, the term $u_ku_{k-1}u_{k-2}$"
+    },
+    {
+      "type": "problem",
+      "title": "The flattering normalisation",
+      "text": "A target has mean 4 and standard deviation 0.5. A predictor has mean squared error 0.0625. Compute the NMSE by the variance and the NMSE by the mean square.",
+      "hint": "$\\langle y^2\\rangle = \\operatorname{var}(y) + \\text{mean}^2$.",
+      "solution": [
+        "Variance $= 0.5^2 = 0.25$. NMSE $= 0.0625/0.25 = 0.25$.",
+        "Mean square $= \\text{var} + \\text{mean}^2 = 0.25 + 16 = 16.25$. NMSE by it $= 0.0625/16.25 = 0.00385$.",
+        "The same predictor looks 65 times better under the second normalisation."
+      ],
+      "answer": "0.25 and 0.00385"
+    },
+    {
+      "type": "problem",
+      "title": "Counting the ladder",
+      "text": "The sample's quadratic baseline uses 10 lags and has 65 features. Where does 65 come from, and how many would there be for 20 lags?",
+      "solution": [
+        "10 linear features plus all products of pairs with repeats (squares and cross products): $\\binom{11}{2} = 55$. Total $10 + 55 = 65$.",
+        "For 20 lags: $20 + \\binom{21}{2} = 20 + 210 = 230$."
+      ],
+      "answer": "$10 + 55 = 65$; 230 for 20 lags"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The quantum pages report these tasks: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir), Dynamical Regimes (#/qrc/models/dynamical-regimes) and Quantum Data Tasks (#/qrc/models/quantum-data-tasks).",
+        "How to set up a complete experiment in code: Hands-on Implementation (#/qrc/theory/hands-on-implementation).",
+        "The critical reading of claims of advantage: Expressivity and Universality (#/qrc/theory/expressivity-and-universality) and Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+      ]
     },
     {
       "type": "heading",
