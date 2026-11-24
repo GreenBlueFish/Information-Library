@@ -5,43 +5,150 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Which observables"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "Any Hermitian $O$ gives a feature $\\operatorname{Tr}(O\\rho_k)$, but each measurement setting (a choice of basis per qubit) costs its own shots. In the computational basis one setting gives a bitstring per shot, and from those bitstrings every diagonal observable can be estimated at once: all $2^n-1$ Z-strings $Z_{i}$, $Z_iZ_j$, $Z_iZ_jZ_l$, and so on. Off-diagonal observables need other settings (rotate before measuring), multiplying the shot cost."
+      "text": "The spin-network model and its features from The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir); the effect of the encoding from Input Encoding (#/qrc/models/input-encoding); ridge regression from Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge) and memory capacity from Training, Testing and Measuring Error (#/qrc/start/training-and-testing). From the Quantum Mechanics shelf: Measurement and the Born Rule (#/quantum/foundations/measurement) (the probability of each outcome and the expectation value of an observable)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
     },
     {
       "type": "list",
       "items": [
-        "Local magnetisations $\\langle Z_i\\rangle$: $n$ features, lowest variance, standard choice.",
-        "Two-point correlators $\\langle Z_iZ_j\\rangle$: $n(n-1)/2$ more features from the same shots; they add quadratic information about the state.",
-        "Higher Z-strings: up to $2^n-1$ from the same shots, but a weight-$w$ string in a scrambled state is typically small and costs as many shots to resolve as any other, so in practice only low weights are used.",
-        "Other bases: $\\langle X_i\\rangle$ or full local tomography multiply settings by up to $3^n$ (all Pauli bases)."
+        "Turn a table of measured bitstrings into estimates of $\\langle Z_i\\rangle$, $\\langle Z_iZ_j\\rangle$ and higher $Z$-strings, with their standard errors.",
+        "Count the features per input of a readout that uses a given set of observables, virtual nodes and parallel reservoirs.",
+        "Say what temporal and spatial multiplexing each cost and gain, and read a comparison table of the two.",
+        "Estimate how many shots a feature needs and why shot noise erodes long-delay memory first.",
+        "Decide which of the cheap upgrades to try before adding qubits."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Temporal multiplexing (virtual nodes)"
+      "text": "Why the readout is half the reservoir"
     },
     {
       "type": "prose",
-      "text": "Split the evolution between inputs into $V$ sub-steps and read after each: $x_k = (\\langle O\\rangle_{k,1},\\dots,\\langle O\\rangle_{k,V})$. The features at different sub-times are different linear functionals of the same state (the Heisenberg-evolved observables $U^{\\dagger v}OU^{v}$), so for generic dynamics they are linearly independent until their number approaches the dimension of the reachable operator space. Cost: $V$ times more readouts per input, and on a single device each one is a separate experiment (or a weak measurement; see Online Protocols (#/qrc/hardware/online-protocols))."
+      "text": "In The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) we measured $\\langle Z_i\\rangle$ once per input and found that four qubits give four features, so at most four independent pieces of the past. The reservoir may have $4^n-1$ real numbers inside it but the readout is a weighted sum of whatever we choose to measure, and the weights are the only thing trained. If we measure little, we learn little. This page is about the choices on the measurement side: which quantities, how often, from how many reservoirs, and with how many repetitions, and what each one costs."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Spatial multiplexing"
+      "text": "Which observables"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "Nakajima and coauthors proposed running several small reservoirs with different random couplings in parallel, all driven by the same input, and concatenating their features. $K$ reservoirs of $n$ qubits give $K$ times the features while each stays small enough to control and to simulate classically; the price is that information never mixes between them, so a $K\\times n$ system is not as rich as one $Kn$-qubit reservoir could be in principle. Nakajima et al. showed numerically on benchmark tasks that this boosts performance well beyond that of a single small reservoir, and examined where the technique stops paying off."
+      "text": "Any Hermitian operator $O$ gives a feature $\\operatorname{Tr}(O\\rho_k)$. But a quantum measurement does not hand out all of them at once. What a device actually does is: measure every qubit in some basis, getting a bitstring of $\\pm1$ values, and repeat. So the question is which observables can be estimated from the same repeated measurement, since those come for free."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "If every qubit is measured in the $Z$ basis, one shot gives a bitstring $z=(z_1,\\dots,z_n)$ with each $z_i=\\pm1$. From the same bitstring you can compute not just $z_i$ but any product $z_iz_j$, $z_iz_jz_l$, and so on, because $Z_iZ_j$ has eigenvalue $z_iz_j$ on that basis state. Averaging over shots gives the expectation of every one of those operators. There are $2^n-1$ nontrivial products (every non-empty subset of the qubits), all from one measurement setting. Observables that need another basis, such as $X_i$, require a different setting: rotate the qubit before measuring."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A worked example with numbers"
+    },
+    {
+      "type": "prose",
+      "text": "Two qubits, and suppose the exact probabilities of the four outcomes are $p_{00}=0.5$, $p_{01}=0.2$, $p_{10}=0.1$, $p_{11}=0.2$ (the first digit is qubit 1; $0$ means $z=+1$ and $1$ means $z=-1$)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $\\langle Z_1\\rangle=p_{00}+p_{01}-p_{10}-p_{11}=0.5+0.2-0.1-0.2=0.4$.",
+        "Step 2. $\\langle Z_2\\rangle=p_{00}-p_{01}+p_{10}-p_{11}=0.5-0.2+0.1-0.2=0.2$.",
+        "Step 3. $\\langle Z_1Z_2\\rangle=p_{00}-p_{01}-p_{10}+p_{11}=0.5-0.2-0.1+0.2=0.4$. Same four probabilities, a third number for free.",
+        "Step 4. Noise. One shot of $Z_1$ is $\\pm1$ with variance $1-\\langle Z_1\\rangle^2=1-0.16=0.84$. With $S=1000$ shots the standard error is $\\sqrt{0.84/1000}=0.029$. For $Z_1Z_2$ the variance is also $1-0.16=0.84$. The three estimates come from the same shots, so their errors are correlated, but each has about the same error."
+      ]
+    },
+    {
+      "type": "list",
+      "items": [
+        "Local magnetisations $\\langle Z_i\\rangle$. $n$ features, the standard choice.",
+        "Two-point correlators $\\langle Z_iZ_j\\rangle$. $n(n-1)/2$ more features from the same shots. They are quadratic in the state's coordinates, so they add information that single-qubit averages do not contain (in the example, $\\langle Z_1Z_2\\rangle=0.4$ is not determined by $0.4$ and $0.2$).",
+        "Higher $Z$-strings. Up to $2^n-1$ from the same shots, but in a scrambled state a weight-$w$ string is typically small, and costs as many shots as any other to resolve. In practice only low weights are used.",
+        "Other bases. $\\langle X_i\\rangle$ or full local tomography multiply the number of settings, up to $3^n$ settings for all Pauli bases (81 for $n=4$)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Counting for $n=10$ qubits: $10$ single-qubit features, $\\binom{10}{2}=45$ pairs, $\\binom{10}{3}=120$ triples, and all $2^{10}-1=1023$ strings in total. Using weights up to 2 gives $55$ features from one setting."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: feature count with correlators",
+      "text": "A 10-qubit reservoir is read in the computational basis after each of $V=4$ virtual-node steps, and the readout uses all $\\langle Z_i\\rangle$ and $\\langle Z_iZ_j\\rangle$. How many features per input?",
+      "hint": "Count single-qubit plus pair features, then multiply by $V$.",
+      "solution": [
+        "Per readout time: $10+\\binom{10}{2}=10+45=55$.",
+        "Per input: $55\\times4=220$, all from the same bitstrings at each sub-step."
+      ],
+      "answer": "220"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Simulated comparison"
+      "text": "Temporal multiplexing: virtual nodes"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Four $Z$-averages per input is little. We could add qubits, but each is expensive. Is there something cheaper that already exists in the hardware?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "Yes: time. Between two inputs the register evolves for $\\Delta t$. Do not wait until the end. Split the interval into $V$ equal sub-steps and read after each. The state at sub-step 1 is not the state at sub-step 2: the dynamics rotates it. So the numbers you read are different linear functionals of the same quantum state (in the Heisenberg picture, the operators $U^{\\dagger v}Z_iU^{v}$ for $v=1,\\dots,V$), and they are independent as long as the dynamics keeps rotating information into new directions."
+    },
+    {
+      "type": "math",
+      "tex": "x_k=\\left(\\langle O\\rangle_{k,1},\\dots,\\langle O\\rangle_{k,V}\\right),\\qquad \\langle O\\rangle_{k,v}=\\operatorname{Tr}\\left(O\\,U_v\\rho_k^{+}U_v^\\dagger\\right)",
+      "caption": "Features of step k with V virtual nodes, where rho_k^+ is the state just after the input was written and U_v the evolution for v sub-steps."
+    },
+    {
+      "type": "prose",
+      "text": "The cost: $V$ times more readouts per input, and on a single device each is a separate experiment (or a weak measurement; see Online Measurement Protocols (#/qrc/hardware/online-protocols)). The gain is large: in the sweep of The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir), four qubits went from $\\mathrm{MC}=1.42$ at $V=1$ to $3.75$ at $V=5$. The ceiling is the dimension of the space of operators the dynamics can reach in $\\Delta t$: once the sub-step features stop being new, adding nodes only repeats information."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Spatial multiplexing: several reservoirs"
+    },
+    {
+      "type": "prose",
+      "text": "Nakajima and co-authors proposed running several small reservoirs with different random couplings in parallel, all driven by the same input, and concatenating their features. $K$ reservoirs of $n$ qubits give $K$ times the features, while each stays small enough to control and to simulate on a classical computer. The price: information never mixes between reservoirs, so $K\\times n$ qubits in separate boxes are not as rich as one $Kn$-qubit reservoir could be in principle. They showed numerically on benchmark tasks that this boosts performance well beyond that of a single small reservoir, and examined where the technique stops paying off."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A simulated comparison"
+    },
+    {
+      "type": "prose",
+      "text": "The program below uses the same 4-qubit reservoir ($h=1$, $\\Delta t=10$) and compares five readouts, scoring each on memory capacity (delays 1 to 12) and the test NMSE on NARMA2 (the benchmark of Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks)). The last case has two independent 4-qubit reservoirs (different seeds)."
     },
     {
       "type": "code",
@@ -49,22 +156,66 @@
       "source": "import numpy as np\nfrom itertools import combinations\n\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1, -1]).astype(complex)\ndef op(o, i, n):\n    m = np.array([[1]], complex)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\nn, D = 4, 16\nzd = [np.real(np.diag(op(Z, i, n))) for i in range(n)]\nzz = [zd[i] * zd[j] for i, j in combinations(range(n), 2)]       # diagonal of Z_i Z_j\n\ndef reservoir(seed, dt, V):\n    rng = np.random.default_rng(seed)\n    H = sum(rng.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\n    H = H + sum(op(Z, i, n) for i in range(n))\n    E, P = np.linalg.eigh(H)\n    return P @ np.diag(np.exp(-1j * E * dt / V)) @ P.conj().T\n\ndef run(s, U, V, corr):\n    rho = np.eye(D) / D; out = []\n    for x in s:\n        r4 = rho.reshape(2, 8, 2, 8); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)]); rho = np.kron(np.outer(psi, psi), rest); f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T; d = np.real(np.diag(rho))\n            f += [z @ d for z in zd] + ([z @ d for z in zz] if corr else [])\n        out.append(f)\n    return np.array(out)\n\ndef narma2(u):\n    y = np.zeros_like(u)\n    for t in range(2, len(u)): y[t] = 0.4 * y[t-1] + 0.4 * y[t-1] * y[t-2] + 0.6 * u[t-1] ** 3 + 0.1\n    return y\n\ns = np.random.default_rng(101).uniform(0, 1, 1400); yN = narma2(s / 2)\nwash, tr = 200, 800\ndef fit(F, y, lam=1e-7):\n    F = np.hstack([F, np.ones((len(F), 1))]); A = F[wash:wash + tr]\n    w = np.linalg.solve(A.T @ A + lam * np.eye(A.shape[1]), A.T @ y[wash:wash + tr])\n    return F[wash + tr:] @ w, y[wash + tr:]\ndef scores(F):\n    mc = 0\n    for d in range(1, 13):\n        p, t = fit(F, np.roll(s, d)); mc += np.corrcoef(p, t)[0, 1] ** 2\n    p, t = fit(F, yN)\n    return mc, np.mean((p - t) ** 2) / np.var(t)\n\ncases = [(\"<Z_i>, V=1\", lambda: run(s, reservoir(1, 10, 1), 1, False)),\n         (\"<Z_i>, V=5\", lambda: run(s, reservoir(1, 10, 5), 5, False)),\n         (\"<Z_i>+<Z_iZ_j>, V=1\", lambda: run(s, reservoir(1, 10, 1), 1, True)),\n         (\"<Z_i>+<Z_iZ_j>, V=5\", lambda: run(s, reservoir(1, 10, 5), 5, True)),\n         (\"2 reservoirs x <Z_i>, V=5\", lambda: np.hstack([run(s, reservoir(1, 10, 5), 5, False),\n                                                          run(s, reservoir(2, 10, 5), 5, False)]))]\nfor name, f in cases:\n    F = f(); mc, nm = scores(F)\n    print(f\"{name:28s} features={F.shape[1]:3d}  MC={mc:.2f}  NARMA2 NMSE={nm:.3f}\")\n"
     },
     {
-      "type": "prose",
-      "text": "Same 4-qubit reservoir ($h=1$, $\\Delta t=10$), scored on memory capacity (delays 1 to 12) and NARMA2 test NMSE:"
-    },
-    {
       "type": "list",
       "items": [
-        "$\\langle Z_i\\rangle$, $V=1$: 4 features, MC 1.42, NMSE 0.248.",
-        "$\\langle Z_i\\rangle$, $V=5$: 20 features, MC 3.75, NMSE 0.138.",
-        "$\\langle Z_i\\rangle$ and $\\langle Z_iZ_j\\rangle$, $V=1$: 10 features, MC 2.82, NMSE 0.143.",
-        "$\\langle Z_i\\rangle$ and $\\langle Z_iZ_j\\rangle$, $V=5$: 50 features, MC 5.48, NMSE 0.066.",
-        "Two independent reservoirs, $\\langle Z_i\\rangle$, $V=5$: 40 features, MC 5.30, NMSE 0.067."
+        "$\\langle Z_i\\rangle$, $V=1$: 4 features, MC $1.42$, NMSE $0.248$.",
+        "$\\langle Z_i\\rangle$, $V=5$: 20 features, MC $3.75$, NMSE $0.138$.",
+        "$\\langle Z_i\\rangle$ and $\\langle Z_iZ_j\\rangle$, $V=1$: 10 features, MC $2.82$, NMSE $0.143$.",
+        "The same with $V=5$: 50 features, MC $5.48$, NMSE $0.066$.",
+        "Two independent reservoirs, $\\langle Z_i\\rangle$, $V=5$: 40 features, MC $5.30$, NMSE $0.067$."
       ]
     },
     {
       "type": "prose",
-      "text": "Correlators are the cheapest upgrade: from the same bitstrings, 10 features at $V=1$ do about as well on NARMA2 as 20 virtual-node features. Spatial multiplexing and correlators with virtual nodes land at the same place, around 0.07, for very different hardware costs."
+      "text": "Correlators are the cheapest upgrade: from the same bitstrings, 10 features at $V=1$ do about as well on NARMA2 as 20 virtual-node features ($0.143$ against $0.138$). Spatial multiplexing and correlators with virtual nodes land at the same place, around $0.07$, for very different hardware costs: the first needs two devices (or two regions) but 40 readouts, the second one device and 50 features from 5 readout times."
+    },
+    {
+      "type": "callout",
+      "text": "Common confusion: features are only worth adding if they are different. $20$ features from $V=5$ are better than 4, but $V=20$ would not give 80 independent features; sooner or later the sub-step operators repeat information the earlier ones already read. The only reliable test is the comparison the program makes: add the feature, retrain, see whether the error falls."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: correlators or virtual nodes",
+      "text": "From the table, which uses fewer distinct readout times per input to reach a NARMA2 NMSE near $0.14$: virtual nodes with $\\langle Z_i\\rangle$, or correlators at $V=1$?",
+      "hint": "How many readout times does each use?",
+      "solution": [
+        "$\\langle Z_i\\rangle$ with $V=5$ gives $0.138$ using 5 readout times per input.",
+        "$\\langle Z_i\\rangle+\\langle Z_iZ_j\\rangle$ with $V=1$ gives $0.143$ using 1 readout time, since correlators come from the same bitstrings.",
+        "Correlators at $V=1$: five times fewer readouts for about the same error."
+      ],
+      "answer": "Correlators at $V=1$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Shot noise and its budget"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Everything so far assumed exact expectation values. A real device gives bitstrings. How many bitstrings per feature are enough, and what goes wrong when there are too few?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths"
+    },
+    {
+      "type": "math",
+      "tex": "\\hat z=\\frac1S\\sum_{t=1}^{S}z_t,\\qquad \\operatorname{Var}(\\hat z)=\\frac{1-\\langle Z\\rangle^2}{S}",
+      "caption": "Each shot gives z = ±1; the estimate of <Z> from S shots and its variance."
+    },
+    {
+      "type": "prose",
+      "text": "Each shot $z_t$ is $+1$ with probability $(1+\\langle Z\\rangle)/2$ and $-1$ otherwise; its mean is $\\langle Z\\rangle$ and its variance is $1-\\langle Z\\rangle^2$ (since $z^2=1$). The mean of $S$ independent shots has variance $1/S$ times that. To halve the error you need four times as many shots: $S\\propto\\epsilon^{-2}$. For a feature near $0$ with $S=1000$: standard error $\\sqrt{1/1000}=0.0316$. For $0.001$ you need $S=1/0.001^2=10^6$ shots, a thousand times more for about 30 times the precision."
+    },
+    {
+      "type": "prose",
+      "text": "Where it bites. A feature is $x_i=\\bar x_i+\\text{noise}$. The readout weights $w_i$ applied to old-input features are small combinations of many features whose differences encode the old input. The signal from an input $d$ steps back is a small fraction of the feature, perhaps $0.01$ to $0.1$; noise of order $0.03$ drowns it. So long delays go first."
     },
     {
       "type": "widget",
@@ -136,21 +287,45 @@
     },
     {
       "type": "prose",
-      "text": "With $V=5$ and exact expectations MC is about 5.1. Now raise shots from 0: at 100 000 the curve is nearly unchanged, at 1000 MC drops to about 3.3, at 100 to about 1.9. The long-delay terms go first, because they are small linear combinations buried under noise."
+      "text": "Try this. (1) With $V=5$ and shots 0 the label gives MC $5.10$. (2) Raise shots to 100000: MC $4.89$, barely changed. (3) At 1000 shots: $3.33$. (4) At 100 shots: $1.90$; compare a few stems with the exact curve: $d=1$ falls from $0.98$ to $0.75$, $d=3$ from $0.87$ to $0.26$, $d=6$ from $0.39$ to $0.07$. Old inputs go first. (5) Set $V=1$ at 100 shots: MC is $0.92$, so with noise, dropping the virtual nodes does not rescue the memory; it removes the features the readout needs to average the noise away."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Does ridge regularisation rescue noisy features?"
+    },
+    {
+      "type": "prose",
+      "text": "Ridge shrinks weights on weak directions, so it is the obvious remedy. The program below adds actual shot noise (sampled bitstrings from the exact outcome probabilities) to the 20 features of the first reservoir and scans the ridge parameter $\\lambda$."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\nX = np.array([[0, 1], [1, 0]], complex); Z = np.diag([1, -1]).astype(complex)\ndef op(o, i, n):\n    m = np.array([[1]], complex)\n    for k in range(n): m = np.kron(m, o if k == i else np.eye(2))\n    return m\nn, D, dt, V = 4, 16, 10.0, 5\nrng = np.random.default_rng(1)\nH = sum(rng.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\nH = H + sum(op(Z, i, n) for i in range(n))\nE, P = np.linalg.eigh(H); U = P @ np.diag(np.exp(-1j * E * dt / V)) @ P.conj().T\nzd = np.array([np.real(np.diag(op(Z, i, n))) for i in range(n)])\n\ndef run(s):\n    \"\"\"exact outcome probabilities of the computational-basis measurement after each of the V sub-steps\"\"\"\n    rho = np.eye(D) / D; out = []\n    for x in s:\n        r4 = rho.reshape(2, 8, 2, 8); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)]); rho = np.kron(np.outer(psi, psi), rest); f = []\n        for _ in range(V):\n            rho = U @ rho @ U.conj().T; f.append(np.real(np.diag(rho)))\n        out.append(f)\n    return np.array(out)                        # (steps, V, 16)\n\ns = np.random.default_rng(101).uniform(0, 1, 1400)\nPr = run(s)\nbits = rng2 = np.random.default_rng(7)\n\ndef noisy_features(S):\n    \"\"\"S shots per sub-step: sample bitstrings, estimate <Z_i> from them (S=0: exact)\"\"\"\n    F = []\n    for t in range(len(s)):\n        row = []\n        for v in range(V):\n            p = np.clip(Pr[t, v], 0, None); p = p / p.sum()\n            c = rng2.multinomial(S, p) / S if S else p\n            row += list(zd @ c)\n        F.append(row)\n    return np.hstack([np.array(F), np.ones((len(s), 1))])\n\ndef mc_lambda(F, lam, dmax=12, wash=200, tr=800):\n    mc = 0\n    for d in range(1, dmax + 1):\n        A = F[wash:wash + tr]; y = s[wash - d:wash + tr - d]\n        w = np.linalg.solve(A.T @ A + lam * np.eye(A.shape[1]), A.T @ y)\n        mc += np.corrcoef(F[wash + tr:] @ w, s[wash + tr - d:len(s) - d])[0, 1] ** 2\n    return mc\n\nlams = [1e-8, 1e-4, 1e-2, 1, 10, 100]\nprint(\"memory capacity (delays 1-12), 20 features, as shots per feature and ridge lambda vary\")\nprint(\"shots   \" + \"\".join(f\"lam={l:<8g}\" for l in lams))\nfor S in (0, 100000, 1000, 100):\n    F = noisy_features(S)\n    print(f\"{S:<8d}\" + \"\".join(f\"{mc_lambda(F, l):<12.2f}\" for l in lams))\n"
+    },
+    {
+      "type": "prose",
+      "text": "The honest reading of this table. Exact features: MC $3.75$ for small $\\lambda$, falling as $\\lambda$ grows ($1.51$ at $\\lambda=100$). With 1000 shots: $2.88$, and no $\\lambda$ in the scan improves it (best is the smallest); with 100 shots: $2.02$ at small $\\lambda$ and $2.03$ at $\\lambda=1$, a gain of $0.01$. So here ridge is nearly useless against shot noise: the noise is not larger than the useful variation in the features, it is spread over all directions, and every direction that carries signal also carries noise. What helps is more shots, more training steps (the readout averages noise over the training window) or fewer needless features. A regularisation parameter should still be chosen on a validation window and not set to nearly zero blindly, as in Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge); but do not expect it to repair a measurement budget that is too small."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: shots for a target precision",
+      "text": "A feature with $\\langle Z\\rangle\\approx0$ is estimated from 1000 shots. What is its standard error, and how many shots would bring it to $0.001$?",
+      "hint": "Use $\\operatorname{Var}=(1-\\langle Z\\rangle^2)/S$.",
+      "solution": [
+        "$\\sqrt{(1-0)/1000}\\approx0.0316$.",
+        "For $0.001$: $S=1/0.001^2=10^6$ shots, a thousand times more for about thirty times the precision."
+      ],
+      "answer": "0.032; 1,000,000"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Shot noise and its budget"
-    },
-    {
-      "type": "math",
-      "tex": "\\hat z = \\frac{1}{S}\\sum_{t=1}^{S} z_t,\\qquad \\operatorname{Var}(\\hat z) = \\frac{1-\\langle Z\\rangle^2}{S}",
-      "caption": "Each shot gives z = ±1; the estimate of <Z> from S shots."
+      "text": "The total cost of one experiment"
     },
     {
       "type": "prose",
-      "text": "With $M$ features per input, $T$ inputs and $S$ shots per feature, a naive single-device experiment needs about $S\\,T$ runs if every feature of a step comes from the same shots (all Z-strings at once), times $V$ if the virtual nodes must be separate experiments, and more if the reservoir must be re-run from the start to reach step $k$ (the restart cost discussed in Measurement Back-Action (#/qrc/hardware/measurement-back-action)). Ridge regularisation helps: with noisy features, the optimal $\\lambda$ grows roughly with the noise variance, which shrinks weights on weak, noisy directions."
+      "text": "With $M$ features per input, $T$ inputs and $S$ shots per feature, a naive single-device experiment needs about $S\\,T$ runs if every feature of a step comes from the same shots (all $Z$-strings at once), times $V$ if the virtual nodes must be separate experiments, and more if the reservoir must be re-run from the start to reach step $k$ (the restart cost of Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action)). For $T=1400$ inputs, $S=1000$ shots and $V=5$ that is $1400\\times1000\\times5=7\\times10^{6}$ runs; at 1 kHz repetition it is about two hours. This accounting is made general on Resource Accounting (#/qrc/hardware/resource-accounting)."
     },
     {
       "type": "heading",
@@ -160,41 +335,109 @@
     {
       "type": "list",
       "items": [
-        "Standardise features before ridge; their scales differ by orders of magnitude between local and high-weight observables.",
+        "Standardise features before ridge. Their scales differ by orders of magnitude between local and high-weight observables, and ridge treats all weights equally.",
         "A polynomial or kernel readout on the features adds nonlinearity classically. It can raise accuracy but moves computation out of the quantum system, and makes comparisons with classical reservoirs less clean.",
-        "Online training (recursive least squares) suits streams but changes nothing in the feature argument."
+        "Online training (recursive least squares) suits streams but does not change the feature argument."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. You have a 4-qubit device that can repeat an experiment 100 times per feature per input within your time budget, and a task that needs about 3 steps of memory. You can use $V$ virtual nodes (each a separate experiment, so shots per node are 100 divided by $V$ if the total is fixed) or correlators (free). Decide."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Total shots per input: 100. With $V=1$, $\\langle Z_i\\rangle$ gets all 100 shots: standard error $\\sqrt{1/100}=0.1$ per feature. That is the 100-shot regime of the widget: MC $0.92$ at $V=1$ (and $1.90$ at $V=5$ where each node also got 100 shots).",
+        "Step 2. With $V=5$ at a fixed total of 100 shots, each node gets 20 shots: standard error $\\sqrt{1/20}=0.22$. Much noisier features.",
+        "Step 3. Correlators at $V=1$: 10 features from the same 100 shots, each with standard error about $0.1$. The table said this gives MC $2.82$ with exact features, NMSE on NARMA2 $0.143$, better than $V=1$ alone, and costs nothing extra.",
+        "Step 4. So with a fixed shot budget try correlators first; add virtual nodes only if the shot budget per node can stay above a few hundred. Verify by simulating with the actual shot budget (the program above, with the correlators added)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The general lesson: when shots are the scarce resource, features that share bitstrings beat features that need new experiments."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "One computational-basis setting gives every $Z$-string expectation ($2^n-1$ of them) from the same bitstrings.",
+        "Single-shot variance is $1-\\langle Z\\rangle^2$; the standard error of a feature is $\\sqrt{(1-\\langle Z\\rangle^2)/S}$, so precision costs $S\\propto\\epsilon^{-2}$.",
+        "Virtual nodes multiply features by $V$ at the cost of $V$ readouts per input; they are independent only as long as the dynamics keeps generating new operators.",
+        "Correlators are free extra features from the same shots and in the table beat extra virtual nodes per readout time.",
+        "Spatial multiplexing (parallel small reservoirs) matches the correlator-plus-nodes result with different hardware costs but cannot mix information between boxes.",
+        "Shot noise removes long-delay memory first; ridge does little against it (table above); more shots or training data do.",
+        "Always compare by retraining: add the feature and measure the error."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
       "title": "Feature count with correlators",
       "text": "A 10-qubit reservoir is read in the computational basis after each of $V=4$ virtual-node steps; the readout uses all $\\langle Z_i\\rangle$ and $\\langle Z_iZ_j\\rangle$. How many features per input?",
+      "hint": "Binomial coefficient for pairs.",
       "solution": [
-        "Per readout: $10 + \\binom{10}{2} = 10 + 45 = 55$.",
-        "Per input: $55\\times4 = 220$, all from the same bitstrings at each sub-step."
+        "Per readout: $10+\\binom{10}{2}=10+45=55$.",
+        "Per input: $55\\times4=220$, all from the same bitstrings at each sub-step."
       ],
       "answer": "220"
     },
     {
       "type": "problem",
       "title": "Shots for a target precision",
-      "text": "A feature with $\\langle Z\\rangle \\approx 0$ is estimated from 1000 shots. What is its standard error, and how many shots would bring it to 0.001?",
+      "text": "A feature with $\\langle Z\\rangle\\approx0$ is estimated from 1000 shots. What is its standard error, and how many shots would bring it to $0.001$?",
+      "hint": "$\\epsilon=1/\\sqrt S$.",
       "solution": [
-        "$\\sqrt{(1-0)/1000} \\approx 0.0316$.",
-        "For 0.001: $S = 1/0.001^2 = 10^6$ shots, a thousand times more for about 30 times the precision."
+        "$\\sqrt{(1-0)/1000}\\approx0.0316$.",
+        "For $0.001$: $S=1/0.001^2=10^6$ shots, a thousand times more for about 30 times the precision."
       ],
       "answer": "0.032; 1,000,000 shots"
     },
     {
       "type": "problem",
       "title": "Correlators or virtual nodes",
-      "text": "From the table, which costs fewer distinct measurement times per input to reach NARMA2 NMSE near 0.14: virtual nodes with $\\langle Z_i\\rangle$ or correlators at $V=1$?",
+      "text": "From the table, which costs fewer distinct measurement times per input to reach NARMA2 NMSE near $0.14$: virtual nodes with $\\langle Z_i\\rangle$ or correlators at $V=1$?",
+      "hint": "Count readout times.",
       "solution": [
-        "$\\langle Z_i\\rangle$ with $V=5$ gives 0.138 using 5 readout times per input.",
-        "$\\langle Z_i\\rangle+\\langle Z_iZ_j\\rangle$ with $V=1$ gives 0.143 using 1 readout time, since correlators come from the same bitstrings.",
+        "$\\langle Z_i\\rangle$ with $V=5$ gives $0.138$ using 5 readout times per input.",
+        "$\\langle Z_i\\rangle+\\langle Z_iZ_j\\rangle$ with $V=1$ gives $0.143$ using 1 readout time.",
         "Correlators at $V=1$: five times fewer readouts for the same error."
       ],
       "answer": "Correlators at V = 1"
+    },
+    {
+      "type": "problem",
+      "title": "Estimating from a bitstring table",
+      "text": "Out of 2000 shots on two qubits you observe the outcomes 00: 900, 01: 300, 10: 400, 11: 400. Estimate $\\langle Z_1\\rangle$, $\\langle Z_2\\rangle$, $\\langle Z_1Z_2\\rangle$ and the standard error of the first.",
+      "hint": "Digit 0 means $z=+1$, digit 1 means $z=-1$.",
+      "solution": [
+        "Frequencies: $0.45$, $0.15$, $0.20$, $0.20$.",
+        "$\\langle Z_1\\rangle=0.45+0.15-0.20-0.20=0.20$; $\\langle Z_2\\rangle=0.45-0.15+0.20-0.20=0.30$; $\\langle Z_1Z_2\\rangle=0.45-0.15-0.20+0.20=0.30$.",
+        "Standard error of $\\langle Z_1\\rangle$: $\\sqrt{(1-0.04)/2000}=\\sqrt{0.00048}=0.0219$."
+      ],
+      "answer": "0.20, 0.30, 0.30; error 0.022"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "prose",
+      "text": "Counting features and shots is the basis of the cost analysis in Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Resource Accounting (#/qrc/hardware/resource-accounting). Concentration and Scalability (#/qrc/theory/concentration-and-scalability) explains why in a strongly scrambling reservoir the features all shrink toward zero and the shots needed grow exponentially, and Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines) applies the same counting to memoryless reservoirs."
     },
     {
       "type": "heading",

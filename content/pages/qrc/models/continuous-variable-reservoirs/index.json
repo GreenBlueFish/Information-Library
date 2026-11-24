@@ -5,45 +5,196 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Modes, quadratures and Gaussian states"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "A mode has ladder operators $[a,a^\\dagger]=1$ and quadratures $x=(a+a^\\dagger)/\\sqrt2$, $p=i(a^\\dagger-a)/\\sqrt2$, so $[x,p]=i$. Its Hilbert space is infinite; in simulation it is truncated to Fock states $\\vert0\\rangle,\\dots,\\vert N-1\\rangle$, and the truncation must hold the populated states (check the top population)."
-    },
-    {
-      "type": "prose",
-      "text": "A Gaussian state of $N$ modes is fixed by its first moments $\\bar r=\\langle r\\rangle$ with $r=(x_1,p_1,\\dots,x_N,p_N)$ and its covariance matrix $\\sigma_{jk}=\\tfrac12\\langle\\{r_j-\\bar r_j,r_k-\\bar r_k\\}\\rangle$: $2N$ plus $N(2N+1)$ real numbers. Hamiltonians at most quadratic in $a,a^\\dagger$ (beam splitters, squeezers, displacements, phase shifts) and Gaussian noise (loss, thermal noise) keep states Gaussian and act as"
-    },
-    {
-      "type": "math",
-      "tex": "\\bar r \\mapsto S\\bar r + d,\\qquad \\sigma\\mapsto S\\sigma S^\\top + N_\\mathrm{noise},",
-      "caption": "A Gaussian channel: symplectic matrix S (with loss, a contraction X) plus noise and displacement."
-    },
-    {
-      "type": "prose",
-      "text": "So a Gaussian reservoir of $N$ modes is simulated with $2N\\times2N$ matrices, not with an exponentially large density matrix. This is both its strength (cheap, analysable, and its observables are few and well conditioned) and the reason it offers no quantum advantage in simulation cost: Gaussian dynamics are efficiently classically simulable."
+      "text": "The general reservoir recursion and ridge readout from The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) and Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge); the harmonic oscillator, its ladder operators and number states from The Harmonic Oscillator (#/quantum/dynamics/harmonic-oscillator); mixed states from Mixed States (#/quantum/many-body/mixed-states). Lindblad damping (Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics)) appears in the Kerr section. Gaussian states are built from scratch below."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "The Nokkala et al. Gaussian reservoir"
-    },
-    {
-      "type": "prose",
-      "text": "Nokkala and co-workers take a network of harmonic oscillators coupled by a quadratic Hamiltonian and inject the input at each step by resetting one of them (the ancilla) to a fresh single-mode Gaussian state that carries $s_k$; the network then evolves by a symplectic map. As in reset injection for spins, the reset is what makes the reservoir forget. The encodings behave very differently:"
+      "text": "What you will be able to do"
     },
     {
       "type": "list",
       "items": [
-        "Into the magnitude of the displacement (a coherent state with amplitude $\\propto s_k$): first moments evolve linearly, so $\\bar r_k$ is a linear filter of the input history. Readout of first moments gives a linear reservoir, an excellent linear memory but no nonlinearity. Encoding into the temperature of a thermal state is likewise linear.",
-        "Into the phase of the displacement, or the magnitude $r_k$ or phase $\\phi_k$ of squeezing: the input enters through $\\cos\\phi_k$, $\\sin\\phi_k$ (first moments) or $\\cosh 2r_k$, $\\sinh 2r_k$ (covariance matrix), so the observables become nonlinear functions of the inputs.",
-        "Into both: first moments carry linear memory and second moments carry nonlinear memory, so a single linear readout over all moments trades the two off."
+        "Write the quadratures and ladder operators of a mode, compute the photon-number distribution of a coherent state, and say when a Fock-space truncation is safe.",
+        "Describe a Gaussian state by its first moments and covariance matrix and apply a beam splitter, a squeezer and a loss step to it by hand.",
+        "Count the features of an $N$-mode Gaussian reservoir and say which encodings give linear memory, nonlinear memory, or neither.",
+        "Explain why a Gaussian reservoir with a linear readout cannot compute a product of two different past inputs, and what fixes it.",
+        "Explain what a single Kerr oscillator adds, and why more nonlinearity is not always better."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why bosonic modes"
+    },
+    {
+      "type": "prose",
+      "text": "So far the reservoir was made of qubits: two-level systems, a Hilbert space of dimension $2^n$. Many of the systems that will actually be built are not like that. Light in a fibre, microwaves in a resonator, the vibration of a membrane: each is a mode of a field, an oscillator whose energy can be any whole number of quanta. Such a system has infinitely many levels, and it is natural to ask what a reservoir made from them looks like. Two features make it interesting. First, some of these systems are easy to simulate and to measure (the Gaussian ones), so they make an excellent design laboratory. Second, a single oscillator with a nonlinearity has a large state space by itself, so one device can play the role of many qubits."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Modes, quadratures and photon numbers"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "A mode is an oscillator. Classically its state is two numbers, a position-like $x$ and a momentum-like $p$, and it traces a circle in the $(x,p)$ plane. Quantum mechanically $x$ and $p$ cannot both be sharp, and the energy comes in quanta (photons) that can be counted. Everything you know from The Harmonic Oscillator (#/quantum/dynamics/harmonic-oscillator) applies; here is what we need."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths"
+    },
+    {
+      "type": "prose",
+      "text": "A mode has a lowering operator $a$ and a raising operator $a^\\dagger$ with $[a,a^\\dagger]=1$. The quadratures are $x=(a+a^\\dagger)/\\sqrt2$ and $p=i(a^\\dagger-a)/\\sqrt2$, so $[x,p]=i$. The number operator $a^\\dagger a$ counts photons, with eigenstates (Fock states) $\\vert0\\rangle,\\vert1\\rangle,\\dots$ and $a\\vert n\\rangle=\\sqrt n\\vert n-1\\rangle$. The Hilbert space is infinite; in a simulation it is cut off at $N$ levels, $\\vert0\\rangle,\\dots,\\vert N-1\\rangle$, and the cutoff must be checked."
+    },
+    {
+      "type": "prose",
+      "text": "A coherent state $\\vert\\alpha\\rangle$ is the quantum state closest to a classical oscillation: it is an eigenstate of $a$ with eigenvalue $\\alpha$, a complex number whose real and imaginary parts are (up to a factor $\\sqrt2$) the average $x$ and $p$. Its photon number is Poisson distributed with mean $\\vert\\alpha\\vert^2$:"
+    },
+    {
+      "type": "math",
+      "tex": "P_n=e^{-\\vert\\alpha\\vert^2}\\frac{\\vert\\alpha\\vert^{2n}}{n!}"
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. A linear oscillator with loss rate $\\kappa$ and Hamiltonian $H=\\epsilon s(a+a^\\dagger)$ obeys $\\dot\\alpha=-i\\epsilon s-\\tfrac{\\kappa}{2}\\alpha$ for the mean amplitude (the drive pushes, the loss pulls back). The steady state sets $\\dot\\alpha=0$: $\\alpha_{\\mathrm{ss}}=-2i\\epsilon s/\\kappa$. With $\\epsilon=0.6$, $s=1$, $\\kappa=1$: $\\alpha_{\\mathrm{ss}}=-1.2i$, so the mean photon number is $\\vert\\alpha\\vert^2=1.44$. How safe is a 10-level truncation? Photon number is Poisson with mean $1.44$, and $P(n\\ge10)=1-\\sum_{n=0}^{9}e^{-1.44}1.44^n/n!=2.9\\times10^{-6}$. Safe. But with $\\kappa=0.5$ and $\\epsilon=1$ the amplitude would reach $\\vert\\alpha\\vert=2\\epsilon/\\kappa=4$, a mean of 16 photons, and a 10-level truncation would silently corrupt the results."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: truncation",
+      "text": "A coherent state has mean photon number 4. Roughly how many levels must you keep so that the probability beyond the cutoff is below $10^{-3}$? (Use the Poisson tail; the mean is 4 and the standard deviation is 2.)",
+      "hint": "Sum the Poisson probabilities until the remaining tail is small.",
+      "solution": [
+        "Poisson with mean 4: $P(n\\ge12)=1-\\sum_{n=0}^{11}e^{-4}4^n/n!\\approx0.0009$.",
+        "So keep levels $0,\\dots,11$, i.e. at least 12 (the standard-deviation rule gives mean plus 4 sigma = 12).",
+        "Always check the top level's population in the actual simulation: it should be negligible."
+      ],
+      "answer": "About 12 levels (n up to 11)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Gaussian states and Gaussian reservoirs"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Simulating $N$ modes with $d$ levels each costs $d^N$ numbers. For a large class of states this is unnecessary."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "A Gaussian state of $N$ modes is completely described by the means $\\bar r=\\langle r\\rangle$ of the quadratures $r=(x_1,\\dots,x_N,p_1,\\dots,p_N)$ and their covariance matrix $\\sigma_{jk}=\\tfrac12\\langle\\{r_j-\\bar r_j,r_k-\\bar r_k\\}\\rangle$: $2N$ plus $N(2N+1)$ real numbers. The vacuum has $\\bar r=0$ and $\\sigma=\\tfrac12I$: each quadrature has variance $\\tfrac12$. Hamiltonians that are at most quadratic in $a,a^\\dagger$ (beam splitters, squeezers, phase shifts, displacements) and Gaussian noise (loss, thermal noise) keep a Gaussian state Gaussian, and act on these numbers by simple matrix formulas:"
+    },
+    {
+      "type": "math",
+      "tex": "\\bar r\\mapsto S\\bar r+d,\\qquad \\sigma\\mapsto S\\sigma S^\\top+N_{\\mathrm{noise}}",
+      "caption": "A Gaussian channel: symplectic matrix S, displacement d, added noise matrix N. With loss the action is r -> sqrt(eta) S r and sigma -> eta S sigma S^T + (1-eta)/2 I."
+    },
+    {
+      "type": "prose",
+      "text": "So a Gaussian reservoir of $N$ modes is simulated with $2N\\times2N$ matrices, not an exponentially large density matrix. That is its strength (cheap, analysable, with few and well-conditioned observables) and the reason it offers no quantum advantage in simulation cost: Gaussian dynamics are efficiently classically simulable."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Three operations by hand"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Beam splitter, 50:50, on two modes: $a'=(a+b)/\\sqrt2$, $b'=(a-b)/\\sqrt2$. A displacement $(\\bar x_a,\\bar x_b)=(1,0)$ becomes $(0.7071,0.7071)$: the amplitude is shared. A vacuum stays vacuum.",
+        "Loss with transmission $\\eta=0.8$: first moments shrink by $\\sqrt\\eta=0.894$ (so the shared amplitude becomes $0.632$ on each mode); the covariance becomes $\\eta\\sigma+(1-\\eta)\\tfrac12I$. For vacuum, $\\sigma=\\tfrac12I$ gives $0.8\\times0.5+0.2\\times0.5=0.5$: vacuum is unchanged, as it should be, so loss pulls everything toward vacuum.",
+        "Squeezing with parameter $r=0.5$: the variances become $\\tfrac12e^{-2r}=0.184$ in $x$ and $\\tfrac12e^{2r}=1.359$ in $p$. The product $0.184\\times1.359=0.25$ is unchanged (the uncertainty relation is saturated). One quadrature is quieter than vacuum and the other noisier. After the loss step above: $0.8\\times0.184+0.2\\times0.5=0.247$ and $0.8\\times1.359+0.1=1.187$."
       ]
     },
     {
       "type": "prose",
-      "text": "The observables are the first moments and the covariance entries, which are measurable by homodyne detection. Nokkala et al. prove that this family is universal for fading-memory maps without any non-Gaussian resource, by combining the outputs of several networks with a polynomial readout; with a linear readout of one network, the encoding is the only source of nonlinear memory, and its choice tunes the linear-versus-nonlinear balance. Number of features: $2N + N(2N+1)$, which is $230$ for $N=10$ modes: quadratic, not exponential, in the system size."
+      "text": "The input has to be injected. As in the spin model, one mode is reset at each step to a single-mode Gaussian state that carries $s_k$, and the others keep their state. The reset and the loss are the dissipation; the passive network of beam splitters spreads the information among the modes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a Gaussian reservoir can and cannot compute"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The encodings"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Displacement size: a coherent state with amplitude proportional to $s_k$. The first moments evolve linearly, so $\\bar r_k$ is a linear filter of the input history. Read out the first moments and you get an excellent linear memory but no nonlinearity. Encoding in the temperature of a thermal state is linear in the same way.",
+        "Displacement phase: amplitude fixed, phase $\\phi=\\pi s$. The first moments contain $\\cos\\phi$ and $\\sin\\phi$: nonlinear functions of the input.",
+        "Squeezing: the covariance contains $e^{\\pm2r_k}$ with $r_k$ proportional to $s_k$. First moments stay zero; the covariance carries the nonlinear function."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The observables are the first moments and the covariance entries, which are measurable by homodyne detection. The number of features is $2N+N(2N+1)=230$ for $N=10$ modes: quadratic, not exponential, in the system size."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A simulation"
+    },
+    {
+      "type": "prose",
+      "text": "The program builds a random passive network of 4 modes with 20% loss per step, resets mode 1 each step to the encoded state, and records the first moments (8 numbers) and the covariance (36 entries). It reports three scores for each encoding and readout. Linear memory: the sum of $r^2$ for recalling $s_{k-d}$, $d=1$ to 8. Squared memory: the same for recalling $(s_{k-d}-\\tfrac12)^2$, a nonlinear function of a single past input. The centred product $(s_k-\\tfrac12)(s_{k-1}-\\tfrac12)$ has no linear part, so any readout that is a linear filter scores NMSE 1 (no better than predicting the mean). The last line of each block adds the 36 pairwise products of the first moments to the readout."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\n# N bosonic modes, quadratures ordered (x_1..x_N, p_1..p_N); vacuum covariance = I/2.\nN, eta = 4, 0.8                          # modes, transmission per step (loss = 1 - eta)\nrng = np.random.default_rng(3)\nA = rng.normal(size=(N, N)) + 1j * rng.normal(size=(N, N))\nUc, _ = np.linalg.qr(A)                  # a random passive linear-optics network (unitary on the modes)\nS = np.block([[Uc.real, -Uc.imag], [Uc.imag, Uc.real]])      # its symplectic matrix\nassert np.allclose(S @ S.T, np.eye(2 * N))\n\ndef step(m, V, m1, V1):\n    \"\"\"reset mode 1 to the input state (first moments m1, covariance V1), then one lossy network step\"\"\"\n    keep = [i for i in range(2 * N) if i not in (0, N)]\n    m2 = np.zeros(2 * N); V2 = np.zeros((2 * N, 2 * N))\n    m2[keep] = m[keep]; V2[np.ix_(keep, keep)] = V[np.ix_(keep, keep)]\n    m2[[0, N]] = m1; V2[np.ix_([0, N], [0, N])] = V1\n    m3 = np.sqrt(eta) * S @ m2\n    V3 = eta * S @ V2 @ S.T + (1 - eta) * 0.5 * np.eye(2 * N)\n    return m3, V3\n\ndef encode(s, kind):\n    if kind == \"displacement size\":   return np.array([2 * s, 0.0]), 0.5 * np.eye(2)\n    if kind == \"displacement phase\":  return np.array([2 * np.cos(np.pi * s), 2 * np.sin(np.pi * s)]), 0.5 * np.eye(2)\n    if kind == \"squeezing\":\n        r = 1.5 * s; return np.zeros(2), 0.5 * np.diag([np.exp(-2 * r), np.exp(2 * r)])\n\ndef features(s, kind):\n    m, V = np.zeros(2 * N), 0.5 * np.eye(2 * N); first, second = [], []\n    iu = np.triu_indices(2 * N)\n    for x in s:\n        m, V = step(m, V, *encode(x, kind))\n        first.append(m.copy()); second.append(V[iu])\n    return np.array(first), np.array(second)\n\ndef fit(F, y, wash=100, tr=600, lam=1e-8):\n    F = np.hstack([F, np.ones((len(F), 1))]); A_ = F[wash:wash + tr]\n    w = np.linalg.solve(A_.T @ A_ + lam * np.eye(F.shape[1]), A_.T @ y[wash:wash + tr])\n    return F[wash + tr:] @ w, y[wash + tr:]\n\ns = np.random.default_rng(11).uniform(0, 1, 1000)\nprint(f\"{N} modes, loss {1-eta:.0%} per step; features: first moments {2*N}, covariance entries {N*(2*N+1)}\")\ndef nmse(F, y):\n    p, t = fit(F, y); return np.mean((p - t) ** 2) / np.var(t)\ndef memory_capacity(F, f=lambda v: v):\n    mc = 0\n    for d in range(1, 9):\n        p, t = fit(F, f(np.roll(s, d)))\n        mc += np.corrcoef(p, t)[0, 1] ** 2 if np.std(p) > 1e-9 else 0\n    return mc\ndef with_products(F):\n    iu = np.triu_indices(F.shape[1]); return np.hstack([F, np.einsum(\"ti,tj->tij\", F, F)[:, iu[0], iu[1]]])\nprod_target = np.r_[0, (s[1:] - 0.5) * (s[:-1] - 0.5)]       # (s_k - 1/2)(s_{k-1} - 1/2): no linear part\nfor kind in (\"displacement size\", \"displacement phase\", \"squeezing\"):\n    f1, f2 = features(s, kind)\n    print(kind)\n    for name, F in ((\"first moments\", f1), (\"covariance\", f2), (\"first + covariance\", np.hstack([f1, f2]))):\n        print(f\"   {name:19s} linear memory MC {memory_capacity(F):.2f}; squared memory MC {memory_capacity(F, lambda v: (v - .5) ** 2):.2f}; centred product NMSE {nmse(F, prod_target):.3f}\")\n    print(f\"   first moments + their pairwise products: centred product NMSE {nmse(with_products(f1), prod_target):.3f}\")\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Displacement size: first moments give linear memory $4.82$, squared memory $0.01$ (none) and product NMSE $1.04$. The covariance does not depend on the input at all (displacing a state does not change its variances): MC $0.00$.",
+        "Displacement phase: linear memory $3.77$ and squared memory $1.23$ from the first moments: the nonlinearity of $\\cos\\pi s$ and $\\sin\\pi s$ shows up as some squared memory.",
+        "Squeezing: the first moments are blind (zero), the covariance gives linear memory $7.55$ and squared memory $5.25$: a linear readout of the covariance already recalls a nonlinear function of old inputs.",
+        "Every linear readout of moments has product NMSE $\\approx1$ for the centred product, whatever the encoding. Adding pairwise products of the first moments to the readout brings it down to $0.176$ (displacement size) and $0.279$ (phase)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The explanation is structural. Gaussian dynamics acts linearly on the moments, and the reset puts the encoded moments of the input into mode 1. So each moment at time $k$ is a sum over past steps, $\\sum_j c_j\\,g(s_{k-j})$: one function of each past input, added, with no cross terms. Nonlinear memory comes from the encoding function $g$; products of two different past inputs cannot appear in a linear readout. Nokkala et al. prove that this family is universal for fading-memory maps without any non-Gaussian resource, by combining the outputs of several networks with a polynomial readout; with a linear readout of one network, the encoding is the only source of nonlinearity, and its choice tunes the balance between linear and nonlinear memory."
+    },
+    {
+      "type": "callout",
+      "text": "Common confusion: 'Gaussian' does not mean 'linear in the input'. The state evolves by linear maps on the moments, but the encoding can put a nonlinear function of the input into the moments (squeezing, phase). What a Gaussian reservoir cannot do alone is multiply two different past inputs."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: counting Gaussian features",
+      "text": "How many real features does a reservoir of $N=10$ modes offer if you read every first and second moment, and how does that compare with the $4^n-1$ Pauli expectations of $n=4$ qubits?",
+      "hint": "Count the independent entries of a symmetric matrix.",
+      "solution": [
+        "First moments: $2N=20$. Covariance: a symmetric $2N\\times2N$ matrix has $2N(2N+1)/2=N(2N+1)=210$ independent entries.",
+        "Total $230$, growing as $2N^2$.",
+        "$n=4$ qubits have $4^4-1=255$ independent Pauli expectations: more than 230 already at 4 qubits, and then exponentially growing. But reading many of them costs shots (Resource Accounting (#/qrc/hardware/resource-accounting))."
+      ],
+      "answer": "230; 255 for four qubits"
     },
     {
       "type": "heading",
@@ -51,25 +202,31 @@
       "text": "Nonlinearity in the dynamics: the Kerr oscillator"
     },
     {
-      "type": "prose",
-      "text": "Govia et al. proposed a single oscillator with a Kerr nonlinearity, $H = K a^\\dagger a\\, a^\\dagger a + \\alpha\\, u(t)(a+a^\\dagger)$ in the frame rotating at the oscillator frequency, with single-photon loss at rate $\\kappa$ and the input $u(t)$ as the drive. The Kerr term makes the oscillation frequency depend on photon number, so the state's response to the drive is nonlinear. Their readout is a single quadrature expectation sampled at many times during each input (time multiplexing), and they identify the nonlinearity of quantum measurement as the likely source of their quantum-over-classical gain. The selling point is one well-controlled oscillator instead of many qubits."
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "A natural variant reads the Fock-state populations $P_n=\\langle n\\vert\\rho\\vert n\\rangle$ instead (on hardware: measured with a dispersively coupled qubit), giving $N$ features from one element with a truncation of $N$ levels. The sample below compares the two readouts on a version of the model with Hamiltonian $\\Delta a^\\dagger a + K a^{\\dagger2}a^2 + \\epsilon\\, s_k (a+a^\\dagger)$."
+      "text": "If the nonlinearity has to come from the encoding, we need many modes and a polynomial readout to compute products. Is there a way for a single device to supply it physically?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea and the maths"
     },
     {
       "type": "prose",
-      "text": "It simulates a single damped oscillator ($\\kappa=1$, drive $\\epsilon=0.6\\,s_k$ held for $\\Delta t=1$ per step, $N=10$ Fock levels, zero detuning) with and without Kerr, and trains two readouts on the target $(s_k-\\tfrac12)(s_{k-1}-\\tfrac12)$, a product with no linear part, so any linear reservoir scores NMSE $\\approx1$."
+      "text": "Govia et al. proposed a single oscillator with a Kerr nonlinearity, $H=K\\,a^\\dagger a\\,a^\\dagger a+\\alpha\\,u(t)(a+a^\\dagger)$ in the frame rotating at the oscillator frequency, with single-photon loss at rate $\\kappa$ and the input $u(t)$ as the drive. The Kerr term makes the oscillation frequency depend on the photon number: a state with $n$ photons has energy $Kn^2$, so the gap between $n$ and $n+1$ is $K(2n+1)$, and the response to a drive at a fixed frequency is nonlinear. Their readout is a single quadrature expectation sampled at many times during each input (time multiplexing), and they identify the nonlinearity of quantum measurement as the likely source of their quantum-over-classical gain. The selling point is one well-controlled oscillator instead of many qubits."
+    },
+    {
+      "type": "prose",
+      "text": "A natural variant reads the Fock-state populations $P_n=\\langle n\\vert\\rho\\vert n\\rangle$ instead (on hardware, measured with a dispersively coupled qubit), giving $N$ features from one element with a truncation of $N$ levels. The program compares the two readouts on a version of the model with Hamiltonian $\\Delta a^\\dagger a+Ka^{\\dagger2}a^2+\\epsilon s_k(a+a^\\dagger)$. It simulates a single damped oscillator ($\\kappa=1$, drive $\\epsilon=0.6\\,s_k$ held for $\\Delta t=1$ per step, $N=10$ Fock levels, zero detuning) with and without Kerr, and trains two readouts on the target $(s_k-\\tfrac12)(s_{k-1}-\\tfrac12)$, a product with no linear part, so any linear reservoir scores NMSE $\\approx1$."
     },
     {
       "type": "code",
       "lang": "python",
       "source": "import numpy as np\nfrom scipy.linalg import expm\nN = 10                                   # Fock-space truncation\na = np.diag(np.sqrt(np.arange(1, N)), 1); ad = a.T; num = ad @ a; I = np.eye(N)\ndef run(s, K, kappa=1.0, eps=0.6, delta=0.0, dt=1.0, levels=32):\n    cdc = kappa * num\n    D0 = kappa * np.kron(a, a) - 0.5 * np.kron(I, cdc) - 0.5 * np.kron(cdc.T, I)   # column-stacked vec\n    cache = {}                           # inputs quantised to 1/levels: one propagator per level\n    def prop(q):\n        if q not in cache:\n            Hk = delta * num + K * ad @ ad @ a @ a + eps * (q / levels) * (a + ad)\n            cache[q] = expm((-1j * (np.kron(I, Hk) - np.kron(Hk.T, I)) + D0) * dt)\n        return cache[q]\n    rho = np.zeros((N, N), complex); rho[0, 0] = 1; F = []\n    for x in s:\n        rho = (prop(round(levels * x)) @ rho.reshape(-1, order=\"F\")).reshape(N, N, order=\"F\")\n        F.append(np.concatenate([np.real(np.diag(rho)),\n                                 [np.real(np.trace(rho @ (a + ad))), np.real(np.trace(rho @ (1j * (ad - a))))]]))\n    return np.array(F)\ndef nmse(F, y, w0=100, tr=600, lam=1e-8):\n    A = np.hstack([F, np.ones((len(F), 1))])\n    w = np.linalg.solve(A[w0:w0+tr].T @ A[w0:w0+tr] + lam * np.eye(A.shape[1]), A[w0:w0+tr].T @ y[w0:w0+tr])\n    p = A[w0+tr:] @ w; t = y[w0+tr:]\n    return np.mean((p - t) ** 2) / np.var(t)\ns = np.round(32 * np.random.default_rng(3).uniform(0, 1, 1000)) / 32\ny = np.r_[0, (s[1:] - .5) * (s[:-1] - .5)]   # target: (s(k)-1/2)(s(k-1)-1/2), no linear part\nfor K in [0.0, 0.5, 2.0]:\n    F = run(s, K)\n    print(f\"K={K}: mean photons {np.mean(F[:, :N] @ np.arange(N)):.2f}, max P({N-1})={F[:, N-1].max():.0e}; \"\n          f\"NMSE quadratures only {nmse(F[:, N:], y):.3f}, Fock populations {nmse(F[:, :N], y):.3f}\")\n"
-    },
-    {
-      "type": "prose",
-      "text": "Results of that run:"
     },
     {
       "type": "list",
@@ -81,53 +238,133 @@
     },
     {
       "type": "prose",
-      "text": "Two lessons. First, a linear system can still be a nonlinear reservoir if the observable is nonlinear: for a coherent state $\\vert\\alpha\\rangle$, $P_n=e^{-\\vert\\alpha\\vert^2}\\vert\\alpha\\vert^{2n}/n!$ is a nonlinear function of $\\alpha$, which is itself linear in the inputs. Second, more physical nonlinearity is not monotonically better: at large $K$ the drive is off resonance with the photon-number-shifted transitions and the system stops responding. Detuning $\\Delta$ and drive strength have to be tuned together with $K$. The truncation check matters too: the top Fock population stays at or below about $10^{-6}$ here, whereas with $\\kappa=0.5$ and $\\epsilon=1$ the steady amplitude would reach $\\vert\\alpha\\vert=2\\epsilon/\\kappa=4$, a mean of 16 photons, and a 10-level truncation would silently corrupt the results."
+      "text": "Two lessons. First, a linear system can still be a nonlinear reservoir if the observable is nonlinear: for a coherent state of amplitude $\\alpha$, $P_n=e^{-\\vert\\alpha\\vert^2}\\vert\\alpha\\vert^{2n}/n!$ is a nonlinear function of $\\alpha$, which is itself linear in the inputs. (That is why the populations of the linear oscillator already reach $0.655$.) Second, more physical nonlinearity is not monotonically better: at large $K$ the drive is off resonance with the photon-number-shifted transitions and the system stops responding. Detuning $\\Delta$ and drive strength have to be tuned together with $K$. The truncation check matters too: the top Fock population stays at or below about $10^{-6}$ here ($10^{-6}$, $4\\times10^{-15}$, $6\\times10^{-24}$ for the three rows)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: memory of a linear oscillator",
+      "text": "In the linear oscillator with $\\kappa=1$ and $\\Delta t=1$ per input step, by what factor does the contribution of an input to $\\langle a\\rangle$ shrink per step, and how much of an input 5 steps back is left?",
+      "hint": "The amplitude decays at rate $\\kappa/2$.",
+      "solution": [
+        "With no drive, $\\alpha(t)=\\alpha(0)e^{-\\kappa t/2}$ (plus a phase if $\\Delta\\ne0$).",
+        "Per step: $e^{-\\kappa\\Delta t/2}=e^{-0.5}\\approx0.607$.",
+        "After 5 steps: $e^{-2.5}\\approx0.082$. The memory is short and purely linear in $\\langle a\\rangle$; to lengthen it, lower $\\kappa\\Delta t$."
+      ],
+      "answer": "0.607 per step; 0.082"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Photonic and other platforms"
+      "text": "Platforms, loss and measurement noise"
     },
     {
       "type": "prose",
-      "text": "Continuous-variable reservoirs map onto optical hardware: frequency-comb or time-multiplexed squeezed light, with modes coupled by beam splitters and read by homodyne detection, and onto superconducting resonators and mechanical modes. Loss is natural dissipation (and it is non-unital, pulling toward vacuum), and the dominant practical noise is detection inefficiency and the shot noise of homodyne measurement: a quadrature measured once has variance $1/2$ in vacuum units, so estimating a first moment to $\\pm0.01$ needs about $5000$ samples. The survey by Mujal et al. reviews these platforms."
+      "text": "Continuous-variable reservoirs map onto optical hardware: frequency-comb or time-multiplexed squeezed light, with modes coupled by beam splitters and read by homodyne detection, and onto superconducting resonators and mechanical modes (see Analog Platforms (#/qrc/hardware/analog-platforms)). Loss is natural dissipation, and it is non-unital: it pulls toward vacuum, the same reason amplitude damping worked on Dissipation as a Resource (#/qrc/models/dissipation-as-resource). The dominant practical noise is detection inefficiency and the shot noise of homodyne measurement: a quadrature measured once has variance $1/2$ in vacuum units, so the mean of $S$ samples has variance $1/(2S)$, and estimating a first moment to $\\pm0.01$ (variance $10^{-4}$) needs $S=0.5/10^{-4}=5000$ samples. The survey by Mujal et al. reviews these platforms."
     },
     {
       "type": "callout",
       "text": "Gaussian reservoirs are easy to simulate, so they are a design laboratory rather than a route to quantum advantage. Non-Gaussian elements (Kerr, photon-number readout, photon subtraction) are what make a bosonic reservoir hard to simulate classically, and they cost noise and control."
     },
     {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. You want to build a Gaussian reservoir to recall the input from 3 steps ago and, separately, its square. You can encode in displacement size or in squeezing, and read first moments, covariance, or both. Choose, justify with numbers from the table, and say what you would add for a cross-time product."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Linear recall needs a feature that is a linear filter of $s$. Displacement size with first moments gives MC $4.82$ over delays 1 to 8, squeezing with covariance gives $7.55$. Both work.",
+        "Step 2. The square $(s-\\tfrac12)^2$ is a nonlinear function of a single input. Displacement size scores $0.01$ squared memory: it cannot. Squeezing with covariance scores $5.25$: it can, because $e^{\\pm2r}$ is already nonlinear in $r\\propto s$. So squeezing is the choice that covers both.",
+        "Step 3. Cost: squeezing needs a squeezed-light source and its covariance has $N(2N+1)=36$ entries for $N=4$ (versus 8 first moments), each estimated from homodyne data; with a $\\pm0.01$ target that is 5000 samples each.",
+        "Step 4. For the cross-time product no linear readout of any encoding works (NMSE $\\ge1.0$); add a polynomial readout (products of features). The first-moment products reached $0.18$ for displacement size; the same products of covariance entries were not tested here."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The principle: list what the task needs (a function of each single past input, or a product across inputs), see which of the two the structure of the reservoir can provide, and add the missing piece in the readout, if it is cheap, or in a nonlinear element such as the Kerr term."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A mode is an oscillator with $[a,a^\\dagger]=1$, quadratures $x,p$ with $[x,p]=i$, and photon number states; a coherent state has Poisson photon number with mean $\\vert\\alpha\\vert^2$.",
+        "Gaussian states need only $2N+N(2N+1)$ numbers, and Gaussian operations act on them as $2N\\times2N$ matrices: cheap to simulate, hence no quantum-advantage claim.",
+        "Loss pulls toward vacuum (non-unital), supplying the fading memory; the reset of one mode injects the input.",
+        "Moments evolve linearly: with a linear readout the reservoir computes a sum of functions of single past inputs. Displacement size gives linear memory; squeezing and phase encodings give nonlinear memory.",
+        "Products of different past inputs need a polynomial readout or a non-Gaussian element such as a Kerr nonlinearity.",
+        "A Kerr oscillator is nonlinear in its dynamics but too much Kerr detunes the drive; tune $K$, $\\Delta$ and the drive together.",
+        "Check the Fock-space truncation by looking at the top population."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
       "type": "problem",
       "title": "Steady state of a driven damped oscillator",
       "text": "A linear oscillator ($K=\\Delta=0$) with loss rate $\\kappa=1$ is driven by $H=\\epsilon s(a+a^\\dagger)$ with $\\epsilon=0.6$ and a constant input $s=1$. Find the steady-state coherent amplitude, the mean photon number, and the probability that a truncation to 10 Fock levels misses.",
+      "hint": "Set $\\dot\\alpha=0$.",
       "solution": [
-        "$\\dot\\alpha=-i\\epsilon s-\\tfrac{\\kappa}{2}\\alpha$, so $\\alpha_\\mathrm{ss}=-2i\\epsilon s/\\kappa=-1.2i$.",
+        "$\\dot\\alpha=-i\\epsilon s-\\tfrac\\kappa2\\alpha$, so $\\alpha_{\\mathrm{ss}}=-2i\\epsilon s/\\kappa=-1.2i$.",
         "Mean photons $\\vert\\alpha\\vert^2=1.44$.",
         "Photon number is Poisson with mean $1.44$: $P(n\\ge10)=1-\\sum_{n=0}^{9}e^{-1.44}1.44^n/n!\\approx2.9\\times10^{-6}$. Truncation to 10 levels is safe."
       ],
-      "answer": "$\\alpha=-1.2i$, $1.44$ photons, $P(n\\ge10)\\approx2.9\\times10^{-6}$."
+      "answer": "$\\alpha=-1.2i$, $1.44$ photons, $P(n\\ge10)\\approx2.9\\times10^{-6}$"
     },
     {
       "type": "problem",
       "title": "Memory of a linear oscillator",
       "text": "In the same oscillator with $\\Delta t=1$ per input step, by what factor does the contribution of an input to $\\langle a\\rangle$ shrink per step, and how much of an input 5 steps back is left?",
+      "hint": "Amplitude decays at $\\kappa/2$.",
       "solution": [
-        "With no drive, $\\alpha(t)=\\alpha(0)e^{-\\kappa t/2}$ (plus a phase if $\\Delta\\neq0$).",
+        "With no drive, $\\alpha(t)=\\alpha(0)e^{-\\kappa t/2}$.",
         "Per step: $e^{-\\kappa\\Delta t/2}=e^{-0.5}\\approx0.607$.",
-        "After 5 steps: $e^{-2.5}\\approx0.082$. The memory is short and purely linear in $\\langle a\\rangle$; to lengthen it, lower $\\kappa\\Delta t$."
+        "After 5 steps: $e^{-2.5}\\approx0.082$."
       ],
-      "answer": "$0.607$ per step; $0.082$ after 5 steps."
+      "answer": "$0.607$ per step; $0.082$ after 5 steps"
     },
     {
       "type": "problem",
       "title": "Counting Gaussian features",
       "text": "How many real features does a reservoir of $N=10$ modes offer if you read every first and second moment, and how does that compare with the $4^n-1$ Pauli expectations of $n$ qubits?",
+      "hint": "Symmetric matrix entries.",
       "solution": [
-        "First moments: $2N=20$. Covariance: symmetric $2N\\times2N$, so $2N(2N+1)/2=N(2N+1)=210$.",
+        "First moments: $2N=20$. Covariance: $N(2N+1)=210$.",
         "Total $230$, growing as $2N^2$.",
-        "$n$ qubits have $4^n-1$ independent Pauli expectations, $255$ for $n=4$: the qubit count exceeds 230 already at 4 qubits and then grows exponentially, but reading many of them costs shots, see Resource Accounting (#/qrc/hardware/resource-accounting)."
+        "$n$ qubits have $4^n-1$ independent Pauli expectations, $255$ for $n=4$: more than 230 already at 4 qubits, then exponentially more, but reading many of them costs shots."
       ],
-      "answer": "$230$; exceeded by 4 qubits ($255$)."
+      "answer": "230; exceeded by 4 qubits (255)"
+    },
+    {
+      "type": "problem",
+      "title": "Squeezing and loss",
+      "text": "A mode is squeezed with $r=0.8$ (variances $\\tfrac12e^{-2r}$ in $x$ and $\\tfrac12e^{2r}$ in $p$) and then passes through loss with $\\eta=0.7$. Give the variances after the loss, and say which one is still below the vacuum value $0.5$.",
+      "hint": "Use $\\sigma\\mapsto\\eta\\sigma+(1-\\eta)\\tfrac12$.",
+      "solution": [
+        "Before loss: $x$: $0.5e^{-1.6}=0.1009$; $p$: $0.5e^{1.6}=2.4765$.",
+        "After loss: $\\eta\\sigma+(1-\\eta)\\tfrac12$: $x$: $0.7\\times0.1009+0.15=0.2206$; $p$: $0.7\\times2.4765+0.15=1.8835$.",
+        "The $x$ variance $0.2206$ is still below $0.5$: loss reduces squeezing but does not remove it unless $\\eta\\to0$."
+      ],
+      "answer": "$0.221$ and $1.884$; $x$ stays below $0.5$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "prose",
+      "text": "The same counting (features per readout, shots per feature) reappears in Resource Accounting (#/qrc/hardware/resource-accounting). Photonic realisations are discussed in Analog Platforms (#/qrc/hardware/analog-platforms) and Physical Reservoirs (#/qrc/foundations/physical-reservoirs). For what Gaussian reservoirs can approximate in principle, see Expressivity and Universality (#/qrc/theory/expressivity-and-universality)."
     },
     {
       "type": "heading",

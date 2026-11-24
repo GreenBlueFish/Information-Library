@@ -5,31 +5,144 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Definition and the linear-in-ρ view"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "The classical extreme learning machine (Huang et al.) is a one-hidden-layer network with random, untrained hidden weights and a trained linear output layer. The quantum version replaces the hidden layer with a quantum system:"
+      "text": "The channel and POVM language of Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels) and the measurement postulate of Measurement and the Born Rule (#/quantum/foundations/measurement); the ridge readout of Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge); the encodings of Input Encoding (#/qrc/models/input-encoding) and the shot counting of Readout and Multiplexing (#/qrc/models/readout-and-multiplexing). Everything else is defined where used."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Define a quantum extreme learning machine and say how it differs from a quantum reservoir (memory).",
+        "Rewrite the whole pipeline as the expectation of one operator on the encoded state, and find the readout weights that reproduce a given observable from a measurement.",
+        "State what an informationally complete measurement is and count the outcomes needed for a given input dimension.",
+        "Say which functions of a classical input a QELM can fit, and why encoding the same input into $n$ qubits gives frequencies up to $n$.",
+        "Explain why two informationally complete measurements can have very different noise amplification, and compute the factor for a simple case."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a quantum extreme learning machine is"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir is built for streams: its memory is the point. But many data sets have no order: pictures, measurements of independent samples, quantum states from an experiment. For these, memory is a nuisance. Can the same recipe (a fixed complex system, a trained linear readout) be applied to a single, independent input?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Yes, and it is older than reservoir computing for time series. A classical extreme learning machine (Huang, Zhu and Siew 2006) is a network with one hidden layer whose weights are random and never trained, and an output layer that is trained by linear regression. It is the reservoir with the recurrence removed. The quantum version replaces the hidden layer by a quantum system: encode the data into a quantum state, let a fixed, complicated quantum process act on it, measure, and train a linear readout on the measurement statistics. A picture: pouring each sample into a fresh, identical, intricately shaped glass and photographing the pattern of the liquid with a fixed set of sensors. No sample sees the leftovers of the last one; the glass is the feature map."
     },
     {
       "type": "math",
-      "tex": "x \\;\\mapsto\\; \\rho(x) \\;\\mapsto\\; \\mathcal{E}(\\rho(x)) \\;\\mapsto\\; p_k(x)=\\operatorname{Tr}\\left[\\Pi_k\\,\\mathcal{E}(\\rho(x))\\right] \\;\\mapsto\\; y(x)=\\sum_k w_k\\,p_k(x)+b,",
+      "tex": "x\\;\\mapsto\\;\\rho(x)\\;\\mapsto\\;\\mathcal{E}(\\rho(x))\\;\\mapsto\\;p_k(x)=\\operatorname{Tr}\\left[\\Pi_k\\,\\mathcal{E}(\\rho(x))\\right]\\;\\mapsto\\;y(x)=\\sum_kw_kp_k(x)+b",
       "caption": "Encoding, fixed channel (the reservoir), measurement, linear readout."
     },
     {
       "type": "prose",
-      "text": "Pull the channel into the measurement: $E_k=\\mathcal{E}^\\dagger(\\Pi_k)$ is an effective POVM on the input state and $p_k=\\operatorname{Tr}[E_k\\rho(x)]$. The prediction is then $y(x)=\\operatorname{Tr}[O_w\\,\\rho(x)]+b$ with $O_w=\\sum_kw_kE_k$. Everything the trained machine can compute is the expectation of some operator in the span of the effective POVM, evaluated on the encoded state. Two corollaries follow (Innocenti et al.):"
+      "text": "Read left to right. The data $x$ is encoded into a quantum state $\\rho(x)$ (as on Input Encoding (#/qrc/models/input-encoding)). The fixed channel $\\mathcal{E}$ is the reservoir: some unitary dynamics, possibly with ancilla qubits and loss. $\\Pi_k$ are the projectors of the final measurement (for a computational-basis measurement, $\\Pi_k=\\vert k\\rangle\\langle k\\vert$), and $p_k$ is the probability of outcome $k$. The only trained quantities are $w_k$ and $b$. If the reservoir resets completely before each input, or the dissipation is so strong that only the current input survives, a quantum reservoir is a QELM: no memory."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The linear-in-$\rho$ view"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, step by step"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Each outcome probability is $p_k=\\operatorname{Tr}[\\Pi_k\\mathcal{E}(\\rho)]$.",
+        "Step 2. Move the channel onto the measurement. The adjoint channel $\\mathcal{E}^\\dagger$ is defined by $\\operatorname{Tr}[A\\,\\mathcal{E}(\\rho)]=\\operatorname{Tr}[\\mathcal{E}^\\dagger(A)\\,\\rho]$ for all $A,\\rho$ (for a unitary channel, $\\mathcal{E}^\\dagger(A)=U^\\dagger AU$: the Heisenberg picture of Schrödinger and Heisenberg Pictures (#/quantum/dynamics/pictures-of-time-evolution)). So $p_k=\\operatorname{Tr}[E_k\\rho]$ with $E_k=\\mathcal{E}^\\dagger(\\Pi_k)$, the effective POVM element.",
+        "Step 3. The prediction is linear in the $p_k$: $y=\\sum_kw_k\\operatorname{Tr}[E_k\\rho]+b=\\operatorname{Tr}[O_w\\,\\rho]+b$ with $O_w=\\sum_kw_kE_k$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "So everything the trained machine can compute is the expectation of one operator, in the span of the effective POVM, on the encoded state. Two corollaries follow (Innocenti et al.):"
     },
     {
       "type": "list",
       "items": [
         "The reservoir dynamics matter only through $\\operatorname{span}\\{E_k\\}$. Two reservoirs whose effective POVMs span the same operator space are equivalent after training, however different their Hamiltonians.",
-        "The best a QELM can do is reached when the effective POVM is informationally complete (IC): $\\operatorname{span}\\{E_k\\}$ is all operators on the input space, dimension $d^2$ for a $d$-dimensional input. Then $O_w$ can be any observable, and the QELM is linear regression on full tomographic data. More reservoir beyond that adds nothing except, possibly, better conditioning against noise."
+        "The best a QELM can do is reached when the effective POVM is informationally complete (IC): $\\operatorname{span}\\{E_k\\}$ is all operators on the input space, dimension $d^2$ for a $d$-dimensional input. Then $O_w$ can be any observable, and the QELM is linear regression on full tomographic data. More reservoir beyond that adds nothing, except possibly better conditioning against noise."
       ]
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "A worked example: damping"
+    },
+    {
       "type": "prose",
-      "text": "The relation to a QRC is direct: a QRC with no memory (each input step resets the whole system, or the dissipation is so strong that only the current input survives) is a QELM. It is the right tool when the inputs are independent samples, as in classification or regression of static data, or quantum states, rather than time series."
+      "text": "Let the channel be amplitude damping with $\\gamma=0.3$ on one qubit, with Kraus operators $K_0=\\operatorname{diag}(1,\\sqrt{1-\\gamma})$ and $K_1=\\sqrt\\gamma\\,\\vert0\\rangle\\langle1\\vert$, and measure $\\Pi_1=\\vert1\\rangle\\langle1\\vert$. The adjoint of a Kraus channel is $\\mathcal{E}^\\dagger(A)=\\sum_jK_j^\\dagger AK_j$. Then $K_0^\\dagger\\Pi_1K_0=(1-\\gamma)\\vert1\\rangle\\langle1\\vert$ and $K_1^\\dagger\\Pi_1K_1=\\gamma\\vert1\\rangle\\langle0\\vert\\,\\vert1\\rangle\\langle1\\vert\\,\\vert0\\rangle\\langle1\\vert=0$ (because $\\langle0\\vert1\\rangle=0$). So $E_1=0.7\\,\\vert1\\rangle\\langle1\\vert$ and $P(1)=0.7\\,\\rho_{11}$: the damping simply scales the population measured. A single outcome of this kind has $E_1$ in the span of $\\{\\vert1\\rangle\\langle1\\vert\\}$, one operator; this measurement can never see the coherences of $\\rho$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What 'informationally complete' needs"
+    },
+    {
+      "type": "prose",
+      "text": "For a qubit input ($d=2$) the space of operators has dimension $d^2=4$ (spanned by $I,X,Y,Z$), so at least 4 independent effects are needed. A computational-basis readout of the input alone gives only $\\vert0\\rangle\\langle0\\vert,\\vert1\\rangle\\langle1\\vert$, so the span is $\\{I,Z\\}$: it cannot represent $\\langle X\\rangle$. Adding ancillas and a unitary mixes in other operators. In general a computational-basis readout of $d\\cdot2^m$ outcomes after a unitary on the input plus $m$ ancilla qubits needs $d\\cdot 2^m\\ge d^2$, i.e. enough outcomes."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A worked example: a symmetric measurement"
+    },
+    {
+      "type": "prose",
+      "text": "The standard IC measurement of one qubit has four effects $E_k=\\tfrac14(I+\\hat n_k\\cdot\\vec\\sigma)$ with $\\hat n_k$ pointing to the corners of a tetrahedron: $(1,1,1)/\\sqrt3$, $(1,-1,-1)/\\sqrt3$, $(-1,1,-1)/\\sqrt3$, $(-1,-1,1)/\\sqrt3$. The four effects add to $I$ (the $\\hat n_k$ sum to zero). Suppose we want $\\langle X\\rangle=\\operatorname{Tr}[X\\rho]$, that is weights with $\\sum_kw_kE_k=X$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Collect coefficients of $I$: $\\tfrac14\\sum_kw_k=0$.",
+        "Step 2. Coefficients of $X,Y,Z$: $\\tfrac14\\sum_kw_kn_{k,x}=1$, $\\tfrac14\\sum_kw_kn_{k,y}=0$, $\\tfrac14\\sum_kw_kn_{k,z}=0$.",
+        "Step 3. Solve (four linear equations, four unknowns; the sample below does it): $w=\\sqrt3\\,(1,1,-1,-1)=(1.732,1.732,-1.732,-1.732)$. So $\\langle X\\rangle=1.732\\,(p_1+p_2-p_3-p_4)$.",
+        "Step 4. Noise. At the maximally mixed state each $p_k=\\tfrac14$, and the variance of the estimate from $S$ shots is $\\sum_kw_k^2p_k/S-\\langle X\\rangle^2/S=3/S$ (here $\\langle X\\rangle=0$). Measuring $X$ directly gives $1/S$. The symmetric measurement costs a factor 3 in shots for $\\langle X\\rangle$, but gives $\\langle Y\\rangle$ and $\\langle Z\\rangle$ from the same data."
+      ]
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\nX = np.array([[0, 1], [1, 0]], complex); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1, -1]).astype(complex); I2 = np.eye(2)\n# a symmetric informationally complete measurement of one qubit: four effects E_k = (I + n_k . sigma)/4, tetrahedron directions\nn = np.array([[1, 1, 1], [1, -1, -1], [-1, 1, -1], [-1, -1, 1]]) / np.sqrt(3)\nE = [(I2 + v[0] * X + v[1] * Y + v[2] * Z) / 4 for v in n]\nprint(\"sum of effects = identity:\", np.allclose(sum(E), I2))\n# weights w with sum_k w_k E_k = X, found by least squares on the 4 Pauli coordinates of the effects\nA = np.array([[np.real(np.trace(P @ e)) for e in E] for P in (I2, X, Y, Z)])          # 4 x 4, invertible\nw = np.linalg.solve(A, [0, 2, 0, 0])                                                    # Tr(P X) = 2 for P = X\nprint(\"weights for <X>:\", np.round(w, 4), \" check:\", np.allclose(sum(wk * e for wk, e in zip(w, E)), X))\nprint(\"variance factor sum_k w_k^2 p_k at the maximally mixed state (p_k = 1/4):\", round(float(sum(w ** 2) / 4), 3), \"(measuring X directly: 1)\")\n\n# a random reservoir: input qubit + m ancillas in |0>, Haar-random unitary, computational-basis readout\nrng = np.random.default_rng(4)\ndef haar(d):\n    z = (rng.normal(size=(d, d)) + 1j * rng.normal(size=(d, d))) / np.sqrt(2)\n    q, r = np.linalg.qr(z); return q * (np.diag(r) / abs(np.diag(r)))\nfor m in (1, 2, 3):\n    U = haar(2 ** (1 + m)); anc = np.zeros(2 ** m); anc[0] = 1\n    Ek = []\n    for k in range(2 ** (1 + m)):\n        row = U[k].reshape(2, 2 ** m) @ anc\n        Ek.append(np.outer(row.conj(), row))\n    A = np.array([[np.real(np.trace(P @ e)) for e in Ek] for P in (I2, X, Y, Z)])\n    w = np.linalg.lstsq(A, [0, 2, 0, 0], rcond=None)[0]                                  # minimum-norm weights for <X>\n    p0 = np.array([np.real(np.trace(e) / 2) for e in Ek])                                # outcome probabilities at I/2\n    print(f\"m={m}: {2**(1+m)} outcomes, rank {np.linalg.matrix_rank(A)}, noise factor for <X> at I/2: {float(np.sum(w**2 * p0)):.2f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "The sample confirms the weights and the factor 3. It also tests random reservoirs: the input qubit plus $m$ ancillas, a Haar-random unitary (a random unitary drawn uniformly), computational-basis readout. With $m=1$ (4 outcomes) the measurement is IC (rank 4) but badly conditioned: the weights needed for $\\langle X\\rangle$ amplify the noise by a factor $2292$ (one random draw). With $m=2$ (8 outcomes) the factor is $4.20$, and with $m=3$ (16 outcomes) $3.60$. More outcomes give better conditioning, even though the rank cannot exceed $d^2=4$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: ancillas for an informationally complete measurement",
+      "text": "You want a QELM that can learn any linear function $\\operatorname{Tr}[O\\rho]$ of a 3-qubit input state, using computational-basis measurement of the input plus $m$ ancilla qubits after a fixed unitary. What is the smallest $m$?",
+      "hint": "IC needs $d^2$ effects; count outcomes.",
+      "solution": [
+        "IC on $d=8$ needs $d^2=64$ linearly independent effects.",
+        "Computational-basis readout of $3+m$ qubits gives $2^{3+m}$ outcomes; $2^{3+m}\\ge64$ gives $m\\ge3$.",
+        "With $m=3$ a generic unitary gives rank 64 (as the 2-qubit case on Quantum Data Tasks (#/qrc/models/quantum-data-tasks) shows with $m=2$)."
+      ],
+      "answer": "$m=3$ (64 outcomes)"
     },
     {
       "type": "heading",
@@ -37,26 +150,40 @@
       "text": "What the encoding allows: frequencies"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "For classical data the function class is decided before the reservoir acts: $y(x)$ lies in the span of the matrix elements of $\\rho(x)$. With angle encoding, a qubit rotated by $R_y(\\pi x)$ from $\\vert0\\rangle$ has $\\rho=\\tfrac12(I+\\sin\\pi x\\,X+\\cos\\pi x\\,Z)$, so its entries are in $\\operatorname{span}\\{1,\\cos\\pi x,\\sin\\pi x\\}$. Encoding the same $x$ into $n$ qubits ($\\rho(x)=\\rho_1(x)^{\\otimes n}$, or re-uploading it $n$ times in sequence) multiplies these, so the entries of $\\rho(x)$ are trigonometric polynomials of degree at most $n$ in $\\pi x$:"
+      "text": "The IC argument says the measurement can reach any observable on $\\rho(x)$. But a classical input $x$ lives in a small corner of state space: a curve. So the real question is which functions of $x$ the entries of $\\rho(x)$ can be, since $y(x)=\\operatorname{Tr}[O_w\\rho(x)]$ can never be richer than that."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths"
+    },
+    {
+      "type": "prose",
+      "text": "For classical data the function class is decided before the reservoir acts: $y(x)$ lies in the span of the matrix elements of $\\rho(x)$. With angle encoding a qubit rotated by $R_y(\\pi x)$ from $\\vert0\\rangle$ has $\\rho=\\tfrac12(I+\\sin\\pi x\\,X+\\cos\\pi x\\,Z)$, so its entries are in $\\operatorname{span}\\{1,\\cos\\pi x,\\sin\\pi x\\}$. Take $n$ qubits, each encoded with the same $x$ (so $\\rho(x)=\\rho_1(x)^{\\otimes n}$, or the same input re-uploaded $n$ times in sequence). An entry of the product is a product of up to $n$ factors, each in $\\{1,\\cos\\pi x,\\sin\\pi x\\}$. Products such as $\\cos^2\\pi x=\\tfrac12(1+\\cos2\\pi x)$ and $\\sin\\pi x\\cos\\pi x=\\tfrac12\\sin2\\pi x$ show that a product of $j$ factors has frequencies up to $j\\pi$. So the entries are trigonometric polynomials of degree at most $n$ in $\\pi x$:"
     },
     {
       "type": "math",
-      "tex": "y(x)\\in\\operatorname{span}\\{1,\\cos\\pi x,\\sin\\pi x,\\dots,\\cos n\\pi x,\\sin n\\pi x\\},\\qquad \\dim\\le 2n+1.",
+      "tex": "y(x)\\in\\operatorname{span}\\{1,\\cos\\pi x,\\sin\\pi x,\\dots,\\cos n\\pi x,\\sin n\\pi x\\},\\qquad \\dim\\le2n+1.",
       "caption": "The Fourier view of Schuld, Sweke and Meyer, applied to a QELM."
     },
     {
       "type": "prose",
-      "text": "However large the reservoir, a QELM with $n$ encodings cannot fit a frequency above $n$. The sample checks this with a Haar-random unitary as the reservoir and target $f(x)=\\cos3\\pi x+\\tfrac12\\sin\\pi x$ (degree 3), comparing the readout of all $2^n$ outcome probabilities with the readout of only the $n$ local expectations $\\langle Z_i\\rangle$."
+      "text": "For $n=2$: the span is $\\{1,\\cos\\pi x,\\sin\\pi x,\\cos2\\pi x,\\sin2\\pi x\\}$, dimension 5. However large the reservoir, a QELM with $n$ encodings cannot fit a frequency above $n$: the channel and the measurement act on the already-fixed function space and can only choose a subspace of it."
+    },
+    {
+      "type": "prose",
+      "text": "The program tests this with a Haar-random unitary as the reservoir and target $f(x)=\\cos3\\pi x+\\tfrac12\\sin\\pi x$ (degree 3), comparing a readout of all $2^n$ outcome probabilities with a readout of only the $n$ local expectations $\\langle Z_i\\rangle$."
     },
     {
       "type": "code",
       "lang": "python",
       "source": "import numpy as np\nrng = np.random.default_rng(0)\ndef haar(d):\n    z = (rng.normal(size=(d, d)) + 1j * rng.normal(size=(d, d))) / np.sqrt(2)\n    q, r = np.linalg.qr(z); return q * (np.diag(r) / abs(np.diag(r)))\ndef state(x, n):\n    q = np.array([np.cos(np.pi * x / 2), np.sin(np.pi * x / 2)])   # R_y(pi x)|0>\n    psi = np.array([1.0])\n    for _ in range(n): psi = np.kron(psi, q)                       # n copies of the encoding\n    return psi\ndef features(xs, n, U, local):\n    P = np.array([abs(U @ state(x, n)) ** 2 for x in xs])        # all 2^n outcome probabilities\n    if not local: return P\n    bits = (np.arange(2 ** n)[:, None] >> np.arange(n)[::-1]) & 1\n    return P @ (1 - 2 * bits)                                      # only <Z_i>, i = 1..n\nf = lambda x: np.cos(3 * np.pi * x) + 0.5 * np.sin(np.pi * x)     # a degree-3 trig polynomial in pi x\nxtr, xte = rng.uniform(-1, 1, 200), np.linspace(-1, 1, 101)\nfor n in range(1, 6):\n    U = haar(2 ** n); row = []\n    for local in (False, True):\n        Ftr, Fte = features(xtr, n, U, local), features(xte, n, U, local)\n        A = lambda F: np.hstack([F, np.ones((len(F), 1))])\n        w = np.linalg.lstsq(A(Ftr), f(xtr), rcond=1e-10)[0]\n        nmse = np.mean((A(Fte) @ w - f(xte)) ** 2) / np.var(f(xte))\n        row.append(f\"{'local <Z_i>' if local else 'all 2^n probabilities'}: rank {np.linalg.matrix_rank(A(Ftr), 1e-9)}, NMSE {nmse:.3f}\")\n    print(f\"n={n}: \" + \"; \".join(row))\n"
-    },
-    {
-      "type": "prose",
-      "text": "Results (rank is that of the training feature matrix including the bias column):"
     },
     {
       "type": "list",
@@ -68,7 +195,23 @@
     },
     {
       "type": "prose",
-      "text": "The rank of the full readout is exactly $\\min(2^n,2n+1)$: the $2^n$ probabilities are capped by the $2n+1$ functions the encoding can produce. The local readout has only $n+1$ features, so it needs more qubits to reach the same function class, and here never quite does. The general picture: the encoding fixes a function space of dimension $r_\\mathrm{enc}$; the measurement picks a subspace of dimension at most its rank $r_\\mathrm{meas}$; the QELM's capacity is the dimension of the intersection, at most $\\min(r_\\mathrm{enc},r_\\mathrm{meas})$."
+      "text": "The rank of the full readout is exactly $\\min(2^n,2n+1)$: the $2^n$ probabilities are capped by the $2n+1$ functions the encoding can produce. (For $n=1,2$ the cap is the number of outcomes, $2$ and $4$; from $n=3$ it is $2n+1$.) The local readout has only $n+1$ features, so it needs more qubits to reach the same function class, and here never quite does. The general picture: the encoding fixes a function space of dimension $r_{\\mathrm{enc}}$; the measurement picks a subspace of dimension at most its rank $r_{\\mathrm{meas}}$; the QELM's capacity is the dimension of the intersection, at most $\\min(r_{\\mathrm{enc}},r_{\\mathrm{meas}})$."
+    },
+    {
+      "type": "callout",
+      "text": "Common misconception: a bigger reservoir always means a more powerful QELM. Not so. With angle encoding of one number, a 5-qubit reservoir fitted by all its probabilities has at most 11 independent functions, and a 10-qubit one has the same 11 if the number of encodings is still 5. Power is limited by the encoding and by the measurement rank, not by the Hilbert-space dimension."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: minimum encodings for a frequency",
+      "text": "A QELM encodes $x\\in[-1,1]$ by $R_y(\\pi x)$ on each of $n$ qubits. The target is $\\cos5\\pi x$. What is the smallest $n$, and how many outcomes must the measurement have at least to reach every function of that degree?",
+      "hint": "Dimension of the trigonometric space is $2n+1$.",
+      "solution": [
+        "Degree 5 in $\\pi x$ needs $n\\ge5$.",
+        "The function space then has dimension $2n+1=11$ (constant included), so the readout needs at least 11 independent features: with probabilities summing to one, 11 outcomes give 10 independent ones plus the constant through the bias.",
+        "With $n=5$ qubits there are $32$ outcomes, enough if the reservoir mixes them well; measuring only five $\\langle Z_i\\rangle$ (6 features with the bias) cannot span 11 functions."
+      ],
+      "answer": "$n=5$; 11 outcomes"
     },
     {
       "type": "heading",
@@ -77,7 +220,22 @@
     },
     {
       "type": "prose",
-      "text": "In exact arithmetic any IC measurement is as good as any other. With $S$ shots per input, each $p_k$ carries noise of variance $p_k(1-p_k)/S$, and the readout weights $w$ that reconstruct a target observable can be large when the effective POVM is badly conditioned (its frame operator has small eigenvalues). The estimation error is then amplified: roughly, the variance of $\\hat y$ scales as $\\sum_k w_k^2 p_k/S$. So among IC reservoirs prefer the ones whose POVM is close to a tight frame (symmetric IC POVMs, or randomised measurements as in classical shadows, are the best case). Ridge regularisation trades bias for this variance. Xiong et al. also show that for reservoirs that scramble strongly over many qubits, the outcome probabilities concentrate (they approach the uniform distribution, with input-dependent deviations exponentially small in $n$), so the shots needed to see the input grow exponentially; see Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+      "text": "In exact arithmetic any IC measurement is as good as any other. With $S$ shots per input, each $p_k$ carries noise of variance $p_k(1-p_k)/S$, and the readout weights $w$ that reconstruct a target observable can be large when the effective POVM is badly conditioned (its frame operator has small eigenvalues). The estimation error is then amplified: roughly, the variance of $\\hat y$ scales as $\\sum_kw_k^2p_k/S$, which is what the qubit example computed (3 for the symmetric measurement, thousands for a poor random one). So among IC reservoirs prefer the ones whose POVM is close to a tight frame (symmetric IC POVMs, or randomised measurements as in classical shadows, are the best case). Ridge regularisation trades bias for this variance."
+    },
+    {
+      "type": "prose",
+      "text": "Xiong et al. also show that for reservoirs that scramble strongly over many qubits, the outcome probabilities concentrate (they approach the uniform distribution, with input-dependent deviations exponentially small in $n$), so the shots needed to see the input grow exponentially; see Concentration and Scalability (#/qrc/theory/concentration-and-scalability). A number: if a 10-qubit scrambler makes all $1024$ probabilities about $1/1024=9.8\\times10^{-4}$ and you need to resolve changes of $10\\%$ of that ($\\delta=9.8\\times10^{-5}$), then $S\\approx p/\\delta^2=9.8\\times10^{-4}/9.6\\times10^{-9}\\approx1.0\\times10^{5}$ shots per input; for a single outcome with $p=0.1$ and error $0.003$ you only need $S=p(1-p)/0.003^2=10^4$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: shot noise in a probability feature",
+      "text": "An outcome has probability $p=0.1$. How many shots give a standard error of $0.003$?",
+      "hint": "Solve $\\sqrt{p(1-p)/S}=0.003$ for $S$.",
+      "solution": [
+        "Standard error $\\sqrt{p(1-p)/S}$.",
+        "$S=p(1-p)/0.003^2=0.09/(9\\times10^{-6})=10^4$."
+      ],
+      "answer": "$10^4$"
     },
     {
       "type": "heading",
@@ -95,37 +253,104 @@
       ]
     },
     {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. You have 2-qubit inputs ($d=4$) and want a QELM that estimates any expectation value $\\operatorname{Tr}[O\\rho]$ of them, with at most 5 ancilla qubits and $10^4$ shots per input. Decide how many ancillas to use and estimate the cost."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. IC needs $d^2=16$ independent effects. A computational-basis readout of $2+m$ qubits has $2^{2+m}$ outcomes: $m=2$ gives 16, the bare minimum.",
+        "Step 2. The one-qubit sample above shows that the bare minimum is badly conditioned for a random unitary (qubit example: $m=1$, 4 outcomes, noise factor $2292$; $m=2$: $4.2$; $m=3$: $3.6$). So use $m=3$ (32 outcomes) or $m=4$ (64) for margin; rank cannot exceed 16 but conditioning improves.",
+        "Step 3. Cost: with $10^4$ shots per input and a noise factor of about 4, the standard error of an expectation value of magnitude $\\le1$ is about $\\sqrt{4/10^4}=0.02$.",
+        "Step 4. Check on the quantum-data page's sample whether the learned map for your target works at that shot count. If $0.02$ is too coarse, you need $4\\times$ more shots per halving of the error."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The decision came from counting: the minimum from $d^2$, the margin from conditioning, the cost from the variance formula."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A QELM is a quantum reservoir without memory: encode, fixed channel, measure, linear readout.",
+        "The whole machine computes $\\operatorname{Tr}[O_w\\rho(x)]+b$ with $O_w=\\sum_kw_kE_k$ and $E_k=\\mathcal{E}^\\dagger(\\Pi_k)$; only $\\operatorname{span}\\{E_k\\}$ matters.",
+        "The ceiling is an informationally complete measurement: $d^2$ independent effects; more reservoir only improves conditioning.",
+        "For a classical input the function class is the span of the entries of $\\rho(x)$: degree $n$ trigonometric polynomials for $n$ angle encodings, dimension $2n+1$.",
+        "A tight (symmetric) measurement amplifies shot noise least: factor 3 for $\\langle X\\rangle$ with the tetrahedron, thousands for a poor random draw.",
+        "Strong scrambling over many qubits flattens the probabilities, so shots grow exponentially."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
       "type": "problem",
       "title": "Minimum encodings for a frequency",
       "text": "A QELM encodes $x\\in[-1,1]$ by $R_y(\\pi x)$ on each of $n$ qubits. The target is $\\cos5\\pi x$. What is the smallest $n$, and how many outcomes must the measurement have at least for a linear readout to reach every function of that degree?",
+      "hint": "$\\dim=2n+1$.",
       "solution": [
         "Degree 5 in $\\pi x$ needs $n\\ge5$.",
-        "The function space then has dimension $2n+1=11$ (constant included), so the readout needs at least $10$ independent probabilities plus the bias (probabilities sum to one, so 11 outcomes give 10 independent ones plus the constant).",
+        "The function space then has dimension $2n+1=11$ (constant included), so the readout needs at least 11 independent features.",
         "With $n=5$ qubits there are $32$ outcomes, enough if the reservoir mixes them well; measuring only five $\\langle Z_i\\rangle$ (6 features with the bias) cannot span 11 functions."
       ],
-      "answer": "$n=5$; to span all 11 functions, at least 11 outcomes."
+      "answer": "$n=5$; at least 11 outcomes"
     },
     {
       "type": "problem",
       "title": "Ancillas for an informationally complete measurement",
       "text": "You want a QELM that can learn any linear function $\\operatorname{Tr}[O\\rho]$ of a 3-qubit input state, using computational-basis measurement of the input plus $m$ ancilla qubits after a fixed unitary. What is the smallest $m$?",
+      "hint": "$2^{3+m}\\ge d^2$.",
       "solution": [
         "IC on $d=8$ needs $d^2=64$ linearly independent effects.",
         "Computational-basis readout of $3+m$ qubits gives $2^{3+m}$ outcomes; $2^{3+m}\\ge64$ gives $m\\ge3$.",
-        "With $m=3$, a generic (e.g. Haar-random) unitary gives rank 64, as the 2-qubit case in Quantum Data Tasks (#/qrc/models/quantum-data-tasks) shows with $m=2$."
+        "With $m=3$ a generic unitary gives rank 64."
       ],
-      "answer": "$m=3$ ancillas (64 outcomes)."
+      "answer": "$m=3$ ancillas (64 outcomes)"
     },
     {
       "type": "problem",
       "title": "Shot noise in a probability feature",
-      "text": "An outcome has probability $p=0.1$. How many shots give it a standard error of $0.003$, and what if a strongly scrambling 10-qubit reservoir makes all $1024$ probabilities about $1/1024$ and you need to resolve changes of $10\\%$ of that?",
+      "text": "An outcome has probability $p=0.1$. How many shots give a standard error of $0.003$? And if a strongly scrambling 10-qubit reservoir makes all $1024$ probabilities about $1/1024$ and you need to resolve changes of $10\\%$ of that?",
+      "hint": "Variance $\\approx p/S$ when $p$ is small.",
       "solution": [
-        "Standard error $\\sqrt{p(1-p)/S}$: $S=p(1-p)/0.003^2=0.09/9\\times10^{-6}=10^4$.",
+        "Standard error $\\sqrt{p(1-p)/S}$: $S=p(1-p)/0.003^2=0.09/(9\\times10^{-6})=10^4$.",
         "For $p\\approx9.8\\times10^{-4}$ and a change $\\delta=9.8\\times10^{-5}$: $S\\approx p/\\delta^2=9.8\\times10^{-4}/9.6\\times10^{-9}\\approx1.0\\times10^5$ shots per input.",
         "The requirement grows with $2^n$ when probabilities flatten, which is the concentration problem."
       ],
-      "answer": "$10^4$ shots; about $10^5$ in the scrambled case."
+      "answer": "$10^4$ shots; about $10^5$ in the scrambled case"
+    },
+    {
+      "type": "problem",
+      "title": "Weights for a Pauli with the tetrahedron",
+      "text": "With the four tetrahedron effects, what weights give $\\langle Z\\rangle$, and what is the noise factor at the maximally mixed state?",
+      "hint": "Match the $Z$ components of the four directions.",
+      "solution": [
+        "By the symmetry of the tetrahedron the $Z$ coefficients are $n_{k,z}=(1,-1,-1,1)/\\sqrt3$. Solving $\\tfrac14\\sum_kw_kn_{k,z}=1$ with the other coefficients zero gives $w=\\sqrt3\\,(1,-1,-1,1)$.",
+        "At $p_k=\\tfrac14$ the factor is $\\sum_kw_k^2p_k=4\\times3\\times\\tfrac14=3$.",
+        "So $\\langle Z\\rangle$ costs the same factor 3 in shots as $\\langle X\\rangle$: the measurement treats all three Pauli directions equally."
+      ],
+      "answer": "$w=\\sqrt3(1,-1,-1,1)$; factor 3"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "prose",
+      "text": "The effective-POVM picture carries over directly to Quantum Data Tasks (#/qrc/models/quantum-data-tasks), where the input is itself a quantum state. The concentration problem that limits strongly scrambling QELMs is treated in Concentration and Scalability (#/qrc/theory/concentration-and-scalability), and the cost of the shots in Resource Accounting (#/qrc/hardware/resource-accounting)."
     },
     {
       "type": "heading",
