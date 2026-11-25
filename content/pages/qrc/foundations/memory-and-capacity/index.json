@@ -91,11 +91,11 @@
     {
       "type": "code",
       "lang": "python",
-      "source": "import numpy as np\n# One linear unit x_k = a x_{k-1} + u_k, i.i.d. input. Theory: MC_d = a^(2d) (1 - a^2), sum over d>=1 is a^2.\nrng = np.random.default_rng(0)\nT = 200000\nu = rng.uniform(-1, 1, T)\nfor a in (0.5, 0.9):\n    x = np.zeros(T)\n    for k in range(1, T): x[k] = a * x[k - 1] + u[k]\n    row = []\n    for d in (0, 1, 2, 3, 5):\n        r2 = np.corrcoef(x[100:], np.roll(u, d)[100:])[0, 1] ** 2\n        row.append(f\"d={d}: {r2:.3f} (theory {a**(2*d) * (1 - a**2):.3f})\")\n    print(f\"a={a}: \" + \"; \".join(row))\n    print(f\"   sum over d>=1 (theory a^2) = {a**2:.2f};  d=0 term plus that = {(1 - a**2) + a**2:.2f}  (= N = 1)\")\n"
+      "source": "import numpy as np\n# One linear unit x_k = a x_{k-1} + u_k, i.i.d. input. Theory: MC_d = a^(2d) (1 - a^2), sum over d>=1 is a^2.\nrng = np.random.default_rng(0)\nT = 200000\nu = rng.uniform(-1, 1, T)\nfor a in (0.5, 0.9):\n    x = np.zeros(T)\n    for k in range(1, T): x[k] = a * x[k - 1] + u[k]\n    r2 = [np.corrcoef(x[100:], np.roll(u, d)[100:])[0, 1] ** 2 for d in range(80)]   # measured MC_d, d = 0..79\n    row = [f\"d={d}: {r2[d]:.3f} (theory {a**(2*d) * (1 - a**2):.3f})\" for d in (0, 1, 2, 3, 5)]\n    print(f\"a={a}: \" + \"; \".join(row))\n    print(f\"   measured sum over d>=1 = {sum(r2[1:]):.3f} (theory a^2 = {a**2:.2f});  \"\n          f\"measured d=0 term plus that = {sum(r2):.3f}  (theory 1 = N)\")\n"
     },
     {
       "type": "prose",
-      "text": "Real output: for $a = 0.5$, $\\mathrm{MC}_0 = 0.750$, $\\mathrm{MC}_1 = 0.186$ (theory 0.188), $\\mathrm{MC}_2 = 0.047$; for $a = 0.9$, $\\mathrm{MC}_0 = 0.190$, $\\mathrm{MC}_1 = 0.153$ (0.154), $\\mathrm{MC}_5 = 0.067$ (0.066). The small differences are from using 200 000 random inputs rather than infinitely many. The note that the $d=0$ term plus the rest is 1.00 for both is the first appearance of the bound below."
+      "text": "Real output: for $a = 0.5$, $\\mathrm{MC}_0 = 0.750$, $\\mathrm{MC}_1 = 0.186$ (theory 0.188), $\\mathrm{MC}_2 = 0.047$; for $a = 0.9$, $\\mathrm{MC}_0 = 0.190$, $\\mathrm{MC}_1 = 0.153$ (0.154), $\\mathrm{MC}_5 = 0.067$ (0.066). The small differences are from using 200 000 random inputs rather than infinitely many. Adding up the measured values over delays 0 to 79: the sum from $d=1$ is 0.249 for $a = 0.5$ (theory 0.25) and 0.813 for $a = 0.9$ (theory 0.81), and with the $d=0$ term included the totals are 0.999 and 1.003. That the total is 1, the number of units, is the first appearance of the bound below."
     },
     {
       "type": "problem",
@@ -360,7 +360,7 @@
     },
     {
       "type": "prose",
-      "text": "Real output: the typical state is only 0.069 in size. Without noise MC is 18.11 of the bound 19; with noise of standard deviation $10^{-6}$ it is 17.88; $10^{-4}$ gives 15.11; $10^{-3}$ gives 12.12; $10^{-2}$ gives 7.80. Noise one hundredth of a percent of the signal costs about a sixth of the capacity; noise at one fifth of the signal ($10^{-2}$ against 0.069) costs more than half. The deepest delays are lost first, since their traces are the weakest."
+      "text": "Real output: the typical state is only 0.069 in size. Without noise MC is 18.11 of the bound 19; with noise of standard deviation $10^{-6}$ it is 17.88; $10^{-4}$ gives 15.11; $10^{-3}$ gives 12.12; $10^{-2}$ gives 7.80. Noise about a seventh of a percent of the signal ($10^{-4}$ against 0.069) costs about a sixth of the capacity; noise at about a seventh of the signal ($10^{-2}$ against 0.069) costs more than half. The deepest delays are lost first, since their traces are the weakest."
     },
     {
       "type": "problem",
@@ -443,7 +443,7 @@
     },
     {
       "type": "prose",
-      "text": "Try this. (1) With 4 qubits, $V = 1$, field 1 and evolution time 10, MC is about 2.14 of a possible 4. (2) Set $V$ to 5: the features are read five times between inputs, 20 in all, and MC rises to about 5.10 of a possible 20. (3) Set shots to 1000 with $V = 5$: MC falls to about 3.33. The capacity bound is only reached for features you can estimate precisely. (4) Set qubits to 2 with $V=1$: MC is about 0.99, just under the bound of 2. (5) Reduce the evolution time to 1 with 4 qubits and $V = 1$: MC rises to about 2.42, as the system has less time to scramble the input."
+      "text": "Try this. (1) With 4 qubits, $V = 1$, field 1 and evolution time 10, MC is about 2.14 of a possible 4. (2) Set $V$ to 5: the features are read five times between inputs, 20 in all, and MC rises to about 5.10 of a possible 20. (3) Set shots to 1000 with $V = 5$: MC falls to about 3.33. The capacity bound is only reached for features you can estimate precisely. (4) Set qubits to 2 with $V=1$: MC is about 0.99 of a possible 2. (5) Reduce the evolution time to 1 with 4 qubits and $V = 1$: MC rises to about 2.42, as the system has less time to scramble the input."
     },
     {
       "type": "heading",

@@ -270,7 +270,7 @@
     },
     {
       "type": "prose",
-      "text": "A score is only informative next to the score of something simple. NMSE 0.08 on NARMA10 sounds impressive until you find that a 25-unit software network gets 0.44 and a linear fit gets 0.68; or sounds poor until you find that every method scores worse. The ladder below lists the rungs, from the cheapest, with what climbing each one shows."
+      "text": "A score is only informative next to the score of something simple. NMSE 0.08 on NARMA10 sounds impressive next to a 25-unit software network (0.44) or a linear fit (0.35), and much less so once you find that a plain quadratic fit on the last twenty inputs gets 0.03. The ladder below lists the rungs, from the cheapest, with what climbing each one shows."
     },
     {
       "type": "heading",
@@ -279,12 +279,12 @@
     },
     {
       "type": "prose",
-      "text": "The sample computes the ladder for both NARMA tasks on the same data: the training mean, linear regression on the last $L$ inputs, a quadratic fit (all pair products of those lags, in the spirit of next-generation reservoir computing, Gauthier et al. 2021), and echo state networks of 25, 50 and 200 units."
+      "text": "The sample computes the ladder for both NARMA tasks on the same data: the training mean, linear regression on the last $L$ inputs (lags 0 to $L-1$), a quadratic fit (all pair products of those lags, in the spirit of next-generation reservoir computing, Gauthier et al. 2021), and echo state networks of 25, 50 and 200 units."
     },
     {
       "type": "code",
       "lang": "python",
-      "source": "import numpy as np\nfrom itertools import combinations_with_replacement\n# NARMA10 and NARMA2: the baseline ladder (mean, linear lags, quadratic lags, ESNs of two sizes).\ndef narma10(u):\n    y = np.zeros_like(u)\n    for t in range(9, len(u) - 1):\n        y[t + 1] = 0.3 * y[t] + 0.05 * y[t] * y[t - 9:t + 1].sum() + 1.5 * u[t - 9] * u[t] + 0.1\n    return y\ndef narma2(u):\n    y = np.zeros_like(u)\n    for t in range(2, len(u)):\n        y[t] = 0.4 * y[t - 1] + 0.4 * y[t - 1] * y[t - 2] + 0.6 * u[t - 1] ** 3 + 0.1\n    return y\ndef esn(u, N, seed=1, radius=0.9, in_scale=0.5):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N)); W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-in_scale, in_scale, N); x = np.zeros(N); X = np.zeros((len(u), N))\n    for t, ut in enumerate(u): x = np.tanh(W @ x + w_in * ut); X[t] = x\n    return X\ndef nmse(F, y, wash=200, ntr=3000, lam=1e-8):\n    A = np.hstack([F, np.ones((len(F), 1))])\n    w = np.linalg.solve(A[wash:ntr].T @ A[wash:ntr] + lam * np.eye(A.shape[1]), A[wash:ntr].T @ y[wash:ntr])\n    return np.mean((A[ntr:] @ w - y[ntr:]) ** 2) / np.var(y[ntr:])\ndef lags(u, L): return np.stack([np.roll(u, k) for k in range(L)], 1)\ndef quad(F):\n    cols = [F[:, i] * F[:, j] for i, j in combinations_with_replacement(range(F.shape[1]), 2)]\n    return np.hstack([F, np.stack(cols, 1)])\nu = np.random.default_rng(0).uniform(0, 0.5, 4000)\nfor name, y, L in ((\"NARMA10\", narma10(u), 10), (\"NARMA2\", narma2(u), 3)):\n    print(f\"{name}: target mean {y.mean():.3f}, std {y.std():.3f}, range {y.min():.3f} to {y.max():.3f}\")\n    print(f\"   predict the training mean:        NMSE = {np.mean((y[3000:] - y[200:3000].mean())**2) / np.var(y[3000:]):.3f}\")\n    print(f\"   linear on {L} lags:                 NMSE = {nmse(lags(u, L), y):.3f}\")\n    print(f\"   quadratic on {L} lags ({L + L*(L+1)//2} features): NMSE = {nmse(quad(lags(u, L)), y):.3f}\")\n    for N in (25, 50, 200): print(f\"   ESN with {N:3d} units:              NMSE = {nmse(esn(u, N), y):.3f}\")\nbad = 0\nfor seed in range(200):\n    y = narma10(np.random.default_rng(seed).uniform(0, 0.5, 1000))\n    bad += (not np.all(np.isfinite(y))) or np.abs(y).max() > 5\nprint(\"NARMA10 runs that blew up, out of 200 random input draws:\", bad)\n"
+      "source": "import numpy as np\nfrom itertools import combinations_with_replacement\n# NARMA10 and NARMA2: the baseline ladder (mean, linear lags, quadratic lags, ESNs of three sizes).\n# Lags 0..L-1 of u. The NARMA10 target at step k uses u at lags 1 and 10, so it needs L = 11.\ndef narma10(u):\n    y = np.zeros_like(u)\n    for t in range(9, len(u) - 1):\n        y[t + 1] = 0.3 * y[t] + 0.05 * y[t] * y[t - 9:t + 1].sum() + 1.5 * u[t - 9] * u[t] + 0.1\n    return y\ndef narma2(u):\n    y = np.zeros_like(u)\n    for t in range(2, len(u)):\n        y[t] = 0.4 * y[t - 1] + 0.4 * y[t - 1] * y[t - 2] + 0.6 * u[t - 1] ** 3 + 0.1\n    return y\ndef esn(u, N, seed=1, radius=0.9, in_scale=0.5):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N)); W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-in_scale, in_scale, N); x = np.zeros(N); X = np.zeros((len(u), N))\n    for t, ut in enumerate(u): x = np.tanh(W @ x + w_in * ut); X[t] = x\n    return X\ndef nmse(F, y, wash=200, ntr=3000, lam=1e-8):\n    A = np.hstack([F, np.ones((len(F), 1))])\n    w = np.linalg.solve(A[wash:ntr].T @ A[wash:ntr] + lam * np.eye(A.shape[1]), A[wash:ntr].T @ y[wash:ntr])\n    return np.mean((A[ntr:] @ w - y[ntr:]) ** 2) / np.var(y[ntr:])\ndef lags(u, L): return np.stack([np.roll(u, k) for k in range(L)], 1)\ndef quad(F):\n    cols = [F[:, i] * F[:, j] for i, j in combinations_with_replacement(range(F.shape[1]), 2)]\n    return np.hstack([F, np.stack(cols, 1)])\nu = np.random.default_rng(0).uniform(0, 0.5, 4000)\nfor name, y, L in ((\"NARMA10\", narma10(u), 11), (\"NARMA2\", narma2(u), 3)):\n    print(f\"{name}: target mean {y.mean():.3f}, std {y.std():.3f}, range {y.min():.3f} to {y.max():.3f}\")\n    print(f\"   predict the training mean:        NMSE = {np.mean((y[3000:] - y[200:3000].mean())**2) / np.var(y[3000:]):.3f}\")\n    print(f\"   linear on {L} lags:                 NMSE = {nmse(lags(u, L), y):.3f}\")\n    print(f\"   quadratic on {L} lags ({L + L*(L+1)//2} features): NMSE = {nmse(quad(lags(u, L)), y):.3f}\")\n    if name == \"NARMA10\":\n        print(f\"   quadratic on 20 lags (230 features): NMSE = {nmse(quad(lags(u, 20)), y):.3f}\")\n    for N in (25, 50, 200): print(f\"   ESN with {N:3d} units:              NMSE = {nmse(esn(u, N), y):.3f}\")\nbad = 0\nfor seed in range(200):\n    y = narma10(np.random.default_rng(seed).uniform(0, 0.5, 1000))\n    bad += (not np.all(np.isfinite(y))) or np.abs(y).max() > 5\nprint(\"NARMA10 runs that blew up, out of 200 random input draws:\", bad)\n"
     },
     {
       "type": "prose",
@@ -293,14 +293,14 @@
     {
       "type": "list",
       "items": [
-        "NARMA10. Training mean: 1.003. Linear on 10 lags: 0.680. Quadratic on 10 lags (65 features): 0.693. ESN with 25 units: 0.441; 50 units: 0.154; 200 units: 0.081.",
+        "NARMA10. Training mean: 1.003. Linear on 11 lags: 0.346. Quadratic on 11 lags (77 features): 0.253. Quadratic on 20 lags (230 features): 0.031. ESN with 25 units: 0.441; 50 units: 0.154; 200 units: 0.081.",
         "NARMA2. Training mean: 1.001. Linear on 3 lags: 0.290. Quadratic on 3 lags (9 features): 0.139. ESN with 25 units: 0.204; 50 units: 0.156; 200 units: 0.011.",
         "Of 200 random input draws of length 1000, one NARMA10 run blew up (the sample prints an overflow warning), so NARMA10 targets must be checked for divergence."
       ]
     },
     {
       "type": "prose",
-      "text": "Notice three things. First, the quadratic fit on the last ten inputs does not help on NARMA10 (0.693 against 0.680), because the target depends on its own past through the feedback term, which gives it memory far longer than ten inputs: a short window cannot see everything that matters. (I did not test longer windows, so this is my interpretation.) Second, on NARMA2 the quadratic baseline with only 9 features (0.139) beats a 25-unit and a 50-unit ESN; a reservoir needs enough size to catch up with a good hand-made feature set. Third, the ESN at 200 units reaches 0.011 on NARMA2: with the right size it is clearly better than either baseline."
+      "text": "Notice three things. First, the window must be counted carefully. The NARMA10 target at step $k+1$ contains $u_{k-9}u_k$, so measured from the step being predicted it needs the inputs 1 and 10 steps back: lags 0 to 10, eleven of them. With only lags 0 to 9 the product cannot be formed at all, and the same fits give 0.680 (linear) and 0.693 (quadratic), no better than each other. With the right eleven lags the quadratic fit helps (0.253 against 0.346), and with twenty lags it reaches 0.031, because the feedback term $0.05\\,y_k\\sum y$ gives the target a memory longer than ten steps and the longer window catches more of it. That quadratic fit beats every ESN in the table: on NARMA10 a hand-made polynomial of recent inputs is a very strong baseline. Second, on NARMA2 the quadratic baseline with only 9 features (0.139) beats a 25-unit and a 50-unit ESN; a reservoir needs enough size to catch up with a good hand-made feature set. Third, the ESN at 200 units reaches 0.011 on NARMA2: with the right size it is clearly better than either baseline there. Which method wins depends on the task, which is why the ladder is run for every task."
     },
     {
       "type": "heading",
@@ -344,7 +344,7 @@
       "type": "list",
       "items": [
         "Step 1. Features. 4 qubits read through $\\langle Z_i\\rangle$ at $V$ virtual nodes gives $4V$ features. For $V = 5$ that is 20 features; the matching classical reservoir is a 20-unit ESN, which scores about 0.44 on the data of the sample (25 units) and so the claim needs to beat that, not the 200-unit result of 0.081.",
-        "Step 2. Baselines. Run the ladder on the same input stream: mean, linear on 10 lags (0.68), quadratic (0.69), ESN(20). Report them in a table with the claim.",
+        "Step 2. Baselines. Run the ladder on the same input stream: mean, linear on 11 lags (0.35), quadratic on 11 lags (0.25) and on 20 lags (0.031), ESN(20). Report them in a table with the claim. Already here the claim is in trouble: 0.12 beats the equal-size ESN but not the 20-lag quadratic fit, so 'beating classical methods' is true only for some classical methods.",
         "Step 3. Evaluation. Ask for ten reservoir draws (random couplings) and the spread, as in the seed sample (standard deviation 0.016). Ask for the washout, the split and the validation procedure for $\\lambda$.",
         "Step 4. Measurement. Ask whether 0.12 is for exact expectation values or for estimated ones, and with how many shots. From the memory page, 1000 shots reduced a memory capacity of 5.10 to 3.33; an NMSE can degrade as sharply.",
         "Step 5. Verdict. The claim stands if it beats the 20-unit ESN and the baselines with the spread taken into account, at a stated shot count."
@@ -363,7 +363,7 @@
         "NMSE normalised by the variance is 1 for the mean predictor; normalising by the mean square can make a poor result look excellent (0.270 against 0.00042 in the sample). NRMSE is the square root of NMSE.",
         "NARMA tests memory plus nonlinearity; parity tests high-degree nonlinear memory and exposes the odd symmetry of bias-free tanh; Mackey-Glass tests prediction horizon; channel equalisation tests robustness to nonlinear distortion and noise.",
         "Baselines ladder: mean, linear lags, quadratic lags, equal-size classical reservoir with equal noise. A quantum result should be compared with the equal-feature rung.",
-        "On the same data, a 50-unit ESN got NARMA10 NMSE 0.154 against 0.680 for linear lags and 0.693 for quadratic lags."
+        "On the same data, a 50-unit ESN got NARMA10 NMSE 0.154 against 0.346 for linear regression on 11 lags and 0.253 for a quadratic fit on them, but a quadratic fit on 20 lags got 0.031: count the lags the target needs, and do not skip the polynomial rung."
       ]
     },
     {
@@ -418,7 +418,7 @@
     {
       "type": "problem",
       "title": "Counting the ladder",
-      "text": "The sample's quadratic baseline uses 10 lags and has 65 features. Where does 65 come from, and how many would there be for 20 lags?",
+      "text": "A quadratic baseline on 10 lags has 65 features. Where does 65 come from, and how many are there for the sample's 20 lags?",
       "solution": [
         "10 linear features plus all products of pairs with repeats (squares and cross products): $\\binom{11}{2} = 55$. Total $10 + 55 = 65$.",
         "For 20 lags: $20 + \\binom{21}{2} = 20 + 210 = 230$."

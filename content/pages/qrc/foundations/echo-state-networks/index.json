@@ -141,7 +141,7 @@
     },
     {
       "type": "prose",
-      "text": "Notice what has happened to the information. After three steps the state is $(-0.2239, 0.1720, 0.0588)$. The last input was a small positive 0.25, yet all the activities in unit 1 are negative and large compared with what that input alone would give: they still carry the $-1$ from one step earlier. The state is a blend of the history. The readout's job is to unblend it."
+      "text": "Notice what has happened to the information. After three steps the state is $(-0.2239, 0.1720, 0.0588)$. The last input was a small positive 0.25, which on its own would push unit 1 to $\\tanh(0.8 \\times 0.25) = +0.197$; yet unit 1 sits at $-0.2239$, because it still carries the $-1$ from one step earlier. The state is a blend of the history. The readout's job is to unblend it."
     },
     {
       "type": "heading",
@@ -207,7 +207,7 @@
     },
     {
       "type": "prose",
-      "text": "Any table $Z$ can be written $Z = U \\Sigma V^{\\top}$, where $\\Sigma$ is a diagonal table of non-negative numbers $\\sigma_1 \\ge \\sigma_2 \\ge \\dots$ called singular values and $U$ and $V$ are rotations. You can think of the cloud of states as an egg-shaped cloud of points in $M$ dimensions. The singular values are the lengths of the egg's axes (scaled by the number of points) and $V$ gives the directions of the axes. Using this, the ridge solution becomes"
+      "text": "Any table $Z$ can be written $Z = U \\Sigma V^{\\top}$, where $\\Sigma$ is a diagonal table of non-negative numbers $\\sigma_1 \\ge \\sigma_2 \\ge \\dots$ called singular values and $U$ and $V$ are rotations. You can think of the cloud of states as an egg-shaped cloud of points in $M$ dimensions. The singular values are the lengths of the egg's axes (times the square root of the number of points) and $V$ gives the directions of the axes. Using this, the ridge solution becomes"
     },
     {
       "type": "math",
@@ -415,7 +415,7 @@
     },
     {
       "type": "prose",
-      "text": "Try this. (1) Leave the defaults (30 units, radius 0.9, input scaling 0.5) and read the label: MC about 9.8 of 30. (2) Raise the radius to 0.99 and drop input scaling to 0.1: MC climbs to about 15.1, and the stems stretch to longer delays, the 'almost linear, slow decay' recipe. (3) Return to the radius 0.9 and push input scaling to 2: MC collapses to about 4.9 as the units saturate. (4) Set the leak rate to 0.2 with the other defaults: MC falls to about 5.3. (5) Set the radius down to 0.5: MC is about 7.4, the memory is short. (6) Set $N$ to 10, then 100 (with the largest delay at 60): MC is 6.2, then 16.2. MC is far below $N$ every time, because the random network never uses its units perfectly."
+      "text": "Try this. (1) Leave the defaults (30 units, radius 0.9, input scaling 0.5) and read the label: MC about 9.8 of 30. (2) Raise the radius to 0.99 and drop input scaling to 0.1: MC climbs to about 15.1, and the stems stretch to longer delays, the 'almost linear, slow decay' recipe. (3) Return to the radius 0.9 and push input scaling to 2: MC collapses to about 4.9 as the units saturate. (4) Set the leak rate to 0.2 with the other defaults: MC falls to about 5.3. (5) Set the radius down to 0.5: MC is about 7.4, the memory is short. (6) Set $N$ to 10, then 100 (with the largest delay at 60): MC is 6.3, then 16.2. MC is below $N$ every time, and far below it for the larger networks, because the random network never uses its units perfectly."
     },
     {
       "type": "problem",
@@ -445,16 +445,16 @@
     },
     {
       "type": "prose",
-      "text": "The sample generates the target, builds the network, trains the readout on 2800 steps after a 200-step washout, and tests on the last 1000 steps, against the best purely linear method that sees the last ten inputs directly:"
+      "text": "The sample generates the target, builds the network, trains the readout on 2800 steps after a 200-step washout, and tests on the last 1000 steps, against the best purely linear method that sees the inputs it needs (0 to 10 steps back) directly:"
     },
     {
       "type": "code",
       "lang": "python",
-      "source": "import numpy as np\nrng = np.random.default_rng(0)\n\ndef narma10(u):\n    y = np.zeros_like(u)\n    for t in range(9, len(u) - 1):\n        y[t + 1] = (0.3 * y[t] + 0.05 * y[t] * y[t - 9:t + 1].sum()\n                    + 1.5 * u[t - 9] * u[t] + 0.1)\n    return y\n\nT, washout, ntrain = 4000, 200, 3000\nu = rng.uniform(0, 0.5, T)\ny = narma10(u)\n\ndef esn_states(u, N=200, radius=0.9, in_scale=0.5, leak=1.0, seed=1):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N))\n    W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-in_scale, in_scale, N)\n    x, X = np.zeros(N), np.zeros((len(u), N))\n    for t, ut in enumerate(u):\n        x = (1 - leak) * x + leak * np.tanh(W @ x + w_in * ut)\n        X[t] = x\n    return X\n\ndef fit_eval(X, y, lam=1e-8):\n    A = np.hstack([X, np.ones((len(X), 1))])\n    tr = slice(washout, ntrain); te = slice(ntrain, None)\n    w = np.linalg.solve(A[tr].T @ A[tr] + lam * np.eye(A.shape[1]), A[tr].T @ y[tr])\n    p = A[te] @ w\n    return np.mean((p - y[te])**2) / np.var(y[te])\n\nfor N in (50, 200):\n    X = esn_states(u, N=N)\n    print(f\"N={N:4d}  NMSE(test) = {fit_eval(X, y):.3f}\")\n# baseline: linear regression on the last 10 inputs\nlags = np.stack([np.roll(u, k) for k in range(10)], 1)\nprint(f\"linear on 10 lags NMSE = {fit_eval(lags, y):.3f}\")\n"
+      "source": "import numpy as np\nrng = np.random.default_rng(0)\n\ndef narma10(u):\n    y = np.zeros_like(u)\n    for t in range(9, len(u) - 1):\n        y[t + 1] = (0.3 * y[t] + 0.05 * y[t] * y[t - 9:t + 1].sum()\n                    + 1.5 * u[t - 9] * u[t] + 0.1)\n    return y\n\nT, washout, ntrain = 4000, 200, 3000\nu = rng.uniform(0, 0.5, T)\ny = narma10(u)\n\ndef esn_states(u, N=200, radius=0.9, in_scale=0.5, leak=1.0, seed=1):\n    r = np.random.default_rng(seed)\n    W = r.normal(size=(N, N))\n    W *= radius / max(abs(np.linalg.eigvals(W)))\n    w_in = r.uniform(-in_scale, in_scale, N)\n    x, X = np.zeros(N), np.zeros((len(u), N))\n    for t, ut in enumerate(u):\n        x = (1 - leak) * x + leak * np.tanh(W @ x + w_in * ut)\n        X[t] = x\n    return X\n\ndef fit_eval(X, y, lam=1e-8):\n    A = np.hstack([X, np.ones((len(X), 1))])\n    tr = slice(washout, ntrain); te = slice(ntrain, None)\n    w = np.linalg.solve(A[tr].T @ A[tr] + lam * np.eye(A.shape[1]), A[tr].T @ y[tr])\n    p = A[te] @ w\n    return np.mean((p - y[te])**2) / np.var(y[te])\n\nfor N in (50, 200):\n    X = esn_states(u, N=N)\n    print(f\"N={N:4d}  NMSE(test) = {fit_eval(X, y):.3f}\")\n# baseline: linear regression on the inputs 0 to 10 steps back (the target at step k uses lags 1 and 10)\nlags = np.stack([np.roll(u, k) for k in range(11)], 1)\nprint(f\"linear on 11 lags NMSE = {fit_eval(lags, y):.3f}\")\n"
     },
     {
       "type": "prose",
-      "text": "Real output: with $N = 50$ the test NMSE is 0.154, with $N = 200$ it is 0.081, and linear regression on ten lags gives 0.680. (NMSE: 0 is perfect, 1 is no better than guessing the average; see Training, Testing and Measuring Error (#/qrc/start/training-and-testing).) The linear model has all the memory it needs and none of the nonlinearity: it cannot form the product $u_{k-9}u_k$ that is in the target. The reservoir supplies memory and some of the products, and the readout assembles them."
+      "text": "Real output: with $N = 50$ the test NMSE is 0.154, with $N = 200$ it is 0.081, and linear regression on eleven lags gives 0.346. (NMSE: 0 is perfect, 1 is no better than guessing the average; see Training, Testing and Measuring Error (#/qrc/start/training-and-testing).) The linear model sees every input the product term needs (the target at step $k+1$ contains $u_{k-9}u_k$, inputs 1 and 10 steps back) but has none of the nonlinearity: it cannot form that product. The reservoir supplies memory and some of the products, and the readout assembles them."
     },
     {
       "type": "prose",
@@ -527,7 +527,7 @@
         "Ridge shrinks each singular direction by $\\sigma_i^2/(\\sigma_i^2+\\lambda)$; weak directions, where noise dominates, are suppressed. The dual form is cheaper when there are fewer training points than features.",
         "Spectral radius sets the memory timescale, roughly $-1/\\ln\\rho$ steps; a random matrix with entry standard deviation $\\rho/\\sqrt N$ has spectral radius close to $\\rho$.",
         "Input scaling trades memory for nonlinearity; leak rate sets the speed; bias breaks the odd symmetry of tanh so even functions can be learned.",
-        "On NARMA10 a 50-unit network reached NMSE 0.154 and a 200-unit one 0.081 against 0.680 for linear regression on the last ten inputs.",
+        "On NARMA10 a 50-unit network reached NMSE 0.154 and a 200-unit one 0.081 against 0.346 for linear regression on the last eleven inputs.",
         "Teacher forcing makes training easy, but closing the loop lets errors accumulate: test the closed loop."
       ]
     },
