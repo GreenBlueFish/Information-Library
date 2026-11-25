@@ -1,0 +1,547 @@
+{
+  "title": "Convolution in Practice",
+  "intro": "Convolution is behind blurred photographs, the sum of two dice, the echo of a concert hall, the moving average on a price chart and the first layer of an image-recognition network. This page works each in turn, adds its mirror image correlation, and ends with the hard problem of running convolution backwards.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Blurring an image"
+    },
+    {
+      "type": "prose",
+      "text": "An image is a grid of numbers, and convolution works on grids as it does on lines: flip the kernel in both directions, slide it, multiply and add. The kernel is a small grid, usually 3 by 3, and each output pixel is the weighted sum of the input pixels under it. The simplest blur is the box kernel, all nine weights equal to $\\tfrac19$, which replaces each pixel by the average of itself and its eight neighbours. A Gaussian kernel weights the centre more. The standard small one has rows $(1, 2, 1)$, $(2, 4, 2)$ and $(1, 2, 1)$, all divided by 16."
+    },
+    {
+      "type": "prose",
+      "text": "A test image: five rows, each equal to $(0, 0, 9, 9, 9)$: a dark region on the left and a bright one on the right, with a vertical edge between columns 1 and 2. Take the output pixel at row 1, column 2: the window under the kernel (rows 0 to 2, columns 1 to 3) is three rows of $(0, 9, 9)$. With the box kernel the output is $\\tfrac19(3 \\times (0 + 9 + 9)) = 6$. With the Gaussian kernel: each row of the window gives $1\\cdot 0 + 2\\cdot 9 + 1\\cdot 9 = 27$ for the top and bottom rows and, for the middle row, $2 \\cdot 0 + 4 \\cdot 9 + 2 \\cdot 9 = 54$, total $27 + 54 + 27 = 108$, and $108/16 = 6.75$. Doing the same at the columns on either side gives the output across the edge (every row inside the image gives the same, since the rows are alike):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Box blur: $(3,\\; 6,\\; 9)$. The sharp step from 0 to 9 has become a ramp in three equal steps.",
+        "Gaussian blur: $(2.25,\\; 6.75,\\; 9)$. Also a ramp, but with its middle value on the heavier side, and gentler at the ends."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "These kernels are symmetric, so flipping them changes nothing, which is why image-processing books often skip the flip. A clever fact shows why kernels are called impulse responses of the system: put a single bright pixel of value 9 on a black $5\\times 5$ image and convolve with the box kernel. The output is a $3 \\times 3$ block of 1s, which is the kernel itself ($9 \\times \\tfrac19$ in every cell). With the Gaussian kernel the output is $9/16$ times the weights: $(0.5625, 1.125, 0.5625)$, $(1.125, 2.25, 1.125)$, $(0.5625, 1.125, 0.5625)$. Whatever the kernel looks like is how a single point is smeared. In an optical blur, from an out-of-focus lens, the same kernel is called the point-spread function."
+    },
+    {
+      "type": "prose",
+      "text": "The Gaussian kernel has a convenient property: it is separable. $\\tfrac{1}{16}(1,2,1)^{\\top}(1,2,1)$ is the product of a column and a row, so a 2D Gaussian blur equals a blur along every row with $\\tfrac14(1,2,1)$ followed by a blur along every column. That is $3 + 3 = 6$ multiplications per pixel instead of 9, and for a large $k \\times k$ kernel it is $2k$ instead of $k^2$. And, by the variance rule on Properties of Convolution (#/math/convolution/properties), blurring a Gaussian with a Gaussian gives a wider Gaussian, whose variance is the sum, so a big blur can be built from several small ones."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sharpening and edges"
+    },
+    {
+      "type": "prose",
+      "text": "Kernels can also do the opposite. The sharpening kernel has a large positive centre and negative neighbours: rows $(0,-1,0)$, $(-1,5,-1)$, $(0,-1,0)$. Its weights add to 1, so flat regions are unchanged, while differences from the neighbours are exaggerated. On our edge image, the same window at row 1, column 2 gives $5 \\times 9 - (9 + 9 + 0 + 9) = 18$; at column 1 the centre is 0 and the right-hand neighbour is 9, giving $-9$; and at column 3 all four neighbours are 9, giving $45 - 36 = 9$. The result across the edge is $(-9,\\; 18,\\; 9)$: a dark undershoot on the dark side, an overshoot to 18 on the bright side, where the true values were 0 and 9. The eye reads the exaggerated step as a crisper edge."
+    },
+    {
+      "type": "prose",
+      "text": "An edge-detecting kernel has weights that add to 0, so flat regions give 0 and only changes survive. The Sobel kernel with rows $(-1,0,1)$, $(-2,0,2)$, $(-1,0,1)$ gives, on our image, the values $(-36, -36, 0)$ across columns 1, 2 and 3 when it is applied as a true convolution (with the flip), and $+36$ in the first two columns if applied without the flip: the sign depends on the flip but the location of the edge does not. Remember this: for kernels that are not symmetric, flipping matters."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "A pulse blurred by a Gaussian bump",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "Gaussian bump"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1.5
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "This is the same blur in one dimension: a 1 s pulse (a bright stripe with sharp edges) convolved with a Gaussian bump of standard deviation 0.25 s. At Shift t = 1.5 the readout gives y(t) = 0.598: the flipped bump is centred at $\\tau = t - 1 = 0.5$, the middle of the stripe, and the stripe's ends lie two standard deviations either side of that centre, so only the tails beyond $2\\sigma$ are lost. The value matches $0.6267 \\times \\mathrm{erf}(\\sqrt{2}) = 0.598$, where $0.6267$ is the bump's area. Slide t and watch the output panel: the sharp edges of the pulse have become smooth S-shaped ramps, centred on $t = 1$ and $t = 2$ and about 0.6 s wide from 10% to 90%, and there is no flat top: the output peaks at 0.598 at $t = 1.5$, a little below the bump's full area, because the 0.25 s bump is not small compared with the 1 s stripe."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sums of random numbers"
+    },
+    {
+      "type": "prose",
+      "text": "If $X$ and $Y$ are independent whole-number random variables, the probability that $X + Y = n$ is $\\sum_k P(X = k)\\,P(Y = n-k)$, which is exactly the discrete convolution of the two probability lists. Take two fair dice, each the list $p[k] = \\tfrac16$ for $k = 1 \\ldots 6$. The sum of both has $P(7) = 6/36 = 0.1667$: there are six pairs $(1,6), (2,5), \\ldots, (6,1)$ and each has probability $\\tfrac1{36}$. At the ends, $P(2) = P(12) = 1/36 = 0.0278$. The eleven probabilities, for totals 2 to 12, rise and fall in a triangle $1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1$ (in 36ths). A third die convolves again: $P(10) = P(11) = 27/216 = 0.125$ (the two most likely sums), and $P(3) = P(18) = 1/216 = 0.0046$. The shape is turning from a triangle into a smooth bell."
+    },
+    {
+      "type": "prose",
+      "text": "There is a pattern in the numbers worth noticing. The mean of one die is 3.5 and its variance is $35/12 = 2.917$. For the sum of $n$ dice, means add ($3.5n$) and variances add ($2.917n$): the same rule as for convolving signals on Properties of Convolution (#/math/convolution/properties), of which this is the probability version. Keep convolving and the bell-shaped result is the central limit theorem. The probability shelf treats this fully on Sums of Random Variables (#/probability/multivariate/sums). A classic trick built on it: the sum of 12 uniform random numbers on $[0,1]$ has variance $12 \\times \\tfrac1{12} = 1$ and an almost-Gaussian shape, which was once a cheap way to generate normal noise."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "conv-sequence",
+        "title": "Two dice are a convolution",
+        "params": [
+          {
+            "key": "x",
+            "label": "Sequence x[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "a die: 1/6 at n = 1 … 6"
+          },
+          {
+            "key": "h",
+            "label": "Sequence h[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "a die: 1/6 at n = 1 … 6"
+          },
+          {
+            "key": "n",
+            "label": "Output index n",
+            "control": "range",
+            "min": 0,
+            "max": 14,
+            "step": 1,
+            "default": 7
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Both sequences are dice, with 1/6 at every $n$ from 1 to 6. Output index $n$ is now the total of the two dice. At n = 7 the readout lists the six non-zero products $x[1]\\cdot h[6] + \\cdots + x[6]\\cdot h[1]$, each $1/36$, and the sum $y[7] = 1/6$. Press ◀ n down to 2: $y[2] = 1/36$, with only one non-zero product, $x[1]\\cdot h[1]$ (the readout also lists $x[0]\\cdot h[2]$ and $x[2]\\cdot h[0]$, which are 0 because neither die can show 0). Step up to 12: $y[12] = 1/36$ again. The output stems form the triangle, with a peak at n = 7. The multiplication table shows the same thing: it is 7 by 7, its row and column for 0 hold zeros and the other 36 cells hold $1/36$, and the anti-diagonal for n = 7 has the most $1/36$ cells, six."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Echoes and reverb"
+    },
+    {
+      "type": "prose",
+      "text": "A room, a cave or a spring reverb tank responds to a clap with a pattern of delayed, weakened copies: the direct sound, a few early reflections off the nearest walls, then a thickening tail. That pattern, recorded, is the room's impulse response, and any sound played in the room is the dry sound convolved with it. So 'convolution reverb' works by recording (or computing) the impulse response of a cathedral and convolving it with a studio recording. A single echo is the simplest case: $h(t) = \\delta(t) + 0.5\\,\\delta(t - 1.5)$, the sound plus a half-strength copy 1.5 s later, so $y(t) = x(t) + 0.5\\,x(t - 1.5)$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "A pulse and its echo",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "echo δ(t) + 0.5·δ(t − 1.5)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed τ: echoes of h"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -90
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 15
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The input is a 1 s pulse and the system an echo at 1.5 s with weight 0.5. The view is set to the echoes slices and Turn −90°: each ribbon is a copy of the impulse response (the spike and the half-height spike 1.5 s after it) started at one input moment and scaled by the input there. The output panel is the pulse, a gap from $t = 1$ to $1.5$, and a half-height pulse from $1.5$ to $2.5$. At Shift t = 2 the readout says y(t) = 0.500, the echo; at t = 0.5 it says 1.000, the original. Because the pulse is 1 s long and the echo comes 1.5 s later, they do not overlap. Make the pulse wider (set x to pulse, 2 s wide) and the two copies overlap between $t = 1.5$ and $t = 2$ and add there: at Shift t = 1.75 the readout gives y(t) = 1.500, that is $1 + 0.5$."
+    },
+    {
+      "type": "prose",
+      "text": "A real concert hall has an impulse response lasting about two seconds, which at 48,000 samples per second is 96,000 taps. As computed on Fast Convolution with the FFT (#/math/convolution/fast-convolution), a direct implementation needs $96{,}000$ multiplications per output sample, 4.6 billion per second of audio. Convolution reverb is practical only because of the FFT methods there."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Moving averages"
+    },
+    {
+      "type": "prose",
+      "text": "The simplest smoothing filter averages the last $M$ values: $y[n] = \\tfrac1M\\sum_{k=0}^{M-1} x[n-k]$, a convolution with $M$ equal weights $\\tfrac1M$. Take eight daily prices $10, 11, 13, 12, 15, 14, 18, 17$. A three-day average gives $11.33, 12, 13.33, 13.67, 15.67, 16.33$ (from the third day onwards, when three prices are available); the five-day average gives $12.2, 13, 14.4, 15.2$. The jittery series has become smoother, and the longer window smoother still."
+    },
+    {
+      "type": "prose",
+      "text": "There is a price for it, and convolution tells exactly what. A causal average of $M$ values is centred on the midpoint of its window, a delay of $(M-1)/2$ days: 2 days for $M = 5$. Averages show a trend late. The frequency view on The Convolution Theorem (#/math/convolution/convolution-theorem) gives the smoothing: the transform of $M$ equal weights is zero at $f = 1/M$ cycles per sample, so a five-day average completely removes a wiggle that repeats every five days ($|H(0.2)| \\approx 0$) and passes a ten-day wiggle at $|H(0.1)| = 0.647$. Slower trends pass nearly untouched; that is why it is a low-pass filter."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "conv-sequence",
+        "title": "A two-point moving average",
+        "params": [
+          {
+            "key": "x",
+            "label": "Sequence x[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "3, 1, 4, 1, 5"
+          },
+          {
+            "key": "h",
+            "label": "Sequence h[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "two-point average: 0.5, 0.5"
+          },
+          {
+            "key": "n",
+            "label": "Output index n",
+            "control": "range",
+            "min": 0,
+            "max": 14,
+            "step": 1,
+            "default": 2
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Here $h = (0.5, 0.5)$ averages each sample with the one before. With x = 3, 1, 4, 1, 5 the output stems are $1.5, 2, 2.5, 2.5, 3, 2.5$: the up-and-down series $3,1,4,1,5$ has been flattened toward the middle. The readout at n = 2 gives $y[2] = x[1]\\cdot h[1] + x[2]\\cdot h[0] = 1 \\cdot 0.5 + 4 \\cdot 0.5 = 2.5$, the average of the samples 1 and 4. Step n through 0 to 5 and watch the sums. There are six outputs, one more than the five inputs, as the rule $N + M - 1$ says: the first and last are half-averages, with a missing neighbour taken as zero."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Correlation: convolution without the flip"
+    },
+    {
+      "type": "prose",
+      "text": "Convolution flips one signal. Leave out the flip and you have cross-correlation:"
+    },
+    {
+      "type": "math",
+      "tex": "r_{xh}[n] = \\sum_k x[k]\\, h[k - n], \\qquad \\text{versus} \\qquad (x * h)[n] = \\sum_k x[k]\\, h[n - k]"
+    },
+    {
+      "type": "prose",
+      "text": "The two are tied: substituting $g[m] = h[-m]$ gives $h[k - n] = g[n - k]$, so correlating with $h$ is the same as convolving with $h$ turned round end to end. Cross-correlation asks 'how well does a copy of $h$ shifted right by $n$ match $x$?', because the sum of products is large when the two have the same shape at the same place. This is the matched filter. Suppose a receiver hunts for the pattern $p = (1, 2, 1)$ in the signal $r = (0, 1, 0, 1, 2, 1, 0, 1, 0)$. Sliding $p$ along $r$ and summing products gives $(2, 2, 4, 6, 4, 2, 2)$, highest, at 6, when $p$ lies over $r[3..5] = (1, 2, 1)$: the pattern is at position 3. The peak height 6 equals the energy of the pattern, $1^2 + 2^2 + 1^2$. By the Cauchy-Schwarz inequality the sum at any offset is at most $\\sqrt{6}$ times the square root of the energy of the three samples of $r$ under the pattern, and no stretch of three samples of this $r$ holds more than 6, so no offset can beat the exact copy. Convolving $r$ with the reversed pattern, $(1,2,1)$ again (it is symmetric), gives the same list as the middle seven values of the full convolution. For a pattern that is not symmetric, $p = (1, 2, 3)$ in $r = (0,0,1,2,3,0,0)$: correlation gives $(3, 8, 14, 8, 3)$, peaking at 14 = $1 + 4 + 9$, while plain convolution gives $(1, 4, 10, 12, 9)$ with no clean peak. The flip is the difference between finding a pattern and smearing it."
+    },
+    {
+      "type": "prose",
+      "text": "A signal correlated with itself is its autocorrelation. For $x = (1, 2, 3)$ it is $(3, 8, 14, 8, 3)$ for lags $-2$ to $2$: always symmetric, always largest at lag 0, where it equals the energy $1 + 4 + 9 = 14$. Autocorrelation tells you how long a signal 'remembers' itself, and finds hidden repetition, such as the pitch period of a voice. The widget shows the same thing for a symmetric sequence, for which flipping does nothing: convolving $(1,2,1)$ with itself gives the autocorrelation $(1, 4, 6, 4, 1)$, peak 6 at the middle."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "conv-sequence",
+        "title": "A symmetric sequence with itself: autocorrelation",
+        "params": [
+          {
+            "key": "x",
+            "label": "Sequence x[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "1, 2, 1"
+          },
+          {
+            "key": "h",
+            "label": "Sequence h[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "1, 2, 1"
+          },
+          {
+            "key": "n",
+            "label": "Output index n",
+            "control": "range",
+            "min": 0,
+            "max": 14,
+            "step": 1,
+            "default": 2
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Because $(1,2,1)$ reads the same backwards, convolving it with itself is the same as correlating it with itself. At n = 2 the readout is $y[2] = 1\\cdot 1 + 2\\cdot 2 + 1 \\cdot 1 = 6$, the energy, and every other n gives less: $1, 4, 6, 4, 1$. Slide n and see the two copies line up fully at n = 2 only. For a sequence that is not symmetric, such as $1,2,3$, the viewer would show the convolution, not the autocorrelation, and its peak would not stand at the middle. The same peak appears in the frequency domain: the transform of an autocorrelation is the energy spectrum $|X(f)|^2$ (the Wiener-Khinchin relation, which follows from the convolution theorem). Numerically, the 8-point DFT of $(3,8,14,8,3)$, placed at lags $-2 \\ldots 2$ (lags $-1$ and $-2$ wrapped to slots 7 and 6), equals $|X|^2$ for the 8-point DFT of $x = (1,2,3)$."
+    },
+    {
+      "type": "prose",
+      "text": "A modern aside: the 'convolution' layers of convolutional neural networks actually compute cross-correlation. The kernel is not flipped. This does not matter in practice, because the kernel's weights are learned, and a network that wanted the flipped kernel would simply learn it flipped. The word 'convolution' stuck, and the code is faster to write without the flip."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Deconvolution: running it backwards"
+    },
+    {
+      "type": "prose",
+      "text": "A blurred photograph, a smeared radio signal and a distorted recording are all $y = x * h$, with $h$ the blur, the channel or the room. Deconvolution tries to recover $x$ from $y$ and $h$. The theorem on The Convolution Theorem (#/math/convolution/convolution-theorem) gives the answer in one line: $X(f) = Y(f)/H(f)$. In many cases that is the whole story, and it does work when $h$ is known exactly and there is no noise. Noise ruins it."
+    },
+    {
+      "type": "prose",
+      "text": "Take the blur $h = (\\tfrac14, \\tfrac12, \\tfrac14)$ on 16 samples (a circular convolution). Its transform at frequency bin $k$ is $H_k = \\tfrac12 + \\tfrac12\\cos(2\\pi k/16)$. The magnitudes for $k = 0, 1, \\ldots, 8$ are $1, 0.962, 0.854, 0.691, 0.5, 0.309, 0.146, 0.038, 0$. The blur takes down the fast components, in bin 7 to $3.8\\%$ and in bin 8 (the fastest alternation, $+,-,+,-$) to exactly zero. To undo the blur you must multiply bin 7 by $1/0.038 = 26.3$. So any noise in the blurred data that lands in that bin is multiplied by 26.3. Adding noise of standard deviation 0.001 to the blurred data and dividing the spectra (skipping bin 8, where there is nothing to divide by) gives an error in the recovered signal of about $0.009$ (averaged over 200 trials), an amplification of about nine, matching the root-mean-square gain of $1/|H_k|$ across the bins, $9.7$; with noise of 0.01 the error is 0.087. And in bin 8 the information is simply gone: $H = 0$, so no division can bring it back."
+    },
+    {
+      "type": "prose",
+      "text": "This is why deconvolution is called ill-posed. A blur is a low-pass filter, and undoing it means a high-pass boost, which amplifies noise most at exactly the frequencies where the signal is weakest. Practical methods do not divide by $H$ but by a regularised version, such as $\\overline{H}/(|H|^2 + \\varepsilon)$ (the Wiener filter, with $\\varepsilon$ set by the noise level), which stops boosting when $|H|$ gets small. In time-domain terms the same trouble appears as instability: for $h = (0.5, 1)$ the recovery rule is $x[n] = 2\\,(y[n] - x[n-1])$, so any error doubles at every step, and an error of $0.01$ in the first sample becomes $0.32$ after 5 steps and $10.24$ after 10."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "One window, three kernels",
+      "text": "A window of an image holds rows $(0,8,0)$, $(8,0,8)$, $(0,8,0)$. Find the centre output for the box kernel, the Gaussian kernel $\\tfrac1{16}(1,2,1;2,4,2;1,2,1)$ and the sharpening kernel $(0,-1,0;-1,5,-1;0,-1,0)$. Which of these kernels are symmetric, and does the flip matter?",
+      "solution": [
+        "All three are symmetric, so the flip changes nothing and convolution equals correlation here. Box: the sum of the window is $4 \\times 8 = 32$, divided by 9: $3.556$. Gaussian: the four 8s sit at the edge-centre positions with weight $2/16$ each: $4 \\times 8 \\times 2/16 = 4$. Sharpening: the centre is 0 and the four 8s sit where the kernel is $-1$, so the result is $5 \\times 0 - 4 \\times 8 = -32$."
+      ],
+      "answer": "$3.556$, $4$ and $-32$."
+    },
+    {
+      "type": "problem",
+      "title": "Dice again",
+      "text": "Find the probability that the total of two dice is 5, and that the total of three dice is 9.",
+      "solution": [
+        "Two dice: the pairs $(1,4), (2,3), (3,2), (4,1)$, so $4/36 = 0.1111$. Three dice: the convolution of the two-dice list with a third die gives $25$ ordered triples out of $216$ with sum 9, so $25/216 = 0.1157$. (Check by listing: sums of 9 from three dice are $(1,2,6)$ in 6 orders, $(1,3,5)$ in 6, $(1,4,4)$ in 3, $(2,2,5)$ in 3, $(2,3,4)$ in 6, $(3,3,3)$ in 1: $6+6+3+3+6+1 = 25$.)"
+      ],
+      "answer": "$4/36 = 0.111$ and $25/216 = 0.116$."
+    },
+    {
+      "type": "problem",
+      "title": "A moving average and its lag",
+      "text": "Compute the 3-day moving average of the prices $10, 11, 13, 12, 15$ and state how many days it lags behind the prices.",
+      "solution": [
+        "Each output is the mean of three consecutive prices: $(10 + 11 + 13)/3 = 11.33$, $(11 + 13 + 12)/3 = 12$, $(13 + 12 + 15)/3 = 13.33$. A trailing average of $M = 3$ values lags by $(M - 1)/2 = 1$ day: each average describes the middle day of its window but is only available on the window's last day, one day later."
+      ],
+      "answer": "$11.33,\\ 12,\\ 13.33$; a lag of 1 day."
+    },
+    {
+      "type": "problem",
+      "title": "Autocorrelation and deconvolution",
+      "text": "(a) Find the autocorrelation of $(1, -1, 1)$ for lags $-2$ to $2$. (b) A recording was made through $h = (1, 0.5)$ and the result is $y = (2, 5, 5, 1.5)$. Recover the input $x$.",
+      "solution": [
+        "(a) Lag 0: $1 + 1 + 1 = 3$. Lag $\\pm 1$: $1\\cdot(-1) + (-1)\\cdot 1 = -2$. Lag $\\pm 2$: $1 \\cdot 1 = 1$. So $(1, -2, 3, -2, 1)$, with its peak 3, the energy, at lag 0. (b) $y[n] = x[n] + 0.5\\,x[n-1]$, so $x[n] = y[n] - 0.5\\,x[n-1]$. Then $x[0] = 2$, $x[1] = 5 - 1 = 4$, $x[2] = 5 - 2 = 3$, and the check $y[3] = 0.5 \\times 3 = 1.5$ holds. So $x = (2, 4, 3)$. Because the factor 0.5 is less than 1, errors shrink as the recursion proceeds and the recovery is stable."
+      ],
+      "answer": "(a) $(1,-2,3,-2,1)$. (b) $x = (2,4,3)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Steven W. Smith, The Scientist and Engineer's Guide to Digital Signal Processing (California Technical Publishing, 1997), free online at dspguide.com. The chapters on image processing and on convolution and correlation.",
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997). Chapter 2 for convolution sums and integrals.",
+        "See also Sums of Random Variables (#/probability/multivariate/sums) for the probability side, and Fast Convolution with the FFT (#/math/convolution/fast-convolution) for how big convolutions are computed.",
+        "Next: A Gallery of Convolutions (#/math/convolution/gallery)."
+      ]
+    }
+  ]
+}

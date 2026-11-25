@@ -1,0 +1,865 @@
+{
+  "title": "Worked Convolutions",
+  "intro": "Six convolutions done carefully from the integral: a pulse into an exponential, two exponentials, a step against a triangle, a ramp against a pulse, two Gaussian bells and an echo. Each has the piecewise limits written out and a preset in the viewer, and the page ends with a checklist for doing your own.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The bookkeeping that every example uses"
+    },
+    {
+      "type": "prose",
+      "text": "Convolving two pieces by hand is mostly care about where the integrand is non-zero. The method is the same each time, and it is worth saying once."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Write the interval where $x(\\tau)$ is non-zero, $[a_x, b_x]$, and where $h$ is non-zero, $[a_h, b_h]$. Either end can be infinite.",
+        "The flipped, slid response $h(t - \\tau)$ is non-zero for $t - b_h \\le \\tau \\le t - a_h$. It moves right as $t$ grows.",
+        "The integrand is non-zero on the overlap, from $\\max(a_x,\\ t - b_h)$ to $\\min(b_x,\\ t - a_h)$. If the lower limit is not below the upper one, $y(t) = 0$.",
+        "The max and the min each switch which of their two arguments wins at one value of $t$. Those values, the sums $a_x + a_h$, $a_x + b_h$, $b_x + a_h$, $b_x + b_h$ (those that exist), are where the regions change. Between them, write the limits as plain expressions in $t$.",
+        "In each region, write the integral with those limits and evaluate it.",
+        "Check: $y$ should be continuous where regions meet (when neither signal has an impulse), should be zero outside $[a_x + a_h,\\ b_x + b_h]$, and its area should be area of $x$ times area of $h$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The first example follows this to the letter. The others lean on it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A pulse into an exponential"
+    },
+    {
+      "type": "prose",
+      "text": "Let $x$ be the 1 s pulse and $h(t) = e^{-at}u(t)$ with decay rate $a > 0$. Here $[a_x, b_x] = [0, 1]$ and $[a_h, b_h] = [0, \\infty)$. The flipped response is non-zero for $\\tau \\le t$, so the overlap is $[\\max(0, -\\infty), \\min(1, t)] = [0, \\min(1, t)]$. The only change is at $t = 0$ (when $\\min$ becomes positive) and at $t = 1$ (when the $\\min$ switches from $t$ to 1)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$t < 0$: the upper limit $t$ is below the lower limit 0. $y = 0$.",
+        "$0 \\le t \\le 1$: the overlap is $[0, t]$ and $y(t) = \\int_0^t e^{-a(t - \\tau)}d\\tau = \\dfrac{1 - e^{-at}}{a}$.",
+        "$t > 1$: the overlap is $[0, 1]$ and $y(t) = \\int_0^1 e^{-a(t - \\tau)}d\\tau = \\dfrac{(e^{a} - 1)\\,e^{-at}}{a}$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The two formulas agree at $t = 1$, both being $(1 - e^{-a})/a$: a useful check. With $a = 1$: $y(0.5) = 0.3935$, $y(1) = 0.6321$, $y(2) = 0.2325$, $y(3) = 0.0855$. With $a = 2$: $y(0.5) = 0.3161$, $y(1) = 0.4323$, $y(2) = 0.0585$. The output rises to its peak at the end of the pulse and then decays at the exponential's own rate, since after the pulse the system just rings down."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "A pulse into an exponential",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "decaying exponential e^(−at)u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The readout at $t = 2$ shows $y = 0.233$ and says the product is non-zero for $\\tau = 0 \\ldots 1$, the whole pulse, so the shaded area is the integral of $e^{-(2 - \\tau)}$ over it. Move Shift t down to 1 for 0.632 (the end of the pulse), to 0.5 for 0.393, and down below 0 for zero. Set a to 2 and put $t$ at 1: 0.432. Larger $a$ means a faster-fading $h$, so a lower and narrower output."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two exponentials"
+    },
+    {
+      "type": "prose",
+      "text": "With $h$ and $x$ both $e^{-at}u(t)$, both signals start at 0 and go on for ever, so the overlap is $[0, t]$ for $t > 0$ and empty otherwise. One region:"
+    },
+    {
+      "type": "math",
+      "tex": "y(t) = \\int_0^t e^{-a\\tau}\\, e^{-a(t - \\tau)}\\, d\\tau = e^{-at}\\int_0^t d\\tau = t\\, e^{-at}"
+    },
+    {
+      "type": "prose",
+      "text": "The two exponentials multiply to a constant, $e^{-at}$, because the $\\tau$ cancels. The result starts at 0, rises, peaks at $t = 1/a$ with value $1/(ae)$ and decays: it is what you get from two RC stages in a row (if the second does not load the first). For $a = 1$ the peak is $0.3679$ at $t = 1$; the values $y(2) = 0.2707$ and $y(3) = 0.1494$ show the long tail."
+    },
+    {
+      "type": "prose",
+      "text": "With different rates, $x = e^{-at}u(t)$ and $h = e^{-bt}u(t)$, the integrand is $e^{-a\\tau}e^{-b(t - \\tau)} = e^{-bt}e^{(b - a)\\tau}$, and"
+    },
+    {
+      "type": "math",
+      "tex": "y(t) = e^{-bt}\\int_0^t e^{(b - a)\\tau}\\,d\\tau = \\frac{e^{-at} - e^{-bt}}{b - a}"
+    },
+    {
+      "type": "prose",
+      "text": "With $a = 1$ and $b = 2$ this is $e^{-t} - e^{-2t}$: $0.2387$ at $t = 0.5$, $0.2325$ at $t = 1$, $0.1170$ at $t = 2$, and a peak of exactly $0.25$ at $t = \\ln 2 = 0.6931$. Let $b \\to a$ and the formula tends to $t\\,e^{-at}$ (with $b = 1.001$ it gives $0.36770$ at $t = 1$, close to $0.36788$). The viewer has one decay-rate slider that sets both exponentials, so it can only show the equal-rate case."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "Two equal exponentials",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "decaying exponential e^(−at)u(t)"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "decaying exponential e^(−at)u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "At $t = 1$ the product is the constant $e^{-1}$ over the whole overlap from $\\tau = 0$ to 1; the readout gives $y = 0.368$. Slide to $t = 2$ (0.271) and 3 (0.149): the flat product gets longer while its height falls. The output curve is not an exponential: it starts at zero with a slope of 1."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A step against anything"
+    },
+    {
+      "type": "prose",
+      "text": "If $h = u(t)$ then $h(t - \\tau)$ is 1 for $\\tau \\le t$ and 0 after, so the integral is $\\int_{-\\infty}^{t} x(\\tau)\\,d\\tau$: convolving with a step is a running integral, the area of $x$ so far. Take $x$ to be the 2 s triangle, rising from 0 at $t = 0$ to 1 at $t = 1$ and falling to 0 at $t = 2$. Its area up to $t$ is $t^2/2$ while it rises, then $1 - (2 - t)^2/2$ while it falls, and 1 after that."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$t < 0$: 0.",
+        "$0 \\le t \\le 1$: $t^2/2$. At $t = 0.5$ it is $0.125$; at $t = 1$ it is $0.5$, half the area, since the triangle is symmetric.",
+        "$1 \\le t \\le 2$: $1 - (2 - t)^2/2$. At $t = 1.5$ it is $1 - 0.125 = 0.875$.",
+        "$t \\ge 2$: $1$ for ever, the whole area of the triangle. The output never returns to zero because the step never ends."
+      ]
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "A triangle into a step",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "triangle, 2 s wide"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "unit step u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1.5
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "At $t = 1.5$ the readout gives $y = 0.875$. The slid, flipped step covers every $\\tau \\le 1.5$, so the shaded area is the triangle's area up to 1.5. Slide to $t = 1$ for 0.500 and $t = 2$ for 1.000, then keep sliding: the value stays at 1. The step's area is infinite, which the last walk-through step reports."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A ramp against a pulse, and the flip"
+    },
+    {
+      "type": "prose",
+      "text": "Take the 1 s ramp $x(t) = t$ for $0 \\le t < 1$ and the 1 s pulse $h$. Since the pulse is 1 on $[t - 1, t]$, $y(t)$ is the area of $x$ in that window. For $0 \\le t \\le 1$ the window is $[0, t]$ and $y = \\int_0^t \\tau\\,d\\tau = t^2/2$. For $1 \\le t \\le 2$ the window is $[t - 1, 1]$ and $y = \\int_{t-1}^{1}\\tau\\,d\\tau = (1 - (t - 1)^2)/2$. So $y(0.5) = 0.125$, $y(1) = 0.5$, $y(1.5) = 0.375$, $y(2) = 0$. It is not symmetric: it rises on a parabola that starts flat and steepens to slope 1 at $t = 1$, where it has a sharp corner, and then falls on a parabola that starts with slope 0 and steepens to slope $-1$ at $t = 2$. The corner comes from the ramp's sudden drop at its end; the output keeps the input's lopsidedness. Its area is $1/6 + 1/3 = 0.5$, which is $0.5 \\times 1$, the area of the ramp times the area of the pulse."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "A ramp through a pulse",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "ramp, 1 s long"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1.5
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "At $t = 1.5$ the readout gives $y = 0.375$. The shaded product is the part of the ramp between $\\tau = 0.5$ and $1$. Step Shift t through 0.5 (0.125), 1 (0.500) and 1.5 (0.375), and watch the output panel: the rise curves upward into a sharp peak at $t = 1$, and the fall starts flat and steepens."
+    },
+    {
+      "type": "prose",
+      "text": "A pulse cannot show why the flip matters, because the pulse looks the same flipped. An exponential can. Convolve the ramp with $h = e^{-t}u(t)$ and ask for $y(1)$. The flipped response $e^{-(1 - \\tau)}$ is biggest at $\\tau = 1$, where the ramp is biggest too, so the product is $\\tau\\,e^{-(1 - \\tau)}$ and $y(1) = e^{-1}\\int_0^1 \\tau\\,e^{\\tau}d\\tau = e^{-1}\\,[(\\tau - 1)e^{\\tau}]_0^1 = e^{-1} = 0.3679$. Without the flip, the product would be $\\tau\\,e^{-\\tau}$, the late and big part of the ramp meeting the faded part of $h$, and the integral would be $1 - 2e^{-1} = 0.2642$, about 28 percent too small. For $t \\ge 1$ the ramp is gone and $y(t) = e^{-t}$ exactly: $y(2) = 0.1353$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "The flip matters: a ramp into an exponential",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "ramp, 1 s long"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "decaying exponential e^(−at)u(t)"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "At $t = 1$ the readout gives $y = 0.368$. In the middle panel the product starts at 0 and climbs toward the right end of the ramp, since both the ramp and the flipped exponential are largest at $\\tau = 1$. Compare the left panel: the flipped exponential has its tall edge at the present, $\\tau = t$, and its tail pointing back into the past."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two Gaussian bells"
+    },
+    {
+      "type": "prose",
+      "text": "The viewer's Gaussian bump has height 1, centre 1 s and standard deviation $\\sigma = 0.25$ s (it is cut off at six standard deviations, which makes no visible difference). Convolve it with itself. The flipped bell is centred at $t - 1$, so it sits on the original at $t = 2$, where the product is $e^{-(\\tau - 1)^2/\\sigma^2}$ with area $\\sigma\\sqrt{\\pi} = 0.25\\sqrt{\\pi} = 0.4431$. In general, convolving two Gaussians gives a Gaussian whose centre is the sum of the centres and whose variance is the sum of the variances:"
+    },
+    {
+      "type": "math",
+      "tex": "\\sigma_y^2 = \\sigma_1^2 + \\sigma_2^2 = 0.0625 + 0.0625 = 0.125, \\qquad \\sigma_y = 0.25\\sqrt{2} = 0.3536"
+    },
+    {
+      "type": "prose",
+      "text": "So the output is centred at $1 + 1 = 2$ s, with peak $0.4431$, and it is wider than the inputs by a factor $\\sqrt2$. At $t = 1.5$ and $t = 2.5$ it is $0.4431\\,e^{-1} = 0.1630$. The areas multiply: each bell has area $0.25\\sqrt{2\\pi} = 0.627$ and the output has $0.627^2 = 0.393$. Variances adding, and not widths, is why the sum of many independent random quantities becomes wider by the square root of their number, a fact used on the probability shelf."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "Two Gaussian bells",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "Gaussian bump"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "Gaussian bump"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "At $t = 2$ the readout gives $y = 0.443$: the flipped bell sits exactly on the fixed one. Move Shift t to 1.5 or 2.5 and read 0.163 each time; at $t = 1$ or 3 it is below 0.01. The output panel shows a bell centred at 2 that is clearly wider than the input bell. The last walk-through step prints the areas, 0.63 × 0.63 = 0.39."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "An echo through a pulse"
+    },
+    {
+      "type": "prose",
+      "text": "An impulse convolved with a function copies the function to the impulse's position, scaled by its weight: $\\delta(t - t_0) * h = h(t - t_0)$. So the echo $\\delta(t) + 0.5\\,\\delta(t - 1.5)$ convolved with the 1 s pulse gives the pulse itself, plus a copy half as tall, 1.5 s later: $y(t) = p(t) + 0.5\\,p(t - 1.5)$. It is 1 for $0 \\le t \\le 1$, 0 for $1 < t < 1.5$ (a silent gap), 0.5 for $1.5 \\le t \\le 2.5$, and 0 afterwards. In the integral there is no area to compute: each impulse just reads one value of the other signal."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "convolution-3d",
+        "title": "An echo through a pulse",
+        "params": [
+          {
+            "key": "x",
+            "label": "Input x(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "echo δ(t) + 0.5·δ(t − 1.5)"
+          },
+          {
+            "key": "h",
+            "label": "Impulse response h(t)",
+            "control": "select",
+            "options": [
+              "pulse, 1 s wide",
+              "pulse, 2 s wide",
+              "triangle, 2 s wide",
+              "ramp, 1 s long",
+              "decaying exponential e^(−at)u(t)",
+              "damped sine e^(−at)sin(2πt)u(t)",
+              "unit step u(t)",
+              "Gaussian bump",
+              "unit impulse δ(t)",
+              "echo δ(t) + 0.5·δ(t − 1.5)"
+            ],
+            "default": "pulse, 1 s wide"
+          },
+          {
+            "key": "a",
+            "label": "Decay rate a (1/s)",
+            "control": "range",
+            "min": 0.2,
+            "max": 3,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "t",
+            "label": "Shift t (s)",
+            "control": "range",
+            "min": -1,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "slices",
+            "label": "3D slices",
+            "control": "select",
+            "options": [
+              "fixed t: flip and slide",
+              "fixed τ: echoes of h"
+            ],
+            "default": "fixed t: flip and slide"
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -50
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 30
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "At $t = 2$ the readout gives $y = 0.500$ and the product is a spike at $\\tau = 1.5$, the echo's position, of height $0.5$: the flipped pulse covers $\\tau$ from 1 to 2 and the echo sits inside. Move Shift t to 0.5 (a spike at $\\tau = 0$ of height 1, $y = 1.000$), to 1.25 (no spike lands inside the flipped pulse, $y = 0$), and beyond 2.5 for 0 again. The output panel draws the two copies, separated by the gap."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "Slower decay",
+      "text": "The 1 s pulse is fed into $h(t) = e^{-0.5\\,t}u(t)$. Find $y(1)$ and $y(2)$.",
+      "solution": [
+        "Use the formulas with $a = 0.5$. For $0 \\le t \\le 1$: $y = (1 - e^{-0.5t})/0.5$, so $y(1) = 2(1 - 0.6065) = 0.7869$. For $t > 1$: $y = (e^{0.5} - 1)\\,e^{-0.5t}/0.5$, so $y(2) = 2 \\times 0.6487 \\times 0.3679 = 0.4773$. A slower exponential has area $1/a = 2$, so the output is larger and falls more slowly than with $a = 1$."
+      ],
+      "answer": "$y(1) = 0.7869$, $y(2) = 0.4773$."
+    },
+    {
+      "type": "problem",
+      "title": "Unequal rates",
+      "text": "Convolve $e^{-t}u(t)$ with $e^{-3t}u(t)$. Where is the peak, and how high is it? What is $y(1)$?",
+      "solution": [
+        "By the formula with $a = 1$, $b = 3$: $y(t) = (e^{-t} - e^{-3t})/2$. Setting the derivative to zero, $-e^{-t} + 3e^{-3t} = 0$, so $e^{2t} = 3$ and $t = \\tfrac12\\ln 3 = 0.5493$. There $e^{-t} = 3^{-1/2} = 0.5774$ and $e^{-3t} = 3^{-3/2} = 0.1925$, so $y = (0.5774 - 0.1925)/2 = 0.1925$. At $t = 1$: $(0.3679 - 0.0498)/2 = 0.1590$."
+      ],
+      "answer": "Peak $0.1925$ at $t = 0.5493$; $y(1) = 0.1590$."
+    },
+    {
+      "type": "problem",
+      "title": "Two regions with a longer pulse",
+      "text": "A 2 s pulse ($1$ for $0 \\le t \\le 2$) is fed into $h(t) = e^{-t}u(t)$. Write $y(t)$ in each region and find $y(1)$ and $y(3)$.",
+      "solution": [
+        "The overlap is $[0, \\min(2, t)]$. For $0 \\le t \\le 2$: $y = \\int_0^t e^{-(t - \\tau)}d\\tau = 1 - e^{-t}$, so $y(1) = 0.6321$. For $t > 2$: $y = \\int_0^2 e^{-(t - \\tau)}d\\tau = e^{-t}(e^{2} - 1)$, so $y(3) = 0.0498 \\times 6.3891 = 0.3181$. Check at $t = 2$: $1 - e^{-2} = 0.8647$ and $e^{-2}(e^2 - 1) = 1 - e^{-2}$. Equal, as they must be."
+      ],
+      "answer": "$y = 1 - e^{-t}$ for $0 \\le t \\le 2$ and $(e^2 - 1)e^{-t}$ after; $y(1) = 0.6321$, $y(3) = 0.3181$."
+    },
+    {
+      "type": "problem",
+      "title": "Gaussians with different widths",
+      "text": "A Gaussian with standard deviation 3 and centre 2 is convolved with a Gaussian of standard deviation 4 and centre 5. Describe the result.",
+      "solution": [
+        "The centres add, $2 + 5 = 7$, and the variances add, $3^2 + 4^2 = 25$, so the standard deviation is $\\sqrt{25} = 5$. It is a Gaussian centred at 7 with standard deviation 5. Note that the widths do not add (that would give 7); the 3-4-5 triangle does."
+      ],
+      "answer": "A Gaussian centred at 7 with standard deviation 5."
+    },
+    {
+      "type": "problem",
+      "title": "The ramp and the exponential for later times",
+      "text": "For the ramp $x(t) = t$ on $[0, 1)$ and $h = e^{-t}u(t)$, show that $y(t) = e^{-t}$ for $t \\ge 1$.",
+      "solution": [
+        "For $t \\ge 1$ the whole ramp overlaps the flipped exponential, so $y(t) = \\int_0^1 \\tau\\,e^{-(t - \\tau)}d\\tau = e^{-t}\\int_0^1 \\tau\\,e^{\\tau}d\\tau$. Integrating by parts, $\\int_0^1 \\tau\\,e^{\\tau}d\\tau = [(\\tau - 1)e^{\\tau}]_0^1 = 0 - (-1) = 1$. So $y(t) = e^{-t}$, and $y(2) = 0.1353$. It is the same decay shape as the exponential, scaled by 1."
+      ],
+      "answer": "$y(t) = e^{-t}$ for $t \\ge 1$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Alan V. Oppenheim and Alan S. Willsky, with S. Hamid Nawab, Signals and Systems, 2nd edition (Prentice Hall, 1997), chapter 2. Many worked convolutions of exactly this kind.",
+        "Steven W. Smith, The Scientist and Engineer's Guide to Digital Signal Processing (California Technical Publishing, 1997), free online at dspguide.com. Chapter 6.",
+        "Ronald N. Bracewell, The Fourier Transform and Its Applications, 3rd edition (McGraw-Hill, 2000)."
+      ]
+    }
+  ]
+}

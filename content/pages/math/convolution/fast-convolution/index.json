@@ -1,0 +1,287 @@
+{
+  "title": "Fast Convolution with the FFT",
+  "intro": "Convolving two sequences of length $N$ the direct way takes about $N^2$ multiplications. Through the DFT it takes about $N \\log N$, so for long signals the transform detour is much faster, provided you handle one trap: the DFT computes circular convolution, not the linear convolution you wanted.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The cost of the direct way"
+    },
+    {
+      "type": "prose",
+      "text": "On Discrete Convolution (#/math/convolution/discrete) the output is $y[n] = \\sum_k x[k]\\, h[n-k]$. If $x$ has $N$ samples and $h$ has $M$, each of the $N$ values of $x$ is multiplied by each of the $M$ values of $h$ and the products are added into the right places. That is $N M$ multiplications, and $N + M - 1$ output values. For two sequences of 1024 samples that is $1024 \\times 1024 = 1{,}048{,}576$ multiplications to produce 2047 numbers. For audio at 48,000 samples per second and a reverberation response two seconds long ($96{,}000$ taps), every output sample needs $96{,}000$ multiplications, which is $4.6$ billion multiplications for each second of music. A computer can do it, but it would use most of a processor just for one effect."
+    },
+    {
+      "type": "prose",
+      "text": "The convolution theorem on The Convolution Theorem (#/math/convolution/convolution-theorem) offers another route: transform both signals, multiply the transforms point by point, and transform back. The multiplication is cheap, $N$ of them. The question is the cost of the transforms and whether the answer is the convolution you wanted. The first question has a good answer, found by Cooley and Tukey in 1965: The Fast Fourier Transform (#/math/fourier-transform/fft) computes an $N$-point DFT in about $\\tfrac{N}{2}\\log_2 N$ complex multiplications instead of $N^2$. The second question has a catch."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The catch: the DFT convolves in a circle"
+    },
+    {
+      "type": "prose",
+      "text": "The DFT of a length-$N$ sequence, described on Sampling and the DFT (#/math/fourier-transform/sampling-and-dft), is built from $N$ turning arrows $e^{j2\\pi kn/N}$, and every one of them repeats after $N$ samples. So the DFT treats the signal as if it were periodic with period $N$: index $N$ is the same as index 0, and index $-1$ is the same as $N - 1$. If you multiply two DFTs of length $N$ and invert, the convolution theorem still holds, but for the periodic versions. The result is the circular convolution"
+    },
+    {
+      "type": "math",
+      "tex": "y_c[n] = \\sum_{k=0}^{N-1} x[k]\\, h[(n - k) \\ \\mathrm{mod}\\ N]"
+    },
+    {
+      "type": "prose",
+      "text": "which differs from the linear sum in one way: where the flipped-and-slid copy of $h$ slides off one end, it wraps round and comes back in at the other. Equivalently, the linear convolution has length $N + M - 1$, longer than $N$, and the DFT has only $N$ slots for the answer, so everything past slot $N - 1$ is folded back onto the start."
+    },
+    {
+      "type": "prose",
+      "text": "A small example shows it. Take $x = (1, 2, 3)$ and $h = (1, 1, 1, 1)$, whose linear convolution is $(1, 3, 6, 6, 5, 3)$: six numbers. Suppose we use $N = 4$ and put $x$ in four slots as $(1, 2, 3, 0)$. The linear answer has entries at $n = 4$ and $n = 5$, which would sit in slots 4 and 5 and do not exist. Slot 4 is the same as slot 0 and slot 5 the same as slot 1, so they are added there:"
+    },
+    {
+      "type": "math",
+      "tex": "y_c = (1 + 5,\\; 3 + 3,\\; 6,\\; 6) = (6, 6, 6, 6)"
+    },
+    {
+      "type": "prose",
+      "text": "Computing this through the DFT agrees. The 4-point DFT of $(1,2,3,0)$ is $(6,\\; -2-2j,\\; 2,\\; -2+2j)$ and that of $h$ is $(4, 0, 0, 0)$, because the four ones are a constant, which has only a zero-frequency component. Their product is $(24, 0, 0, 0)$, and the inverse DFT of that is a constant, $24/4 = 6$ in every slot. The answer is right as a circular convolution and wrong as a linear one: the true $y[0] = 1$ has been polluted with $y[4] = 5$, and $y[1] = 3$ with $y[5] = 3$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "conv-sequence",
+        "title": "Linear convolution: the entries that wrap",
+        "params": [
+          {
+            "key": "x",
+            "label": "Sequence x[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "1, 2, 3"
+          },
+          {
+            "key": "h",
+            "label": "Sequence h[n]",
+            "control": "select",
+            "options": [
+              "1, 2, 3",
+              "1, 1, 1, 1",
+              "1, 2, 1",
+              "impulse: 1",
+              "delay by one: 0, 1",
+              "two-point average: 0.5, 0.5",
+              "difference: 1, −1",
+              "echo: 1, 0, 0, 0.5",
+              "a die: 1/6 at n = 1 … 6",
+              "3, 1, 4, 1, 5"
+            ],
+            "default": "1, 1, 1, 1"
+          },
+          {
+            "key": "n",
+            "label": "Output index n",
+            "control": "range",
+            "min": 0,
+            "max": 14,
+            "step": 1,
+            "default": 4
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Set x = 1, 2, 3 and h = 1, 1, 1, 1 (already chosen). At n = 4 the readout gives $y[4] = x[1]\\cdot h[3] + x[2]\\cdot h[2] = 2\\cdot 1 + 3\\cdot 1 = 5$. Press n ▶ once more: $y[5] = 3$, and the sums for n = 0, 1, 2, 3 give 1, 3, 6, 6. With a 4-slot circle, the outputs at n = 4 and 5, the 5 and the 3, are exactly the ones that fall off the end and are added to n = 0 and 1, turning 1 and 3 into 6 and 6. At n = 6 the readout says that no k has both samples inside, so $y[6] = 0$: the linear convolution is only $N + M - 1 = 6$ long. The viewer draws only the linear sum; the wrap-around is a statement about what the DFT would do with those six numbers."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The cure: zero padding"
+    },
+    {
+      "type": "prose",
+      "text": "The fix is to give the answer room. The linear convolution has $N + M - 1$ samples; if you use a DFT length $L \\ge N + M - 1$, then nothing wraps, because every output index already lies in $0 \\ldots L-1$. So: pad $x$ with zeros to length $L$, pad $h$ with zeros to length $L$, take both DFTs, multiply, invert. The extra zeros do not change the signals, they only make the circle big enough that the slide never closes on itself. For our example $L = 6$ is enough, and the circular convolution then equals the linear one, $(1, 3, 6, 6, 5, 3)$. With the next power of two, $L = 8$, the result is $(1, 3, 6, 6, 5, 3, 0, 0)$, the last two slots empty, as they should be. A second example with the wrap in a different place: $x = (1,2,3,4)$ and $h = (1,1)$ have the linear convolution $(1,3,5,7,4)$ of length 5, and $N = 4$ circular convolution gives $(5, 3, 5, 7)$, where the final 4 has wrapped onto the first entry, $1 + 4 = 5$."
+    },
+    {
+      "type": "prose",
+      "text": "People round $L$ up to a power of two because the radix-2 FFT of The Fast Fourier Transform (#/math/fourier-transform/fft) is simplest and fastest at those sizes. That wastes some work (padding 1049 samples up to 2048 nearly doubles the length), so libraries also offer sizes with small prime factors such as 1050 = 2 · 3 · 5² · 7."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Counting the work"
+    },
+    {
+      "type": "prose",
+      "text": "The recipe for fast convolution of an $N$-sample $x$ with an $M$-sample $h$ is: pick $L$, a power of two with $L \\ge N + M - 1$; take the FFT of padded $x$ and of padded $h$; multiply the two spectra point by point ($L$ complex multiplications); take the inverse FFT. That is three FFTs and $L$ multiplications. Each FFT of length $L$ takes $\\tfrac{L}{2}\\log_2 L$ complex multiplications, and a complex multiplication is four real ones (or three, with a trick; we use four). Meanwhile the direct method uses $NM$ real multiplications."
+    },
+    {
+      "type": "prose",
+      "text": "For $N = M = 1024$ we need $L = 2048$. One FFT costs $1024 \\times 11 = 11{,}264$ complex multiplications; three cost $33{,}792$, plus $2048$ for the product: $35{,}840$ complex, $143{,}360$ real. The direct method needs $1{,}048{,}576$. The fast route is $7.3$ times cheaper. Here is the whole picture for two sequences of equal length $N$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$N = 16$: direct 256, FFT route 1088 real multiplications (padded to $L = 32$). Direct wins by a factor of about 4.",
+        "$N = 64$: direct 4096, FFT 5888. Direct still wins, by a hair.",
+        "$N = 128$: direct 16,384, FFT 13,312. The FFT wins for the first time. By this count the break-even is at $N = 116$.",
+        "$N = 1024$: direct 1,048,576, FFT 143,360. The FFT is 7.3 times cheaper.",
+        "$N = 4096$: direct 16,777,216, FFT 671,744: 25 times cheaper.",
+        "$N = 65{,}536$: direct 4,294,967,296, FFT 13,893,632: 309 times cheaper."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The break-even near 100 is the main lesson: for short sequences, such as a 5-tap filter or a 3 by 3 image kernel, direct convolution is faster and simpler, and nobody uses an FFT. The count is crude (it ignores additions, memory traffic and the fact that real signals allow tricks that halve the FFT work), so real break-even points move around, but the trend is solid: direct work grows as $N^2$ and the FFT route as $N \\log N$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "fft-butterfly",
+        "title": "Counting the FFT's work",
+        "params": [
+          {
+            "key": "input",
+            "label": "Input x[n]",
+            "control": "select",
+            "options": [
+              "impulse at n = 0",
+              "impulse at n = 1",
+              "constant 1",
+              "cosine, 1 cycle",
+              "cosine, 2 cycles",
+              "alternating +1, −1",
+              "square: four 1s, four 0s",
+              "ramp 0 … 7"
+            ],
+            "default": "square: four 1s, four 0s"
+          },
+          {
+            "key": "size",
+            "label": "Count the work for N =",
+            "control": "select",
+            "options": [
+              "8",
+              "64",
+              "1024",
+              "65536",
+              "1048576"
+            ],
+            "default": "1024"
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The widget draws the eight-point FFT of the chosen input, and its readout line compares costs for the size you pick. With the size at 1024 it says that the definition of the DFT takes $N^2 = 1{,}048{,}576$ complex multiplications and the FFT $(N/2)\\log_2 N = 5{,}120$, 205 times fewer. That is the cost of one transform of length $N$. Fast convolution needs three transforms of the padded length $2N$ plus the products, counted above in real multiplications (four per complex one), and it is compared with direct convolution's $N^2$ real multiplications, not $N^2$ complex ones; that is why its gain at $N = 1024$ is 7.3 and not 205. Change the size to 65,536 and then to 1,048,576 to watch the gap widen. Press Next stage ▶ to follow the eight-point butterflies."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Long signals: overlap-add"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose $x$ is a recording of a million samples and $h$ a filter of 1000 taps. One huge FFT is possible, but it needs the whole signal in memory and the output arrives only at the end, which is useless for live audio. The way out uses linearity: convolution distributes over addition, so cut $x$ into blocks, convolve each block with $h$ separately, and add the pieces. Each block of length $B$ gives an output of length $B + M - 1$, which overlaps the next block's output in $M - 1$ samples; adding them where they overlap gives the exact result. This is the overlap-add method."
+    },
+    {
+      "type": "prose",
+      "text": "A small case. Let $x = (1, 2, 3, 4, 5, 6)$ and $h = (1, 1)$, and use blocks of $B = 3$. The blocks are $(1, 2, 3)$ and $(4, 5, 6)$, with convolutions with $h$ of $(1, 3, 5, 3)$ and $(4, 9, 11, 6)$. The second one starts at $n = 3$, so the output slot $n = 3$ receives $3 + 4 = 7$:"
+    },
+    {
+      "type": "math",
+      "tex": "y = (1,\\ 3,\\ 5,\\ 3 + 4,\\ 9,\\ 11,\\ 6) = (1, 3, 5, 7, 9, 11, 6)"
+    },
+    {
+      "type": "prose",
+      "text": "which equals the direct convolution of the whole signal. In practice each block convolution is done by FFT: choose an FFT size $L$, take blocks of $B = L - M + 1$ samples (so that block plus filter, $B + M - 1 = L$ samples, just fits the circle and nothing wraps), compute the FFT of $h$ once and keep it, and for each block do one FFT, one multiplication and one inverse FFT. The size $L$ has a sweet spot. For the million-sample signal and 1000-tap filter, the direct cost is $10^9$ multiplications. (The counts below are for the blocks and leave out the single FFT of $h$, which is done once.) With $L = 1024$ the blocks hold only 25 samples and there are 40,000 of them: the FFT route costs 1.8 times the direct work, which is worse. With $L = 2048$ it is 93.8 million real multiplications, 10.7 times cheaper than direct; with $L = 8192$, 64.2 million, 15.6 times cheaper; with $L = 16{,}384$, 63.9 million, 15.7 times cheaper (the best); and with $L = 524{,}288$, close to one giant FFT, 83.9 million, 11.9 times cheaper. Bigger is not always better, because the transform cost per sample grows with $\\log L$, while smaller blocks waste more of each FFT on the $M - 1$ overlap."
+    },
+    {
+      "type": "prose",
+      "text": "A related method, overlap-save, keeps the circular wrap-around instead of avoiding it. Take input blocks of length $L$ that overlap by $M - 1$ samples, multiply their DFTs by the DFT of $h$, and in each circular result throw away the first $M - 1$ outputs, which are the ones corrupted by wrap-around. The remaining $L - M + 1$ outputs are exactly the linear convolution. For $x = (1,2,3,4,5,6)$ and $h = (1,1)$ take $L = 4$ and $M - 1 = 1$: the first block is $(0, 1, 2, 3)$ (a zero stands in for the missing past), and its circular convolution with $h$ is $(3, 1, 3, 5)$; drop the first value, a contaminated 3 that included the wrapped-round sample, and keep $(1, 3, 5)$. The next block $(3, 4, 5, 6)$ gives $(9, 7, 9, 11)$, and dropping the first leaves $(7, 9, 11)$. Together: $(1, 3, 5, 7, 9, 11)$, the first six values of the direct answer. The two methods cost about the same; overlap-add adds overlapping outputs, overlap-save discards contaminated ones."
+    },
+    {
+      "type": "prose",
+      "text": "Real-time audio engines use the same idea with blocks as small as a few hundred samples, so the delay between input and output stays short, and they split a long reverb response into pieces so that the first piece has low delay. The cost accounting is the same."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Big numbers and polynomials"
+    },
+    {
+      "type": "prose",
+      "text": "Multiplying two long integers is a convolution of their digits, as shown on Discrete Convolution (#/math/convolution/discrete). Take $57 \\times 46$: the digit lists, least significant first, are $(7, 5)$ and $(6, 4)$, and their convolution is $(42, 58, 20)$. Read as a polynomial in 10: $42 + 580 + 2000 = 2622 = 57 \\times 46$. The carries are done at the end, once. For numbers with a million digits, schoolbook multiplication takes $10^{12}$ steps, while the FFT route takes about $L \\log L$ with $L \\approx 2 \\times 10^6$. One catch, which is the price of using floating-point FFTs: round-off error grows with length, so the digits must be kept small (each convolution sum must stay far below the precision of the arithmetic). In a test with two random 1000-digit numbers, a double-precision FFT of length 2048 produced convolution values that differed from whole numbers by at most $7 \\times 10^{-12}$, so rounding them recovered the exact product (checked against Python's own integers). For $10^5$ digits the largest deviation was $9 \\times 10^{-10}$, still far below $0.5$, with convolution values up to about $2 \\times 10^6$. Record-setting multiplications use exact variants of the same idea (number-theoretic transforms, the Schönhage-Strassen method), but the principle is the one on this page."
+    },
+    {
+      "type": "prose",
+      "text": "The same reasoning multiplies polynomials, which is why the FFT is inside many algorithms for error-correcting codes and for long-number arithmetic. The first fast-convolution papers, such as Stockham's, appeared soon after the FFT itself."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "Spot the wrap-around",
+      "text": "Convolve $x = (1,2,3,4)$ with $h = (1,1)$ linearly, then circularly with $N = 4$, and say which output entries differ and why.",
+      "solution": [
+        "Linear: $y[0] = 1$, $y[1] = 1 + 2 = 3$, $y[2] = 2 + 3 = 5$, $y[3] = 3 + 4 = 7$, $y[4] = 4$, so $y = (1, 3, 5, 7, 4)$, which has $4 + 2 - 1 = 5$ entries. With only four slots, the fifth value $y[4] = 4$ wraps to slot 0 and is added to $y[0]$: $1 + 4 = 5$. The circular result is $(5, 3, 5, 7)$. Only slot 0 differs. Using $N = 5$ or more would give the linear answer."
+      ],
+      "answer": "Linear $(1,3,5,7,4)$; circular $(5,3,5,7)$; slot 0 changes from 1 to 5."
+    },
+    {
+      "type": "problem",
+      "title": "Is the FFT worth it?",
+      "text": "A signal of 1000 samples is filtered with 50 taps. Compare the direct multiplication count with one large FFT convolution, and then with overlap-add at FFT size 256 (so blocks of 207 samples). Which is cheaper?",
+      "solution": [
+        "Direct: $1000 \\times 50 = 50{,}000$ real multiplications. One large FFT: the output has $1049$ samples, so $L = 2048$, costing $4 \\times (3 \\times 11{,}264 + 2048) = 143{,}360$ real multiplications, nearly three times the direct cost. Overlap-add with $L = 256$: the block size is $256 - 50 + 1 = 207$, so $\\lceil 1000/207 \\rceil = 5$ blocks. Each block takes two FFTs of length 256 ($2 \\times 128 \\times 8 = 2048$ complex multiplications) and 256 for the product: 2304. The five blocks cost $11{,}520$, plus one FFT for $h$ ($1024$): $12{,}544$ complex, or $50{,}176$ real, essentially the same as direct. For a filter this short, direct convolution is as good as anything, and simpler."
+      ],
+      "answer": "Direct 50,000; one FFT 143,360; overlap-add 50,176. Direct wins."
+    },
+    {
+      "type": "problem",
+      "title": "Multiply by convolution",
+      "text": "Compute $57 \\times 46$ by convolving digit lists, then fixing the carries.",
+      "solution": [
+        "Digits least significant first: $57 \\to (7, 5)$, $46 \\to (6, 4)$. Convolution: $7 \\cdot 6 = 42$; $7 \\cdot 4 + 5 \\cdot 6 = 58$; $5 \\cdot 4 = 20$. So $(42, 58, 20)$ means $42 + 58 \\cdot 10 + 20 \\cdot 100 = 42 + 580 + 2000 = 2622$. With carries: 42 puts 2 down and carries 4; $58 + 4 = 62$ puts 2 down and carries 6; $20 + 6 = 26$ puts 6 down and carries 2; the final digit is 2: $2622$."
+      ],
+      "answer": "$2622$."
+    },
+    {
+      "type": "problem",
+      "title": "Overlap-add by hand",
+      "text": "Use overlap-add with blocks of 3 to convolve $x = (2, 0, 1, 3, 1, 4)$ with $h = (1, -1)$, and check against the whole convolution.",
+      "solution": [
+        "The blocks are $(2, 0, 1)$ and $(3, 1, 4)$. Their convolutions with $(1, -1)$ are $(2, -2, 1, -1)$ and $(3, -2, 3, -4)$. The second starts at $n = 3$, so slot 3 is $-1 + 3 = 2$: $y = (2, -2, 1, 2, -2, 3, -4)$. Directly, $y[n] = x[n] - x[n-1]$ gives $2, -2, 1, 2, -2, 3, -4$ (the last is $0 - 4$). They agree."
+      ],
+      "answer": "$(2, -2, 1, 2, -2, 3, -4)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Steven W. Smith, The Scientist and Engineer's Guide to Digital Signal Processing (California Technical Publishing, 1997), free online at dspguide.com. The chapters on FFT convolution and overlap-add.",
+        "Alan V. Oppenheim and Ronald W. Schafer, Discrete-Time Signal Processing, 3rd edition (Pearson, 2010). The sections on circular convolution and on block convolution (overlap-add and overlap-save).",
+        "James W. Cooley and John W. Tukey, An algorithm for the machine calculation of complex Fourier series, Mathematics of Computation 19 (1965), 297-301.",
+        "Thomas G. Stockham Jr., High-speed convolution and correlation, AFIPS Spring Joint Computer Conference (1966): FFT convolution of long signals by sectioning.",
+        "Next: Convolution in Practice (#/math/convolution/applications)."
+      ]
+    }
+  ]
+}
