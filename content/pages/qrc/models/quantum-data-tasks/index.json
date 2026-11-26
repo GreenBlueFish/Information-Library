@@ -186,7 +186,7 @@
     },
     {
       "type": "prose",
-      "text": "For pure two-qubit states entanglement is a quadratic function of the state: with $\\rho_A=\\operatorname{Tr}_B\\vert\\psi\\rangle\\langle\\psi\\vert$, the concurrence satisfies $C^2=2(1-\\operatorname{Tr}\\rho_A^2)$, and $\\operatorname{Tr}\\rho_A^2=\\operatorname{Tr}[(\\mathrm{SWAP}_A\\otimes I_B)\\,\\rho\\otimes\\rho]$ is linear in two copies. (Here $\\mathrm{SWAP}_A$ exchanges the $A$ halves of the two copies; I checked the identity numerically on a random pure state: both sides gave $0.8074$.) So the same quadratic readout that learns purity learns pure-state entanglement. For mixed states, measures like the negativity involve eigenvalues of the partial transpose and are not polynomials of fixed degree; a reservoir with a polynomial readout approximates them, and an entanglement witness (a linear $\\operatorname{Tr}[W\\rho]<0$ test) is learnable exactly by a linear readout of an IC reservoir, but only one witness at a time."
+      "text": "For pure two-qubit states entanglement is a quadratic function of the state: with $\\rho_A=\\operatorname{Tr}_B\\vert\\psi\\rangle\\langle\\psi\\vert$, the concurrence satisfies $C^2=2(1-\\operatorname{Tr}\\rho_A^2)$, and $\\operatorname{Tr}\\rho_A^2=\\operatorname{Tr}[(\\mathrm{SWAP}_A\\otimes I_B)\\,\\rho\\otimes\\rho]$ is linear in two copies. (Here $\\mathrm{SWAP}_A$ exchanges the $A$ halves of the two copies. A numerical check on a random pure state gives $0.8074$ for both sides.) So the same quadratic readout that learns purity learns pure-state entanglement. For mixed states, measures like the negativity involve eigenvalues of the partial transpose and are not polynomials of fixed degree; a reservoir with a polynomial readout approximates them, and an entanglement witness (a linear $\\operatorname{Tr}[W\\rho]<0$ test) is learnable exactly by a linear readout of an IC reservoir, but only one witness at a time."
     },
     {
       "type": "heading",
@@ -202,7 +202,7 @@
       "items": [
         "Step 1. $\\rho_A=\\operatorname{diag}(\\cos^2\\theta,\\sin^2\\theta)=\\operatorname{diag}(0.854,0.146)$.",
         "Step 2. $\\operatorname{Tr}\\rho_A^2=\\cos^4\\theta+\\sin^4\\theta=0.729+0.021=0.75$ (using $\\cos^4+\\sin^4=1-\\tfrac12\\sin^22\\theta=1-\\tfrac12\\cdot\\tfrac12$).",
-        "Step 3. Concurrence $C=2\\vert ad-bc\\vert=2\\cos\\theta\\sin\\theta=\\sin2\\theta=\\sin(\\pi/4)=0.7071$.",
+        "Step 3. For a pure state $a\\vert00\\rangle+b\\vert01\\rangle+c\\vert10\\rangle+d\\vert11\\rangle$ the concurrence is $C=2\\vert ad-bc\\vert$. Here $a=\\cos\\theta$, $d=\\sin\\theta$, $b=c=0$, so $C=2\\cos\\theta\\sin\\theta=\\sin2\\theta=\\sin(\\pi/4)=0.7071$.",
         "Step 4. Check: $C^2=0.5$ and $2(1-0.75)=0.5$."
       ]
     },
@@ -258,7 +258,7 @@
       "type": "list",
       "items": [
         "Step 1. For pure states $C=\\sqrt{2(1-\\operatorname{Tr}\\rho_A^2)}$, so the target to learn is the purity of one half, a quadratic function of $\\rho$. A linear one-copy readout cannot do it (the impossibility proof above).",
-        "Step 2. Option A: quadratic readout of one copy: $16+16\\cdot17/2=152$ features. Needs several hundred labelled training states and unbiased product estimates (disjoint shot batches). Option B: two copies at once, 4 input qubits ($d=16$), IC would need $256$ effects, but we need only one operator, $\\mathrm{SWAP}_A$, which a linear readout of a rich enough reservoir can represent with far fewer; I did not test this option here.",
+        "Step 2. Option A: quadratic readout of one copy: $16+16\\cdot17/2=152$ features. Needs several hundred labelled training states and unbiased product estimates (disjoint shot batches). Option B: two copies at once, 4 input qubits ($d=16$), IC would need $256$ effects, but we need only one operator, $\\mathrm{SWAP}_A$, which needs far fewer. The inputs $\\rho\\otimes\\rho$ are unchanged when the two copies are exchanged, so for pure states they span only $100$ of the $256$ dimensions. A quick test (one random unitary, 600 random pure training states, exact probabilities): with $m=2$ ancillas (64 outcomes) the linear readout of the two-copy reservoir leaves NMSE $0.36$ on $\\operatorname{Tr}\\rho_A^2$; with $m=3$ (128 outcomes, rank 100) it is exact. Option B therefore needs 7 qubits in all, but no products of estimates and so no product bias.",
         "Step 3. Training set. Labelled pure states with known concurrence, e.g. the family $\\cos\\theta\\vert00\\rangle+\\sin\\theta\\vert11\\rangle$ and its local rotations (a generic pure state is related to this family by local unitaries). Preparing these reliably is the hard part.",
         "Step 4. Check: predict the concurrence of a Bell state (1) and of $\\theta=\\pi/8$ (0.7071) as a calibration test; deviations beyond the shot-noise error show a bias."
       ]
@@ -290,27 +290,27 @@
     },
     {
       "type": "problem",
-      "title": "Purity is not linear",
-      "text": "A linear readout is trained to output the purity and gets it right on $\\rho_1=\\vert0\\rangle\\langle0\\vert$ and $\\rho_2=\\vert1\\rangle\\langle1\\vert$. What does it output on $\\rho=\\tfrac12(\\rho_1+\\rho_2)$, and what is the true value?",
-      "hint": "Linearity on the equal mixture.",
+      "title": "Purity two ways",
+      "text": "Find the purity $\\operatorname{Tr}\\rho^2$ of $\\rho=\\tfrac12\\vert0\\rangle\\langle0\\vert+\\tfrac12\\vert+\\rangle\\langle+\\vert$ in two ways: from the overlap of the two pure states, and from the Bloch vector, using $\\operatorname{Tr}\\rho^2=\\tfrac12(1+\\vert\\vec r\\vert^2)$. Could a linear readout trained on $\\vert0\\rangle$ and $\\vert+\\rangle$ alone get it right?",
+      "hint": "$\\operatorname{Tr}(\\vert u\\rangle\\langle u\\vert\\,\\vert v\\rangle\\langle v\\vert)=\\vert\\langle u\\vert v\\rangle\\vert^2$, and $\\vert\\langle0\\vert+\\rangle\\vert^2=\\tfrac12$.",
       "solution": [
-        "Linear: $f(\\rho)=\\tfrac12f(\\rho_1)+\\tfrac12f(\\rho_2)=\\tfrac12+\\tfrac12=1$.",
-        "True: $\\operatorname{Tr}(I/2)^2=\\tfrac12$.",
-        "So no linear readout of single-copy statistics represents purity; in the sample the best linear fit leaves NMSE $0.986$."
+        "Overlap: $\\operatorname{Tr}\\rho^2=\\tfrac14\\left(1+1+2\\vert\\langle0\\vert+\\rangle\\vert^2\\right)=\\tfrac14(2+1)=0.75$.",
+        "Bloch: $\\vert0\\rangle$ has $\\vec r=(0,0,1)$ and $\\vert+\\rangle$ has $(1,0,0)$, so $\\rho$ has $\\vec r=(0.5,0,0.5)$, $\\vert\\vec r\\vert^2=0.5$ and $\\operatorname{Tr}\\rho^2=\\tfrac12(1.5)=0.75$.",
+        "A linear readout that outputs 1 on both pure states outputs $\\tfrac12+\\tfrac12=1$ on their equal mixture, not $0.75$: the same contradiction as for $\\vert0\\rangle$ and $\\vert1\\rangle$, only smaller."
       ],
-      "answer": "It outputs 1; the true purity is 1/2"
+      "answer": "0.75 both ways; a linear readout would say 1"
     },
     {
       "type": "problem",
       "title": "Concurrence from reduced purity",
-      "text": "For $\\vert\\psi\\rangle=\\cos\\theta\\vert00\\rangle+\\sin\\theta\\vert11\\rangle$ with $\\theta=\\pi/8$, compute $\\operatorname{Tr}\\rho_A^2$ and the concurrence, and check $C^2=2(1-\\operatorname{Tr}\\rho_A^2)$.",
-      "hint": "$\\sin^22\\theta=\\tfrac12$ at $\\theta=\\pi/8$.",
+      "text": "For $\\vert\\psi\\rangle=\\cos\\theta\\vert00\\rangle+\\sin\\theta\\vert11\\rangle$ with $\\theta=\\pi/6$, compute $\\operatorname{Tr}\\rho_A^2$ and the concurrence, and check $C^2=2(1-\\operatorname{Tr}\\rho_A^2)$.",
+      "hint": "$\\cos^2(\\pi/6)=0.75$ and $\\sin^2(\\pi/6)=0.25$.",
       "solution": [
-        "$\\rho_A=\\operatorname{diag}(\\cos^2\\theta,\\sin^2\\theta)$, so $\\operatorname{Tr}\\rho_A^2=\\cos^4\\theta+\\sin^4\\theta=1-\\tfrac12\\sin^22\\theta=1-\\tfrac12\\cdot\\tfrac12=0.75$.",
-        "Concurrence $C=2\\vert ad-bc\\vert=2\\cos\\theta\\sin\\theta=\\sin2\\theta=\\sin(\\pi/4)\\approx0.707$.",
-        "Check: $C^2=0.5$ and $2(1-0.75)=0.5$."
+        "$\\rho_A=\\operatorname{diag}(\\cos^2\\theta,\\sin^2\\theta)=\\operatorname{diag}(0.75,0.25)$, so $\\operatorname{Tr}\\rho_A^2=0.5625+0.0625=0.625$.",
+        "Concurrence $C=2\\vert ad-bc\\vert=2\\cos\\theta\\sin\\theta=\\sin2\\theta=\\sin(\\pi/3)\\approx0.866$.",
+        "Check: $C^2=0.75$ and $2(1-0.625)=0.75$."
       ],
-      "answer": "$\\operatorname{Tr}\\rho_A^2=0.75$, $C\\approx0.707$"
+      "answer": "$\\operatorname{Tr}\\rho_A^2=0.625$, $C\\approx0.866$"
     },
     {
       "type": "problem",
