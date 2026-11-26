@@ -5,15 +5,51 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "Three meanings of advantage"
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "This page asks when a quantum reservoir would be worth building instead of a classical model. It assumes the model of A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand) and the scoring ideas of Training, Testing and Measuring Error (#/qrc/start/training-and-testing) (train and test split, NMSE) and Time Series and Prediction (#/qrc/start/time-series-and-prediction) (NARMA-style targets). It uses the structure results of Expressivity and Universality (#/qrc/theory/expressivity-and-universality) (cross-time products are native; capacity is limited by the number of independent features) and the shot-cost results of Concentration and Scalability (#/qrc/theory/concentration-and-scalability). The spin models of Spin Models (#/quantum/many-body/spin-models) are the examples throughout."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
     },
     {
       "type": "list",
       "items": [
-        "Task advantage: on a practical task, a quantum reservoir reaches a given accuracy with fewer resources (energy, time, hardware cost, data) than the best classical method. This is the claim users care about and the hardest to establish, because the best classical method keeps improving.",
-        "Complexity advantage: the feature map is hard to compute classically (under standard conjectures) and some learning task provably needs it. This is clean but says nothing about usefulness on real data.",
-        "Quantum-data advantage: the input is itself quantum (states from a sensor, a quantum simulator or a communication channel), and the reservoir processes it without tomography. Here the competition is a classical model that must first measure the states, and sample-complexity separations are known in related settings. See Quantum Data Tasks (#/qrc/models/quantum-data-tasks) (Ghosh and co-authors)."
+        "Distinguish a task advantage, a complexity advantage and a quantum-data advantage, and say which one a given claim is about.",
+        "Explain why a reservoir with a Hamiltonian made only of nearest-neighbour $XX$ couplings and $Z$ fields cannot give a complexity advantage, and run that argument as code.",
+        "Build a polynomial baseline in the style of next-generation reservoir computing and compare it with a quantum reservoir at equal feature count.",
+        "Design a comparison that is fair: matched features, finite shots, strong baselines, several seeds, a scaling trend.",
+        "Read a benchmark table in a paper and name the first baseline you would ask for."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three meanings of advantage"
+    },
+    {
+      "type": "prose",
+      "text": "People say 'quantum advantage' and mean quite different things, and most arguments in the field come from mixing them up. A claim has to be about one of three kinds."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Task advantage: on a practical task, a quantum reservoir reaches a given accuracy with fewer resources (energy, time, hardware cost, data) than the best classical method. This is what a user cares about, and it is the hardest to establish, because 'the best classical method' keeps improving and is never frozen.",
+        "Complexity advantage: the feature map is hard to compute classically (under standard conjectures of complexity theory) and some learning task provably needs it. This kind of statement is clean and mathematical but says nothing about whether any useful data has the required structure.",
+        "Quantum-data advantage: the input is itself quantum (states from a sensor, a quantum simulator or a communication channel), and the reservoir processes it without first reconstructing it by tomography. Here the competitor is a classical model that must first measure the states, and sample-complexity separations are known in related settings. See Quantum Data Tasks (#/qrc/models/quantum-data-tasks) (Ghosh and co-authors)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A way to keep them apart is to ask what the evidence would look like. For a task advantage: a plot of error against cost, with a curve for the quantum model below every classical curve at the same cost. For a complexity advantage: a hardness argument. For a quantum-data advantage: a count of how many copies of the quantum state each method needs. A reservoir paper that shows only the first, with the classical curve missing or weak, has not shown an advantage of any kind."
+    },
+    {
+      "type": "prose",
+      "text": "Toy numbers help to see what 'fewer resources' means. If a quantum reservoir with 20 features reaches an NMSE of 0.05 and a classical model needs 52 features for the same NMSE, you might say the quantum model has a 2.6-fold advantage in features. But it might need $10^5$ shots per feature per step; the classical model's 52 features are exact. Resources must be counted in the same currency: the fair currency is usually total operations, or wall-clock time and energy, including the measurements. Section 'Running a fair comparison' below turns this into a checklist."
     },
     {
       "type": "heading",
@@ -21,12 +57,16 @@
       "text": "The arguments for"
     },
     {
+      "type": "prose",
+      "text": "There are four standard reasons to expect something from quantum reservoirs. It is worth stating each one at its strongest."
+    },
+    {
       "type": "list",
       "items": [
-        "Dimension. The state space grows as $4^n$ and the dynamics mix it nontrivially; a modest device has more internal degrees of freedom than any classical reservoir of the same physical size.",
-        "No quantum training. Only the linear readout is trained, a convex least-squares problem with a closed-form solution. That sidesteps barren plateaus and the costly gradient estimation of variational circuits.",
-        "Natural dynamics. Analog hardware (Rydberg arrays, NMR ensembles, superconducting circuits left to evolve) does the computation by physics, with no gate compilation; noise can be part of the reservoir instead of an error to correct.",
-        "Cross-time products are native. Unrolled reset-injection dynamics are a sum over products of past inputs (see Expressivity and Universality (#/qrc/theory/expressivity-and-universality)), with exponentially many terms available to the readout in principle."
+        "Dimension. The state space grows as $4^n$ and the dynamics mix it nontrivially; a modest device has more internal degrees of freedom than any classical reservoir of the same physical size. Thirty qubits give about $10^{18}$ state parameters; a classical reservoir with $10^{18}$ units is not buildable.",
+        "No quantum training. Only the linear readout is trained, a convex least-squares problem with a closed-form solution. That sidesteps barren plateaus and the costly gradient estimation of variational circuits, which are the main practical obstacles for quantum machine learning on hardware.",
+        "Natural dynamics. Analog hardware (Rydberg arrays, NMR ensembles, superconducting circuits left to evolve) does the computation by physics, with no gate compilation; noise can be part of the reservoir instead of an error to correct (Analog Platforms (#/qrc/hardware/analog-platforms), Physical Reservoirs (#/qrc/foundations/physical-reservoirs)).",
+        "Cross-time products are native. Unrolled reset-injection dynamics are a sum over products of past inputs (see Expressivity and Universality (#/qrc/theory/expressivity-and-universality)), with exponentially many terms available to the readout in principle. A classical reservoir has to form these products by its nonlinear units, a classical polynomial model has to list them one by one."
       ]
     },
     {
@@ -35,35 +75,153 @@
       "text": "The arguments against"
     },
     {
+      "type": "prose",
+      "text": "Each argument for has a matching reply, and the replies are quantitative."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Only polynomially many features can be read"
+    },
+    {
+      "type": "prose",
+      "text": "The readout sees $N$ estimated expectation values, each costing shots; the exponentially many internal parameters are not accessible. The usable feature count is $N_{\\text{eff}}(S)$, not $4^n$ (Concentration and Scalability (#/qrc/theory/concentration-and-scalability)). A device that offers $10^{18}$ numbers but delivers 100 of them, each with a one per cent error, is not a $10^{18}$-feature device. The capacity bound of Expressivity and Universality (#/qrc/theory/expressivity-and-universality) says exactly this: total capacity is at most the number of independent features read."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Concentration"
+    },
+    {
+      "type": "prose",
+      "text": "Generic scrambling dynamics make features exponentially insensitive to the input, so the shots needed to read them grow like $2^n$. The reservoirs that work avoid this by being structured. But structure is what classical algorithms exploit."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Simulable regimes"
+    },
+    {
+      "type": "prose",
+      "text": "There are two ways a reservoir can be easy to simulate classically. It can have a restricted algebraic structure (free fermions, Gaussian states), or low entanglement (tensor networks). The first deserves a worked example, because it is the most common reservoir model in the literature: a chain of qubits with nearest-neighbour couplings."
+    },
+    {
+      "type": "prose",
+      "text": "Take $H = \\sum_j J_j X_j X_{j+1} + \\sum_j h_j Z_j$ on a chain of $n$ qubits. The Jordan–Wigner transformation rewrites qubit operators in terms of Majorana operators $\\gamma_a$, $a = 0, \\dots, 2n-1$, which are Hermitian, square to 1 and anticommute: $\\{\\gamma_a, \\gamma_b\\} = 2\\delta_{ab}$. Concretely, $\\gamma_{2j} = Z_0 \\cdots Z_{j-1} X_j$ and $\\gamma_{2j+1} = Z_0 \\cdots Z_{j-1} Y_j$. Three facts follow by multiplying out Pauli matrices."
+    },
+    {
       "type": "list",
       "items": [
-        "Only polynomially many features can be read. The readout sees $N$ estimated expectation values, each costing shots; the exponentially many internal parameters are not accessible. Usable feature count is set by $N_{\\text{eff}}(S)$, not by $4^n$.",
-        "Concentration. Generic scrambling dynamics make features exponentially insensitive to the input, so the shots to read them grow as $2^n$ (see Concentration and Scalability (#/qrc/theory/concentration-and-scalability)).",
-        "Simulable regimes. One-dimensional nearest-neighbour transverse-field Ising chains (free fermions), Gaussian bosonic reservoirs and low-entanglement dynamics are classically efficient; a reservoir that works because it stays in such a regime gives no complexity advantage.",
-        "Data beats hardness. Huang and co-authors showed for quantum kernels that classical learners given data can often match a model whose features are classically hard to compute, and gave a geometric test (comparing kernel matrices) for when a quantum model can even possibly win. The same logic applies to reservoir features.",
-        "Strong classical baselines. Classical reservoirs are cheap at thousands of nodes, and next-generation reservoir computing (Gauthier and co-authors), a linear readout of polynomial monomials of recent inputs, solves many standard benchmarks with tens of features and no reservoir at all."
+        "$\\gamma_{2j}\\gamma_{2j+1} = X_j Y_j = i Z_j$, so $Z_j = -i\\,\\gamma_{2j}\\gamma_{2j+1}$.",
+        "$\\gamma_{2j+1}\\gamma_{2j+2} = (Z_0\\cdots Z_{j-1}Y_j)(Z_0\\cdots Z_{j}X_{j+1}) = Y_jZ_jX_{j+1} = i X_jX_{j+1}$, so $X_jX_{j+1} = -i\\,\\gamma_{2j+1}\\gamma_{2j+2}$. The strings of $Z$'s cancel because the two operators are neighbours. A coupling between qubits $i$ and $j$ that are not neighbours leaves a string of $Z$'s in between and is not a product of two Majoranas.",
+        "So $H$ is quadratic in Majoranas: $H = \\frac{i}{4}\\sum_{ab} A_{ab}\\gamma_a\\gamma_b$ with $A$ a real antisymmetric $2n \\times 2n$ matrix whose entries are $\\pm 2h_j$ and $\\pm 2J_j$."
       ]
+    },
+    {
+      "type": "prose",
+      "text": "Next, the Heisenberg equation. Using $[\\gamma_a\\gamma_b, \\gamma_c] = 2\\delta_{bc}\\gamma_a - 2\\delta_{ac}\\gamma_b$ (which follows from the anticommutation rule: Schrödinger and Heisenberg Pictures (#/quantum/dynamics/pictures-of-time-evolution) explains the Heisenberg picture) one finds $d\\gamma_c/dt = i[H, \\gamma_c] = \\sum_b A_{cb}\\gamma_b$. A system of linear equations whose solution is $\\gamma(t) = e^{At}\\gamma$: each Majorana at time $t$ is a real linear combination of the Majoranas at time 0 with coefficients in the orthogonal matrix $R = e^{At}$. Starting from a computational-basis state with $\\langle Z_j\\rangle = z_j = \\pm 1$, the only nonzero two-point functions are $\\langle\\gamma_{2j}\\gamma_{2j+1}\\rangle = i z_j$, and one obtains"
+    },
+    {
+      "type": "math",
+      "tex": "\\langle Z_j\\rangle(t) = \\big(R\\,M\\,R^{\\top}\\big)_{2j,\\,2j+1}, \\qquad R = e^{At}, \\qquad M_{2j,2j+1} = z_j = -M_{2j+1,2j}",
+      "caption": "A $2n \\times 2n$ computation replaces a $2^n$-dimensional one."
+    },
+    {
+      "type": "prose",
+      "text": "Step by step, the cost is: build $A$ ($2n \\times 2n$), exponentiate (about $(2n)^3$ operations), multiply three matrices. For $n = 10$ that is a $20 \\times 20$ problem against vectors with 1024 amplitudes. For $n = 200$ it is $400 \\times 400$ against $2^{200}$. The sample compares the free-fermion result with exact state-vector evolution for 10 qubits (random couplings $J_j \\in [-0.5, 0.5]$, fields $h_j \\in [0.5, 1.5]$, a random computational-basis starting state, time 3), then runs 200 qubits."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# A 1D nearest-neighbour transverse-field Ising chain H = sum_j J_j X_j X_{j+1} + sum_j h_j Z_j is a free-fermion model:\n# <Z_j>(t) follows from a 2n x 2n matrix, so it is cheap at any n. Check against exact evolution, then go big.\nimport numpy as np, time\nfrom scipy.linalg import expm\n\nX = np.array([[0, 1], [1, 0]], dtype=complex); Z = np.diag([1.0, -1.0]).astype(complex); I2 = np.eye(2)\ndef op(single, i, n):\n    out = np.array([[1.0 + 0j]])\n    for k in range(n): out = np.kron(out, single if k == i else I2)\n    return out\n\ndef majorana_generator(J, h):\n    \"\"\"A with  d gamma_c / dt = sum_b A_cb gamma_b,  gamma_{2j}=Z..Z X_j, gamma_{2j+1}=Z..Z Y_j (0-based sites).\"\"\"\n    n = len(h); A = np.zeros((2 * n, 2 * n))\n    for j in range(n):                       # h_j Z_j = -i h_j gamma_{2j} gamma_{2j+1}\n        A[2 * j, 2 * j + 1] += -2 * h[j]; A[2 * j + 1, 2 * j] += 2 * h[j]\n    for j in range(n - 1):                   # J_j X_j X_{j+1} = -i J_j gamma_{2j+1} gamma_{2j+2}\n        a, b = 2 * j + 1, 2 * j + 2\n        A[a, b] += -2 * J[j]; A[b, a] += 2 * J[j]\n    return A\n\ndef zt_free(J, h, z0, t):\n    n = len(h); R = expm(majorana_generator(J, h) * t)\n    M = np.zeros((2 * n, 2 * n))\n    for j in range(n): M[2 * j, 2 * j + 1] = z0[j]; M[2 * j + 1, 2 * j] = -z0[j]\n    G = R @ M @ R.T\n    return np.array([G[2 * j, 2 * j + 1] for j in range(n)])\n\nn, t = 10, 3.0\nrng = np.random.default_rng(0)\nJ = rng.uniform(-0.5, 0.5, n - 1); h = 1 + rng.uniform(-0.5, 0.5, n)\nH = sum(J[j] * op(X, j, n) @ op(X, j + 1, n) for j in range(n - 1)) + sum(h[j] * op(Z, j, n) for j in range(n))\nz0 = rng.choice([-1.0, 1.0], n)\nidx = int(\"\".join(\"0\" if z > 0 else \"1\" for z in z0), 2)\npsi = np.zeros(2**n, complex); psi[idx] = 1\nt0 = time.time(); psi_t = expm(-1j * H * t) @ psi; t_exact = time.time() - t0\nexact = np.array([np.real(psi_t.conj() @ op(Z, j, n) @ psi_t) for j in range(n)])\nfree = zt_free(J, h, z0, t)\nprint(\"n = 10, t = 3, <Z_j> exact   :\", np.round(exact, 4))\nprint(\"n = 10, t = 3, <Z_j> 20x20   :\", np.round(free, 4))\nprint(\"max difference: %.1e   (exact took %.2f s)\" % (np.abs(exact - free).max(), t_exact))\nnb = 200\nJb = rng.uniform(-0.5, 0.5, nb - 1); hb = 1 + rng.uniform(-0.5, 0.5, nb); zb = rng.choice([-1.0, 1.0], nb)\nt0 = time.time(); big = zt_free(Jb, hb, zb, 10.0)\nprint(\"n = 200, t = 10: first five <Z_j> =\", np.round(big[:5], 4), \" (%.2f s; a state vector would need 2^200 numbers)\" % (time.time() - t0))\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "n = 10, t = 3, <Z_j> exact   : [-0.9944 -0.9765 -0.9681 -0.9951 -0.9767 -0.9746 -0.9567  0.9608  0.9743\n  0.9992]\nn = 10, t = 3, <Z_j> 20x20   : [-0.9944 -0.9765 -0.9681 -0.9951 -0.9767 -0.9746 -0.9567  0.9608  0.9743\n  0.9992]\nmax difference: 9.3e-15   (exact took 1.51 s)\nn = 200, t = 10: first five <Z_j> = [-0.9949 -0.621   0.1745  0.0268  0.454 ]  (0.15 s; a state vector would need 2^200 numbers)\n"
+    },
+    {
+      "type": "prose",
+      "text": "The two $\\langle Z_j\\rangle$ vectors agree to $10^{-14}$, and 200 qubits take a fraction of a second. Any reservoir whose unitary part is of this form, and whose input and readout stay within the free-fermion structure, has a classical shortcut. The all-to-all random $XX$ couplings of the Fujii–Nakajima model (The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)) leave strings of $Z$'s and break the mapping; that is why it is the standard 'non-trivial' model. Note also that the input step matters: the reset encoding (measure qubit 1, then prepare a state with coherence) takes the system out of the Gaussian class, so a hardness argument would have to come from the input step or from non-local couplings. This is the content of the old question: is the unitary part a candidate? For nearest-neighbour $XX$ plus $Z$ it is not."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Data beats hardness"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose you have a quantum feature map whose features are hard to compute classically. Is a classical learner then helpless? Not necessarily. A classical learner is given training data: examples of inputs together with the correct outputs. For a given input it does not have to compute the quantum features; it has to predict the output, and the training set may already contain enough examples to interpolate. Huang and co-authors showed this for quantum kernels: a classical learner with access to data can often match a model whose features are classically hard, and they gave a test for when a quantum model can possibly win. Compute the kernel matrix of each model on the training inputs (entry $(i,j)$ is the similarity the model assigns to inputs $i$ and $j$; for a quantum model the overlap of the two feature states), $K_Q$ for the quantum one and $K_C$ for the classical one, both scaled so their trace is the number of training points $N$. Their geometric difference is $g = \\sqrt{\\lambda_{\\max}\big(\\sqrt{K_Q}\\,K_C^{-1}\\sqrt{K_Q}\big)}$, where $\\lambda_{\\max}$ is the largest eigenvalue. If $g$ is small (close to 1), the guaranteed bound on the classical model's prediction error is at most $g$ times the quantum model's bound, for every target, so no large advantage is possible on that data; only when $g$ grows like $\\sqrt{N}$ is there room for a quantum model to win, and then only on targets that use that room. The reservoir version of the logic: if your target is a smooth function of recent inputs and you have a few thousand training points, a classical model of comparable size is likely to fit it, whatever the quantum features can do in principle."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Strong classical baselines"
+    },
+    {
+      "type": "prose",
+      "text": "Classical reservoirs are cheap at thousands of nodes. And there is a stronger baseline that has no reservoir at all. Next-generation reservoir computing (Gauthier and co-authors) takes the last $k$ inputs and forms all monomials up to some degree, then applies the same ridge readout. This is exactly the Volterra construction of Expressivity and Universality (#/qrc/theory/expressivity-and-universality), written down explicitly instead of generated by a reservoir. Its feature count is known in advance: all monomials of degree at most $d$ in $k$ inputs number $\\binom{k+d}{d}$ including the constant, so for $d = 3$ and $k = 5$ there are $\\binom{8}{3} = 56$, $k = 8$ gives $\\binom{11}{3} = 165$. A smaller set (lags, pairwise products including squares, and cubes) has $k + k(k+1)/2 + k$ columns: 12, 25 and 52 for $k = 3, 5, 8$. On many standard benchmarks tens of features and no reservoir at all suffice."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a monomial count",
+      "text": "How many monomials of total degree at most 2 (including the constant) are there in the last 6 inputs? How many without the constant?",
+      "hint": "Use $\\binom{k+d}{d}$ and subtract the constant.",
+      "solution": [
+        "The count of monomials of degree at most $d$ in $k$ variables is $\\binom{k+d}{d}$.",
+        "$\\binom{8}{2} = 28$.",
+        "Without the constant, 27 (the readout bias supplies the constant, so a feature matrix needs 27 columns)."
+      ],
+      "answer": "28; 27"
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "A small case study"
+      "text": "A small case study: NARMA2"
     },
     {
       "type": "prose",
-      "text": "The hands-on NARMA2 sample makes the last point concrete. On the same input series (200 washout, 1000 train, 500 test), with the test NMSE as score:"
+      "text": "The Hands-on page runs a NARMA2 benchmark, and the numbers there make the last argument concrete. NARMA2 is the recurrence $y_t = 0.4\\,y_{t-1} + 0.4\\,y_{t-1}y_{t-2} + 0.6\\,u_{t-1}^3 + 0.1$ driven by inputs $u = s/2 \\in [0, 0.5]$ (the second-order NARMA of Atiya and Parlos; see Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks)). The output depends on the previous input cubed and on a nonlinear self-interaction; because the inputs are at most 0.5 the feedback is weak and the output is dominated by the last few inputs. So it is, to good accuracy, a low-degree polynomial of a short input window. The following script scores a linear lag readout, quantum reservoirs and polynomial readouts on the same series (200 washout, 1000 train, 500 test); it needs the shared module from the Hands-on page (Hands-on Implementation (#/qrc/theory/hands-on-implementation))."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\nimport numpy as np\nfrom qrc_th_common import *\n\nwashout, train, test = 200, 1000, 500\nT = washout + train + test\ns = np.random.default_rng(101).uniform(0, 1, T)\nu = s / 2                                    # NARMA2 is driven by inputs in [0, 0.5]\ny = np.zeros(T)\nfor t in range(2, T):\n    y[t] = 0.4 * y[t-1] + 0.4 * y[t-1] * y[t-2] + 0.6 * u[t-1]**3 + 0.1\n\ndef score(F, name):\n    w = ridge_fit(F[washout:washout + train], y[washout:washout + train])\n    print(f\"{name:42s} features {F.shape[1]:3d}  test NMSE {nmse(ridge_predict(w, F[washout + train:]), y[washout + train:]):.3f}\")\n\n# baseline 1: a linear readout of the last 20 raw inputs (a perfect linear memory, no nonlinearity)\nlags = np.array([np.roll(s, d) for d in range(20)]).T\nscore(lags, \"linear in the last 20 inputs\")\nfor V in (1, 5, 10):\n    F, _ = run(s, n=4, V=V)\n    score(F, f\"4-qubit reservoir, V={V}\")\nF, _ = run(s, n=5, V=5)\nscore(F, \"5-qubit reservoir, V=5\")\n# the readout is linear, so adding squares of the features is a cheap extra nonlinearity\nF, _ = run(s, n=4, V=5)\nscore(np.hstack([F, F**2]), \"4-qubit reservoir, V=5, features and squares\")\n\n# baseline 2: a classical polynomial readout of recent inputs (in the spirit of next-generation RC):\n# the last k inputs, all their pairwise products, and their cubes\nfor k in (3, 5, 8):\n    L = np.array([np.roll(s, d) for d in range(k)]).T\n    quad = np.array([L[:, i] * L[:, j] for i in range(k) for j in range(i, k)]).T\n    score(np.hstack([L, quad, L**3]), f\"polynomial in the last {k} inputs\")\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "linear in the last 20 inputs               features  20  test NMSE 0.157\n4-qubit reservoir, V=1                     features   4  test NMSE 0.240\n4-qubit reservoir, V=5                     features  20  test NMSE 0.121\n4-qubit reservoir, V=10                    features  40  test NMSE 0.057\n5-qubit reservoir, V=5                     features  25  test NMSE 0.103\n4-qubit reservoir, V=5, features and squares features  40  test NMSE 0.055\npolynomial in the last 3 inputs            features  12  test NMSE 0.143\npolynomial in the last 5 inputs            features  25  test NMSE 0.024\npolynomial in the last 8 inputs            features  52  test NMSE 0.002\n"
     },
     {
       "type": "list",
       "items": [
-        "4-qubit reservoir, $V = 5$, 20 features: 0.121; $V = 10$, 40 features: 0.057; 5 qubits, $V = 5$, 25 features: 0.103.",
-        "Linear readout of the last 20 raw inputs, 20 features: 0.157.",
-        "Polynomial readout of the last 5 inputs (linear, pairwise products including squares, cubes), 25 features: 0.024; of the last 8 inputs, 52 features: 0.0019."
+        "A linear readout of the last 20 raw inputs (20 features): 0.157.",
+        "4-qubit reservoirs: $V = 1$ (4 features) 0.240, $V = 5$ (20 features) 0.121, $V = 10$ (40 features) 0.057; a 5-qubit one at $V = 5$ (25 features) 0.103.",
+        "Polynomial readouts of the last 3, 5 and 8 inputs: 0.143 with 12 features, 0.024 with 25 features, 0.0019 with 52 features (printed as 0.002)."
       ]
     },
     {
       "type": "prose",
-      "text": "NARMA2 is a low-degree polynomial of the recent past, so a model that builds exactly those monomials wins by more than an order of magnitude at equal feature count. This is not evidence against quantum reservoirs in general; it is evidence that a benchmark whose target is a short low-degree polynomial cannot show an advantage, and that small reservoirs need comparison with explicit polynomial baselines, not only with a linear readout of raw inputs."
+      "text": "NARMA2 is a low-degree polynomial of the recent past, so a model that builds exactly those monomials wins by a factor of about four at equal feature count (25 features at 0.024 against the reservoir's 25 at 0.103), five against the 20-feature reservoir's 0.121, and by more than an order of magnitude once it is given 52 features (0.0019). This is not evidence against quantum reservoirs in general. It is evidence that a benchmark whose target is a short low-degree polynomial cannot show an advantage, and that small reservoirs need comparison with explicit polynomial baselines, not only with a linear readout of raw inputs, which flatters them."
+    },
+    {
+      "type": "prose",
+      "text": "One series and one Hamiltonian is a weak basis for any statement. The next sample repeats the comparison over 8 random Hamiltonians (couplings drawn with seeds 1 to 8) and 4 different input series, so 32 reservoir runs, and 4 runs of each baseline."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# A fair comparison reports spread: NARMA2 test NMSE over 8 random reservoirs and 4 input series, against matched baselines.\nimport numpy as np\nfrom qrc_th_common import *\n\nwashout, train, test = 200, 1000, 500\nT = washout + train + test\n\ndef narma2(s):\n    u = s / 2\n    y = np.zeros(len(s))\n    for t in range(2, len(s)):\n        y[t] = 0.4 * y[t-1] + 0.4 * y[t-1] * y[t-2] + 0.6 * u[t-1]**3 + 0.1\n    return y\n\ndef score(F, y):\n    w = ridge_fit(F[washout:washout + train], y[washout:washout + train])\n    return nmse(ridge_predict(w, F[washout + train:]), y[washout + train:])\n\ndef poly(s, k):\n    L = np.array([np.roll(s, d) for d in range(k)]).T\n    quad = np.array([L[:, i] * L[:, j] for i in range(k) for j in range(i, k)]).T\n    return np.hstack([L, quad, L**3])\n\nres = {\"4 qubits, V=5 (20 features)\": [], \"linear in last 20 inputs (20)\": [], \"polynomial in last 5 inputs (25)\": []}\nfor in_seed in range(4):\n    s = np.random.default_rng(200 + in_seed).uniform(0, 1, T)\n    y = narma2(s)\n    res[\"linear in last 20 inputs (20)\"].append(score(np.array([np.roll(s, d) for d in range(20)]).T, y))\n    res[\"polynomial in last 5 inputs (25)\"].append(score(poly(s, 5), y))\n    for hs in range(1, 9):\n        F, _ = run(s, n=4, V=5, seed=hs)\n        res[\"4 qubits, V=5 (20 features)\"].append(score(F, y))\nfor k, v in res.items():\n    v = np.array(v)\n    print(f\"{k:36s} runs {len(v):2d}  NMSE mean {v.mean():.3f}  sd {v.std():.3f}  min {v.min():.3f}  max {v.max():.3f}\")\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "4 qubits, V=5 (20 features)          runs 32  NMSE mean 0.097  sd 0.025  min 0.060  max 0.150\nlinear in last 20 inputs (20)        runs  4  NMSE mean 0.173  sd 0.011  min 0.155  max 0.186\npolynomial in last 5 inputs (25)     runs  4  NMSE mean 0.024  sd 0.000  min 0.023  max 0.024\n"
+    },
+    {
+      "type": "prose",
+      "text": "The quantum reservoir's NMSE varies from 0.060 to 0.150 (mean 0.097, standard deviation 0.025): a spread by a factor of 2.5 from nothing but the random couplings. The polynomial baseline hardly varies at all (0.023 to 0.024). Two lessons. A single reservoir draw can look good or bad by luck, and the comparison should report the mean and the spread. And the quantum reservoir's best draw (0.060) is still more than twice as bad as the polynomial baseline at the same size."
     },
     {
       "type": "heading",
@@ -71,15 +229,31 @@
       "text": "Running a fair comparison"
     },
     {
+      "type": "prose",
+      "text": "From the arguments above one can write the checklist a reviewer should apply. Each item has a reason."
+    },
+    {
       "type": "list",
       "items": [
-        "Match the readout: same number of trainable weights, same regularisation search, same train/test split and washout.",
-        "Match the measurement budget: report the quantum result at the shot count actually used, not with exact expectation values, and count restarts in the time budget.",
-        "Use strong baselines: a tuned echo state network of the same feature count, a next-generation RC polynomial readout, and a linear model of lagged inputs.",
-        "Report spread: NMSE (or accuracy) averaged over several random reservoirs and input seeds, with its standard deviation; one seed of one reservoir proves little.",
-        "Separate the parts: test the classical simulation of the same reservoir at the same shot count; if it matches the device, any gain comes from the model class, which a classical computer can run too, at least at that size.",
-        "State the scaling: show how accuracy and cost change with $n$; an advantage is a trend, not a point."
+        "Match the readout: same number of trainable weights, same regularisation search, same train/test split and washout. A model with more weights wins on the training set by construction.",
+        "Match the measurement budget: report the quantum result at the shot count actually used, not with exact expectation values, and count restarts in the time budget. Exact features overstate what hardware gives; the Hands-on page shows memory capacity 3.86 exact falling to 1.94 at 100 shots.",
+        "Use strong baselines: a tuned echo state network of the same feature count (Echo State Networks (#/qrc/foundations/echo-state-networks)), a next-generation RC polynomial readout, and a linear model of lagged inputs.",
+        "Report spread: NMSE (or accuracy) averaged over several random reservoirs and input seeds, with its standard deviation; the sample above shows a factor 2.5 between best and worst draws.",
+        "Separate the parts: test the classical simulation of the same reservoir at the same shot count. If it matches the device, any gain comes from the model class, which a classical computer can run too, at least at that size.",
+        "State the scaling: show how accuracy and cost change with $n$. An advantage is a trend, not a point."
       ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which baseline first?",
+      "text": "A paper reports a 6-qubit reservoir reaching NMSE 0.05 on NARMA2 with 30 exact features and compares only with a 30-node echo state network at 0.08. Name the baseline you would ask for first, and one more.",
+      "hint": "What does NARMA2's target look like as a function of the inputs?",
+      "solution": [
+        "NARMA2 is, to good accuracy, a low-degree polynomial of a short window of inputs.",
+        "So a polynomial readout of matched size (30 features) is the strongest cheap baseline; in the sample above it reached 0.024 at 25 features and 0.0019 at 52.",
+        "Second, the same reservoir at a realistic shot count, since exact features overstate what hardware gives."
+      ],
+      "answer": "A matched-size polynomial (next-generation RC) readout; then the finite-shot result"
     },
     {
       "type": "heading",
@@ -88,12 +262,67 @@
     },
     {
       "type": "prose",
-      "text": "Experiments have run quantum reservoirs on superconducting processors (Chen, Nurdin and Yamamoto on IBM devices; Yasuda and co-authors with repeated mid-circuit measurements), on NMR spin ensembles, and on analog neutral-atom arrays: Kornjača and co-authors ran reservoir learning on a Rydberg-atom processor with up to 108 qubits on classification and time-series tasks, reporting competitive performance on the tasks tried; they also report a comparative quantum-kernel advantage on synthetic datasets constructed from the geometric difference between quantum and classical kernels (in the sense of Huang and co-authors), which is not a task advantage on natural data. None of these establishes a task advantage in the sense above, and the literature reviews (Mujal and co-authors) frame the field's open question the same way: identify tasks, ideally with quantum or physically generated data, where the reservoir's dynamics are both hard to simulate and the source of the predictive power."
+      "text": "Experiments have run quantum reservoirs on superconducting processors (Chen, Nurdin and Yamamoto on IBM devices, Gate-Based Devices (#/qrc/hardware/gate-based-devices); Yasuda and co-authors with repeated mid-circuit measurements), on NMR spin ensembles, and on analog neutral-atom arrays (Analog Platforms (#/qrc/hardware/analog-platforms)). Kornjača and co-authors ran reservoir learning on a Rydberg-atom processor with up to 108 qubits on classification and time-series tasks, reporting competitive performance on the tasks tried; they also report a comparative quantum-kernel advantage on synthetic datasets constructed from the geometric difference between quantum and classical kernels (in the sense of Huang and co-authors), which is not a task advantage on natural data."
+    },
+    {
+      "type": "prose",
+      "text": "None of these results establishes a task advantage in the sense of the first definition, and the review literature (Mujal and co-authors) frames the open question the same way: identify tasks, ideally with quantum or physically generated data, where the reservoir's dynamics are both hard to simulate and the source of the predictive power. Such tasks are listed in Open Problems (#/qrc/theory/open-problems)."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. A paper claims that a 10-qubit analog reservoir reaches NMSE 0.04 on NARMA2 with 200 features read at $10^3$ shots each, and states a quantum advantage because a 200-node echo state network reaches 0.06. Decide what is established, using the checklist and the numbers of this page."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Which kind of claim is it? A task advantage on a synthetic benchmark. The evidence required is an error-against-cost curve with strong baselines."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Is the benchmark able to show one? NARMA2 is a low-degree polynomial of a short window. A polynomial readout with 52 features reached NMSE 0.0019 in our sample, 20 times lower than 0.04, with 52 against 200 features and with exact, cost-free features. So the reported result is beaten by a model with a quarter of the features."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Measurement budget. $10^3$ shots per feature per step for 200 features: $2 \\times 10^5$ shots per step, read from the same bitstrings only if the features are all of one type (Pauli-$Z$ strings); otherwise more settings. The classical polynomial model costs about $52 \\times$ a few operations per step. The cost ratio is not close."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Spread. One run is reported. From the sample, random reservoirs vary between 0.06 and 0.15 for the same size; a single 0.04 may be the best of many draws."
+    },
+    {
+      "type": "prose",
+      "text": "Step 5. Simulability. With 10 qubits an exact density-matrix simulation takes 16 MiB ($16 \\cdot 4^{10}$ bytes), trivial. So whatever the device computes, a laptop reproduces."
+    },
+    {
+      "type": "prose",
+      "text": "Conclusion: the claim as stated shows a good reservoir (which is useful as an engineering result), not an advantage. The experiments that would change this are on a task with no cheap polynomial structure, or with quantum data, at a size where classical simulation becomes costly, with a scaling plot."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Advantage means one of three things: task, complexity or quantum-data. Say which.",
+        "For: huge state space, no quantum training, natural analog dynamics, cross-time products are native.",
+        "Against: only $N_{\\text{eff}}(S)$ features are readable, scrambling concentrates features, structured dynamics are simulable, data can beat hardness, and classical baselines are strong.",
+        "A nearest-neighbour $XX$ plus $Z$ chain is free-fermionic: the run matched exact evolution to $10^{-14}$ and handled 200 qubits in well under a second.",
+        "On NARMA2 an explicit polynomial readout beats a quantum reservoir at equal feature count by a factor of 4 or more (0.024 against 0.103 at 25 features).",
+        "Random reservoirs of the same size differ by a factor of 2.5 in NMSE; report mean and spread.",
+        "Fair comparison: matched features, finite shots, strong baselines, several seeds, classical simulation of the same reservoir, a scaling trend.",
+        "No experiment so far shows a task advantage on natural data."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
@@ -102,7 +331,7 @@
       "hint": "Think Jordan–Wigner.",
       "solution": [
         "Nearest-neighbour $XX$ couplings and $Z$ fields on a chain map under the Jordan–Wigner transformation to a quadratic fermion Hamiltonian.",
-        "Quadratic (free-fermion) dynamics are simulable in polynomial time through the $2n \\times 2n$ single-particle correlation matrix, and $\\langle Z_i\\rangle$ is a single-particle quantity.",
+        "Quadratic (free-fermion) dynamics are simulable in polynomial time through the $2n \\times 2n$ matrix $R = e^{At}$, and $\\langle Z_i\\rangle$ is a single-particle quantity, $(RMR^{\\top})_{2i,2i+1}$.",
         "So the unitary part is classically easy; a hardness argument would have to come from the input step or from non-local couplings (the all-to-all random $J_{ij}$ of the Fujii–Nakajima model breaks the free-fermion mapping)."
       ],
       "answer": "No: it maps to free fermions"
@@ -112,11 +341,43 @@
       "title": "Reading a benchmark table",
       "text": "A paper reports a 6-qubit reservoir reaching NMSE 0.05 on NARMA2 with 30 exact features and compares only with a 30-node echo state network at 0.08. What baseline would you ask for first, and why?",
       "solution": [
-        "NARMA2 is a quadratic-and-cubic recurrence driven by the previous input, with feedback through $y_{t-1}$ and $y_{t-2}$ that makes older inputs fade quickly, so its target is close to a low-degree polynomial of a short input window.",
-        "A polynomial readout of the last few inputs (as in next-generation RC) of matched size is therefore the natural strongest cheap baseline; in the hands-on sample it reaches 0.024 at 25 features and 0.0019 at 52.",
+        "NARMA2's output is dominated by the previous input cubed and weak feedback, so it is close to a low-degree polynomial of a short window of inputs.",
+        "A polynomial readout of the last few inputs of matched size is therefore the natural strongest cheap baseline; in the sample above it reaches 0.024 at 25 features and 0.0019 at 52.",
         "Second, the same reservoir at a realistic shot count, since exact features overstate what hardware gives."
       ],
       "answer": "A matched-size polynomial (next-generation RC) readout, then the finite-shot result"
+    },
+    {
+      "type": "problem",
+      "title": "Cost of a polynomial baseline",
+      "text": "How many columns does the NG-RC feature set 'last $k$ inputs, all pairwise products including squares, and cubes of single inputs' have for $k = 10$? How does that compare with all monomials up to degree 3 in 10 inputs, without the constant?",
+      "solution": [
+        "Lags: $k = 10$. Pairwise products including squares: $k(k+1)/2 = 55$. Cubes: 10. Total $10 + 55 + 10 = 75$.",
+        "All monomials of degree at most 3 in 10 variables: $\\binom{13}{3} = 286$, minus the constant: 285.",
+        "So the restricted set is about a quarter of the full cubic set; NARMA2 does not need the cross terms of three different inputs."
+      ],
+      "answer": "75 against 285"
+    },
+    {
+      "type": "problem",
+      "title": "Spread over draws",
+      "text": "Eight random reservoirs give NMSE values with mean 0.097 and standard deviation 0.025. The polynomial baseline gets 0.024. Is the baseline better than the reservoir by more than the draw-to-draw spread?",
+      "hint": "Divide the difference of the means by the standard deviation.",
+      "solution": [
+        "Difference of the means: $0.097 - 0.024 = 0.073$.",
+        "In units of the reservoir spread: $0.073/0.025 = 2.9$ standard deviations.",
+        "Yes: even the best of the 32 runs (0.060) is above 0.024, so the polynomial baseline wins in every run."
+      ],
+      "answer": "Yes, by about 2.9 standard deviations"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "prose",
+      "text": "The question of which tasks could show an advantage is picked up in Open Problems (#/qrc/theory/open-problems), and the data-type argument in Quantum Data Tasks (#/qrc/models/quantum-data-tasks). The resource currencies in which any comparison must be made are in Resource Accounting (#/qrc/hardware/resource-accounting). All the code on this page is built on the model of Hands-on Implementation (#/qrc/theory/hands-on-implementation)."
     },
     {
       "type": "heading",

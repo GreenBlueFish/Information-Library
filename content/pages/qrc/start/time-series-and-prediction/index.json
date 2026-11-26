@@ -1,0 +1,525 @@
+{
+  "title": "Time Series and Prediction",
+  "intro": "A time series is a list of measurements in which the order matters, and prediction means producing the next value (or a wanted function of the past) from what has already been seen. This page builds the vocabulary of lags, windows and errors, computes simple baselines by hand, and introduces the three tasks (delay recall, a product, NARMA2) that test memory and nonlinearity.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "The ideas of What Is Reservoir Computing? (#/qrc/start/what-is-reservoir-computing): a stream of inputs, a state that holds the past, and a readout. High-school algebra is enough for everything else."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Write a time series with indices and lags, and arrange it into a table of examples (past values in, a wanted value out).",
+        "Set up a one-step-ahead prediction problem and compute the error of simple baselines by hand: predict the last value, predict the average, extrapolate a straight line.",
+        "Say what memory and nonlinearity a task demands, with the three tiny tasks used throughout this library: delay recall, a product of past inputs, and NARMA2.",
+        "Compute NARMA2 step by step and say what each term of its formula does.",
+        "Explain why a good score against a weak baseline can still be meaningless."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a time series is"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A thermometer reading is a number. A day of thermometer readings is a different object: a list in which the order carries information. Writing that list down carefully is the first step to asking questions about it, and to giving it to a machine."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "A time series is a list of values measured at regular moments. The moments are the time steps, counted $k = 1, 2, 3, \\dots$ (or starting from 0; this library starts wherever is convenient and says so). The gap between two neighbouring measurements is the sampling interval: one hour for a weather station that reports hourly, 1/44100 of a second for CD-quality audio. We write the value at step $k$ as $u_k$ or $u(k)$, using the subscript when we want to do arithmetic with neighbours and the bracket when we mean the signal as a whole. In this library $u$ is a signal that is fed to a machine as input, $y$ is a signal we want the machine to produce (the target), and $\\hat y$ (read 'y hat') is what the machine actually produced (the prediction)."
+    },
+    {
+      "type": "prose",
+      "text": "Sampling hides what happens between measurements. A reading every hour cannot tell you about a ten-minute thunderstorm in between. Whatever you ask about must be answerable from the samples you have, and the sampling interval is part of the problem, not just a detail of the equipment. For the examples in this chapter the signals are just lists of numbers, and the step is the unit of time."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A concrete series"
+    },
+    {
+      "type": "prose",
+      "text": "Here is ten hours of temperature in degrees Celsius, starting at the first reading:"
+    },
+    {
+      "type": "math",
+      "tex": "u_1, u_2, \\dots, u_{10} = 12, 13, 15, 16, 16, 15, 13, 12, 11, 11",
+      "caption": "A small temperature series, one reading per hour."
+    },
+    {
+      "type": "prose",
+      "text": "We use it for the rest of the page. $u_3 = 15$. The value one step earlier than $u_3$ is $u_2 = 13$, two steps earlier is $u_1 = 12$. A value $d$ steps earlier is called the lag-$d$ value, $u_{k-d}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Lags, windows and tables of examples"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Most learning methods, including the weighted-sum readout of this chapter, take a fixed-length list of numbers and produce a number. To use them on a series we have to cut the series into such lists. The standard way is a sliding window of lags."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The construction"
+    },
+    {
+      "type": "prose",
+      "text": "To predict the next value $u_{k+1}$ from the last three, take as inputs $u_k$, $u_{k-1}$, $u_{k-2}$ (lags 0, 1 and 2) and as the wanted output the next value. Slide the window along the series one step at a time. Each position gives one example, one row of a table. For the temperature series:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Window at $k = 3$: inputs $(u_3, u_2, u_1) = (15, 13, 12)$, wanted $u_4 = 16$.",
+        "Window at $k = 4$: inputs $(16, 15, 13)$, wanted $u_5 = 16$.",
+        "Window at $k = 5$: inputs $(16, 16, 15)$, wanted $u_6 = 15$.",
+        "Window at $k = 6$: inputs $(15, 16, 16)$, wanted $u_7 = 13$.",
+        "Window at $k = 7$: inputs $(13, 15, 16)$, wanted $u_8 = 12$.",
+        "Window at $k = 8$: inputs $(12, 13, 15)$, wanted $u_9 = 11$.",
+        "Window at $k = 9$: inputs $(11, 12, 13)$, wanted $u_{10} = 11$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Ten readings give seven examples, not ten: the first window cannot start before $k = 3$ (there are not three values yet) and the last wanted value is $u_{10}$. In general a series of length $T$ with window length $L$ gives $T - L$ examples for a one-step-ahead target. Windows are simple and often work well, but they have two weaknesses: the window length $L$ must be chosen in advance, and the number of inputs grows with it. A reservoir replaces the window by an internal state, as the previous page described; what the state does for you is hold a fading summary of an unlimited past."
+    },
+    {
+      "type": "callout",
+      "text": "A common mistake is to let a future value leak into the inputs. If you are predicting $u_{k+1}$, the inputs may only contain values up to step $k$. A table with a wrong shift by one can make a hopeless problem look easy, and the error is easy to miss. Always write out one row by hand and check it."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: building the table",
+      "text": "With the temperature series above and a window of two values $(u_k, u_{k-1})$ to predict $u_{k+1}$, how many examples are there, and what is the last row?",
+      "hint": "The last target is the last reading in the series.",
+      "solution": [
+        "$T = 10$ readings and window length $L = 2$ give $T - L = 8$ examples.",
+        "The last wanted value is $u_{10} = 11$, so $k + 1 = 10$, $k = 9$.",
+        "Inputs $(u_9, u_8) = (11, 12)$, wanted $u_{10} = 11$."
+      ],
+      "answer": "8 examples; last row inputs (11, 12), wanted 11"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "One-step-ahead prediction and its baselines"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose your machine predicts the next temperature with an error of 1.2 degrees. Is that good? Only a comparison can say. A baseline is a deliberately simple method; any serious method must beat it, or it is not earning its complexity. The three baselines below are worth knowing because each one is the right yardstick for a different situation."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The three baselines, computed by hand"
+    },
+    {
+      "type": "prose",
+      "text": "The task is one step ahead: given the readings up to hour $k$, predict $u_{k+1}$ for $k = 2, \\dots, 9$. That is eight predictions, with targets $15, 16, 16, 15, 13, 12, 11, 11$."
+    },
+    {
+      "type": "prose",
+      "text": "Baseline 1, persistence. Predict that the next value equals the current one, $\\hat u_{k+1} = u_k$. Predictions: $13, 15, 16, 16, 15, 13, 12, 11$. Errors (prediction minus target): $-2, -1, 0, 1, 2, 1, 1, 0$."
+    },
+    {
+      "type": "prose",
+      "text": "Baseline 2, the average. Predict the average of the targets, whatever happens. The targets add up to $109$, so the average is $109/8 = 13.625$. (This uses the targets to build the prediction, so it is a ceiling for how good 'know nothing about the time order' can be.)"
+    },
+    {
+      "type": "prose",
+      "text": "Baseline 3, straight-line extrapolation. Continue the line through the last two points: $\\hat u_{k+1} = 2u_k - u_{k-1}$. Predictions: $14, 17, 17, 16, 14, 11, 11, 10$. Errors: $-1, 1, 1, 1, 1, -1, 0, -1$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Measuring the error"
+    },
+    {
+      "type": "prose",
+      "text": "To compare methods we collapse the list of errors to one number. Three standard choices, with $e_i$ the error at prediction $i$ and $n$ the number of predictions:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{MAE} = \\frac{1}{n}\\sum_i \\vert e_i\\vert, \\qquad \\mathrm{MSE} = \\frac{1}{n}\\sum_i e_i^2, \\qquad \\mathrm{RMSE} = \\sqrt{\\mathrm{MSE}}",
+      "caption": "Mean absolute error, mean squared error and root mean squared error."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Persistence. Absolute errors: $2, 1, 0, 1, 2, 1, 1, 0$, sum $8$, so MAE $= 8/8 = 1$. Squares: $4, 1, 0, 1, 4, 1, 1, 0$, sum $12$, so MSE $= 12/8 = 1.5$ and RMSE $= \\sqrt{1.5} = 1.225$.",
+        "Extrapolation. Squares: $1, 1, 1, 1, 1, 1, 0, 1$, sum $7$, so MSE $= 7/8 = 0.875$ and RMSE $= 0.935$.",
+        "Average. Deviations of the targets from $13.625$: $1.375, 2.375, 2.375, 1.375, -0.625, -1.625, -2.625, -2.625$. Squares sum to $31.875$, so MSE $= 31.875/8 = 3.984$ and RMSE $= 1.996$. This number is the variance of the targets."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The MSE of the average baseline, the variance, gives a natural scale. Dividing a method's MSE by it gives the normalised mean squared error, NMSE: persistence $1.5/3.984 = 0.376$, extrapolation $0.875/3.984 = 0.220$, average exactly $1$. So NMSE is read like this: 1 means 'no better than always guessing the average', 0 means perfect. It is the score used throughout this library, and Training, Testing and Measuring Error (#/qrc/start/training-and-testing) treats it fully, including how to compute it on data you did not train on."
+    },
+    {
+      "type": "prose",
+      "text": "MSE squares the errors, so one big miss counts much more than several small ones (an error of 4 costs sixteen times an error of 1); MAE treats them in proportion. RMSE is MSE brought back into the units of the data (degrees here), which makes it easier to talk about, and the library mostly reports NMSE, which has no units."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What a baseline is telling you"
+    },
+    {
+      "type": "prose",
+      "text": "Persistence is hard to beat on slowly changing signals. Our series changes by about one degree an hour, so 'same as now' is already close: NMSE 0.376, a big improvement on the average. A method that scores 0.4 here has learned nothing useful, even though 0.4 sounds good. This is the first lesson about baselines: the right one depends on the data. A signal such as the daily temperature is smooth and persistence is strong; a series of independent coin flips is not, and nothing beats the average."
+    },
+    {
+      "type": "callout",
+      "text": "If someone reports an NMSE for a task, the first questions are: on which data (the training data, or data held back?) and compared with what? A model that fits the training data perfectly can be useless on new data. That is the subject of Training, Testing and Measuring Error (#/qrc/start/training-and-testing)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a baseline error",
+      "text": "For the persistence prediction $\\hat u_{k+1} = u_k$ on the series $12, 13, 15, 16, 16$ (four predictions, targets $13, 15, 16, 16$), compute the MSE.",
+      "hint": "Each prediction is the value one step before its target.",
+      "solution": [
+        "Predictions: $12, 13, 15, 16$.",
+        "Errors (prediction minus target): $-1, -2, -1, 0$.",
+        "Squares: $1, 4, 1, 0$, sum $6$, MSE $= 6/4 = 1.5$."
+      ],
+      "answer": "MSE = 1.5"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Memory: tasks that need the past"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The three benchmark tasks used on this shelf are chosen to isolate two demands: how much of the past is needed (memory) and how nonlinear the dependence is. Start with memory."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Delay recall"
+    },
+    {
+      "type": "prose",
+      "text": "The simplest memory task: output the input from $d$ steps ago, $y_k = u_{k-d}$. With $d = 0$ the machine just copies the present; with $d = 3$ it must hold on to a value for three steps while new ones arrive. The input series is random, so there is no pattern to guess from; the only way to get it right is to have stored the value. For a random input no baseline can do better than the average (NMSE 1), however clever, unless it holds the right lag."
+    },
+    {
+      "type": "prose",
+      "text": "A window predictor with lags $0, 1, 2, \\dots, L-1$ gets delay recall exactly when $d \\le L - 1$: the weight of the lag-$d$ column is 1 and every other weight is 0. A reservoir has no explicit lags; it has an echo of the past spread over its state numbers, and the readout has to untangle the lag it wants. That is why the bucket example of the previous page needed many buckets of different speeds to recall older inputs. How far back a reservoir can recall is measured, summed over all delays, by the memory capacity (see Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity))."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Nonlinearity"
+    },
+    {
+      "type": "prose",
+      "text": "A weighted sum of values is a linear function. Can a weighted sum of $u_k$ and $u_{k-1}$ compute the product $y_k = u_ku_{k-1}$? Take the four possible input pairs when each input is $+1$ or $-1$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$(u_k, u_{k-1}) = (1, 1)$: product $1$.",
+        "$(1, -1)$: product $-1$.",
+        "$(-1, 1)$: product $-1$.",
+        "$(-1, -1)$: product $1$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Try the weighted sum $a\\,u_k + b\\,u_{k-1} + c$. Adding the first and fourth rows gives $2c = 2$, so $c = 1$ would be needed; adding the second and third rows gives $2c = -2$, so $c = -1$. These contradict, so no weights fit all four rows. The best compromise, found by the least-squares method of Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge), is $a = b = c = 0$: always predict 0, with an error of 1 on every row. So the product is a task that no readout based on a weighted sum of the raw inputs can solve."
+    },
+    {
+      "type": "prose",
+      "text": "The remedy is nonlinearity in the features. If the state contained a number proportional to $u_ku_{k-1}$ the readout could just pick it. In a reservoir, nonlinearity in the dynamics (the tanh of an artificial neuron, or the way a qubit's state depends on the input) produces such mixed terms, and the readout picks out the ones it needs."
+    },
+    {
+      "type": "callout",
+      "text": "The result depends on how the input is distributed. If the inputs are uniformly spread between 0 and 1, instead of $\\pm1$, the product has a positive average, and a weighted sum can capture part of it just by predicting that average and leaning on the inputs. The sample below shows it: 0.133 for two lags with inputs in $[0, 1]$, but 1.002 when the inputs are shifted to be centred on zero. Partial credit of that sort is a reason to centre inputs when testing for nonlinearity."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "NARMA2, term by term"
+    },
+    {
+      "type": "prose",
+      "text": "NARMA stands for nonlinear autoregressive moving average. The second-order version used in this library (Atiya and Parlos 2000) builds a target series $y$ from an input series $u$ by a rule that mixes memory and nonlinearity:"
+    },
+    {
+      "type": "math",
+      "tex": "y_k = 0.4\\,y_{k-1} + 0.4\\,y_{k-1}\\,y_{k-2} + 0.6\\,u_{k-1}^3 + 0.1",
+      "caption": "NARMA2. The input u is drawn uniformly from 0 to 0.5; y starts at 0."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$0.4\\,y_{k-1}$: the output's own past, fed back. This is memory by feedback: the effect of an old input decays by a factor 0.4 per step rather than vanishing at once.",
+        "$0.4\\,y_{k-1}y_{k-2}$: a product of two past outputs, which is memory and nonlinearity at the same time. Its size is small (outputs stay below about 0.36) but it cannot be built from weighted sums of $y$.",
+        "$0.6\\,u_{k-1}^3$: the newest input enters cubed. A cube is a nonlinear function of a single value, so even without any memory, a straight-line fit of $y_k$ to $u_{k-1}$ cannot be exact.",
+        "$0.1$: a constant offset. It keeps the series from collapsing to zero and fixes the average level."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The restriction $u \\in [0, 0.5]$ keeps everything bounded: with larger inputs the feedback terms can grow without limit. Let us compute five steps by hand. Start with $y_0 = y_1 = 0$ and take inputs $u_0, \\dots, u_5 = 0.50, 0.10, 0.40, 0.20, 0.30, 0.45$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $y_2 = 0.4(0) + 0.4(0)(0) + 0.6(0.10)^3 + 0.1 = 0.0006 + 0.1 = 0.1006$. (It uses $u_1 = 0.10$.)",
+        "Step 2. $y_3$: feedback $0.4 \\times 0.1006 = 0.04024$; product $0.4 \\times 0.1006 \\times 0 = 0$; input $0.6 \\times 0.40^3 = 0.0384$; plus $0.1$. $y_3 = 0.17864$.",
+        "Step 3. $y_4$: feedback $0.4 \\times 0.17864 = 0.071456$; product $0.4 \\times 0.17864 \\times 0.1006 = 0.007188$; input $0.6 \\times 0.20^3 = 0.0048$; plus $0.1$. $y_4 = 0.183444$.",
+        "Step 4. $y_5$: feedback $0.073378$; product $0.4 \\times 0.183444 \\times 0.17864 = 0.013108$; input $0.6 \\times 0.30^3 = 0.0162$; plus $0.1$. $y_5 = 0.202686$.",
+        "Step 5. $y_6$: feedback $0.081074$; product $0.4 \\times 0.202686 \\times 0.183444 = 0.014873$; input $0.6 \\times 0.45^3 = 0.054675$; plus $0.1$. $y_6 = 0.250622$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Notice that to predict $y_6$ a machine must know $u_5$ (the newest input), but also the earlier outputs, which depend on all the earlier inputs: the target has a long (decaying) memory and a nonlinearity, and the machine is not given $y$, only $u$. This is why the task is a standard test. The sample below measures how a weighted sum of the last $L$ raw inputs does on each of our tasks."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\nrng = np.random.default_rng(1)\nT, wash, ntr = 6000, 100, 4000\nu = rng.uniform(0, 1, T)                                  # the input signal\n\ndef delay(d): return np.r_[np.zeros(d), u[:T - d]]        # y_k = u_{k-d}\nprod = np.r_[0, u[1:] * u[:-1]]                           # y_k = u_k u_{k-1}\nuc = 2 * u - 1                                            # the same input recentred on zero\nprodc = np.r_[0, uc[1:] * uc[:-1]]\nnarma = np.zeros(T)\nfor k in range(2, T):                                     # inputs scaled to [0, 0.5]\n    narma[k] = 0.4 * narma[k-1] + 0.4 * narma[k-1] * narma[k-2] + 0.6 * (u[k-1] / 2) ** 3 + 0.1\n\ndef lags(sig, L):                                         # columns: sig_k, sig_{k-1}, ..., sig_{k-L+1}, then a 1\n    return np.column_stack([np.r_[np.zeros(j), sig[:T - j]] for j in range(L)] + [np.ones(T)])\n\ndef nmse(X, y):\n    w = np.linalg.lstsq(X[wash:ntr], y[wash:ntr], rcond=None)[0]      # fit on the training part\n    p = X[ntr:] @ w; yt = y[ntr:]                                     # score on the unseen part\n    return np.mean((p - yt) ** 2) / np.var(yt)\n\ntasks = [(\"delay 3\", delay(3), u), (\"product u_k u_{k-1}\", prod, u),\n         (\"product, input centred\", prodc, uc), (\"NARMA2\", narma, u)]\nprint(\"%-24s %10s %10s %10s %10s\" % (\"task\", \"average\", \"u_k only\", \"2 lags\", \"10 lags\"))\nfor name, y, sig in tasks:\n    base = np.mean((y[ntr:].mean() - y[ntr:]) ** 2) / np.var(y[ntr:])\n    print(\"%-24s %10.3f %10.3f %10.3f %10.3f\" % ((name, base) + tuple(nmse(lags(sig, L), y) for L in (1, 2, 10))))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run (NMSE on 2000 test steps never used in fitting; 1 is no better than the average):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Delay 3: with the current input alone or two lags, 0.999 (no information about $u_{k-3}$); with ten lags, 0.000, since the lag-3 column is in the table.",
+        "Product $u_ku_{k-1}$ with inputs in $[0, 1]$: 0.551 with $u_k$ alone, 0.133 with two lags, 0.134 with ten (more lags do not help: the product is not linear). With the inputs centred on zero: 1.001, 1.002, 1.003, which is the same impossible fit as the $\\pm1$ table above.",
+        "NARMA2: 1.003 with the current input alone, 0.421 with two lags, 0.153 with ten. The cubic and the product terms keep it from going to zero however many lags are used: a linear window is not enough."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The theory for the first product row: for independent uniform inputs the best weighted sum of the two lags explains $1/24$ out of a variance of $7/144 \\approx 0.0486$, leaving NMSE $= 1 - (1/24)/(7/144) = 1 - 6/7 = 0.143$. The run gives 0.133, within sampling error. A reservoir, whose state contains nonlinear mixtures, can do much better on these, provided it has enough features; you can see that in the widget below."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "parameter-plot",
+        "title": "Three time-series tasks on a small quantum reservoir",
+        "params": [
+          {
+            "key": "task",
+            "label": "Task",
+            "control": "select",
+            "options": [
+              "recall s(k−3)",
+              "product s(k)·s(k−1)",
+              "NARMA2"
+            ],
+            "default": "recall s(k−3)"
+          },
+          {
+            "key": "qubits",
+            "label": "Qubits",
+            "control": "range",
+            "min": 2,
+            "max": 5,
+            "step": 1,
+            "default": 4
+          },
+          {
+            "key": "V",
+            "label": "Virtual nodes V (features per qubit)",
+            "control": "range",
+            "min": 1,
+            "max": 10,
+            "step": 1,
+            "default": 1
+          }
+        ],
+        "config": {
+          "sim": "qrc-task",
+          "xLabel": "test step",
+          "yLabel": "target and prediction"
+        }
+      }
+    },
+    {
+      "type": "prose",
+      "text": "Try this. (1) Leave the task at 'recall s(k−3)' with 4 qubits and V = 1 and read the NMSE in the label: about 0.72, a poor prediction that tracks the target only loosely. Raise V to 5 (five snapshots of the qubits per input, which gives the readout five times as many features): the NMSE falls to about 0.13 and the prediction follows the target closely. (2) Switch to the product task: V = 1 gives about 0.23, worse than the 0.133 of two linear lags above, but V = 5 gives about 0.05, well below it. The reservoir is nonlinear on its own, so with enough features it can form products that a weighted sum of raw inputs cannot. (3) Switch to NARMA2: about 0.36 at V = 1 and 0.10 at V = 5, to be compared with 0.153 for ten linear lags above. The details of the quantum reservoir are in the later chapters; here, just see that the same recipe handles memory, nonlinearity and both together."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: which baseline fits",
+      "text": "A task has target $y_k = u_{k-2}$ for a random input. Roughly what NMSE would a window predictor with lags 0 and 1 reach, and what with lags 0, 1 and 2?",
+      "hint": "Which column of the table equals the target?",
+      "solution": [
+        "With lags 0 and 1 the target column $u_{k-2}$ is not in the table, and for a random input the lags carry no information about it, so the best is the average: NMSE about 1.",
+        "With lags 0, 1 and 2 the column $u_{k-2}$ is there; weights $(0, 0, 1)$ reproduce the target exactly: NMSE 0."
+      ],
+      "answer": "about 1 with two lags; 0 with three"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "For the temperature series $12, 13, 15, 16, 16, 15, 13, 12, 11, 11$, compare persistence with a rule that predicts the average of the last two readings, $\\hat u_{k+1} = (u_k + u_{k-1})/2$, on the eight targets $15, 16, 16, 15, 13, 12, 11, 11$ ($k = 2, \\dots, 9$), and decide which to prefer using NMSE."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Persistence is already done: MSE $1.5$ and NMSE $0.376$.",
+        "Step 2. Two-point average predictions for $k = 2, \\dots, 9$: $(13 + 12)/2 = 12.5$; $(15 + 13)/2 = 14$; $(16 + 15)/2 = 15.5$; $(16 + 16)/2 = 16$; $(15 + 16)/2 = 15.5$; $(13 + 15)/2 = 14$; $(12 + 13)/2 = 12.5$; $(11 + 12)/2 = 11.5$.",
+        "Step 3. Errors against the targets $15, 16, 16, 15, 13, 12, 11, 11$: $-2.5, -2, -0.5, 1, 2.5, 2, 1.5, 0.5$.",
+        "Step 4. Squares: $6.25, 4, 0.25, 1, 6.25, 4, 2.25, 0.25$; sum $24.25$; MSE $= 24.25/8 = 3.031$.",
+        "Step 5. NMSE $= 3.031/3.984 = 0.761$.",
+        "Step 6. So smoothing is worse than persistence and much worse than extrapolation (0.220). On a signal that is rising and falling steadily, a rule that lags behind the trend loses; extrapolation uses the trend. Which baseline is hardest to beat depends on the signal, and a method must be compared with the right one."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A time series is an ordered list $u_1, u_2, \\dots$; $u_{k-d}$ is the lag-$d$ value; the sampling interval is part of the problem.",
+        "A sliding window turns a series into a table of examples (past values in, wanted value out). A series of length $T$ and window length $L$ gives $T - L$ one-step examples; keep future values out of the inputs.",
+        "MAE, MSE and RMSE summarise errors; NMSE divides MSE by the variance of the target, so 1 means 'no better than the average' and 0 means perfect.",
+        "Always compare with simple baselines (persistence, the average, straight-line extrapolation); which is hardest to beat depends on the data.",
+        "Delay recall demands memory only; a product of past inputs demands nonlinearity; NARMA2 demands both. A weighted sum of lags solves the first and cannot solve the other two.",
+        "A reservoir supplies both memory and nonlinearity in its state; the readout then only needs to be a weighted sum."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Count the examples",
+      "text": "A series has 500 readings. How many one-step-ahead examples does a window of 20 lags give? How many if the target is the value 5 steps ahead instead of 1?",
+      "hint": "Each extra step ahead removes one more window from the end.",
+      "solution": [
+        "One step ahead: $500 - 20 = 480$.",
+        "Five steps ahead: the last window must end 5 steps before the end, so $500 - 20 - 4 = 476$ (each extra step of look-ahead removes one more example)."
+      ],
+      "answer": "480 and 476"
+    },
+    {
+      "type": "problem",
+      "title": "Persistence versus the average",
+      "text": "A series is $2, 4, 6, 8, 10$. Compute the MSE of persistence for the four predictions, and of the average-of-targets baseline, and the NMSE of persistence.",
+      "hint": "The MSE of the average baseline is the variance of the targets.",
+      "solution": [
+        "Targets $4, 6, 8, 10$. Persistence predicts $2, 4, 6, 8$: errors all $-2$, squares $4$, MSE $4$.",
+        "Average of targets $= 28/4 = 7$. Deviations $-3, -1, 1, 3$, squares $9, 1, 1, 9$, MSE $= 20/4 = 5$.",
+        "NMSE of persistence $= 4/5 = 0.8$."
+      ],
+      "answer": "persistence MSE 4, average MSE 5, NMSE 0.8"
+    },
+    {
+      "type": "problem",
+      "title": "Extrapolation on a perfect line",
+      "text": "For the same series $2, 4, 6, 8, 10$, use straight-line extrapolation $\\hat u_{k+1} = 2u_k - u_{k-1}$ for the last three targets. What is the error?",
+      "hint": "The step is constant, so extending it is exact.",
+      "solution": [
+        "Targets $6, 8, 10$ (for $k = 2, 3, 4$ with $u_1 = 2$).",
+        "Predictions: $2(4) - 2 = 6$; $2(6) - 4 = 8$; $2(8) - 6 = 10$.",
+        "All three are exact, so the MSE is 0. A straight-line signal is perfectly predicted by extrapolation."
+      ],
+      "answer": "0"
+    },
+    {
+      "type": "problem",
+      "title": "One NARMA2 step",
+      "text": "With $y_{k-1} = 0.2$, $y_{k-2} = 0.1$ and $u_{k-1} = 0.5$, compute $y_k$, and say which term contributes most.",
+      "hint": "Compute each of the four terms separately.",
+      "solution": [
+        "Feedback: $0.4 \\times 0.2 = 0.08$.",
+        "Product: $0.4 \\times 0.2 \\times 0.1 = 0.008$.",
+        "Input: $0.6 \\times 0.5^3 = 0.6 \\times 0.125 = 0.075$.",
+        "Sum with the constant: $0.08 + 0.008 + 0.075 + 0.1 = 0.263$. The constant 0.1 is largest, then the feedback 0.08; the input term 0.075 is close."
+      ],
+      "answer": "0.263"
+    },
+    {
+      "type": "problem",
+      "title": "Why the product defeats a linear fit",
+      "text": "Inputs are $\\pm1$ with equal chance. Show that the best weighted sum $a\\,u_k + b\\,u_{k-1} + c$ for the product $u_ku_{k-1}$ has $a = b = c = 0$, using the four-row table: compute the average of (target $\\times$ each input), and the average target.",
+      "hint": "For uncorrelated unit-variance inputs, each best weight is the average of (target times that input).",
+      "solution": [
+        "Average target: $(1 - 1 - 1 + 1)/4 = 0$, so $c = 0$.",
+        "Average of target $\\times\\ u_k$: $(1\\cdot1 + (-1)\\cdot1 + (-1)(-1) + 1\\cdot(-1))/4 = (1 - 1 + 1 - 1)/4 = 0$. Same for $u_{k-1}$.",
+        "The inputs are uncorrelated with each other and have variance 1, so each weight equals the average of target times input: $a = b = 0$. The fitted rule predicts 0 always, NMSE 1."
+      ],
+      "answer": "a = b = c = 0"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The error measures and the correct way to score on unseen data: Training, Testing and Measuring Error (#/qrc/start/training-and-testing).",
+        "The weighted-sum fit that these baselines use: Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge).",
+        "Memory and nonlinearity measured in general: Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity) and Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks).",
+        "Delay recall and a nonlinear task run on a two-qubit quantum reservoir, fully worked: A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A. F. Atiya and A. G. Parlos, New results on recurrent network training: unifying the algorithms and accelerating convergence, IEEE Transactions on Neural Networks 11, 697 (2000)",
+        "R. J. Hyndman and G. Athanasopoulos, Forecasting: Principles and Practice, 3rd edition, OTexts (2021), chapters on benchmark methods and accuracy measures",
+        "M. Lukosevicius and H. Jaeger, Reservoir computing approaches to recurrent neural network training, Computer Science Review 3, 127 (2009)"
+      ]
+    }
+  ]
+}

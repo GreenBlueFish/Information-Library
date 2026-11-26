@@ -1,0 +1,565 @@
+{
+  "title": "Neural Networks from Scratch",
+  "intro": "A neural network is a chain of weighted sums, each bent by a nonlinear function, and training means adjusting the weights by following the slope of an error. This page computes neurons, layers and a gradient step by hand, builds a recurrent network and unrolls it, shows why gradients through time vanish or explode, and shows how reservoir computing avoids that by training only the last layer.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "The ideas of What Is Reservoir Computing? (#/qrc/start/what-is-reservoir-computing) and the vocabulary of Time Series and Prediction (#/qrc/start/time-series-and-prediction). A derivative as 'rate of change' is the only calculus used. Vectors are used as plain lists of numbers; the one matrix operation needed is explained when it first appears."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Compute the output of an artificial neuron and of a small network by hand, and say what the nonlinearity is for.",
+        "Explain gradient descent and carry out one step of it, for one weight and for a whole small network, using the chain rule.",
+        "Write a recurrent network's state update, and unroll it for three steps with real numbers.",
+        "Show with numbers why gradients through many time steps vanish or explode, and so why training recurrent networks is hard.",
+        "Explain exactly which parts of a network reservoir computing leaves untrained, and why that avoids the difficulty."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The artificial neuron"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "We want a machine that turns a list of numbers into a useful number, and that can be adjusted by changing a few knobs until it does what we want. The simplest adjustable rule is a weighted sum, as in the readout of the previous pages. A neural network is a large collection of weighted sums, each followed by a small bending of the result, wired together."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "An artificial neuron takes several numbers in, multiplies each by its own weight (how much it matters, and with which sign), adds them up, adds one more adjustable number called the bias (a built-in tendency to be high or low), and then passes the total through a fixed bending function called the activation function. The name comes loosely from brain cells that sum signals from many others and fire when the total is large enough. The comparison stops there: nothing in the maths below depends on biology."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths"
+    },
+    {
+      "type": "prose",
+      "text": "Let the inputs be $x_1, \\dots, x_m$, the weights $w_1, \\dots, w_m$ and the bias $b$. The neuron first forms the sum $z$, then applies an activation function $f$ to get its output $a$:"
+    },
+    {
+      "type": "math",
+      "tex": "z = w_1x_1 + w_2x_2 + \\dots + w_mx_m + b, \\qquad a = f(z)",
+      "caption": "A neuron: weighted sum plus bias, then an activation function."
+    },
+    {
+      "type": "prose",
+      "text": "Three activation functions appear in practice. The hyperbolic tangent $\\tanh(z)$ squeezes any number into the range from $-1$ to $1$, is close to $z$ for small $z$ and flattens out for large $\\vert z\\vert$. The sigmoid $1/(1 + e^{-z})$ squeezes into the range from 0 to 1. The rectified linear unit, ReLU, is $\\max(0, z)$: zero for negative $z$, equal to $z$ otherwise. Reservoir computing, and this chapter, mostly uses $\\tanh$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "Inputs $x = (0.5, -1, 2)$, weights $w = (0.8, 0.2, -0.5)$, bias $b = 0.1$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Multiply: $0.8 \\times 0.5 = 0.4$; $0.2 \\times (-1) = -0.2$; $-0.5 \\times 2 = -1.0$.",
+        "Step 2. Add them: $0.4 - 0.2 - 1.0 = -0.8$.",
+        "Step 3. Add the bias: $z = -0.8 + 0.1 = -0.7$.",
+        "Step 4. Activation. With tanh: $a = \\tanh(-0.7) = -0.604$. With the sigmoid: $1/(1 + e^{0.7}) = 0.332$. With ReLU: $\\max(0, -0.7) = 0$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why a bend at all?"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose we leave out the activation function, so each neuron just outputs $z$. Stack two such neurons in a row, using one input for simplicity: the first computes $h = 2x + 1$, and the second takes $h$ and computes $y = 3h - 4$. Substitute: $y = 3(2x + 1) - 4 = 6x - 1$. The two-stage machine is the same as a single neuron with weight 6 and bias $-1$. This is general: a weighted sum of weighted sums is a weighted sum. No matter how many linear layers you stack, the whole can compute only what one can. The bending function is what makes depth worth having: it lets the network compute products, thresholds and other things that straight lines cannot (recall that the product of two inputs defeated every weighted sum in Time Series and Prediction (#/qrc/start/time-series-and-prediction))."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: one neuron",
+      "text": "A neuron has inputs $(1, 2)$, weights $(0.5, -0.25)$, bias $0.3$ and a tanh activation. Find its output.",
+      "hint": "Weighted sum, then bias, then tanh.",
+      "solution": [
+        "$0.5 \\times 1 = 0.5$ and $-0.25 \\times 2 = -0.5$; sum $0$.",
+        "Add the bias: $z = 0.3$.",
+        "$a = \\tanh(0.3) = 0.291$."
+      ],
+      "answer": "tanh(0.3) = 0.291"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Layers and the forward pass"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "One neuron makes one number. To make a useful function we use many neurons that all look at the same inputs but with different weights, so each picks out a different feature, and then we feed their outputs to further neurons. Such a group is called a layer."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea and the maths"
+    },
+    {
+      "type": "prose",
+      "text": "A layer of $n$ neurons looking at $m$ inputs has $n$ lists of weights, one per neuron. Written as a table with one row per neuron, it is a matrix $W$ with $n$ rows and $m$ columns; the biases form a list $b$ of $n$ numbers. The matrix-vector product $Wx$ means: for each row, multiply it entry by entry with $x$ and add up. So the whole layer is"
+    },
+    {
+      "type": "math",
+      "tex": "z = Wx + b, \\qquad a = f(z)",
+      "caption": "A layer: the activation function f is applied to each entry of z separately."
+    },
+    {
+      "type": "prose",
+      "text": "A neural network is a chain of layers. The inputs come first. Layers between the inputs and the final answer are called hidden layers, because we never see their values in the data. Running the numbers from the inputs through every layer to the output is the forward pass."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: a 2-3-1 network"
+    },
+    {
+      "type": "prose",
+      "text": "Two inputs, a hidden layer of three tanh neurons, and one output that is a plain weighted sum. Inputs $x = (1, 0.5)$. Hidden weights (rows are neurons): $(0.4, -0.6)$, $(0.3, 0.8)$, $(-0.5, 0.2)$; hidden biases $(0.1, -0.2, 0)$. Output weights $(0.7, -0.4, 0.9)$ and output bias $0.05$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Hidden neuron 1: $0.4(1) - 0.6(0.5) + 0.1 = 0.4 - 0.3 + 0.1 = 0.2$.",
+        "Step 2. Hidden neuron 2: $0.3(1) + 0.8(0.5) - 0.2 = 0.3 + 0.4 - 0.2 = 0.5$.",
+        "Step 3. Hidden neuron 3: $-0.5(1) + 0.2(0.5) + 0 = -0.5 + 0.1 = -0.4$.",
+        "Step 4. Apply tanh: $h = (\\tanh 0.2, \\tanh 0.5, \\tanh(-0.4)) = (0.1974, 0.4621, -0.3799)$.",
+        "Step 5. Output: $\\hat y = 0.7(0.1974) - 0.4(0.4621) + 0.9(-0.3799) + 0.05 = 0.1382 - 0.1848 - 0.3420 + 0.05 = -0.3386$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "That is all a forward pass is. The rest of the subject is about choosing the numbers in $W$ and $b$."
+    },
+    {
+      "type": "callout",
+      "text": "A reservoir computer's readout is the last layer of exactly this form, with no activation and a single neuron: $y = w \\cdot x + b$. Everything in front of it, the reservoir, is the part that, in a conventional network, would be trained along with it."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a layer by hand",
+      "text": "A layer has two neurons with weight rows $(1, -1)$ and $(0.5, 0.5)$, biases $(0, 0.5)$, and tanh. The input is $(2, 1)$. Find the layer's outputs.",
+      "hint": "Compute each row's weighted sum, add the bias, then apply tanh to each entry.",
+      "solution": [
+        "Neuron 1: $1(2) - 1(1) + 0 = 1$.",
+        "Neuron 2: $0.5(2) + 0.5(1) + 0.5 = 1 + 0.5 + 0.5 = 2$.",
+        "So $z = (1, 2)$ and the outputs are $(\\tanh 1, \\tanh 2) = (0.762, 0.964)$."
+      ],
+      "answer": "(tanh 1, tanh 2) = (0.762, 0.964)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Training by gradient descent"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A network with random weights outputs nonsense. We have examples of inputs with the right answers and need a way to adjust all the weights so that the outputs approach the right answers. With thousands or millions of weights, trying values at random is hopeless. What works is a method that tells us, for every weight, which way to nudge it."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "First, measure how wrong the network is with a single number, the loss. For one example with wanted answer $y$ and prediction $\\hat y$ the squared-error loss is $L = (\\hat y - y)^2$. The loss depends on the weights (through $\\hat y$). Picture the loss as the height of a landscape over the space of all weight values; training is walking downhill. At the current weights, the slope in each direction is the derivative of the loss with respect to that weight, written $\\partial L/\\partial w$ (the curly d means 'with the other weights held fixed'). The collection of all these slopes is the gradient. Take a small step opposite to the slope in every weight. Repeat. This is gradient descent."
+    },
+    {
+      "type": "math",
+      "tex": "w \\leftarrow w - \\eta\\,\\frac{\\partial L}{\\partial w}",
+      "caption": "The gradient descent update. The learning rate eta is the step size."
+    },
+    {
+      "type": "prose",
+      "text": "(In this notation the arrow means 'replace the old value by'.) The number $\\eta$ is the learning rate, chosen by hand. Too small and training is slow; too large and the steps overshoot the valley."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: one weight"
+    },
+    {
+      "type": "prose",
+      "text": "The simplest network: $\\hat y = wx$. One example: $x = 2$, wanted $y = 3$. Start at $w = 0.5$ with $\\eta = 0.1$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Prediction: $\\hat y = 0.5 \\times 2 = 1$. Loss: $(1 - 3)^2 = 4$.",
+        "Step 2. Derivative: $L = (wx - y)^2$, so $\\partial L/\\partial w = 2(wx - y)\\,x$ (the square's derivative times the inner derivative). Here $2(1 - 3)(2) = -8$.",
+        "Step 3. Update: $w \\leftarrow 0.5 - 0.1 \\times (-8) = 1.3$. The slope was negative (loss falls as $w$ grows), so $w$ grew.",
+        "Step 4. New prediction $1.3 \\times 2 = 2.6$, loss $(2.6 - 3)^2 = 0.16$. It fell from 4 to 0.16 in one step.",
+        "Step 5. Repeating gives $w = 1.3, 1.46, 1.492, 1.4984, \\dots$, approaching the perfect value $w = 1.5$ (where $1.5 \\times 2 = 3$)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "What if $\\eta$ is too large? With $\\eta = 0.3$ the same iteration gives $w = 2.9, -0.46, 4.244, -2.3416, \\dots$: each step overshoots further than the last and the loss grows. For this problem the iteration converges when $\\eta < 0.25$ (each step multiplies the distance from the best $w$ by $1 - 2x^2\\eta = 1 - 8\\eta$, and its size is below 1 when $\\eta < 0.25$)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Backpropagation: the chain rule through layers"
+    },
+    {
+      "type": "prose",
+      "text": "For a network with several layers the derivative of the loss with respect to an early weight has to pass through every layer after it. The chain rule says: if $L$ depends on $\\hat y$, which depends on $h$, which depends on $z$, which depends on $w$, then $\\partial L/\\partial w$ is the product of the four local derivatives along the chain. Backpropagation is simply organising this product so it is computed once, starting at the loss and working backwards towards the inputs. Take the 2-3-1 network above with wanted output $y = 0.8$; its forward pass gave $\\hat y = -0.3386$ and loss $(-0.3386 - 0.8)^2 = 1.2965$. We find the gradient for the first weight of the first hidden neuron, $W_{11} = 0.4$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Derivative of the loss with respect to the output: $2(\\hat y - y) = 2(-1.1386) = -2.2773$.",
+        "Step 2. The output is $0.7h_1 + \\dots$, so a change in $h_1$ changes $\\hat y$ at the rate $0.7$: $\\partial L/\\partial h_1 = -2.2773 \\times 0.7 = -1.5941$.",
+        "Step 3. $h_1 = \\tanh z_1$ and the derivative of tanh is $1 - \\tanh^2 = 1 - 0.1974^2 = 0.9610$: $\\partial L/\\partial z_1 = -1.5941 \\times 0.9610 = -1.5320$.",
+        "Step 4. $z_1 = 0.4x_1 + \\dots$ with $x_1 = 1$, so $\\partial z_1/\\partial W_{11} = 1$ and $\\partial L/\\partial W_{11} = -1.5320$.",
+        "Step 5. Update with $\\eta = 0.1$: $W_{11} \\leftarrow 0.4 - 0.1(-1.5320) = 0.5532$. (The sample below updates every weight at once.)"
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The same steps give the other weights: the output weights have gradients $\\partial L/\\partial w_j = -2.2773\\,h_j = (-0.4495, -1.0524, 0.8652)$. After one update of all weights with $\\eta = 0.1$ the prediction moves from $-0.3386$ to $0.5470$ and the loss falls from 1.2965 to 0.0640; after 50 updates the prediction is $0.8$ to four decimals. The sample checks the hand gradients against a numerical estimate (nudge one weight by $10^{-6}$ and watch the loss change)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\nx = np.array([1.0, 0.5]); target = 0.8\nW1 = np.array([[0.4, -0.6], [0.3, 0.8], [-0.5, 0.2]]); b1 = np.array([0.1, -0.2, 0.0])\nw2 = np.array([0.7, -0.4, 0.9]); b2 = 0.05\n\ndef forward(W1, b1, w2, b2):\n    z1 = W1 @ x + b1; h = np.tanh(z1); y = w2 @ h + b2\n    return z1, h, y, (y - target) ** 2\n\nz1, h, y, L = forward(W1, b1, w2, b2)\nprint(\"hidden sums z1 =\", z1.round(4), \" hidden outputs h =\", h.round(4))\nprint(\"prediction y =\", round(y, 4), \" loss =\", round(L, 4))\n\ndy = 2 * (y - target)                    # dL/dy\ndh = dy * w2                             # dL/dh_j\ndz = dh * (1 - h ** 2)                   # dL/dz1_j  (tanh' = 1 - tanh^2)\ngW1 = np.outer(dz, x); gb1 = dz; gw2 = dy * h; gb2 = dy\nprint(\"dL/dy =\", round(dy, 4), \" dL/dW1[0,0] =\", round(gW1[0, 0], 4), \" dL/dw2 =\", gw2.round(4))\n\neps = 1e-6                               # finite-difference check of two of the gradients\nW1p = W1.copy(); W1p[0, 0] += eps\nw2p = w2.copy(); w2p[1] += eps\nprint(\"finite differences:\", round((forward(W1p, b1, w2, b2)[3] - L) / eps, 4), round((forward(W1, b1, w2p, b2)[3] - L) / eps, 4))\n\nlr = 0.1\nfor step in range(1, 51):\n    z1, h, y, L = forward(W1, b1, w2, b2)\n    if step in (1, 2, 3, 10, 50): print(f\"step {step:2d}: loss before the update = {L:.6f}\")\n    dy = 2 * (y - target); dz = dy * w2 * (1 - h ** 2)\n    W1 = W1 - lr * np.outer(dz, x); b1 = b1 - lr * dz; w2 = w2 - lr * dy * h; b2 = b2 - lr * dy\nprint(\"final prediction:\", round(forward(W1, b1, w2, b2)[2], 4), \"target:\", target)\n"
+    },
+    {
+      "type": "prose",
+      "text": "Output of the run: hidden sums $(0.2, 0.5, -0.4)$, outputs $(0.1974, 0.4621, -0.3799)$, prediction $-0.3386$, loss $1.2965$, matching the hand calculation. The gradients are $-2.2773$ (output), $-1.532$ ($W_{11}$) and $(-0.4495, -1.0524, 0.8652)$ (output weights); the finite-difference estimates $-1.532$ and $-1.0524$ agree with the hand values for $W_{11}$ and the second output weight. Losses before the update at steps 1, 2, 3 are $1.296497$, $0.064012$, $0.004354$, and essentially zero by step 10; the final prediction is $0.8$."
+    },
+    {
+      "type": "callout",
+      "text": "One example is easy to fit exactly. Real training uses thousands of examples and takes the average gradient over them (or over small batches); the aim is to do well on new data, not to memorise the training set. That is the subject of Training, Testing and Measuring Error (#/qrc/start/training-and-testing)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a gradient step",
+      "text": "One weight, $\\hat y = wx$, with $x = 1$, wanted $y = 4$, $w = 1$, $\\eta = 0.25$. Do one gradient step.",
+      "hint": "$\\partial L/\\partial w = 2(wx - y)x$.",
+      "solution": [
+        "$\\hat y = 1$, error $\\hat y - y = -3$.",
+        "$\\partial L/\\partial w = 2(-3)(1) = -6$.",
+        "$w \\leftarrow 1 - 0.25(-6) = 2.5$."
+      ],
+      "answer": "w = 2.5"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Recurrent networks: a state carried through time"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The networks so far see one input list and answer. A time series needs memory. The recurrent neural network (RNN) adds an internal state that is passed from one time step to the next."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea and the maths"
+    },
+    {
+      "type": "prose",
+      "text": "At each step $k$ the network has a state vector $h_k$ (a list of numbers, one per hidden neuron). When a new input $u_k$ arrives, the new state is computed from the old state and the new input, using the same weights at every step:"
+    },
+    {
+      "type": "math",
+      "tex": "h_k = \\tanh\\left(W h_{k-1} + v\\,u_k + b\\right)",
+      "caption": "A recurrent update. W is the matrix of recurrent weights, v the input weights, b the biases."
+    },
+    {
+      "type": "prose",
+      "text": "The picture below shows it unrolled in time: one copy of the same cell per step, each handing its state to the next. The unrolling is just a drawing device, and it turns the loop into an ordinary deep network with one layer per time step, in which all the layers share the same weights."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/qrc/rnn-unrolled.svg",
+      "alt": "A recurrent cell drawn folded with a loop, and unrolled for three steps: inputs u1, u2, u3 enter three copies of the cell, a state h0 passes through h1 and h2 to h3, and each step has an output.",
+      "caption": "Folded and unrolled views of a recurrent network. The same weights W, v, b are used at every step."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: three steps by hand"
+    },
+    {
+      "type": "prose",
+      "text": "Two hidden units, $W$ with rows $(0.5, -0.3)$ and $(0.2, 0.4)$, input weights $v = (1, 0.5)$, no bias, inputs $u = (1, 0.5, -1)$, start state $h_0 = (0, 0)$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. $Wh_0 = (0, 0)$, so the sum is $v u_1 = (1, 0.5)$. State: $h_1 = (\\tanh 1, \\tanh 0.5) = (0.7616, 0.4621)$.",
+        "Step 2. $Wh_1$: row 1 is $0.5(0.7616) - 0.3(0.4621) = 0.2422$, row 2 is $0.2(0.7616) + 0.4(0.4621) = 0.3372$. Add $v u_2 = (0.5, 0.25)$: $(0.7422, 0.5872)$. State: $h_2 = (0.6304, 0.5279)$.",
+        "Step 3. $Wh_2 = (0.5(0.6304) - 0.3(0.5279),\\ 0.2(0.6304) + 0.4(0.5279)) = (0.1569, 0.3372)$. Add $v u_3 = (-1, -0.5)$: $(-0.8431, -0.1628)$. State: $h_3 = (-0.6875, -0.1613)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The last state $h_3$ depends on all three inputs. A readout would use it, or each state in turn, to produce an answer. Now start the same network from a different state, $h_0 = (0.9, -0.9)$. The states are $(0.9379, 0.3095)$, $(0.7044, 0.5090)$, $(-0.6643, -0.1543)$. Compare with the first run: the distance between the two state lists is $0.2332$ after step 1, $0.0764$ after step 2 and $0.0242$ after step 3. The memory of the starting state fades by roughly a factor of 3 per step. This is the fading memory of the first page, and it is what the echo state property requires (see The Echo State Property (#/qrc/foundations/echo-state-property)). Here it holds because the recurrent matrix is small: its spectral radius, the largest absolute eigenvalue, is $0.51$, below 1 (the sample computes it)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: two recurrent steps",
+      "text": "One hidden unit: $h_k = \\tanh(0.5\\,h_{k-1} + u_k)$, $h_0 = 0$, inputs $u_1 = 1$, $u_2 = -1$. Find $h_1$ and $h_2$.",
+      "hint": "Use the previous state in the next step.",
+      "solution": [
+        "$h_1 = \\tanh(0 + 1) = 0.7616$.",
+        "$h_2 = \\tanh(0.5 \\times 0.7616 - 1) = \\tanh(0.3808 - 1) = \\tanh(-0.6192) = -0.5506$."
+      ],
+      "answer": "h1 = 0.7616, h2 = -0.5506"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why training recurrent networks is hard"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "If we want to train an RNN by gradient descent as above, we need the gradient of the loss with respect to the shared weights. The loss at step $k$ depends on the weights through every step before it. That is the chain rule from before, now with a chain as long as the sequence. Computing it is called backpropagation through time (the unrolled picture is an ordinary deep network, so the same method applies). Let us look at what the chain contains."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The chain of factors"
+    },
+    {
+      "type": "prose",
+      "text": "Take one hidden unit and no input to keep it simple: $h_k = f(w\\,h_{k-1})$. How much does the state at step $k$ change if the state at step $k - 1$ is nudged? By the chain rule, by $w\\,f'$ (the weight times the slope of the activation). How much does the state at step $k$ change if we nudge the state $T$ steps earlier? By the product of $T$ such factors, one per step. If each factor has size about $w$ (for tanh near zero its slope is about 1), the sensitivity after $T$ steps is about $w^T$."
+    },
+    {
+      "type": "prose",
+      "text": "The numbers for $T = 20$ steps: $w = 0.5$ gives $0.5^{20} = 9.5\\times10^{-7}$; $w = 0.9$ gives $0.12$; $w = 1$ gives $1$; $w = 1.5$ gives $3325$. A factor below 1 multiplies the sensitivity down to nothing: this is the vanishing gradient. A factor above 1 multiplies it up to enormous values: the exploding gradient. In the first case an early input barely affects the loss, so its gradient is tiny and the training cannot learn that the early input matters (it cannot see the long-range dependence). In the second, the gradient is huge and a single step wrecks the weights. Only an exactly balanced factor around 1 avoids both, and tuning to that edge is delicate, because the same weights must work at every step."
+    },
+    {
+      "type": "prose",
+      "text": "For a network with many units, the single weight $w$ is replaced by the matrix $W$, and the size of the product of $T$ copies of it is governed by its largest stretching factor; the vanishing and exploding picture is the same, now in every direction at once. A tanh also has slope below 1 once its input moves away from 0, which makes vanishing more likely; an exploding gradient with tanh can still occur, since it only needs the matrix to stretch in some direction while the units stay out of saturation. Bengio, Simard and Frasconi (1994) analysed this and showed that learning long-term dependencies with gradient descent is hard, and Pascanu, Mikolov and Bengio (2013) revisited it, with remedies such as clipping gradients. Hochreiter and Schmidhuber's LSTM (1997) was invented to give gradients an easier path."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Cost: backpropagation through time stores every state of the whole sequence and takes many passes over the data.",
+        "Instability: exploding gradients can throw the weights far from anywhere useful in one step; the learning rate must be tuned.",
+        "Forgetting: vanishing gradients mean the network learns short-range patterns first and long-range ones slowly or never.",
+        "Fragility: tiny changes in the weights can change the dynamics qualitatively, from forgetting everything to remembering everything."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: vanishing steps",
+      "text": "A per-step factor of $0.8$ is applied at every step. After how many steps does the sensitivity first fall below $10^{-3}$?",
+      "hint": "Take logarithms of both sides.",
+      "solution": [
+        "We need $0.8^T < 10^{-3}$, i.e. $T > \\ln(10^{-3})/\\ln(0.8)$.",
+        "$\\ln(10^{-3}) = -6.908$ and $\\ln 0.8 = -0.2231$, so $T > 30.96$.",
+        "Check: $0.8^{30} = 0.00124$, $0.8^{31} = 0.00099$. So $T = 31$."
+      ],
+      "answer": "31 steps"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How reservoir computing sidesteps the difficulty"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "Reservoir computing takes the recurrent network above and refuses to train its recurrent part. The matrix $W$, the input weights $v$ and the biases are chosen once, at random, and never touched; they are scaled so that the memory fades (spectral radius below 1, usually somewhat close to it, such as 0.9). The state $h_k$ is then just computed forwards in time. Then we train only the last layer: the weights that turn $h_k$ into the answer. That last layer has no feedback in it, so the gradient chain has length one; it is a linear fit with a direct solution (Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge)). There is no backpropagation through time at all, no vanishing or exploding gradient to manage, no learning rate for the recurrent part, and no need to store the sequence for a backward pass."
+    },
+    {
+      "type": "prose",
+      "text": "Is it plausible that a random recurrent network is any use? The previous sections give the reason. The state is a nonlinear blend of recent inputs with fading memory. Because many units have different, randomly mixed responses, the blend contains many different combinations of past inputs (like the buckets with different leak speeds), and the readout can choose among them. The classical theory of when this works, and how well, is in Echo State Networks (#/qrc/foundations/echo-state-networks)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\n# 1. The two-unit recurrent network of the page, unrolled by hand for 3 steps\nW = np.array([[0.5, -0.3], [0.2, 0.4]]); v = np.array([1.0, 0.5]); u = [1.0, 0.5, -1.0]\ndef unroll(h):\n    out = []\n    for uk in u:\n        h = np.tanh(W @ h + v * uk); out.append(h)\n    return out\na, b = unroll(np.zeros(2)), unroll(np.array([0.9, -0.9]))\nfor k in range(3):\n    print(f\"step {k+1}: h from rest = {a[k].round(4)}, h from (0.9, -0.9) = {b[k].round(4)}, distance = {np.linalg.norm(a[k]-b[k]):.4f}\")\nprint(\"spectral radius of W:\", round(max(abs(np.linalg.eigvals(W))), 4))\n\n# 2. The gradient factor through 20 steps of a linear unit h_k = w h_{k-1} + u_k (derivative = w each step)\nfor w in (0.5, 0.9, 1.0, 1.5):\n    print(f\"w = {w}: factor after 20 steps = {w**20:.3g}\")\n\n# 3. A reservoir: 50 tanh units, random fixed weights, only a ridge readout is trained\nrng = np.random.default_rng(2)\nN, T, wash, ntr = 50, 3000, 100, 2000\nWr = rng.normal(size=(N, N)); Wr *= 0.9 / max(abs(np.linalg.eigvals(Wr)))     # spectral radius 0.9\nvin = rng.uniform(-1, 1, N)\ns = rng.uniform(-0.5, 0.5, T)\nX = np.zeros((T, N)); h = np.zeros(N)\nfor k in range(T):\n    h = np.tanh(Wr @ h + vin * s[k]); X[k] = h\nX1 = np.c_[X, np.ones(T)]\nfor d in (1, 3, 5, 10):\n    y = np.r_[np.zeros(d), s[:T - d]]\n    A = X1[wash:ntr]\n    w = np.linalg.solve(A.T @ A + 1e-6 * np.eye(N + 1), A.T @ y[wash:ntr])   # ridge readout, one solve\n    p = X1[ntr:] @ w; yt = y[ntr:]\n    print(f\"recall of the input {d:2d} steps ago: test NMSE = {np.mean((p-yt)**2)/np.var(yt):.4f}\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "The sample does three things. It repeats the hand unrolling and the distance between runs started from different states (0.2332, 0.0764, 0.0242; spectral radius 0.5099). It prints the factor $w^{20}$ for four values of $w$ ($9.54\\times10^{-7}$, $0.122$, $1$, $3.33\\times10^{3}$). And it builds a reservoir of 50 tanh units with random weights, scaled to spectral radius 0.9, drives it with 3000 random inputs, and fits only a ridge readout (one linear solve, no gradient steps) to recall the input $d$ steps ago. Test NMSE on 1000 unseen steps: $0.0004$ for $d = 1$, $0.0024$ for $d = 3$, $0.0075$ for $d = 5$ and $0.0962$ for $d = 10$. Memory fades with delay, as expected for 50 units, but the entire training was a single calculation."
+    },
+    {
+      "type": "callout",
+      "text": "A fair warning. What a random reservoir cannot do, no readout can fix: if the state does not contain a feature, a weighted sum cannot create it. Choosing the scaling (spectral radius, input scaling) is the main craft, and it is done by trying values and measuring the error on held-out data, not by gradients."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Compare the work of two ways to fit a delay-recall task with a 50-unit recurrent network, using the sample's numbers as a guide."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Fully trained RNN. Parameters: $W$ has $50 \\times 50 = 2500$ entries, $v$ has 50, bias 50, readout 51: $2651$ numbers, all adjusted by repeated gradient steps, each needing a backward pass through the whole sequence of 3000 steps.",
+        "Step 2. Reservoir. The $2500 + 50 + 50 = 2600$ internal numbers are drawn at random once. Only the 51 readout numbers are fitted, by one linear solve.",
+        "Step 3. The reservoir is run once forward over the sequence to collect states: 3000 steps of 50 units. No backward pass.",
+        "Step 4. The trained part is $51/2651 = 1.9$ per cent of the parameters, and there is nothing to vanish or explode. The price is that nothing was tuned to the task; the result, NMSE 0.0024 at delay 3, shows that for memory tasks the price can be small, and the sample shows the delay at which the quality has fallen (0.0962 at delay 10)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A neuron computes a weighted sum plus a bias and passes it through an activation function ($\\tanh$, sigmoid, ReLU); without the bend, any stack of layers collapses to one weighted sum.",
+        "A layer is $a = f(Wx + b)$; a network is a chain of layers; the forward pass computes the output from the input.",
+        "Training is gradient descent: measure a loss, compute its derivative with respect to each weight (backpropagation, the chain rule applied backwards), and step downhill, $w \\leftarrow w - \\eta\\,\\partial L/\\partial w$.",
+        "A recurrent network has a state updated by $h_k = \\tanh(Wh_{k-1} + vu_k + b)$ with the same weights at every step; unrolled, it is a deep network with shared weights.",
+        "Gradients through $T$ steps are products of $T$ factors: with factors below 1 they vanish, above 1 they explode, so long-range learning is fragile and costly.",
+        "Reservoir computing leaves $W$, $v$ and $b$ random and fixed (spectral radius below 1 for fading memory) and trains only a linear readout, avoiding backpropagation through time."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A neuron with ReLU",
+      "text": "Inputs $(2, -1, 0.5)$, weights $(0.5, 1, 2)$, bias $-0.5$. Find the output with a ReLU and with a tanh activation.",
+      "hint": "Compute $z$ first.",
+      "solution": [
+        "Weighted sum: $1 - 1 + 1 = 1$.",
+        "Add the bias: $z = 0.5$.",
+        "ReLU: $\\max(0, 0.5) = 0.5$. tanh: $\\tanh 0.5 = 0.462$."
+      ],
+      "answer": "0.5 (ReLU), 0.462 (tanh)"
+    },
+    {
+      "type": "problem",
+      "title": "Two linear layers are one",
+      "text": "A network has two layers without activations: $h = 2x + 1$ and $y = -3h + 5$. Write $y$ as a single weighted sum of $x$.",
+      "hint": "Substitute the first formula into the second.",
+      "solution": [
+        "Substitute: $y = -3(2x + 1) + 5$.",
+        "Expand: $-6x - 3 + 5 = -6x + 2$.",
+        "So one neuron with weight $-6$ and bias $2$ does the same."
+      ],
+      "answer": "y = -6x + 2"
+    },
+    {
+      "type": "problem",
+      "title": "A gradient step on a one-weight model",
+      "text": "For $\\hat y = wx$ with two examples $(x, y) = (1, 2)$ and $(2, 3)$, the average loss is $L = \\tfrac12[(w - 2)^2 + (2w - 3)^2]$. Starting from $w = 0$ with $\\eta = 0.1$, compute $\\partial L/\\partial w$ and the updated $w$.",
+      "hint": "Differentiate each squared term and average.",
+      "solution": [
+        "$\\partial L/\\partial w = \\tfrac12[2(w - 2)(1) + 2(2w - 3)(2)] = (w - 2) + 2(2w - 3)$.",
+        "At $w = 0$: $(-2) + 2(-3) = -8$.",
+        "Update: $w \\leftarrow 0 - 0.1(-8) = 0.8$."
+      ],
+      "answer": "gradient -8, new w = 0.8"
+    },
+    {
+      "type": "problem",
+      "title": "Vanishing gradient horizon",
+      "text": "A recurrent unit has per-step factor $0.9$ (the sensitivity to an input $T$ steps back is $0.9^T$). Find $T$ for which the sensitivity first drops below 1 per cent, and say what factor of $1.1$ gives after the same number of steps.",
+      "hint": "Take logarithms.",
+      "solution": [
+        "$0.9^T < 0.01$: $T > \\ln 0.01/\\ln 0.9 = -4.605/(-0.10536) = 43.7$, so $T = 44$.",
+        "Check: $0.9^{44} = 0.0097$.",
+        "For factor $1.1$ after 44 steps: $1.1^{44} = 66.3$, so the sensitivity grows by about 66 times."
+      ],
+      "answer": "T = 44; 1.1^44 is about 66"
+    },
+    {
+      "type": "problem",
+      "title": "Count what the reservoir trains",
+      "text": "A reservoir has 200 units with a full recurrent matrix, one input channel and a readout with a bias. How many numbers are fixed and how many trained? If 'backpropagation through time' were used instead, how many would be adjusted?",
+      "hint": "Add up the recurrent matrix, input weights, biases and readout separately.",
+      "solution": [
+        "Fixed: recurrent $200^2 = 40\\,000$, input weights $200$, biases $200$ (if used), total $40\\,400$.",
+        "Trained by a reservoir: readout $200 + 1 = 201$.",
+        "With backpropagation through time all of them would be adjusted: $40\\,400 + 201 = 40\\,601$, versus 201."
+      ],
+      "answer": "40 400 fixed, 201 trained; 40 601 with BPTT"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The weighted-sum readout, fitted in one step: Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge).",
+        "How to tell whether a fit will work on new data: Training, Testing and Measuring Error (#/qrc/start/training-and-testing).",
+        "The reservoir in full: Echo State Networks (#/qrc/foundations/echo-state-networks) and The Echo State Property (#/qrc/foundations/echo-state-property).",
+        "A reservoir with qubits in place of tanh units: A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "I. Goodfellow, Y. Bengio and A. Courville, Deep Learning, MIT Press (2016), chapters 6 and 10",
+        "Y. Bengio, P. Simard and P. Frasconi, Learning long-term dependencies with gradient descent is difficult, IEEE Transactions on Neural Networks 5, 157 (1994)",
+        "S. Hochreiter and J. Schmidhuber, Long short-term memory, Neural Computation 9, 1735 (1997)",
+        "R. Pascanu, T. Mikolov and Y. Bengio, On the difficulty of training recurrent neural networks, Proceedings of the 30th International Conference on Machine Learning (2013)",
+        "H. Jaeger, The echo state approach to analysing and training recurrent neural networks, GMD Report 148 (2001)"
+      ]
+    }
+  ]
+}

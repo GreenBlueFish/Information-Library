@@ -1,0 +1,325 @@
+{
+  "title": "A Quantum Reservoir Worked by Hand",
+  "intro": "A complete two-qubit quantum reservoir computer, with every matrix written out: the Hamiltonian, the input written into qubit 1, three time steps computed with numbers, then a few hundred steps in numpy with a ridge readout scored on delay tasks.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Write down a two-qubit reservoir completely: its Hamiltonian, its one-step evolution matrix, how the input enters and what is measured.",
+        "Carry the reservoir through three time steps with real numbers and read off the features at each step.",
+        "Explain where the memory comes from (qubit 2 is never reset) and where the nonlinearity comes from (the input appears as $\\sqrt{u}$ in the state).",
+        "Run a few hundred steps in numpy, fit a ridge readout, and score a delay task with the pipeline of the previous page."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What we are building"
+    },
+    {
+      "type": "prose",
+      "text": "Everything so far has been preparation. A reservoir computer has an input, a fixed dynamical system, measured features, and a trained linear readout. This page builds the smallest quantum version that still shows all four, and computes it with numbers you can check by hand. It uses two qubits. It is far too small to be useful, and the point is that nothing is hidden: every matrix is written out."
+    },
+    {
+      "type": "prose",
+      "text": "What you need from the Quantum Mechanics shelf: a qubit state $|\\psi\\rangle = \\alpha|0\\rangle + \\beta|1\\rangle$ with $|\\alpha|^2 + |\\beta|^2 = 1$ (States and Dirac Notation (#/quantum/foundations/states-and-dirac-notation)); the Pauli matrices $X, Y, Z$ (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)); a density matrix $\\rho$ for a state that may be mixed, and the expectation $\\langle O\\rangle = \\mathrm{Tr}(O\\rho)$ (Mixed States (#/quantum/many-body/mixed-states)); two-qubit states as tensor products (Composite Systems and Tensor Products (#/quantum/many-body/composite-systems)); and the partial trace, which throws away one qubit and keeps the other's state (The Partial Trace and Reduced States (#/quantum/many-body/partial-trace)). Where a step uses one of these, the text says so."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The design"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The pieces"
+    },
+    {
+      "type": "list",
+      "items": [
+        "**Reservoir**: two qubits, with Hamiltonian $H = \\frac{g}{2}(XX + YY) + J\\,ZZ$. The first term lets an excitation hop between the qubits; the second shifts energies depending on whether the qubits agree.",
+        "**Input**: a number $u_t$ between 0 and 1 at each time step. At the start of the step qubit 1 is thrown away and replaced by a fresh qubit in the state $|\\psi_u\\rangle = \\sqrt{1-u}\\,|0\\rangle + \\sqrt{u}\\,|1\\rangle$. Qubit 2 is left alone.",
+        "**Evolution**: the two qubits then evolve together for a fixed time $\\tau$, by the unitary $U = e^{-iH\\tau}$.",
+        "**Readout features**: the expectation values $\\langle Z_1\\rangle$ and $\\langle Z_2\\rangle$ and $\\langle Z_1Z_2\\rangle$ after the evolution. Then the next step starts.",
+        "**Trained part**: ridge regression from the features to the target, exactly as on the previous pages."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Notice what carries memory. Qubit 1 is reset at each step, so it remembers nothing. Qubit 2 is never reset: its state after step $t$ is the result of everything the evolution did to it, and it enters step $t+1$. That is the quantum analogue of the recurrent state $h_{t-1}$ in a classical reservoir."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why the input is encoded this way"
+    },
+    {
+      "type": "prose",
+      "text": "The state $\\sqrt{1-u}|0\\rangle + \\sqrt u|1\\rangle$ has probability $1-u$ of reading 0 and $u$ of reading 1, so $\\langle Z\\rangle = (1-u) - u = 1 - 2u$: the input sets the qubit's $z$ component linearly. But the state's off-diagonal entries are $\\sqrt{u(1-u)}$, which is not a linear function of $u$. The reservoir therefore receives the input both linearly and through square roots, and the evolution mixes them. This is where the quantum reservoir gets its nonlinearity from, without a tanh anywhere. (A different encoding gives different features; The Input Encoding page on the Models shelf compares them.)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The evolution matrix"
+    },
+    {
+      "type": "prose",
+      "text": "In the basis $|00\\rangle, |01\\rangle, |10\\rangle, |11\\rangle$ (first digit qubit 1), $XX + YY$ is zero on $|00\\rangle$ and $|11\\rangle$, and swaps $|01\\rangle$ with $|10\\rangle$ with strength 2, so $\\frac{g}{2}(XX+YY)$ acts on that pair as $g\\,\\sigma_x$. $ZZ$ is $+1$ on $|00\\rangle, |11\\rangle$ and $-1$ on $|01\\rangle, |10\\rangle$. The matrix exponential then splits into pieces we can do by hand. With $\\theta = g\\tau$ and $\\phi = J\\tau$:"
+    },
+    {
+      "type": "prose",
+      "text": "Written out, $U$ has four nonzero blocks. Rows and columns follow the basis order above."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$U_{00,00} = U_{11,11} = e^{-i\\phi}$: the outer states only pick up a phase.",
+        "$U_{01,01} = U_{10,10} = e^{i\\phi}\\cos\\theta$: stay put.",
+        "$U_{01,10} = U_{10,01} = -i\\,e^{i\\phi}\\sin\\theta$: hop to the other qubit, with a factor of $-i$ for the rotation angle $\\theta$.",
+        "Every other entry is zero."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "We choose $\\theta = 0.6$ and $\\phi = 0.5$. Then $\\cos\\theta = 0.8253$, $\\sin\\theta = 0.5646$, $e^{-i\\phi} = 0.8776 - 0.4794i$ and $e^{i\\phi} = 0.8776 + 0.4794i$. Multiplying out gives $e^{i\\phi}\\cos\\theta = 0.7243 + 0.3957i$ and $-ie^{i\\phi}\\sin\\theta = 0.2707 - 0.4955i$. These are the entries printed by the code below."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: probability that an excitation hops",
+      "text": "If the two qubits start in $|10\\rangle$, what is the probability that after one evolution they are found in $|01\\rangle$?",
+      "hint": "The amplitude for $|10\\rangle \\to |01\\rangle$ is the (2,3) entry of $U$; square its magnitude.",
+      "solution": [
+        "The amplitude is $-ie^{i\\phi}\\sin\\theta$, with magnitude $\\sin\\theta = 0.5646$.",
+        "Probability $= \\sin^2\\theta = 0.3188$."
+      ],
+      "answer": "$\\sin^2(0.6) = 0.319$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Step one by hand"
+    },
+    {
+      "type": "prose",
+      "text": "Start with qubit 2 in $|0\\rangle$ and input $u_1 = 0.8$. Qubit 1 is prepared in $\\sqrt{0.2}\\,|0\\rangle + \\sqrt{0.8}\\,|1\\rangle = 0.4472|0\\rangle + 0.8944|1\\rangle$. The joint state is the product, which is a pure state with two nonzero amplitudes:"
+    },
+    {
+      "type": "math",
+      "tex": "|\\Psi\\rangle = 0.4472\\,|00\\rangle + 0.8944\\,|10\\rangle",
+      "caption": "Qubit 2 is in $|0\\rangle$, so only $|00\\rangle$ and $|10\\rangle$ appear."
+    },
+    {
+      "type": "prose",
+      "text": "Apply $U$. The state $|00\\rangle$ only gets a phase, which changes nothing we measure, so its probability stays $0.2$. The state $|10\\rangle$ rotates into $|01\\rangle$ with probability $\\sin^2\\theta = 0.3188$ and stays in $|10\\rangle$ with probability $\\cos^2\\theta = 0.6812$. Thus the probabilities after the evolution are:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$|00\\rangle$: $0.2$",
+        "$|01\\rangle$: $0.8 \\times 0.3188 = 0.2551$",
+        "$|10\\rangle$: $0.8 \\times 0.6812 = 0.5449$",
+        "$|11\\rangle$: $0$"
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "$Z$ is $+1$ on a 0 and $-1$ on a 1. So $\\langle Z_1\\rangle = 0.2 + 0.2551 - 0.5449 - 0 = -0.0898$. And $\\langle Z_2\\rangle = 0.2 - 0.2551 + 0.5449 = 0.4898$. These are the first features. The product feature is $\\langle Z_1Z_2\\rangle = 0.2 - 0.2551 - 0.5449 + 0 = -0.6$. (The code prints $-0.0899$ and $0.4899$: the same up to rounding.)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Passing qubit 2 on"
+    },
+    {
+      "type": "prose",
+      "text": "Before the next step we need qubit 2's state alone. Qubit 1 is about to be thrown away, so we take the partial trace over qubit 1: $\\rho_2 = \\mathrm{Tr}_1 |\\Psi\\rangle\\langle\\Psi|$. Its diagonal entries are the probabilities that qubit 2 reads 0 or 1: $P(0) = 0.2 + 0.5449 = 0.7449$ and $P(1) = 0.2551$. Its off-diagonal entry is the coherence between the parts of the state in which qubit 1 is the same, which is $0.1901 + 0.1220i$ here (computed by the code below):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\rho_2^{(1)}$, the qubit-2 state after step 1: diagonal entries $0.7449$ and $0.2551$; off-diagonal entry $\\rho_{01} = 0.1901 + 0.1220i$ (and its complex conjugate $\\rho_{10}$). The trace is 1, as it must be. This matrix is the memory."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "It is no longer $|0\\rangle\\langle0|$. The qubit has been tilted by the hop and has become partly mixed, since its entangled partner is being discarded. (Its purity $\\mathrm{Tr}\\rho_2^2 = 0.7449^2 + 0.2551^2 + 2(0.1901^2 + 0.1220^2) = 0.5549 + 0.0651 + 0.1020 = 0.7220$, less than 1.) It carries a trace of the first input into the second step."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Steps two and three"
+    },
+    {
+      "type": "prose",
+      "text": "Now the same procedure with a different input and a different qubit 2. Step 2 uses $u_2 = 0.2$: qubit 1 is $\\sqrt{0.8}|0\\rangle + \\sqrt{0.2}|1\\rangle$, tensored with the $\\rho_2^{(1)}$ above, then evolved by $U$. Because qubit 2 is now mixed, the joint state is a $4\\times4$ density matrix and the arithmetic is longer, so the numbers below come from the code; each step is the same four operations (prepare qubit 1, tensor, rotate with $U\\rho U^\\dagger$, measure). The results:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "**Step 1, $u_1 = 0.8$**: $\\langle Z_1\\rangle = -0.0899$, $\\langle Z_2\\rangle = 0.4899$.",
+        "**Step 2, $u_2 = 0.2$**: $\\langle Z_1\\rangle = 0.6559$, $\\langle Z_2\\rangle = 0.4340$. Qubit 2's state now has $\\rho_{00} = 0.717$, $\\rho_{01} = 0.3257 + 0.035i$.",
+        "**Step 3, $u_3 = 0.5$**: $\\langle Z_1\\rangle = 0.1710$, $\\langle Z_2\\rangle = 0.2630$. Qubit 2's state now has $\\rho_{00} = 0.6315$, $\\rho_{01} = 0.3828 + 0.0818i$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Read these as features. $\\langle Z_1\\rangle$ follows the current input: large input (0.8) gives a low value ($-0.09$), small input (0.2) gives a high one ($0.66$), middle input in between. $\\langle Z_2\\rangle$ is a mixture of the current and past inputs, because qubit 2 has been passed on and tilted. The readout will weigh these features, together with $\\langle Z_1Z_2\\rangle$ and a bias, to build its prediction."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: where does the reset matter?",
+      "text": "Suppose qubit 2 were also reset to $|0\\rangle$ at every step. What would the features at step 2 depend on, and could the readout recover $u_1$ from them?",
+      "hint": "Think about what carries information from step 1 to step 2.",
+      "solution": [
+        "With both qubits reset, step 2's features depend only on $u_2$. Nothing is passed on.",
+        "The features then carry no information about $u_1$, so a readout cannot recover it: the memory capacity would be zero. This is why qubit 2 is left alone."
+      ],
+      "answer": "No: the reservoir would be memoryless."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The full computation in code"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\ntheta, phi = 0.6, 0.5                       # g*tau and J*tau\nc, s = np.cos(theta), np.sin(theta)\nU = np.zeros((4, 4), complex)\nU[0, 0] = U[3, 3] = np.exp(-1j * phi)       # |00>, |11>: a phase only\nm = np.exp(1j * phi) * np.array([[c, -1j * s], [-1j * s, c]])\nU[1:3, 1:3] = m                             # |01>, |10>: rotate into each other\n\nZ = np.diag([1, -1]); I = np.eye(2)\nZ1, Z2 = np.kron(Z, I), np.kron(I, Z)\n\ndef trace_out_qubit1(rho):\n    return np.einsum('ijik->jk', rho.reshape(2, 2, 2, 2))\n\ndef step(rho2, u):\n    psi = np.array([np.sqrt(1 - u), np.sqrt(u)])     # fresh qubit 1\n    rho = np.kron(np.outer(psi, psi), rho2)          # joint state\n    rho = U @ rho @ U.conj().T                       # evolve\n    feats = [np.trace(rho @ Z1).real,\n             np.trace(rho @ Z2).real,\n             np.trace(rho @ Z1 @ Z2).real]\n    return trace_out_qubit1(rho), feats              # pass qubit 2 on\n\nrho2 = np.diag([1, 0]).astype(complex)               # qubit 2 starts in |0>\nfor u in (0.8, 0.2, 0.5):\n    rho2, f = step(rho2, u)\n    print(u, np.round(f, 4))"
+    },
+    {
+      "type": "prose",
+      "text": "It prints, for the three inputs, the feature triples $(-0.0899, 0.4899, -0.6000)$, $(0.6559, 0.4340, 0.2939)$ and $(0.1710, 0.2630, 0.0000)$ (rounded), where the first two entries are the numbers above and the third is $\\langle Z_1Z_2\\rangle$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Training a readout on it"
+    },
+    {
+      "type": "prose",
+      "text": "Now the pipeline of the previous page. Feed 1000 random inputs uniform in $[0, 1]$, discard a washout of 50 steps, train on steps 50 to 599 and test on steps 600 to 999. The target for the delay-$d$ task is $y_t = u_{t-d}$. For each delay, fit a ridge readout with $\\lambda = 10^{-6}$ from the features to the target and report the test NMSE. The code, continuing from above:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "rng = np.random.default_rng(3)\nT, wo = 1000, 50\nus = rng.uniform(0, 1, T)\n\nrho2 = np.diag([1, 0]).astype(complex)\nF = []\nfor u in us:\n    rho2, f = step(rho2, u)\n    F.append(f)\nF = np.array(F)\n\ndef fit(F, y, lam):\n    A = np.c_[F, np.ones(len(F))]\n    G = A.T @ A + lam * np.eye(A.shape[1])\n    G[-1, -1] -= lam\n    return np.linalg.solve(G, A.T @ y)\n\ndef predict(F, w):\n    return np.c_[F, np.ones(len(F))] @ w\n\ndef nmse(p, y):\n    return float(np.sum((p - y) ** 2) / np.sum((y - y.mean()) ** 2))\n\ntrain, test = slice(wo, 600), slice(600, 1000)\nfor d in range(5):\n    y = np.roll(us, d)\n    w = fit(F[train], y[train], 1e-6)\n    print(d, round(nmse(predict(F[test], w), y[test]), 4))"
+    },
+    {
+      "type": "prose",
+      "text": "The test NMSE for each delay $d = 0, 1, 2, 3, 4$ is $0.0953$, $0.3823$, $0.7480$, $0.8953$ and $0.9632$. (Using only $\\langle Z_1\\rangle$ as a feature gives $0.0951$ at delay 0 but almost no skill, between $0.97$ and $0.99$, from delay 1 on; adding $\\langle Z_2\\rangle$ is what buys the memory, giving $0.3806$ at delay 1.)"
+    },
+    {
+      "type": "prose",
+      "text": "Read the numbers with the scoring rules of the last page. At delay 0 the readout recovers the current input well (NMSE $0.095$, so an NRMSE of about $0.31$). At delay 1 it recovers roughly $62\\%$ of the variation ($1 - 0.38$), because qubit 2 holds a mixed trace of the previous input. By delay 3, NMSE $0.90$ says almost nothing is left, and at delay 4 the reservoir has forgotten. This fast fading is expected from so small a reservoir: two qubits give a few numbers to remember with, and the reset of qubit 1 wipes the rest at every step. Memory capacity, summing $1 - \\text{NMSE}$ over delays, is about $0.90 + 0.62 + 0.25 + 0.10 + 0.04 \\approx 1.9$."
+    },
+    {
+      "type": "prose",
+      "text": "A nonlinear task also works: predicting $u_{t-1}^2$ gives test NMSE $0.406$, against $0.38$ for the linear delay-1 task. Not better, but the readout is plainly using features that are nonlinear in the input. How well such a reservoir does depends on the choices of $g\\tau$, $J\\tau$ and the encoding; trying other values in the code is the quickest way to see their effect."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: reading the table",
+      "text": "At delay 1 the NMSE is $0.38$ and at delay 2 it is $0.75$. Which delay does the reservoir remember better, and what would adding a third qubit that is never reset probably do?",
+      "hint": "Lower NMSE is better. Think about how many memory slots there are.",
+      "solution": [
+        "Delay 1 is remembered better ($0.38 < 0.75$).",
+        "A third qubit that is passed on gives the reservoir more room for the past, so NMSE at larger delays would probably fall, at the cost of a larger matrix ($8 \\times 8$)."
+      ],
+      "answer": "Delay 1; an extra preserved qubit should extend the memory."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What this tiny example teaches"
+    },
+    {
+      "type": "list",
+      "items": [
+        "**The reservoir is fixed.** $U$ was chosen once and never adjusted. All learning is in the three weights and a bias of the ridge readout.",
+        "**Memory lives in the part that is not reset.** The reset of qubit 1 makes the input enter cleanly; qubit 2 holds the past.",
+        "**Features are expectation values.** We computed exact expectations; a real device estimates each from repeated measurements, so each has shot noise (Hands-on Implementation).",
+        "**Dimension is the resource.** Two qubits give a $4\\times4$ density matrix, so at most 15 independent real features. $n$ qubits give $4^n - 1$, which is why quantum reservoirs are interesting, and why measuring all of them is the hard part (Readout and Multiplexing)."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Problem: one more step by hand",
+      "text": "Take qubit 2 in $|0\\rangle$ and input $u = 0.5$. Compute $\\langle Z_1\\rangle$ and $\\langle Z_2\\rangle$ after one evolution with $\\theta = 0.6$.",
+      "hint": "Qubit 1 is $\\sqrt{0.5}|0\\rangle + \\sqrt{0.5}|1\\rangle$. Only $|00\\rangle$ and $|10\\rangle$ have weight, each $0.5$.",
+      "solution": [
+        "$|00\\rangle$ stays at probability $0.5$.",
+        "$|10\\rangle$ hops to $|01\\rangle$ with probability $\\sin^2 0.6 = 0.3188$: $P(01) = 0.5\\times0.3188 = 0.1594$, and $P(10) = 0.5 \\times 0.6812 = 0.3406$.",
+        "$\\langle Z_1\\rangle = 0.5 + 0.1594 - 0.3406 = 0.3188$.",
+        "$\\langle Z_2\\rangle = 0.5 - 0.1594 + 0.3406 = 0.6812$."
+      ],
+      "answer": "$\\langle Z_1\\rangle = 0.3188$, $\\langle Z_2\\rangle = 0.6812$."
+    },
+    {
+      "type": "problem",
+      "title": "Problem: the hop angle",
+      "text": "What value of $\\theta = g\\tau$ makes an excitation in $|10\\rangle$ move to $|01\\rangle$ with certainty, and what would $\\langle Z_1\\rangle$ be then if the qubits start in $|10\\rangle$?",
+      "hint": "Set $\\sin^2\\theta = 1$.",
+      "solution": [
+        "$\\sin^2\\theta = 1$ at $\\theta = \\pi/2 \\approx 1.571$.",
+        "The state is then $|01\\rangle$: qubit 1 reads 0 and qubit 2 reads 1, so $\\langle Z_1\\rangle = +1$ and $\\langle Z_2\\rangle = -1$."
+      ],
+      "answer": "$\\theta = \\pi/2$; $\\langle Z_1\\rangle = 1$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A quantum reservoir computer is a fixed quantum system driven by a signal, measured, and read out by regression. Here two qubits, one replaced by the input at every step and one carrying the past, produced three features per step, and a ridge readout turned them into predictions that we scored with NMSE on held-out steps. Every piece of the larger chapters on this shelf is a variation: more qubits, noise instead of a reset, other encodings, other observables, other devices. The classical pipeline stays exactly the same."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The reservoir is $H = \\frac g2(XX+YY) + J\\,ZZ$, applied for a fixed time as $U = e^{-iH\\tau}$; it is never trained.",
+        "The input sets qubit 1 to $\\sqrt{1-u}|0\\rangle + \\sqrt u|1\\rangle$ each step; qubit 2 is passed on and carries memory.",
+        "Features are expectation values of $Z_1$, $Z_2$ and $Z_1Z_2$, computed from the density matrix.",
+        "The readout is the ridge regression of the previous pages, scored with a washout and NMSE on held-out steps.",
+        "With two qubits the memory is short (about two steps); more preserved qubits give more."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The spin-network reservoir generalises this model to many qubits: The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir).",
+        "How the input is written into the system is the subject of Input Encoding (#/qrc/models/input-encoding); how features are chosen and combined, of Readout and Multiplexing (#/qrc/models/readout-and-multiplexing).",
+        "The density matrix and partial trace used here are developed in Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels).",
+        "Hands-on Implementation (#/qrc/theory/hands-on-implementation) adds finite measurement shots."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Physical Review Applied 8, 024030 (2017)",
+        "S. Ghosh, A. Opala, M. Matuszewski, T. Paterek and T. C. H. Liew, Quantum reservoir processing, npj Quantum Information 5, 35 (2019)",
+        "M. Lukoševičius and H. Jaeger, Reservoir computing approaches to recurrent neural network training, Computer Science Review 3, 127 (2009)"
+      ]
+    }
+  ]
+}

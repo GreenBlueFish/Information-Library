@@ -1,37 +1,159 @@
 {
   "title": "Memory and Processing Capacity",
-  "intro": "Memory capacity measures how much of the past input a linear readout can recover from the reservoir state; information processing capacity generalises it to every nonlinear function of the past. Both are bounded by the number of independent features, and the split between memory and nonlinearity is a trade-off each reservoir makes.",
+  "intro": "Memory capacity measures how much of the past input a linear readout can recover from the reservoir state; information processing capacity generalises it to every nonlinear function of the past. This lesson derives the memory function of a single unit, proves why capacity cannot exceed the number of independent features, builds the capacity basis from Legendre polynomials, and shows the trade-off between memory and nonlinearity with real numbers.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "The linear memory function"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "Drive the reservoir with i.i.d. input $u_k$ of variance $\\sigma_u^2$. For each delay $d$, train a separate readout to output $u_{k-d}$ and score it on held-out data:"
+      "text": "Read Echo State Networks (#/qrc/foundations/echo-state-networks) and The Echo State Property (#/qrc/foundations/echo-state-property), and, from Getting Started (#/qrc/start), the section on memory capacity in Training, Testing and Measuring Error (#/qrc/start/training-and-testing) and the ridge readout on Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge). You will use correlation (how closely two lists of numbers move together) and variance (how spread out a list is); both are explained where they appear."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Define the memory function and memory capacity of a reservoir and compute them exactly for a single linear unit.",
+        "Prove (or at least follow the proof) that the memory capacity of $N$ state variables cannot exceed $N$, and say when it comes close.",
+        "Define information processing capacity, build a basis of target functions with Legendre polynomials, and count basis functions of a given degree.",
+        "Explain the memory-nonlinearity trade-off and read it off a table of capacities by degree.",
+        "Say how finite data, noise and the input distribution bias a capacity estimate, and how much."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How much does a reservoir remember?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Comparing reservoirs by their scores on tasks mixes two things: the reservoir and the task. A reservoir that does badly on one task may be excellent on another. It would be useful to have a measure of the reservoir alone: how much information about the past does its state hold in a form a linear readout can extract? The first such measure is memory capacity. It is the cleanest quantity in the subject and the place where the number of features first shows up as a hard limit."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Feed the reservoir an input that is random from one step to the next (every value independent of the others). For such an input the past carries no pattern to guess from: the only way a readout can say what the input was $d$ steps ago is that the state still holds a trace of that value. Train one readout per delay $d = 1, 2, 3, \\dots$ to output $u_{k-d}$, and score each one. The scores show how far back the memory reaches and how sharp it is. Add up the scores and you have a single number for the reservoir. The comparison is with a notebook of a given number of pages: you can write only so many numbers in it, however cleverly the pages are arranged. The picture breaks in one respect: the notebook entries are stored exactly, while a reservoir's traces are blended together and have to be separated by the readout."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The definition"
+    },
+    {
+      "type": "prose",
+      "text": "Let $u_k$ be independent random numbers with variance $\\sigma_u^2$ (the squared spread). For each delay $d \\ge 1$ the readout $\\hat y^{(d)}_k$ is the best weighted sum of the features that estimates $u_{k-d}$, found on training data. Its score on held-out data is the squared correlation with the target:"
     },
     {
       "type": "math",
       "tex": "\\mathrm{MC}_d = \\frac{\\operatorname{cov}^2(\\hat y_k^{(d)}, u_{k-d})}{\\operatorname{var}(\\hat y_k^{(d)})\\,\\operatorname{var}(u_k)}, \\qquad \\mathrm{MC} = \\sum_{d=1}^{\\infty}\\mathrm{MC}_d",
-      "caption": "Jaeger's short-term memory capacity (2002). Some authors include $d=0$; this shelf sums from $d=1$."
+      "caption": "Jaeger's short-term memory capacity (2002). $\\operatorname{cov}$ is the covariance. Some authors include $d=0$; this shelf sums from $d=1$."
     },
     {
       "type": "prose",
-      "text": "$\\mathrm{MC}_d \\in [0,1]$ is the squared correlation of the best linear estimate of $u_{k-d}$; for an optimal least-squares readout it equals $1 - \\mathrm{MSE}_d/\\sigma_u^2$. Jaeger proved that for i.i.d. input"
+      "text": "$\\mathrm{MC}_d$ lies between 0 and 1. It equals 1 when the readout reproduces the input from $d$ steps ago exactly (up to scale and offset) and 0 when it is no better than a guess. For a best-fit readout it equals $1 - \\mathrm{MSE}_d/\\sigma_u^2$: one minus the error as a fraction of the input's variance. The curve of $\\mathrm{MC}_d$ against $d$ is the memory function; the sum is the memory capacity MC."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The simplest case, computed exactly"
+    },
+    {
+      "type": "prose",
+      "text": "One linear unit with leak: $x_k = a\\,x_{k-1} + u_k$, with $0<a<1$. This is one bucket from What Is Reservoir Computing? (#/qrc/start/what-is-reservoir-computing). Unrolling the recursion: $x_k = u_k + a\\,u_{k-1} + a^2u_{k-2} + \\cdots = \\sum_{j\\ge0} a^j u_{k-j}$. Now compute the three ingredients of $\\mathrm{MC}_d$, with a readout that is simply a multiple of $x_k$ (the best linear function of one feature)."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Variance of the state. The inputs are independent, so variances add: $\\operatorname{var}(x_k) = \\sigma_u^2\\sum_j a^{2j} = \\sigma_u^2/(1-a^2)$, using the sum of a geometric series.",
+        "Covariance with the input $d$ steps back. Only the term $j=d$ is correlated with $u_{k-d}$: $\\operatorname{cov}(x_k, u_{k-d}) = a^d\\sigma_u^2$.",
+        "Squared correlation: $\\mathrm{MC}_d = \\dfrac{(a^d\\sigma_u^2)^2}{\\sigma_u^2/(1-a^2)\\cdot\\sigma_u^2} = a^{2d}(1-a^2)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Add them up for $d\\ge1$: $(1-a^2)(a^2 + a^4 + \\dots) = (1-a^2)\\,a^2/(1-a^2) = a^2$. So $\\mathrm{MC} = a^2$, and including $d=0$ (which contributes $1-a^2$) the total is exactly 1, the number of units. For $a = 0.9$: $\\mathrm{MC}_1 = 0.154$, $\\mathrm{MC}_2 = 0.125$, $\\mathrm{MC}_5 = 0.066$, $\\mathrm{MC}_{10} = 0.023$, and MC $= 0.81$. A single bucket remembers little about any one delay, but remembers for a long time: its curve is flat and low. The sample checks the formulas with random input:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# One linear unit x_k = a x_{k-1} + u_k, i.i.d. input. Theory: MC_d = a^(2d) (1 - a^2), sum over d>=1 is a^2.\nrng = np.random.default_rng(0)\nT = 200000\nu = rng.uniform(-1, 1, T)\nfor a in (0.5, 0.9):\n    x = np.zeros(T)\n    for k in range(1, T): x[k] = a * x[k - 1] + u[k]\n    r2 = [np.corrcoef(x[100:], np.roll(u, d)[100:])[0, 1] ** 2 for d in range(80)]   # measured MC_d, d = 0..79\n    row = [f\"d={d}: {r2[d]:.3f} (theory {a**(2*d) * (1 - a**2):.3f})\" for d in (0, 1, 2, 3, 5)]\n    print(f\"a={a}: \" + \"; \".join(row))\n    print(f\"   measured sum over d>=1 = {sum(r2[1:]):.3f} (theory a^2 = {a**2:.2f});  \"\n          f\"measured d=0 term plus that = {sum(r2):.3f}  (theory 1 = N)\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Real output: for $a = 0.5$, $\\mathrm{MC}_0 = 0.750$, $\\mathrm{MC}_1 = 0.186$ (theory 0.188), $\\mathrm{MC}_2 = 0.047$; for $a = 0.9$, $\\mathrm{MC}_0 = 0.190$, $\\mathrm{MC}_1 = 0.153$ (0.154), $\\mathrm{MC}_5 = 0.067$ (0.066). The small differences are from using 200 000 random inputs rather than infinitely many. Adding up the measured values over delays 0 to 79: the sum from $d=1$ is 0.249 for $a = 0.5$ (theory 0.25) and 0.813 for $a = 0.9$ (theory 0.81), and with the $d=0$ term included the totals are 0.999 and 1.003. That the total is 1, the number of units, is the first appearance of the bound below."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: one unit",
+      "text": "A unit has $x_k = 0.6\\,x_{k-1} + u_k$. Find $\\mathrm{MC}_1$, $\\mathrm{MC}_2$ and the capacity MC.",
+      "hint": "Use $\\mathrm{MC}_d = a^{2d}(1-a^2)$ and $\\mathrm{MC} = a^2$.",
+      "solution": [
+        "$a^2 = 0.36$ and $1-a^2 = 0.64$.",
+        "$\\mathrm{MC}_1 = a^2(1-a^2) = 0.36 \\times 0.64 = 0.2304$.",
+        "$\\mathrm{MC}_2 = a^4(1-a^2) = 0.1296 \\times 0.64 = 0.0829$.",
+        "MC $= a^2 = 0.36$."
+      ],
+      "answer": "$\\mathrm{MC}_1 = 0.2304$, $\\mathrm{MC}_2 = 0.0829$, MC $= 0.36$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The bound MC is at most N"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The one-unit result suggests that $N$ units can hold at most about $N$ numbers' worth. It is true, it is easy to see why, and the statement is the most used fact on this page."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The argument"
+    },
+    {
+      "type": "prose",
+      "text": "Think of the random inputs $u_{k-1}, u_{k-2}, \\dots$ as directions in a space whose points are random variables, with the angle between two of them given by their correlation. Independent inputs are at right angles to each other and each has the same length $\\sigma_u$ (this is what independence means in this picture). The $N$ state variables at step $k$ span a flat subspace of dimension at most $N$ in the same space. The best linear readout for $u_{k-d}$ is the projection of that direction onto the subspace, and $\\mathrm{MC}_d$ is the squared length of the projection as a fraction of the squared length of $u_{k-d}$."
+    },
+    {
+      "type": "prose",
+      "text": "Now a fact about projections: if you take any set of mutually perpendicular unit vectors and project each onto an $N$-dimensional subspace, the squared lengths of the projections add up to at most $N$ (each dimension of the subspace can be used up once). Applying it with the vectors $u_{k-1}, u_{k-2}, \\dots$ gives"
     },
     {
       "type": "math",
       "tex": "\\mathrm{MC} \\le N",
-      "caption": "N is the number of state variables the readout uses."
+      "caption": "For $N$ linearly independent state variables and independent input. Including $d=0$ (the current input) the bound is the same total."
     },
     {
       "type": "prose",
-      "text": "The argument: the targets $u_{k-1}, u_{k-2},\\dots$ are orthogonal random variables, the readout projects them onto the $N$-dimensional span of the state, and the squared projections of orthonormal vectors onto an $N$-dimensional subspace sum to at most $N$. For a linear network ($x_k = Wx_{k-1}+w u_k$) with $\\rho(W)<1$ and a full-rank state covariance the bound is saturated: summed over all delays including $d=0$, the squared projections add up to exactly $N$, and since the $d=0$ term is close to 1, the sum from $d=1$ used here is close to $N-1$. Finite training data and an ill-conditioned state matrix pull the estimate lower; nonlinearity spends some of the budget on nonlinear functions instead."
+      "text": "When is it reached? Jaeger showed that for a linear reservoir $x_k = Wx_{k-1} + w u_k$ with $\\rho(W)<1$ and independent state variables, the sum over all delays including $d = 0$ equals $N$ exactly, which is the one-unit result above ($1-a^2$ plus $a^2$) generalised. Since the $d=0$ term is usually close to 1, the sum from $d=1$ is close to $N-1$. For nonlinear reservoirs the bound is not reached: part of the budget is spent on nonlinear functions of the inputs, as the next sections show. Finite training data and ill-conditioned state tables lower the estimate further."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Linear against tanh, measured"
     },
     {
       "type": "prose",
-      "text": "The sample compares a linear network with tanh networks at small and large input scaling, all with $N = 20$:"
+      "text": "The sample compares a linear network with tanh networks with small and large input scaling, all with $N = 20$:"
     },
     {
       "type": "code",
@@ -40,33 +162,104 @@
     },
     {
       "type": "prose",
-      "text": "Output: at radius 0.9 the linear network reaches $\\mathrm{MC} = 18.99$, essentially the ideal $N-1 = 19$, the tanh network with small inputs 13.56, with large inputs 4.95. At radius 0.5 the figures are 12.27, 9.27 and 4.45; at 0.99, 18.55, 13.73 and 4.99. The linear values below 19 at radius 0.5 and 0.99 are numerical: the state matrix is ill-conditioned (at 0.5 the deep delays sit in directions of relative size $0.5^{d}$), so the regularised readout cannot resolve them."
+      "text": "Real output: at radius 0.9 the linear network reaches $\\mathrm{MC} = 18.99$, essentially the ideal $N-1 = 19$; the tanh network with small inputs reaches 13.56 and with large inputs only 4.95. At radius 0.5 the figures are 12.27, 9.27 and 4.45; at 0.99 they are 18.55, 13.73 and 4.99. Two things stand out. The nonlinear networks fall well below 19, and the stronger the input the lower. And the linear value at radius 0.5 is 12.27, not 19: that is numerical, not a failure of the theory. With a short memory the state table is badly conditioned (the information about delay $d$ sits in directions whose strength falls like $0.5^d$) and the regularised readout cannot resolve the deep delays above the rounding level."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: what is the bound?",
+      "text": "A reservoir of 12 units is read through 12 features. Its measured MC is 14. What do you conclude?",
+      "hint": "Compare with the bound before looking for explanations.",
+      "solution": [
+        "The bound says $\\mathrm{MC}\\le 12$ for 12 linearly independent features.",
+        "A value above it points to a bug or to overfitting: typically the scores were computed on the training data instead of held-out data, or too few training points were used for the number of features."
+      ],
+      "answer": "Something is wrong with the measurement."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Information processing capacity"
+      "text": "Memory of functions, not only values"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "Dambre, Verstraeten, Schrauwen and Massar (2012) asked how well the readout reconstructs an arbitrary function $z_k = z(u_k, u_{k-1}, \\dots)$ of the past. The capacity for target $z$ is"
+      "text": "Memory capacity only asks about the past inputs themselves. But most tasks want a function of them: the product of two past inputs, their square, a threshold. A reservoir could remember the inputs perfectly and still fail at such a task if it contained no nonlinear combinations. Dambre, Verstraeten, Schrauwen and Massar (2012) extended the idea to any function of the past: how well can the readout reconstruct any given $z_k = z(u_k, u_{k-1}, \\dots)$?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The capacity for one target"
     },
     {
       "type": "math",
-      "tex": "C[z] = 1 - \\frac{\\min_{w}\\, \\langle (z_k - w^\\top x_k)^2\\rangle}{\\langle z_k^2\\rangle}"
+      "tex": "C[z] = 1 - \\frac{\\min_{w}\\,\\langle (z_k - w^{\\top}x_k)^2\\rangle}{\\langle z_k^2\\rangle}",
+      "caption": "The fraction of the target's mean square that the best readout explains. 0 means nothing, 1 means everything. The angle brackets are averages over time."
     },
     {
       "type": "prose",
-      "text": "Choose an orthogonal basis of functions of the past. For $u_k$ i.i.d. uniform on $[-1,1]$ the natural basis is products of Legendre polynomials of delayed inputs, $z_k = \\prod_i P_{n_i}(u_{k-i})$, with degree $\\sum_i n_i$. Degree 1 terms are exactly the linear memory function. Their result: for a reservoir with fading memory and $N$ linearly independent state variables,"
+      "text": "This is the same score as before in a different form: for the delay target $z_k = u_{k-d}$ it gives $\\mathrm{MC}_d$. It requires targets with zero mean, which is why the target for a product or a square is first shifted so that its average is zero."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Building a basis: Legendre polynomials"
+    },
+    {
+      "type": "prose",
+      "text": "To add capacities up without counting anything twice we need a set of targets that are mutually uncorrelated, like the perpendicular directions in the memory argument. For input drawn uniformly from $[-1, 1]$ such a set is made from Legendre polynomials, the family of polynomials that are uncorrelated under that distribution:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$P_0(x) = 1$,",
+        "$P_1(x) = x$,",
+        "$P_2(x) = (3x^2 - 1)/2$,",
+        "$P_3(x) = (5x^3 - 3x)/2$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Check by averaging over uniform $x$: $\\langle x\\cdot P_2(x)\\rangle = \\langle(3x^3 - x)/2\\rangle = 0$ because odd powers average to zero, and $\\langle P_2(x)\\rangle = (3\\langle x^2\\rangle - 1)/2 = (3 \\times \\tfrac13 - 1)/2 = 0$. The $P_2$ polynomial is the square of $x$ with its average removed, which is exactly why it can be uncorrelated with $x$ and with 1. The target functions are products, one factor per delay: $z_k = \\prod_i P_{n_i}(u_{k-d_i})$. The degree of such a target is the sum $\\sum_i n_i$. Degree 1 targets are single delayed inputs, so they reproduce the memory function exactly: $C_1 = \\mathrm{MC}$ (apart from the $d = 0$ term). Degree 2 targets are either $P_2(u_{k-d})$ (a square) or $P_1(u_{k-i})P_1(u_{k-j})$ (a product of two different delays); degree 3 adds cubes and triple products."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Counting basis functions"
+    },
+    {
+      "type": "prose",
+      "text": "A degree-$n$ target is a choice of $n$ delays, repeats allowed (a repeated delay raises the polynomial order). With delays restricted to $0,\\dots,D-1$ the number of targets is the number of multisets of size $n$ from $D$ items, $\\binom{D+n-1}{n}$. For degree 2 and $D = 15$: the squares give 15, the products of two different delays give $\\binom{15}{2} = 105$, total 120, which is $\\binom{16}{2}$. For degree 3 and $D = 8$ it is $\\binom{10}{3} = 120$. The numbers grow quickly with degree and with the range of delays, which is why capacity estimates have to cut off at some degree and delay."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The total budget"
+    },
+    {
+      "type": "prose",
+      "text": "Dambre and colleagues proved that for a reservoir with fading memory and $N$ linearly independent state variables, noise free,"
     },
     {
       "type": "math",
-      "tex": "C_{\\mathrm{tot}} = \\sum_{z\\ \\in\\ \\text{basis}} C[z] \\le N",
-      "caption": "with equality when the system has fading memory and its state variables are linearly independent (and noise-free)."
+      "tex": "C_{\\mathrm{tot}} = \\sum_{z\\,\\in\\,\\text{basis}} C[z] \\le N",
+      "caption": "With equality when the system has fading memory and its $N$ state variables are linearly independent. The sum runs over all degrees and delays."
     },
     {
       "type": "prose",
-      "text": "So every reservoir of size $N$ has the same total budget; what differs is how it spends it across delays and degrees. The sample estimates capacities up to degree 3 for a 20-unit tanh ESN with a small bias:"
+      "text": "The reasoning is the same projection argument as before, now with all the uncorrelated targets (not just single inputs) as the perpendicular directions. A reservoir of size $N$ has a fixed budget of $N$; what differs from reservoir to reservoir is how the budget is spent across delays and across degrees."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Measured: capacity by degree"
+    },
+    {
+      "type": "prose",
+      "text": "The sample estimates capacities up to degree 3 for a 20-unit tanh network with a small bias, at three input scales. Targets are the Legendre products described above (delays 0 to 39 for degree 1, 0 to 14 for degree 2, 0 to 7 for degree 3); each capacity is thresholded at 0.02 to remove the finite-sample floor."
     },
     {
       "type": "code",
@@ -75,7 +268,22 @@
     },
     {
       "type": "prose",
-      "text": "Output: input scale 0.1 gives $C_1 = 11.58$, $C_2 = 7.13$, $C_3 = 0$, total 18.71; scale 0.5 gives 8.43, 6.39, 2.56, total 17.37; scale 2.0 gives 5.27, 3.01, 6.92, total 15.20. Stronger input moves capacity from memory into nonlinearity, and part of the budget escapes into degrees above 3 and delays outside the windows counted, which is why the totals fall short of 20. Note the noise-free surprise at scale 0.1: the quadratic terms are tiny in amplitude, yet a noise-free readout can still recover them exactly. With measurement noise, as in any physical or quantum reservoir, such small components are lost first."
+      "text": "Real output: input scale 0.1 gives $C_1 = 11.58$, $C_2 = 7.13$, $C_3 = 0$, total 18.71. Input scale 0.5 gives 8.43, 6.39, 2.56, total 17.37. Input scale 2.0 gives 5.27, 3.01, 6.92, total 15.20. The totals stay below 20 because some capacity sits in degrees above 3 and in delays beyond the windows counted. Read it as a story: weak input keeps the network nearly linear, and most of the budget is memory (degree 1) and a surprising amount is degree 2; strong input saturates the units and moves the budget up to degree 3 and higher, at the cost of memory."
+    },
+    {
+      "type": "prose",
+      "text": "A subtle point in the weak-input row: the quadratic terms in the state are tiny in amplitude, yet a noise-free readout can still recover them exactly because it can scale them up. Any real noise, such as the shot noise of a quantum measurement, buries such tiny components first. So a noise-free capacity table over-promises for physical reservoirs."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: counting",
+      "text": "How many degree-2 targets are there with delays in $\\{0,\\dots,9\\}$? How many degree-3 targets with delays in $\\{0,\\dots,4\\}$?",
+      "hint": "A degree-$n$ target is a multiset of $n$ delays; use $\\binom{D+n-1}{n}$.",
+      "solution": [
+        "Degree 2, $D = 10$: $\\binom{11}{2} = 55$ (10 squares plus $\\binom{10}{2} = 45$ products).",
+        "Degree 3, $D = 5$: $\\binom{7}{3} = 35$ (5 cubes, $5\\times4 = 20$ of type $P_2(u_i)P_1(u_j)$ with $i \\ne j$, and $\\binom53 = 10$ triple products: $5 + 20 + 10 = 35$)."
+      ],
+      "answer": "55 and 35"
     },
     {
       "type": "heading",
@@ -83,8 +291,30 @@
       "text": "The memory-nonlinearity trade-off"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "Because the budget is fixed, more nonlinearity means less linear memory, as both samples show. Dambre et al. observed this across many systems; Inubushi and Yoshimura (2017) analysed its origin and showed that mixing linear and nonlinear units can soften it. For quantum reservoirs the same accounting holds with $N$ replaced by the number of independent observables read (see Readout and Multiplexing (#/qrc/models/readout-and-multiplexing)), and the trade-off reappears in the dynamical regimes of spin reservoirs (Dynamical Regimes (#/qrc/models/dynamical-regimes))."
+      "text": "The tables above show a pattern that governs every design choice: a fixed budget means more of one thing is less of another. Seeing it is what lets you choose a reservoir for a task rather than try at random."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The trade-off"
+    },
+    {
+      "type": "prose",
+      "text": "Because $C_{\\mathrm{tot}}\\le N$, moving weight to nonlinear degrees takes it from linear memory. Both samples show it: in the first, larger inputs lowered MC from 13.56 to 4.95; in the second the degree-1 capacity fell from 11.58 to 5.27 as the input grew, while degree 3 rose from 0 to 6.92. Dambre and colleagues saw this across many systems. Inubushi and Yoshimura (2017) analysed its origin and showed that mixing linear and nonlinear units, or arranging the dynamics suitably, can soften it."
+    },
+    {
+      "type": "prose",
+      "text": "The practical rule: look at the task. A delay-recall task wants all the budget at degree 1: weak input, spectral radius near 1. A parity task (the product of several bits) wants the budget at high degree: strong input, strong nonlinearity, and a bias. A mixed task such as NARMA10 (see Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks)) wants both, and the best setting is somewhere between; this is what the validation set decides."
+    },
+    {
+      "type": "prose",
+      "text": "For quantum reservoirs the accounting is the same with $N$ replaced by the number of independent observables read, and the trade-off reappears in the dynamical regimes of spin reservoirs (Dynamical Regimes (#/qrc/models/dynamical-regimes)); the reading budget is taken up in Readout and Multiplexing (#/qrc/models/readout-and-multiplexing)."
     },
     {
       "type": "heading",
@@ -92,13 +322,56 @@
       "text": "Estimation pitfalls"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Capacities are estimated from finite data with noise. Four effects bias them, and each one has caught published work."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The four traps"
+    },
+    {
       "type": "list",
       "items": [
-        "Finite-sample bias: on $T_{\\mathrm{test}}$ test points an uncorrelated pair still shows $r^2 \\approx 1/T_{\\mathrm{test}}$ on average. Summed over many delays or many basis functions this adds up to a spurious capacity, so threshold each term (Dambre et al. use a statistical cut-off; the sample above drops $C<0.02$).",
-        "Noise: with state noise of variance $\\sigma_n^2$, components of the state weaker than the noise carry no usable capacity, and $C_{\\mathrm{tot}}$ falls below $N$. For a quantum reservoir the noise is shot noise from finite measurements, so capacity depends on the shot budget (Measurement Back-Action (#/qrc/hardware/measurement-back-action)).",
-        "Input distribution: the Legendre basis is orthogonal only for uniform input; Gaussian input needs Hermite polynomials. The quantum pages use $s_k$ uniform on $[0,1]$, mapped to $[-1,1]$ for the basis.",
-        "Train and test both: memory is a generalisation quantity. Computing $r^2$ on the training data overestimates it when the number of features approaches the training length."
+        "Finite-sample bias. On $T_{\\mathrm{test}}$ test points even a pair of uncorrelated lists shows $r^2 \\approx 1/T_{\\mathrm{test}}$ on average. Summed over many delays or basis functions this adds up to a spurious capacity: for 1500 test points and 70 delays beyond the real memory, $70/1500 = 0.047$. For an IPC sum over thousands of terms it is large. The remedy is to threshold each term (Dambre et al. use a statistical cut-off; the sample above drops $C<0.02$).",
+        "Noise. With noise of variance $\\sigma_n^2$ on each state variable, components of the state weaker than the noise carry no usable capacity and $C_{\\mathrm{tot}}$ falls below $N$. For a quantum reservoir the noise is shot noise from a finite number of measurements, so capacity depends on the measurement budget (Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action)).",
+        "Input distribution. The Legendre basis is orthogonal only for uniform input; Gaussian input needs Hermite polynomials. The quantum pages use an input $s_k$ uniform on $[0,1]$, mapped to $[-1,1]$ for the basis.",
+        "Training against testing. Memory is a generalisation quantity. Computing $r^2$ on the training data overestimates it when the number of features approaches the training length, because a flexible readout can fit anything. Always score on data not used for fitting."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Noise, measured"
+    },
+    {
+      "type": "prose",
+      "text": "How quickly does noise eat capacity? The sample takes a linear 20-unit network and adds independent noise to every state variable before the readout, then measures MC out to delay 60:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n# Memory capacity of a 20-unit linear network when every state variable carries noise.\nrng = np.random.default_rng(0)\nN, T = 20, 12000\nW = rng.normal(size=(N, N)); W *= 0.9 / max(abs(np.linalg.eigvals(W)))\nw_in = rng.uniform(-1, 1, N) * 0.1\nu = rng.uniform(-1, 1, T)\nx = np.zeros(N); X0 = np.zeros((T, N))\nfor k in range(T): x = W @ x + w_in * u[k]; X0[k] = x\nprint(\"typical state size (std of one unit):\", f\"{X0.std(0).mean():.3f}\")\ndef mc(X, dmax=60, wash=200, ntr=8000):\n    A = np.hstack([X, np.ones((len(X), 1))]); total = 0.0\n    for d in range(1, dmax + 1):\n        tgt = np.roll(u, d)\n        w = np.linalg.solve(A[wash:ntr].T @ A[wash:ntr] + 1e-9 * np.eye(N + 1), A[wash:ntr].T @ tgt[wash:ntr])\n        total += np.corrcoef(A[ntr:] @ w, tgt[ntr:])[0, 1] ** 2\n    return total\nfor noise in (0, 1e-6, 1e-4, 1e-3, 1e-2):\n    X = X0 + noise * rng.normal(size=X0.shape)\n    print(f\"noise std {noise:7.0e}: MC = {mc(X):5.2f}   (bound N - 1 = {N - 1})\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "Real output: the typical state is only 0.069 in size. Without noise MC is 18.11 of the bound 19; with noise of standard deviation $10^{-6}$ it is 17.88; $10^{-4}$ gives 15.11; $10^{-3}$ gives 12.12; $10^{-2}$ gives 7.80. Noise about a seventh of a percent of the signal ($10^{-4}$ against 0.069) costs about a sixth of the capacity; noise at about a seventh of the signal ($10^{-2}$ against 0.069) costs more than half. The deepest delays are lost first, since their traces are the weakest."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a noise budget",
+      "text": "You estimate $\\mathrm{MC}_d$ for $d = 1,\\dots,80$ on 2000 test points for a reservoir whose true memory is zero beyond delay 10. About how much spurious capacity do delays 11 to 80 add?",
+      "hint": "Each unrelated delay contributes about $1/T_{\\mathrm{test}}$.",
+      "solution": [
+        "Each uncorrelated delay adds about $1/2000 = 5\\times10^{-4}$.",
+        "There are 70 such delays, so $70/2000 = 0.035$."
+      ],
+      "answer": "about 0.035"
     },
     {
       "type": "heading",
@@ -107,7 +380,7 @@
     },
     {
       "type": "prose",
-      "text": "The plot below runs the shelf's quantum spin reservoir and shows its memory function. With 4 qubits and only the 4 values $\\langle Z_i\\rangle$ read once per input, MC is about 2.1 of a possible 4. Reading them at 5 times between inputs (virtual nodes $V=5$, 20 features) raises MC to about 5.1 of a possible 20. Setting shots to 1000 drops it to about 3.3: the capacity bound is reached only for features you can actually estimate."
+      "text": "The plot below runs a quantum spin reservoir from the Fujii-Nakajima model (explained on The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir)) and shows its memory function. Qubits are the units; the features are the expectation values $\\langle Z_i\\rangle$ of each qubit's $Z$ measurement, read once or $V$ times between inputs (virtual nodes). The input is written by resetting qubit 1."
     },
     {
       "type": "widget",
@@ -169,6 +442,45 @@
       }
     },
     {
+      "type": "prose",
+      "text": "Try this. (1) With 4 qubits, $V = 1$, field 1 and evolution time 10, MC is about 2.14 of a possible 4. (2) Set $V$ to 5: the features are read five times between inputs, 20 in all, and MC rises to about 5.10 of a possible 20. (3) Set shots to 1000 with $V = 5$: MC falls to about 3.33. The capacity bound is only reached for features you can estimate precisely. (4) Set qubits to 2 with $V=1$: MC is about 0.99 of a possible 2. (5) Reduce the evolution time to 1 with 4 qubits and $V = 1$: MC rises to about 2.42, as the system has less time to scramble the input."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A designer plans a 4-qubit reservoir for a task that needs the input from 3 steps ago and the product of the last two inputs. Decide what must be read and estimate the budget."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. Count the features. Reading $\\langle Z_i\\rangle$ for each qubit at $V = 5$ times between inputs gives $4\\times5 = 20$ features, so $\\mathrm{MC} \\le 20$ and $C_{\\mathrm{tot}}\\le 20$ (the value in the widget: 5.10 actually achieved).",
+        "Step 2. Add the pair correlators $\\langle Z_iZ_j\\rangle$: there are $\\binom{4}{2} = 6$ of them, giving $10\\times5 = 50$ features and a bound of 50, provided they are linearly independent across times and estimable.",
+        "Step 3. Match the budget to the task. The delay-3 target is degree 1 and needs memory; the product of the last two inputs is the degree-2 target $P_1(u_k)P_1(u_{k-1})$ (one of the 105 pair products with delays up to 14, or one of $\\binom{5}{2}=10$ with delays 0 to 4). The reservoir must have nonzero $C_2$ at delay pair (0,1) and nonzero $C_1$ at delay 3.",
+        "Step 4. Measure. Estimate the capacity for exactly these two targets, rather than the whole budget, with held-out data, and at the shot count you can afford. If the shot budget makes the estimate fall by more than a few tenths, add more shots or fewer features, since shot noise is paid for every feature."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The memory function $\\mathrm{MC}_d$ is the squared correlation between the best linear readout and the input $d$ steps back; MC is the sum over delays.",
+        "For one linear unit $x_k = ax_{k-1}+u_k$: $\\mathrm{MC}_d = a^{2d}(1-a^2)$ and $\\mathrm{MC} = a^2$; including $d = 0$ the total is exactly 1.",
+        "$\\mathrm{MC}\\le N$ because independent past inputs are perpendicular directions and $N$ features span an $N$-dimensional space; linear reservoirs come close to $N-1$.",
+        "Information processing capacity extends this to every function of the past using orthogonal (Legendre) products; the total is bounded by $N$ for a reservoir with fading memory and independent features.",
+        "The memory-nonlinearity trade-off: stronger nonlinearity moves capacity from low degree and long memory to high degree. Measured: degree-1 capacity 11.58, 8.43, 5.27 for rising input scale while degree 3 went 0, 2.56, 6.92.",
+        "Estimates are biased by finite data ($\\approx 1/T_{\\mathrm{test}}$ per term), noise (which removes weak components first), the wrong basis for the input distribution, and scoring on training data.",
+        "For quantum reservoirs $N$ becomes the number of independent observables actually estimated, which is why measurements and shots decide the usable capacity."
+      ]
+    },
+    {
       "type": "heading",
       "level": 2,
       "text": "Problems"
@@ -179,29 +491,66 @@
       "text": "How many degree-2 Legendre-product targets are there with all delays in $\\{0, 1, \\dots, 14\\}$?",
       "solution": [
         "Degree 2 means either $P_2(u_{k-i})$ (one delay, 15 choices) or $P_1(u_{k-i})P_1(u_{k-j})$ with $i<j$ ($\\binom{15}{2} = 105$ choices).",
-        "Total $15 + 105 = 120$, which is $\\binom{16}{2}$, the number of multisets of size 2 from 15 delays."
+        "Total $15 + 105 = 120$, which equals $\\binom{16}{2}$, the number of multisets of size 2 from 15 delays."
       ],
       "answer": "120"
     },
     {
       "type": "problem",
       "title": "Spurious capacity",
-      "text": "You estimate $\\mathrm{MC}_d$ for $d = 1, \\dots, 80$ on $T_{\\mathrm{test}} = 1500$ test points, for a reservoir whose true memory is zero beyond $d = 10$. Roughly how much spurious capacity do the delays 11 to 80 add?",
+      "text": "You estimate $\\mathrm{MC}_d$ for $d = 1, \\dots, 80$ on $T_{\\mathrm{test}} = 1500$ test points, for a reservoir whose true memory is zero beyond $d = 10$. Roughly how much spurious capacity do delays 11 to 80 add?",
       "solution": [
-        "Each uncorrelated delay contributes about $1/T_{\\mathrm{test}} = 1/1500 \\approx 6.7\\times10^{-4}$.",
-        "Seventy such delays add about $70/1500 \\approx 0.047$: small here, but it grows linearly with the number of terms, which in an IPC sum can run to thousands."
+        "Each uncorrelated delay contributes about $1/T_{\\mathrm{test}} = 1/1500 = 6.7\\times10^{-4}$.",
+        "Seventy such delays add about $70/1500 = 0.047$. Small here, but it grows linearly with the number of terms, which in an IPC sum can run to thousands."
       ],
       "answer": "about 0.05"
     },
     {
       "type": "problem",
       "title": "Bounding a quantum reservoir",
-      "text": "A 4-qubit reservoir is read through $\\langle Z_i\\rangle$ for each qubit, at $V = 5$ times between inputs. What is the largest possible linear memory capacity, and what would it be if you also read all $\\langle Z_iZ_j\\rangle$ at each of those times?",
+      "text": "A 4-qubit reservoir is read through $\\langle Z_i\\rangle$ for each qubit at $V = 5$ times between inputs. What is the largest possible linear memory capacity, and what would it be if you also read all $\\langle Z_iZ_j\\rangle$ at each of those times?",
       "solution": [
-        "Features: $4 \\times 5 = 20$, so $\\mathrm{MC} \\le 20$.",
-        "Adding the $\\binom{4}{2} = 6$ pair correlators gives $10 \\times 5 = 50$ features, so $\\mathrm{MC} \\le 50$, provided they are linearly independent across time and estimated precisely enough."
+        "Features: $4\\times5 = 20$, so $\\mathrm{MC}\\le20$.",
+        "Adding the $\\binom42 = 6$ pair correlators gives $10\\times5 = 50$ features, so $\\mathrm{MC}\\le50$, provided they are linearly independent across time and estimated precisely enough."
       ],
       "answer": "20; 50 with the pair correlators"
+    },
+    {
+      "type": "problem",
+      "title": "Derive the memory function of a leaky unit",
+      "text": "For $x_k = a\\,x_{k-1} + u_k$ with independent inputs of variance $\\sigma_u^2$, show $\\mathrm{MC}_d = a^{2d}(1-a^2)$ and find the delay at which $\\mathrm{MC}_d$ has fallen to half of $\\mathrm{MC}_0$ for $a = 0.9$.",
+      "hint": "Variance of a sum of independent terms is the sum of the variances.",
+      "solution": [
+        "Unroll: $x_k = \\sum_{j\\ge0}a^ju_{k-j}$. Variance: $\\sigma_u^2\\sum_ja^{2j} = \\sigma_u^2/(1-a^2)$. Covariance with $u_{k-d}$: $a^d\\sigma_u^2$.",
+        "$\\mathrm{MC}_d = (a^d\\sigma_u^2)^2(1-a^2)/\\sigma_u^4 = a^{2d}(1-a^2)$.",
+        "Ratio to $d = 0$: $a^{2d}$. Set $0.81^d = 1/2$: $d = \\ln 0.5/\\ln 0.81 = (-0.693)/(-0.2107) = 3.29$."
+      ],
+      "answer": "$\\mathrm{MC}_d = a^{2d}(1-a^2)$; half-way at $d\\approx3.3$"
+    },
+    {
+      "type": "problem",
+      "title": "Reading the capacity table",
+      "text": "Using the three rows $(C_1, C_2, C_3) = (11.58, 7.13, 0)$, $(8.43, 6.39, 2.56)$ and $(5.27, 3.01, 6.92)$ for input scales 0.1, 0.5 and 2.0, which input scale would you choose for a task whose target is $u_{k-2}\\,u_{k-1}\\,u_k$? For one whose target is $u_{k-8}$?",
+      "solution": [
+        "The triple product is a degree-3 target: it needs $C_3$, which is 0, 2.56 and 6.92. Choose input scale 2.0.",
+        "A single delayed input is degree 1: it needs $C_1$, largest (11.58) at scale 0.1. Choose 0.1.",
+        "Caveat: the capacity totals are averaged over all delays; a specific delay may not be where the capacity sits, so check on the actual target."
+      ],
+      "answer": "2.0 for the triple product, 0.1 for the delay"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The capacity numbers decide which benchmark a reservoir can solve: see Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks).",
+        "How physical systems spend their budget, and how noise limits it, is on Physical Reservoirs (#/qrc/foundations/physical-reservoirs).",
+        "For quantum reservoirs the budget depends on how many independent observables you can estimate: Readout and Multiplexing (#/qrc/models/readout-and-multiplexing), Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Resource Accounting (#/qrc/hardware/resource-accounting).",
+        "The trade-off appears again across the phases of a spin reservoir on Dynamical Regimes (#/qrc/models/dynamical-regimes)."
+      ]
     },
     {
       "type": "heading",
@@ -211,7 +560,7 @@
     {
       "type": "list",
       "items": [
-        "H. Jaeger, Short term memory in echo state networks, GMD Report 152 (2002)",
+        "H. Jaeger, Short term memory in echo state networks, GMD Report 152, German National Research Center for Information Technology (2002)",
         "J. Dambre, D. Verstraeten, B. Schrauwen and S. Massar, Information processing capacity of dynamical systems, Scientific Reports 2, 514 (2012)",
         "M. Inubushi and K. Yoshimura, Reservoir computing beyond memory-nonlinearity trade-off, Scientific Reports 7, 10199 (2017)",
         "K. Fujii and K. Nakajima, Harnessing disordered-ensemble quantum dynamics for machine learning, Physical Review Applied 8, 024030 (2017)"

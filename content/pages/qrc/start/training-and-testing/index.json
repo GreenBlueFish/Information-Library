@@ -1,0 +1,399 @@
+{
+  "title": "Training, Testing and Measuring Error",
+  "intro": "A reservoir readout is only believable when it is scored on data it was not fitted to. This page covers splitting a time series, discarding the washout, the normalised mean squared error, memory capacity, spotting overfitting, and a complete small echo state experiment.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Split a time series into washout, training, validation and test segments, and say what each is for.",
+        "Compute the normalised mean squared error (NMSE) of a prediction by hand and read its value: 0 is perfect, 1 is no better than guessing the average.",
+        "Measure memory capacity: how far into the past a readout can recover the input.",
+        "Recognise overfitting from a table of training and test errors, and fix it with the ridge penalty.",
+        "Run a complete small echo state experiment in numpy, from random reservoir to test score."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why scoring needs care"
+    },
+    {
+      "type": "prose",
+      "text": "The previous page ended with a recipe: collect features, solve the ridge equation, get weights. A recipe like that always returns an answer. It returns one when the weights are good and also when they are useless, and the training error cannot tell you which, because a flexible enough readout can be made to match any training data. The only honest question is how the readout does on data it was not fitted to. This page is about asking that question properly: which data to hold back, which part of a run to throw away, and which number to report."
+    },
+    {
+      "type": "prose",
+      "text": "There is a second reason for care that is particular to reservoirs. The reservoir is a dynamical system, so its state at time $t$ depends on the whole history of the input. The first few states of a run depend on how the reservoir was started (usually all zeros), not on the input. Those states are not representative, and feeding them to the readout would teach it about the starting condition. Handling this is called the washout, and it is the first of the practical steps below."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Splitting the data in time"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Washout, training, validation, test"
+    },
+    {
+      "type": "prose",
+      "text": "A single long input sequence $u_1, u_2, \\dots, u_T$ is run through the reservoir once, giving a state vector (the features) at every step. The steps are then cut into consecutive segments:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "**Washout**: the first $T_w$ steps. The reservoir state is still forgetting its initial condition. These steps are never used for fitting or scoring.",
+        "**Training**: the next block. The ridge equation is solved on these steps only.",
+        "**Validation**: the next block. Used to choose settings, mainly the ridge penalty $\\lambda$. The weights are not fitted on it.",
+        "**Test**: the last block. Used once, at the very end, to report the score."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The cuts are in time order, not shuffled. Shuffling would put steps from the middle of a stretch into the training set and their neighbours into the test set; because neighbouring steps share most of their input history, the test set would no longer be new. A time series split must be a split in time."
+    },
+    {
+      "type": "prose",
+      "text": "For the experiment below, $T = 2000$ with a washout of 100 steps, training on steps 100 to 999 (900 steps), validation on 1000 to 1499 and test on 1500 to 1999 (500 steps each). The proportions are not special. What matters is that the test block is long enough that its score is not a fluke and that nothing about it influenced any choice."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why the test set may be used only once"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose you try twenty reservoirs, look at each one's test score, and report the best. That best score is no longer a fair estimate, because you chose it for being high on that very data. The more things you try, the more optimistic the winner looks. The remedy is the third block: tune on validation, and touch the test block once, for the final report. If you do look at test and then change something, say so; the number is then a validation number."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: where does each step go?",
+      "text": "A run has $T = 1200$ steps, with washout 100, training 600, validation 200 and the rest test. Give the first and last step of each block (steps numbered from 1) and say how many test steps there are.",
+      "hint": "The blocks follow each other with no gaps; the test block gets what is left.",
+      "solution": [
+        "Washout: steps 1 to 100. Training: 101 to 700 (600 steps). Validation: 701 to 900 (200 steps).",
+        "Test: 901 to 1200, which is $1200 - 900 = 300$ steps."
+      ],
+      "answer": "Test is steps 901 to 1200, 300 steps."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Measuring error"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Mean squared error and why it is not enough"
+    },
+    {
+      "type": "prose",
+      "text": "Let $y_t$ be the true target at step $t$ and $\\hat y_t$ the readout's prediction, over $n$ test steps. The mean squared error is"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{MSE} = \\frac{1}{n}\\sum_{t=1}^{n}(\\hat y_t - y_t)^2",
+      "caption": "The average squared miss. It carries the units of the target, squared."
+    },
+    {
+      "type": "prose",
+      "text": "An MSE of 0.01 is excellent for a target that swings between $-5$ and $5$ and terrible for one that stays between $0.40$ and $0.45$. The number has no scale of its own. The usual fix is to divide by how much the target varies, which gives a score that means the same thing for every task."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "NMSE: a score with a built-in yardstick"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{NMSE} = \\frac{\\sum_t(\\hat y_t - y_t)^2}{\\sum_t(y_t - \\bar y)^2}",
+      "caption": "Squared error divided by the squared spread of the target about its mean $\\bar y$ (the same sums, so the factors of $1/n$ cancel)."
+    },
+    {
+      "type": "prose",
+      "text": "The denominator is the squared error of the laziest possible predictor: always say $\\bar y$. So NMSE $= 1$ means the readout is exactly as good as ignoring the input and predicting the average. NMSE $= 0$ is a perfect prediction. NMSE above 1 means the readout is worse than the average, which happens when it has overfitted. In reservoir papers you will also see the square root, NRMSE, which is the typical error as a fraction of the target's spread. The relation is $\\mathrm{NRMSE} = \\sqrt{\\mathrm{NMSE}}$, so an NMSE of $0.01$ is an NRMSE of $0.1$, a typical error of one tenth of the spread."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example"
+    },
+    {
+      "type": "prose",
+      "text": "Five test values of a target and a readout's predictions:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Targets $y$: 0.2, 0.5, 0.1, 0.4, 0.3. Predictions $\\hat y$: 0.25, 0.4, 0.2, 0.35, 0.3.",
+        "Mean of the targets: $(0.2 + 0.5 + 0.1 + 0.4 + 0.3)/5 = 1.5/5 = 0.3$.",
+        "Errors $\\hat y - y$: $0.05, -0.10, 0.10, -0.05, 0.00$. Squared: $0.0025, 0.0100, 0.0100, 0.0025, 0$. Sum: $0.025$.",
+        "Deviations $y - \\bar y$: $-0.1, 0.2, -0.2, 0.1, 0$. Squared: $0.01, 0.04, 0.04, 0.01, 0$. Sum: $0.10$.",
+        "NMSE $= 0.025 / 0.10 = 0.25$. (Sanity check: NRMSE $= 0.5$, a typical miss of half the spread of the target.)"
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: NMSE by hand",
+      "text": "Targets are $1, 3, 2$ and predictions are $2, 3, 1$. Compute the NMSE.",
+      "hint": "Mean of targets first, then two sums of squares.",
+      "solution": [
+        "Mean of targets: $(1+3+2)/3 = 2$.",
+        "Squared errors: $(2-1)^2 + (3-3)^2 + (1-2)^2 = 1 + 0 + 1 = 2$.",
+        "Squared deviations: $(1-2)^2 + (3-2)^2 + (2-2)^2 = 1 + 1 + 0 = 2$.",
+        "NMSE $= 2/2 = 1$."
+      ],
+      "answer": "NMSE $= 1$: no better than always predicting the average."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A warning: NMSE of 1 is not the worst it can do"
+    },
+    {
+      "type": "prose",
+      "text": "A readout that predicts a constant far from the mean has NMSE well above 1. And a score of 0.9 looks close to 1, but it still means the readout explained about a tenth of the target's variation. Read an NMSE the way you read a failing grade: values near 1 mean the readout has found almost nothing. Values below $0.1$ mean it has found most of the structure; below $0.01$, nearly all of it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Memory capacity: a score for the reservoir itself"
+    },
+    {
+      "type": "prose",
+      "text": "Prediction scores mix the reservoir with the task. Memory capacity separates them, by asking only: how much of the past input can a linear readout recover from the state? Take the input to be random numbers $u_t$, independent from step to step. For each delay $d = 1, 2, 3, \\dots$, train a separate readout to output $u_{t-d}$ and measure how well it does, using the squared correlation between prediction and target on the test block:"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathrm{MC}_d = r^2(\\hat y^{(d)}, u_{t-d}), \\qquad \\mathrm{MC} = \\sum_{d=1}^{\\infty}\\mathrm{MC}_d",
+      "caption": "Each $\\mathrm{MC}_d$ lies between 0 (the input $d$ steps ago is gone) and 1 (perfectly recovered). The sum is the memory capacity."
+    },
+    {
+      "type": "prose",
+      "text": "The squared correlation $r^2$ is 1 when the prediction is a perfect straight-line function of the target and 0 when they are unrelated; unlike NMSE it ignores a scale or offset error, which a readout can fix anyway. For a reservoir of $N$ real neurons the total is at most $N$, a result on the Foundations shelf (Memory and Processing Capacity). So a 30-neuron reservoir can remember at most 30 steps' worth, and in practice remembers fewer."
+    },
+    {
+      "type": "prose",
+      "text": "In the experiment below, a 30-neuron reservoir scores $\\mathrm{MC}_1 = 0.999$, $\\mathrm{MC}_5 = 0.981$, $\\mathrm{MC}_{10} = 0.668$, $\\mathrm{MC}_{20} = 0.021$, and $\\mathrm{MC}_{30} = 0.003$. Summed over delays 1 to 39, $\\mathrm{MC} = 10.8$. The picture is typical: near-perfect recall of the recent past, then a steep fall-off. The reservoir uses its 30 numbers to remember about eleven steps well, and nothing further back."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: reading memory capacity",
+      "text": "A reservoir has $\\mathrm{MC}_1 = 1.0$, $\\mathrm{MC}_2 = 0.9$, $\\mathrm{MC}_3 = 0.5$, $\\mathrm{MC}_4 = 0.1$ and zero beyond. What is its memory capacity, and how well could it do a task that needs $u_{t-3}$?",
+      "hint": "Add them; then compare the $d=3$ value with the scale of 0 to 1.",
+      "solution": [
+        "Sum: $1.0 + 0.9 + 0.5 + 0.1 = 2.5$.",
+        "$\\mathrm{MC}_3 = 0.5$ means the squared correlation with $u_{t-3}$ is $0.5$: about half of its variation is recovered. The task would be done only moderately well."
+      ],
+      "answer": "$\\mathrm{MC} = 2.5$; the delay-3 task is half-recovered."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Overfitting, seen in numbers"
+    },
+    {
+      "type": "prose",
+      "text": "Overfitting was introduced on the previous page with a polynomial. In a reservoir it takes the same form: more features than the training data can pin down. The reservoir below has $N = 30$ neurons, so the readout has 31 weights counting the bias. We train it to output $u_{t-2}$ (a delay-2 task) on only 31 training steps with essentially no penalty ($\\lambda = 10^{-10}$), then on the same steps with a sensible penalty:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$\\lambda = 10^{-10}$: training NMSE $0.0000$ (the 31 equations are solved exactly), test NMSE $0.280$, largest weight $5.9$.",
+        "$\\lambda = 10^{-4}$: training NMSE $0.00045$, test NMSE $0.0049$, largest weight $0.7$.",
+        "$\\lambda = 10^{-2}$: training NMSE $0.0049$, test NMSE $0.0144$, largest weight $0.5$.",
+        "$\\lambda = 1$: training NMSE $0.243$, test NMSE $0.278$, largest weight $0.2$. Now the penalty is too heavy: both errors are large, the weights are crushed, and the readout underfits."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Three signs identify overfitting at once. The training error is far below the test error (0 against 0.28). The weights are large compared with what the data justify. And a modest penalty reduces the test error about sixtyfold, from 0.280 to 0.0049, while making the training error slightly worse. With 900 training steps instead of 31 the same near-zero penalty works fine, because there are now far more equations than unknowns; the cure for overfitting is more data, a larger penalty, or fewer features."
+    },
+    {
+      "type": "prose",
+      "text": "The $\\lambda = 1$ row shows the opposite failure, underfitting: training and test errors are both large and about equal. The pattern to look for is a U shape in validation error as $\\lambda$ sweeps on a logarithmic grid, with the minimum between the two failures. That minimum is your choice of $\\lambda$."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: diagnosing a table",
+      "text": "A readout has training NMSE 0.002 and test NMSE 0.45. Another has training NMSE 0.40 and test NMSE 0.43. Name the problem of each and one fix.",
+      "hint": "Compare the training and test errors in each pair: are they far apart, or both large?",
+      "solution": [
+        "First: training much smaller than test, so overfitting. Fix: raise $\\lambda$, add training data, or drop features.",
+        "Second: both large and close, so underfitting (or a reservoir with too little memory or nonlinearity for the task). Fix: lower $\\lambda$, or use a richer reservoir."
+      ],
+      "answer": "First overfits (raise $\\lambda$); second underfits (lower $\\lambda$ or enrich the reservoir)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A complete small experiment"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The reservoir"
+    },
+    {
+      "type": "prose",
+      "text": "An echo state network is the classical reservoir the quantum one is compared with. The state is a vector of $N$ numbers updated at each step by"
+    },
+    {
+      "type": "math",
+      "tex": "h_t = \\tanh\\left(W h_{t-1} + v\\,u_t\\right)",
+      "caption": "The old state is mixed by a fixed random matrix $W$, the new input enters through a fixed random vector $v$, and tanh squashes each entry into $(-1, 1)$. Nothing here is trained."
+    },
+    {
+      "type": "prose",
+      "text": "Here $W$ is a random $30\\times30$ matrix with entries uniform in $[-1, 1]$, then scaled so that its largest eigenvalue magnitude is $0.9$. That scaling keeps the dynamics fading: an old input's effect shrinks step by step instead of echoing forever (the echo state property, covered on the Foundations shelf). The inputs $u_t$ are random numbers uniform in $[0, 0.5]$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The code"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\nrng = np.random.default_rng(1)\nN, T, washout = 30, 2000, 100\n\n# ---- the reservoir: random, fixed, never trained ----\nW = rng.uniform(-1, 1, (N, N))\nW *= 0.9 / max(abs(np.linalg.eigvals(W)))   # largest eigenvalue magnitude 0.9\nv = rng.uniform(-1, 1, N)\nu = rng.uniform(0, 0.5, T)                  # random input signal\n\nh = np.zeros(N)\nH = np.zeros((T, N))                         # one feature row per step\nfor t in range(T):\n    h = np.tanh(W @ h + v * u[t])\n    H[t] = h\n\n# ---- the readout: ridge regression with an unpenalised bias ----\ndef fit(F, y, lam):\n    A = np.c_[F, np.ones(len(F))]\n    G = A.T @ A + lam * np.eye(A.shape[1])\n    G[-1, -1] -= lam                         # do not penalise the bias\n    return np.linalg.solve(G, A.T @ y)\n\ndef predict(F, w):\n    return np.c_[F, np.ones(len(F))] @ w\n\ndef nmse(p, y):\n    return float(np.sum((p - y) ** 2) / np.sum((y - y.mean()) ** 2))\n\ntrain, val, test = slice(washout, 1000), slice(1000, 1500), slice(1500, 2000)\n\n# ---- task: recall the input d steps ago ----\nfor d in (1, 2, 3, 5, 8, 12, 20):\n    y = np.roll(u, d)                        # y[t] = u[t-d]\n    best = None\n    for lam in 10.0 ** np.arange(-10, 2):    # choose lambda on validation\n        w = fit(H[train], y[train], lam)\n        e = nmse(predict(H[val], w), y[val])\n        if best is None or e < best[0]:\n            best = (e, lam, w)\n    e, lam, w = best\n    print(d, lam, round(nmse(predict(H[train], w), y[train]), 4),\n          round(e, 4), round(nmse(predict(H[test], w), y[test]), 4))"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What it prints"
+    },
+    {
+      "type": "prose",
+      "text": "Run with the seed above, the columns are the delay $d$, the chosen $\\lambda$, then the NMSE on training, validation and test:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Delay 1: $\\lambda = 10^{-4}$, train 0.0006, validation 0.0006, test 0.0006.",
+        "Delay 2: $\\lambda = 10^{-4}$, train 0.0012, validation 0.0012, test 0.0012.",
+        "Delay 3: $\\lambda = 10^{-4}$, train 0.0030, validation 0.0033, test 0.0030.",
+        "Delay 5: $\\lambda = 10^{-4}$, train 0.0184, validation 0.0188, test 0.0193.",
+        "Delay 8: $\\lambda = 10^{-4}$, train 0.1106, validation 0.1186, test 0.1167.",
+        "Delay 12: $\\lambda = 10^{-4}$, train 0.5465, validation 0.6014, test 0.6028.",
+        "Delay 20: $\\lambda = 10$, train 0.9888, validation 1.0150, test 1.0115."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Read it as a lesson in scoring. The three error columns agree, which is what a good split with enough data gives: no sign of overfitting. The error rises with delay, because the reservoir forgets: delay 1 is almost exact (NMSE 0.0006), delay 8 is already visibly wrong (0.117), delay 12 is poor (0.603), and at delay 20 the readout learns nothing (NMSE 1.01, just above 1: with $\\lambda$ chosen at 10 the weights are crushed to nearly constants and the test block's own mean differs a little from the training mean). This matches the memory capacity profile above: $\\mathrm{MC}_{10} = 0.668$ and $\\mathrm{MC}_{20} = 0.021$."
+    },
+    {
+      "type": "prose",
+      "text": "The same pipeline, with the classical reservoir replaced by a quantum one, is what the next page runs. The washout, the splits, the ridge readout and NMSE are all unchanged; only the loop that makes the features is different."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: what would change?",
+      "text": "In the experiment, you change the training block to steps 100 to 150 only (50 steps) and keep $N = 30$. What happens to the gap between training and test NMSE, and what would you change?",
+      "hint": "Compare the number of training steps with the number of weights (31).",
+      "solution": [
+        "50 training equations against 31 unknowns is barely enough, so the readout can almost memorise the training block: the training NMSE becomes much smaller than the test NMSE, as in the overfitting table.",
+        "Fix: more training steps, a larger $\\lambda$ chosen on validation, or fewer neurons."
+      ],
+      "answer": "The gap opens (overfitting); use more data or a larger $\\lambda$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "**Shuffling the steps** before splitting. Neighbouring steps share input history, so the test block stops being new data.",
+        "**Using the washout steps** in training. They carry the starting condition, not the input.",
+        "**Choosing $\\lambda$ on the test block**, or reporting the best of many test scores.",
+        "**Reporting MSE** without the target's scale. Report NMSE, so that 1 means no skill.",
+        "**Comparing scores across different washouts or test blocks** and calling the difference a result. Same segments, same task, same seed policy, or the comparison means nothing.",
+        "**One run.** A random reservoir is one random draw; report a mean and spread over several seeds before you claim one design beats another."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Problem: a split and a score",
+      "text": "A run has 3000 steps. You use a washout of 200, train on the next 1600, validate on the next 600 and test on the rest. (a) How many test steps? (b) On the test block, targets are $0, 1, 0, 1$ and predictions are $0.5, 0.5, 0.5, 0.5$. What is the NMSE, and what does it say?",
+      "hint": "(a) Subtract. (b) Mean of targets, then both sums.",
+      "solution": [
+        "(a) $200 + 1600 + 600 = 2400$, so $3000 - 2400 = 600$ test steps.",
+        "(b) Mean of targets $= 0.5$. Squared errors: four terms each $0.25$, sum $1.0$. Squared deviations: four terms each $0.25$, sum $1.0$. NMSE $= 1.0$.",
+        "It says the readout is the constant-average predictor: it has learned nothing about the input."
+      ],
+      "answer": "(a) 600 steps. (b) NMSE $= 1$: no skill."
+    },
+    {
+      "type": "problem",
+      "title": "Problem: the memory budget",
+      "text": "A reservoir of $N = 12$ neurons has $\\mathrm{MC}_d = 1, 1, 0.9, 0.6, 0.3, 0.1$ for $d = 1,\\dots,6$ and negligible values beyond. (a) What is its memory capacity? (b) What fraction of the upper bound $N$ does it use? (c) Roughly how many past steps does it remember well?",
+      "hint": "(a) Sum. (b) Divide by $N$. (c) Count the delays with $\\mathrm{MC}_d$ above $0.5$.",
+      "solution": [
+        "(a) $1 + 1 + 0.9 + 0.6 + 0.3 + 0.1 = 3.9$.",
+        "(b) $3.9 / 12 = 0.325$, about a third of the bound.",
+        "(c) Delays 1 to 4 have $\\mathrm{MC}_d \\ge 0.6$, so about four steps."
+      ],
+      "answer": "(a) 3.9 (b) about 33% (c) about 4 steps."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A readout is only as believable as its test. Cut the run in time order into washout, training, validation and test. Discard the washout. Fit on training, choose $\\lambda$ on validation, report one NMSE on test, and read 1 as no skill. Use memory capacity when you want to describe the reservoir without a particular task. Compare training and test error to see overfitting before it fools you. The next page uses exactly this pipeline, with two qubits instead of thirty neurons."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Split in time order: washout (discarded), training, validation, test. Never shuffle a time series.",
+        "Tune on validation; touch the test block once.",
+        "NMSE divides the squared error by the squared spread of the target: 0 is perfect, 1 is the average-predictor, above 1 is worse than that.",
+        "Memory capacity sums, over delays, the squared correlation between a trained readout's output and the input $d$ steps back; it is at most the number of neurons.",
+        "Overfitting shows as training error far below test error with large weights; ridge with $\\lambda$ chosen by validation fixes it. Too large a $\\lambda$ underfits.",
+        "Run several random seeds before comparing designs."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The echo state experiment above is the classical baseline of Echo State Networks (#/qrc/foundations/echo-state-networks); the memory capacity measure is developed in Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity).",
+        "The benchmark tasks and the scores reported in papers are catalogued in Benchmark Tasks and Evaluation (#/qrc/foundations/benchmark-tasks).",
+        "A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand) uses this exact pipeline on a two-qubit reservoir.",
+        "Hands-on Implementation (#/qrc/theory/hands-on-implementation) adds the problem of measuring expectation values with a finite number of shots."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Jaeger, The echo state approach to analysing and training recurrent neural networks, GMD Report 148 (2001)",
+        "H. Jaeger, Short term memory in echo state networks, GMD Report 152 (2002)",
+        "M. Lukoševičius, A practical guide to applying echo state networks, in Neural Networks: Tricks of the Trade, Springer (2012)",
+        "T. Hastie, R. Tibshirani and J. Friedman, The Elements of Statistical Learning, 2nd ed., Springer (2009), chapter 7"
+      ]
+    }
+  ]
+}

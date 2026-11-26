@@ -1,0 +1,425 @@
+{
+  "title": "What Is Reservoir Computing?",
+  "intro": "Reservoir computing is a way of processing signals that unfold in time by letting a fixed, unlearned dynamical system hold a trace of the recent past and training only a simple weighted-sum readout on top of it. This page tells the idea in pictures and everyday terms, with almost no mathematics, and maps the rest of the library.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "Nothing. This page has almost no mathematics. If you can follow a story about buckets of water and a mixing desk, you can follow it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Say what kind of problem reservoir computing is for (signals that unfold in time) and why a single snapshot of such a signal is not enough.",
+        "Name the three parts of a reservoir computer, say which one is trained and which are not, and explain why that makes training cheap.",
+        "Explain, with the water-ripple picture and its limits, why a fixed random system can still be useful for computing.",
+        "Say what a physical reservoir and a quantum reservoir are, and what the rest of the library will teach you about them."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The problem: signals that unfold in time"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "Much of what a computer is asked to understand arrives as a stream. A microphone gives one air-pressure value after another. A heart monitor gives one voltage after another. A thermometer on a roof gives one temperature every minute. A trading screen gives one price after another. In all of these the order matters: the same set of numbers shuffled into a different order is a different signal, often a meaningless one. A word is not a bag of its sounds, and a heartbeat is not a bag of its voltages."
+    },
+    {
+      "type": "prose",
+      "text": "Typical questions asked of a stream are: what will the next value be? (prediction); which word was just spoken? (recognition); is this rhythm healthy? (classification); what would a clean version of this noisy signal look like? (filtering). All of them share one difficulty. To answer, the machine has to use not just the value that has just arrived but also what came before it, and what came before that."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose I show you one number from a stream, say 0.7, and ask whether the signal is rising or falling. You cannot tell. You would need at least the previous number as well. If I ask what word is being spoken, you need a few hundred milliseconds of sound. So any method that works on streams needs some kind of memory: a way of keeping a trace of the recent past that is still there when the next value arrives."
+    },
+    {
+      "type": "prose",
+      "text": "There are two common ways to give a machine that memory. The first is to hand it a window: the last ten values, say, all at once, as a list. This is simple and works for many problems, but the window has a fixed length, and the right length is rarely known in advance. The second is to let the machine keep an internal state that is updated every time a new value arrives, so that the state is a running summary of everything seen so far. A running total is the simplest example: after each new purchase the total changes, and the total is a (very crude) summary of all purchases so far. A machine with an internal state of this kind is called recurrent, because the state is fed back into the machine on the next step. The next pages, Time Series and Prediction (#/qrc/start/time-series-and-prediction) and Neural Networks from Scratch (#/qrc/start/neural-networks-primer), build both ideas carefully."
+    },
+    {
+      "type": "callout",
+      "text": "Everything on this page is about the second kind of machine, one with an internal state that carries the past forward. Reservoir computing is a particular, unusually cheap way to build and use such a state."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The water-ripple picture"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The obvious difficulty with a machine that has an internal state is that its state is complicated, and teaching it what to do with that state seems hard. Reservoir computing starts from a surprising observation: you do not have to design the state with care. You can let it be random, provided it has the right general character, and learn only how to read it."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The picture"
+    },
+    {
+      "type": "prose",
+      "text": "Imagine a shallow tray of water. Every second, someone drops a pebble at one end of the tray. How hard it is dropped (how big the input is) varies from second to second. Each pebble sends out ripples. The ripples spread, bounce off the walls, cross one another and slowly die away. Now look at the surface at any moment. It is a very complicated pattern, but it is not random: it is a record of the recent pebbles. A big pebble dropped a second ago is still visible as a broad ripple. One dropped five seconds ago has mostly faded. Two pebbles dropped close together have made a pattern that neither would alone."
+    },
+    {
+      "type": "prose",
+      "text": "Now put a few sensors in the tray that report the height of the water at their positions. Their readings, taken together, change from moment to moment and depend on the whole recent history of pebbles. Suppose you want to know the size of the pebble dropped three seconds ago. No single sensor tells you directly. But some combination of the sensors might: perhaps twice the reading of sensor A minus the reading of sensor C plus a little of sensor F. You can find such a combination simply by recording the sensors for a while, knowing the pebble sizes, and asking which combination of readings best reproduces the thing you wanted. You never change the tray. You never need to understand its fluid dynamics. You only learn which combination of its readings answers your question."
+    },
+    {
+      "type": "prose",
+      "text": "That is reservoir computing. The tray is the reservoir. The pebbles are the input. The sensor readings are the state. The combination you learned is the readout. In 2003 Fernando and Sojakka did something very close to this literally, with a bucket of water, motors to make the waves, a camera to read the surface and a learned readout; they used it to tell spoken words apart and to compute the logical function XOR (see Physical Reservoirs (#/qrc/foundations/physical-reservoirs))."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Where the picture breaks"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Real ripples are nearly linear: two ripples crossing simply add. A reservoir has to do more than add; it has to mix its inputs in nonlinear ways (a product of two past inputs, for example) or the readout, which only ever forms weighted sums, cannot compute anything that is not already a weighted sum of past inputs. A good reservoir, physical or simulated, has a nonlinearity built in.",
+        "The ripples die away, and that is a feature. If the water never calmed down, the pattern would be a muddle of the whole history since the tray was first filled, including the starting conditions. A reservoir needs fading memory: old inputs are gradually forgotten, so that today's state depends on the recent past and not on how the tray happened to be set up. A tray that forgets too fast is useless for tasks that need long memory; one that never forgets is useless too. Tuning this is a large part of the craft.",
+        "In the picture a person chooses sensor positions and combinations by eye. In reservoir computing the combination is found automatically, by a short calculation, in one go. How is the subject of Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge).",
+        "A tray is not a fixed number of ripples; it has effectively unlimited detail. A reservoir computer has a definite list of numbers that make up its state (a few dozen, a few hundred, a few thousand), and the quality of the result depends strongly on how many."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Three parts: input, reservoir, readout"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The picture needs to be made precise enough to build. Fortunately the parts are few, and each has one simple job."
+    },
+    {
+      "type": "figure",
+      "src": "assets/figures/qrc/rc-block-diagram.svg",
+      "alt": "Block diagram: an input signal u(k) enters a box labelled reservoir (fixed, never trained) containing connected circles; several arrows carry the state x(k) to a box labelled readout (the only part that is trained), which outputs y(k).",
+      "caption": "The three parts. The grey reservoir is built once and never changed. Only the orange readout is trained."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The parts"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The input $u(k)$. A stream of numbers, one at each time step $k = 1, 2, 3, \\dots$. It might be a measured signal, or a number that encodes a measured signal.",
+        "The reservoir. A dynamical system (anything whose state changes in time according to fixed rules) that is driven by the input. Its state after step $k$ is a list of numbers $x(k)$, for instance the heights of the water at ten sensors, or the voltages of a hundred artificial neurons. The rules that update the state are chosen once and never touched again. They are typically random.",
+        "The readout. A weighted sum of the state numbers, $y(k) = w_1x_1(k) + w_2x_2(k) + \\dots$ plus a constant. The weights $w_i$ are the only things that are learned. The result $y(k)$ is the machine's answer at time $k$: a prediction, a label score, a cleaned-up value."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A useful comparison is a mixing desk in a recording studio. The reservoir is a bank of fifty microphones placed around a room where somebody is speaking; each hears a different blend of direct sound and echoes, so together they carry a rich record of the recent sound. The readout is the row of sliders that decides how loudly each microphone enters the final mix. Training is moving the sliders until the mix sounds like what you want. Where the comparison breaks: nobody moves the sliders by ear. The best positions are computed from recorded examples by a formula, and in this setting there is one best answer, found in one step, rather than a long search."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A reservoir you can do by hand: buckets with a hole"
+    },
+    {
+      "type": "prose",
+      "text": "To see how a state can hold the past, take the simplest possible reservoir: one bucket with a small hole. Every minute somebody pours in an amount of water equal to the current input, and during the minute a fixed fraction of the water in the bucket drains away. Say the bucket keeps half of its water from one minute to the next. Pour in 1 litre once and then nothing: the level is 1 after the pour, then 0.5, 0.25, 0.125, and so on. The level is a trace of the pour that fades smoothly. If the inputs are 1, then 0, then 1, the levels are 1, 0.5, and then 0.25 + 1 = 1.25: the second pour sits on top of the remains of the first. The level is a blend of the past, weighted towards the recent."
+    },
+    {
+      "type": "prose",
+      "text": "One bucket gives one number, and one number is a poor record. A level of 1.25 could come from one big recent pour or from several earlier ones. The way out is the one the tray used: have several buckets with different draining speeds. A fast-draining bucket reacts to the latest pour and has forgotten the last one almost completely; a slow-draining bucket remembers for a long time but blurs the detail. Together they say how much came recently and how much came long ago."
+    },
+    {
+      "type": "prose",
+      "text": "The table shows what happens if the buckets keep 0.2, 0.5 and 0.8 of their water each minute, and 1 litre is poured at minute 0 (a computed run of the sample below):"
+    },
+    {
+      "type": "list",
+      "items": [
+        "minute 0: levels 1, 1, 1",
+        "minute 1: levels 0.2, 0.5, 0.8",
+        "minute 2: levels 0.04, 0.25, 0.64",
+        "minute 3: levels 0.008, 0.125, 0.512",
+        "minute 4: levels 0.0016, 0.0625, 0.4096"
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The three columns decay at three speeds. Now the readout task: with random inputs between 0 and 1 poured in, find the weighted sum of the bucket levels that best matches the input from one minute ago (the previous pour). The sample below does this with 1, 3, 10 and 30 buckets of different speeds and reports an error score called NMSE, defined properly in Training, Testing and Measuring Error (#/qrc/start/training-and-testing). Read it simply: 0 means perfect, and 1 means no better than always guessing the average input."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\n\nrng = np.random.default_rng(0)\nT = 3000\nu = rng.uniform(0, 1, T)                       # the input signal: one random number per minute\n\ndef buckets(keep):\n    \"\"\"Each bucket keeps the fraction keep[i] of its water each minute, then the new input is poured in.\"\"\"\n    keep = np.array(keep)\n    x = np.zeros((T, len(keep)))\n    for k in range(T):\n        x[k] = keep * (x[k - 1] if k else 0) + u[k]\n    return x\n\ndef score(x, d, train=2000, wash=50):\n    \"\"\"Fit a weighted sum of the bucket levels (plus a constant) to the input d minutes ago; NMSE on unseen data.\"\"\"\n    y = np.r_[np.zeros(d), u[:T - d]]\n    X = np.c_[x, np.ones(T)]\n    w = np.linalg.lstsq(X[wash:train], y[wash:train], rcond=None)[0]\n    p = X[train:] @ w\n    return np.mean((p - y[train:]) ** 2) / np.var(y[train:])\n\nprint(\"impulse response of buckets that keep 0.2, 0.5, 0.8 per minute:\")\nimp = np.zeros((6, 3)); keep = np.array([0.2, 0.5, 0.8])\nfor k in range(6):\n    imp[k] = keep * (imp[k - 1] if k else 0) + (1 if k == 0 else 0)\nprint(imp.round(4))\nprint(\"\\nNMSE of recalling the input d minutes ago (0 = perfect, 1 = no better than the average)\")\nprint(\"buckets   \" + \"\".join(f\"  d={d}  \" for d in (0, 1, 3, 5)))\nfor name, keep in [(\"1\", [0.5]), (\"3\", [0.2, 0.5, 0.8]), (\"10\", np.linspace(0.05, 0.95, 10)), (\"30\", np.linspace(0.02, 0.98, 30))]:\n    x = buckets(keep)\n    print(f\"{name:>7}   \" + \"\".join(f\"{score(x, d):7.3f}\" for d in (0, 1, 3, 5)))\n"
+    },
+    {
+      "type": "prose",
+      "text": "The output shows the pattern. For the current input (d = 0) even one bucket is decent (0.249), and three are nearly perfect (0.006). For the input one minute ago, one bucket is nearly useless (0.875), three give 0.303, and ten or more give essentially 0 to three decimals. For the input three minutes ago ten buckets give 0.031, and for five minutes ago 0.598, while thirty buckets get all of them essentially right. More buckets with a wider range of speeds means a longer, sharper memory, and nothing about any bucket was tuned. Only the sliders (the weights) were fitted, in one calculation each."
+    },
+    {
+      "type": "callout",
+      "text": "Do not read too much into the perfect scores. They come from noise-free arithmetic with no measurement error. With ten or thirty buckets the fitted weights are large numbers of opposite signs that nearly cancel, so a tiny amount of noise in the levels would ruin the result. The remedy, ridge regularisation, is the subject of Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why training only the readout is cheap"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "The standard way to make a machine with an internal state is to train all of it: every connection in the network is adjusted, little by little, to make the output better. That works, and it is the basis of much of modern machine learning, but for networks with a state fed back on itself it is slow and delicate. Neural Networks from Scratch (#/qrc/start/neural-networks-primer) explains exactly why. Reservoir computing is attractive because it avoids that whole difficulty."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The count"
+    },
+    {
+      "type": "prose",
+      "text": "Take a reservoir of 1000 units where every unit can influence every other. That is $1000 \\times 1000 = 1\\,000\\,000$ internal connections. A conventionally trained recurrent network would adjust all one million of them (and the input connections too) over many passes through the data. A reservoir leaves them alone. The readout has 1000 weights plus one constant, 1001 numbers. So the learned part is about a thousand times smaller than the machine."
+    },
+    {
+      "type": "prose",
+      "text": "The saving is bigger than the count suggests, for two reasons. First, the readout is a weighted sum, so finding the best weights is a linear problem with a direct solution (one matrix calculation), not a long iterative search. Second, there is no need to follow how a change in an early weight would ripple through every later time step, which is the costly and unstable part of training recurrent networks. The reservoir simply runs forward, once, to produce the states; the readout is then fitted to those recorded states."
+    },
+    {
+      "type": "prose",
+      "text": "The price paid is that the internal representation is not tuned to the task. A well-trained recurrent network can in principle build exactly the memory and the nonlinearity the task needs; a random reservoir offers a generic collection of memories and nonlinearities and hopes the task is among the things that weighted sums of them can reach. When the reservoir is big and varied enough, that hope is often well founded, and for many time-series tasks the results are competitive. For others, trained networks win clearly. Reservoir computing is a trade: less accuracy per unit, much less training effort, and the freedom to use almost any dynamical system as the reservoir."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What makes a good reservoir"
+    },
+    {
+      "type": "prose",
+      "text": "The stories above point at three properties, which later pages treat with equations and numbers."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Fading memory (closely tied to what is called the echo state property): the state is determined by the recent inputs, and the effect of a distant input dies away. Without it the state would depend on the start-up conditions and the machine would give different answers on different days. This is the subject of The Echo State Property (#/qrc/foundations/echo-state-property).",
+        "Richness: many different state numbers, reacting to the input in different ways (like buckets with different leak speeds), so that a weighted sum has plenty to choose from.",
+        "Nonlinearity: the state has to respond to combinations of inputs, not only to their sum, otherwise the readout can only ever reproduce weighted sums of past inputs. How much memory and how much nonlinearity a reservoir offers, and the fact that they compete, is measured in Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Real reservoirs trade these against each other. Make the memory longer and the state tends to become more linear; make it more nonlinear and the memory tends to shorten. Choosing a reservoir is choosing a point in that trade-off for the task at hand."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Physical reservoirs"
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir computer does not have to be simulated on a laptop. The reservoir has to be only a driven system with fading memory and a state that can be read, and nature provides plenty. The bucket of water of Fernando and Sojakka (2003) is the classic demonstration. Appeltant and co-workers (2011) used a single electronic circuit with a feedback delay as a reservoir of hundreds of virtual units, and optical, spintronic and soft-robotic versions followed; Tanaka and co-workers (2019) review them. The appeal is speed and energy: the physics performs the recurrent part for free, and only the readout is computed digitally. The difficulty is repeatability: the system must behave the same way when you use it as when you trained the readout, so drift in temperature or ageing of components turns directly into errors. Physical Reservoirs (#/qrc/foundations/physical-reservoirs) treats all this in detail."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Quantum reservoirs"
+    },
+    {
+      "type": "prose",
+      "text": "A quantum reservoir uses a small quantum system, for instance a handful of interacting qubits, as the reservoir. The input is written into one qubit at each time step; the qubits then interact for a fixed time under a fixed Hamiltonian (the rule for how the system changes in time); and the state is read by measuring something about each qubit, such as its average spin along the $z$ axis. Those averages are the state numbers $x(k)$, and a weighted sum of them is the readout. The next input is written in, and the cycle repeats."
+    },
+    {
+      "type": "prose",
+      "text": "Two features make this interesting. First, the number of amplitudes needed to describe $n$ qubits grows as $2^n$, so a few dozen qubits explore a space of states that a classical computer cannot track directly, while the measured averages provide a manageable number of features. Second, quantum systems have natural memory and nonlinearity in the way the input shapes the state. But there are costs. Measurement disturbs and destroys the state, and each average has to be estimated from many repeated runs (shots), which adds noise and time; real devices lose coherence. Whether a quantum reservoir can beat the best classical alternative at a useful task is an open research question, not a settled fact, and the shelf does not hide that. A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand) builds the smallest example you can compute with pencil and calculator, and The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) treats the standard model."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What reservoir computing is not"
+    },
+    {
+      "type": "list",
+      "items": [
+        "It is not magic. A reservoir cannot create information that is not in the input. It can only make the information in the recent past easy to read with a weighted sum.",
+        "It is not always the best method. For large datasets and tasks that need long, precisely tuned memory (translation of long sentences, for instance), trained networks such as LSTMs and transformers do far better. Reservoir computing earns its place where data are limited, where training time or energy is the bottleneck, or where the reservoir is a physical device that cannot be trained inside.",
+        "It is not the same as 'random features for a static problem'. The reservoir has a state that persists, and a time dimension that matters; the closest static relative is the extreme learning machine, which appears later in the shelf."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A map of this library"
+    },
+    {
+      "type": "prose",
+      "text": "This chapter, Getting Started, teaches what you need and ends with a worked example. After it come five chapters, each of which can be read when you want its subject."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Getting Started (this chapter): Time Series and Prediction (#/qrc/start/time-series-and-prediction), Neural Networks from Scratch (#/qrc/start/neural-networks-primer), Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge), Training, Testing and Measuring Error (#/qrc/start/training-and-testing) and A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand).",
+        "Reservoir Computing Foundations: the classical theory. Echo state networks, the echo state property, memory capacity, physical reservoirs and the standard benchmarks. Start with Echo State Networks (#/qrc/foundations/echo-state-networks).",
+        "Open Quantum Systems Toolkit: density matrices, channels and Lindblad dynamics, the language for a quantum system that loses information to its surroundings, which every real quantum reservoir does.",
+        "Quantum Reservoir Models: spin networks, how inputs are encoded, how the state is read out, and the dynamical regimes that decide whether a reservoir is any good.",
+        "Measurement and Hardware: what measuring costs, how real devices (gate-based and analog) are used, and how to account for resources.",
+        "Theory, Limits and Practice: what reservoirs can in principle compute, why large quantum reservoirs may have trouble (concentration), what is and is not known about quantum advantage, and a hands-on implementation."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The Quantum Mechanics shelf is separate. You do not need it for the first four pages of this chapter. For the last page of the chapter and the quantum chapters it helps to have read the parts on qubits, measurement and mixed states; each page says what it needs."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "A walk through one complete, tiny reservoir computer, using only things from this page. The task is to report, at each minute, how much water was poured in one minute ago. The reservoir is three buckets keeping 0.2, 0.5 and 0.8 of their water per minute, as above."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1. The input stream arrives: 0.30, 0.90, 0.20, 0.70, ... litres, one per minute.",
+        "Step 2. The reservoir runs on its own, with no learning. After each pour, each bucket's level becomes (its keep fraction) times (its old level) plus the new pour. Three numbers appear each minute. This is the state.",
+        "Step 3. In a training period we record the states and, alongside, the correct answers (the pour one minute earlier, which we know because we poured it).",
+        "Step 4. We find three weights and a constant so that the weighted sum of the three levels is as close as possible to the recorded answers over the whole training period. Nothing inside the buckets changes. This is the only learning.",
+        "Step 5. In use, we run the buckets on new pours, form the same weighted sum, and read off the answer. From the table above, with these three buckets the score is 0.303: it recovers about 70 per cent of the variation in the previous pour, imperfectly. With ten buckets it is essentially perfect on noise-free data."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Everything in a larger reservoir computer, including a quantum one, is this scheme with more complicated buckets: state numbers that mix the past in rich, nonlinear ways, and a readout fitted by a linear calculation."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Streams (speech, heartbeats, prices, sensor logs) need methods with memory of the recent past, because one value alone does not tell you enough.",
+        "A reservoir computer has three parts: an input, a fixed dynamical system (the reservoir) whose state holds a blend of the recent past, and a trained linear readout.",
+        "Only the readout is trained. It is a weighted sum with a direct solution, so training is a single linear calculation instead of a long search through a tangled network.",
+        "A good reservoir has fading memory, many varied state numbers and some nonlinearity. Memory and nonlinearity trade off against each other.",
+        "Real water, electronics, light and spins can be reservoirs; the quantum version writes the input into a qubit, lets the qubits interact, and reads averages as the state.",
+        "The method is cheap and flexible, not universally best; whether quantum reservoirs beat classical ones is open."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Which tasks need memory?",
+      "text": "For each task say whether a method that sees only the newest value can do it, or whether it needs memory of the past. (a) Report today's temperature in Fahrenheit given it in Celsius. (b) Say whether the temperature is rising or falling. (c) Output the average of the last five readings. (d) Recognise the spoken word 'yes'.",
+      "hint": "Ask: could the answer change if I kept the newest value fixed but changed earlier ones?",
+      "solution": [
+        "(a) Only the newest value is needed: a fixed formula converts it.",
+        "(b) Rising or falling is a comparison of now with before, so memory of at least one earlier value is needed.",
+        "(c) Needs the last five values, so memory of four earlier readings.",
+        "(d) A word is a pattern over time (hundreds of milliseconds of sound), so memory is essential."
+      ],
+      "answer": "only (a) needs no memory"
+    },
+    {
+      "type": "problem",
+      "title": "Counting what is trained",
+      "text": "A reservoir has 500 units, each connected to every unit (including itself), and one input connected to all 500 units. The readout uses all 500 states plus a constant and gives one output. How many numbers are fixed, and how many are trained? What fraction is trained?",
+      "hint": "Count the square matrix of connections separately from the input and readout.",
+      "solution": [
+        "Internal connections: $500 \\times 500 = 250\\,000$.",
+        "Input connections: 500. Fixed in total: $250\\,500$.",
+        "Readout: 500 weights plus 1 constant $= 501$ trained numbers.",
+        "Fraction trained: $501/(250\\,500 + 501) = 501/251\\,001 \\approx 0.002$, that is 0.2 per cent."
+      ],
+      "answer": "250 500 fixed, 501 trained, about 0.2 per cent"
+    },
+    {
+      "type": "problem",
+      "title": "A leaky bucket by hand",
+      "text": "A bucket keeps 0.6 of its water each minute, then the new input is poured in. It starts empty. The inputs for four minutes are 1, 0, 2, 0. Find the level after each minute.",
+      "hint": "New level $= 0.6 \\times$ old level $+$ new input.",
+      "solution": [
+        "Minute 1: $0.6 \\times 0 + 1 = 1$.",
+        "Minute 2: $0.6 \\times 1 + 0 = 0.6$.",
+        "Minute 3: $0.6 \\times 0.6 + 2 = 0.36 + 2 = 2.36$.",
+        "Minute 4: $0.6 \\times 2.36 + 0 = 1.416$."
+      ],
+      "answer": "1, 0.6, 2.36, 1.416"
+    },
+    {
+      "type": "problem",
+      "title": "Why one bucket is not enough",
+      "text": "Using the bucket above, the level after minute 3 is 2.36. Give two different input histories (for minutes 1, 2, 3) with the same keep fraction 0.6 that would produce the same level after minute 3, or explain why you cannot.",
+      "hint": "Write the level as a weighted sum of the three inputs and look for two lists with the same sum.",
+      "solution": [
+        "The level after minute 3 is $0.36 u_1 + 0.6 u_2 + u_3$ (unwinding the update twice).",
+        "For $u = (1, 0, 2)$: $0.36 + 0 + 2 = 2.36$. For $u = (0, 1, 1.76)$: $0 + 0.6 + 1.76 = 2.36$. Both give 2.36 although the histories differ.",
+        "So the single level cannot identify the history. More buckets, with different keep fractions, give more weighted blends, which is what lets a readout separate histories."
+      ],
+      "answer": "e.g. (1, 0, 2) and (0, 1, 1.76)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The next pages teach the machine-learning ground you need: Time Series and Prediction (#/qrc/start/time-series-and-prediction), Neural Networks from Scratch (#/qrc/start/neural-networks-primer), Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge) and Training, Testing and Measuring Error (#/qrc/start/training-and-testing).",
+        "The classical reservoir in full: Echo State Networks (#/qrc/foundations/echo-state-networks) and The Echo State Property (#/qrc/foundations/echo-state-property).",
+        "Real devices: Physical Reservoirs (#/qrc/foundations/physical-reservoirs).",
+        "The quantum version, from the smallest example: A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand)."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "H. Jaeger, The echo state approach to analysing and training recurrent neural networks, GMD Report 148 (2001)",
+        "W. Maass, T. Natschlager and H. Markram, Real-time computing without stable states, Neural Computation 14, 2531 (2002)",
+        "M. Lukosevicius and H. Jaeger, Reservoir computing approaches to recurrent neural network training, Computer Science Review 3, 127 (2009)",
+        "C. Fernando and S. Sojakka, Pattern recognition in a bucket, European Conference on Artificial Life (2003)",
+        "G. Tanaka et al., Recent advances in physical reservoir computing: a review, Neural Networks 115, 100 (2019)"
+      ]
+    }
+  ]
+}

@@ -1,21 +1,79 @@
 {
   "title": "Analog Platforms",
-  "intro": "Analog quantum devices run a Hamiltonian directly rather than a gate sequence, which suits reservoir computing: the reservoir only needs rich, repeatable dynamics, not programmable precision. This page surveys the platforms on which QRC has been demonstrated or proposed and what each offers and costs at the readout.",
+  "intro": "Analog quantum devices run a Hamiltonian directly rather than a gate sequence, which suits reservoir computing: the reservoir only needs rich, repeatable dynamics, not programmable precision. This page surveys the platforms on which QRC has been demonstrated or proposed, what each offers and costs at the readout, and works small numerical examples for a Rydberg array and a Kerr oscillator.",
   "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "What a reservoir needs (input, rich fixed dynamics, fading memory, readout): What Is Reservoir Computing? (#/qrc/start/what-is-reservoir-computing) and The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir). Spin operators and Hamiltonians: Spin Models (#/quantum/many-body/spin-models). For the bosonic section, the harmonic oscillator and its raising and lowering operators: The Harmonic Oscillator (#/quantum/dynamics/harmonic-oscillator). The cost of measurement: Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Online Measurement Protocols (#/qrc/hardware/online-protocols)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "List what a physical platform must provide to be a reservoir (input, dynamics, forgetting, readout, stability), and test a platform against that list.",
+        "Write the Rydberg-array Hamiltonian, say what each term does, and compute how fast the interaction falls with distance and how many correlator features a snapshot provides.",
+        "Explain why a Kerr nonlinearity makes an oscillator a nonlinear reservoir and a linear one not, and read the output of the sample that shows it.",
+        "Say what is different about the NMR and the driven-dissipative lattice approaches, and what each gives the readout.",
+        "Compare platforms by how many features they give per run, how fast runs repeat, and what limits the memory."
+      ]
+    },
     {
       "type": "heading",
       "level": 2,
       "text": "What an analog platform must provide"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
+      "type": "prose",
+      "text": "A gate-based computer is built to run any circuit, and a reservoir uses almost none of that freedom: it needs a fixed system with rich dynamics, and a trained readout. Many physical systems are the wrong shape for a general computer (they have a fixed Hamiltonian that can be steered but not programmed), but are exactly right for a reservoir. These are called analog platforms: the device runs a Hamiltonian directly and no gate sequence is needed."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The checklist"
+    },
+    {
+      "type": "prose",
+      "text": "Whatever the platform, five things must be present. The first four come from the reservoir computing recipe; the fifth is a hardware fact of life."
+    },
+    {
       "type": "list",
       "items": [
-        "An input channel: a control parameter that can be set per step from $s_k$ (a local field, a detuning, a drive amplitude, a reset-and-prepare of some sites).",
-        "Rich, fixed dynamics between inputs: interactions that spread the input across the system; disorder or irregular geometry to avoid symmetries that would leave features redundant.",
-        "Dissipation or a reset path, for fading memory.",
-        "A readout that returns many features per run, and a repetition rate high enough for the shot budget.",
-        "Stability: the readout weights are trained on one day's dynamics and must still fit tomorrow's. Drift is the analog equivalent of gate error."
+        "An input channel: a control parameter that can be set at each step from the input $s_k$. Examples: a local field, a detuning, a drive amplitude, or a reset-and-prepare of some sites. Without it the system just runs by itself.",
+        "Rich, fixed dynamics between inputs: interactions that spread the input across the whole system, with disorder or irregular geometry to avoid symmetries that would leave features redundant (a perfectly symmetric system gives the same information on many features).",
+        "Dissipation or a reset path, for fading memory (The Echo State Property (#/qrc/foundations/echo-state-property)). A closed, isolated system has none.",
+        "A readout that returns many features per run, and a repetition rate high enough for the shot budget (Resource Accounting (#/qrc/hardware/resource-accounting)).",
+        "Stability: the readout weights are trained on one day's dynamics and must still fit tomorrow's. Drift of the device is the analog equivalent of gate error. Everything else on this page assumes the weights stay valid."
       ]
+    },
+    {
+      "type": "prose",
+      "text": "The checklist is also a way of reading each section. For each platform ask: where do I write the input? What gives the forgetting? How many numbers come out per run, and how long does a run take? The answers differ by factors of thousands, and the differences, not the abstract model, decide what is practical."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: test a platform",
+      "text": "A candidate platform is a perfectly symmetric ring of identical spins with identical couplings, with the input applied to all spins equally. Which items of the checklist does it fail, and why?",
+      "hint": "Ask how many different numbers the readout can get.",
+      "solution": [
+        "Input: present (applied to all spins).",
+        "Dynamics: all spins are equivalent by symmetry, and the input is symmetric too, so every spin ends in the same state. All $n$ features are copies of one number.",
+        "So the readout has effectively one feature, however many spins there are. Breaking the symmetry (an input on one spin, unequal couplings, disorder) restores independent features."
+      ],
+      "answer": "It fails the dynamics item: the symmetry makes all spins carry the same feature."
     },
     {
       "type": "heading",
@@ -23,8 +81,42 @@
       "text": "Nuclear spins in NMR"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "In solid- or liquid-state NMR the reservoir is the dipolar-coupled network of nuclear spins in a molecule or crystal, and the readout is the free-induction signal of a macroscopic ensemble. Because the signal is an ensemble average, one run gives expectation values directly, without single-shot repetitions, and weak continuous readout disturbs each spin negligibly. The limits are polarisation (at room temperature only a tiny excess of spins is aligned, so the useful signal is small) and control (all copies share one Hamiltonian; local addressing is limited). Negoro and coauthors (2018) used the controllable dynamics of a nuclear spin ensemble in a solid as a learning machine, an early experimental QRC, and NMR motivated the spatial-multiplexing proposal of Nakajima et al. (2019), in which many small, independent reservoirs (different molecules) are read together."
+      "text": "The oldest answer to the cost of single-copy measurement is not to have a single copy. Nuclear magnetic resonance (NMR) works on a macroscopic sample with an enormous number of nearly identical molecules, and reads the whole sample at once."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "In solid- or liquid-state NMR the reservoir is the network of nuclear spins in a molecule or crystal, coupled by their magnetic dipole interaction, and driven by radio-frequency pulses. The readout is the free-induction signal: the tiny voltage that the precessing net magnetisation induces in a coil. That signal is an ensemble average. One run gives expectation values directly, with no single-shot repetitions, and a weak continuous readout disturbs each spin negligibly (the ensemble readout of Online Measurement Protocols (#/qrc/hardware/online-protocols)). That is why the textbook model of QRC, which assumes features are expectation values, is closest to what NMR actually does."
+    },
+    {
+      "type": "prose",
+      "text": "The limits are two. Polarisation: at room temperature only a tiny excess of spins is aligned with the field. For protons at 1 tesla and 300 K the thermal polarisation is about $3.4\\times10^{-6}$ (computed in Online Measurement Protocols (#/qrc/hardware/online-protocols)), so the signal is a small fraction of its maximum, even though the number of spins makes the total signal measurable. Control: all copies share one Hamiltonian, so local addressing is limited and the number of distinguishable spins is small."
+    },
+    {
+      "type": "prose",
+      "text": "Negoro and coauthors (2018) used the controllable dynamics of a nuclear spin ensemble in a solid as a learning machine, an early experimental demonstration of reservoir-style learning with a quantum system. NMR also motivated the spatial-multiplexing proposal of Nakajima and coauthors (2019): many small, independent reservoirs (for example different molecules) are read together, multiplying the number of features without enlarging any one reservoir, which sidesteps the problem that a large quantum system is hard to control and to model. (See Readout and Multiplexing (#/qrc/models/readout-and-multiplexing) for the multiplexing idea.)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Thinking an ensemble gives free precision. The signal per spin is tiny; the large number of spins compensates, but only up to the detector's noise.",
+        "Forgetting that every copy must receive the same input at the same time. An ensemble is a bulk sample, not an array of independent processors."
+      ]
     },
     {
       "type": "heading",
@@ -32,20 +124,118 @@
       "text": "Rydberg atom arrays"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "Neutral atoms in optical tweezer arrays, excited to Rydberg states, realise an Ising-type Hamiltonian with a global (or locally patterned) drive $\\Omega$, detunings $\\Delta_i$ and van der Waals interactions $V_{ij}\\propto 1/r_{ij}^6$:"
+      "text": "Neutral atoms held in optical tweezers can be arranged in almost any pattern, and the arrangement sets the interactions. That is more design freedom than NMR gives, with readout of every atom in every shot. This is the platform of the largest QRC demonstration so far."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The physics, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Each atom is a two-level system: the ground state $|g\\rangle$ and a highly excited Rydberg state $|r\\rangle$. We write them as qubit states $|0\\rangle=|g\\rangle$ and $|1\\rangle=|r\\rangle$, so that the Rydberg occupation $n_i=|1\\rangle\\langle1|_i=(1-Z_i)/2$ (equal to 1 for $|r\\rangle$ and to 0 for $|g\\rangle$). The Hamiltonian has three parts."
     },
     {
       "type": "math",
-      "tex": "H = \\frac{\\Omega}{2}\\sum_i X_i - \\sum_i \\Delta_i\\, n_i + \\sum_{i<j}V_{ij}\\, n_i n_j, \\qquad n_i = \\frac{1 - Z_i}{2}"
+      "tex": "H = \\frac{\\Omega}{2}\\sum_i X_i \\;-\\; \\sum_i \\Delta_i\\, n_i \\;+\\; \\sum_{i<j}V_{ij}\\, n_i n_j, \\qquad n_i = \\frac{1 - Z_i}{2},\\qquad V_{ij}=\\frac{C_6}{r_{ij}^6}",
+      "caption": "Rydberg-array Hamiltonian: a drive, a detuning (the place to write an input), and van der Waals interactions."
+    },
+    {
+      "type": "list",
+      "items": [
+        "The drive $\\frac\\Omega2\\sum X_i$ flips atoms between $|g\\rangle$ and $|r\\rangle$ (a laser). $\\Omega$ is the Rabi frequency (Driven Qubits and Rabi Oscillations (#/quantum/qubits/driven-qubits)).",
+        "The detuning $-\\Delta_in_i$ rewards or penalises the Rydberg state on atom $i$ by an energy $\\Delta_i$. Because it can be set per atom, it is a natural place to write an input.",
+        "The interaction $V_{ij}n_in_j$ costs energy only when both atoms $i$ and $j$ are in the Rydberg state. It falls with distance as $1/r_{ij}^6$ (the van der Waals law with a constant $C_6$ set by the atom and state)."
+      ]
     },
     {
       "type": "prose",
-      "text": "Inputs can be encoded in local detunings or in the drive, the geometry fixes the couplings, and the readout is a fluorescence image giving the full bitstring per shot, so all one- and two-body correlators $\\langle Z_i\\rangle$, $\\langle Z_iZ_j\\rangle$ come from the same shots. Bravo, Najafi, Gao and Yelin (2022) proposed and analysed QRC on Rydberg arrays. Kornjača and coauthors (2024) ran quantum reservoir learning on an analog neutral-atom computer with up to 108 qubits, using measured correlators over several evolution times as features for binary and multi-class classification and time-series prediction, the largest QRC demonstration reported at the time."
+      "text": "Step 1. Why interactions create correlations. Two atoms close together cannot both be excited at the resonance of one: the state $|rr\\rangle$ is shifted by $V$, so if $V\\gg\\Omega$ it is out of resonance and the drive cannot reach it. This is the Rydberg blockade."
     },
     {
       "type": "prose",
-      "text": "Because each experimental shot reloads and rearranges the atom array, repetition rates are low (of order a few shots per second on current machines, against kHz rates for superconducting circuits), so analog atom reservoirs favour tasks without long recurrence (single-input or short-window processing, closer to a quantum extreme learning machine, see Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines)) and readouts that extract many correlators per shot."
+      "text": "Step 2. Take two atoms, both starting in $|gg\\rangle$, with $\\Delta=0$. The drive couples $|gg\\rangle$ to $|gr\\rangle$ and to $|rg\\rangle$, each with matrix element $\\Omega/2$. Define the symmetric state $|W\\rangle=(|gr\\rangle+|rg\\rangle)/\\sqrt2$. Then $\\langle W|H|gg\\rangle = \\frac{1}{\\sqrt2}(\\Omega/2+\\Omega/2)=\\Omega/\\sqrt2=\\sqrt2\\,\\Omega/2$: the pair oscillates between $|gg\\rangle$ and $|W\\rangle$ with Rabi frequency $\\sqrt2\\,\\Omega$, faster than one atom."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. For $N$ atoms all within the blockade distance, the frequency is $\\sqrt N\\,\\Omega$, because there is only one excitation allowed, shared by all. With $\\Omega=2\\pi\\times1$ MHz and $N=4$ the swing from $|gg..g\\rangle$ to the shared state takes $\\pi/(\\sqrt N\\,\\Omega) = \\pi/(2\\times2\\pi\\times10^6) = 0.25\\ \\mu$s."
+    },
+    {
+      "type": "prose",
+      "text": "The correlations created by blockade (neighbouring atoms rarely excited together) are exactly what a reservoir wants: features that are not independent single-atom signals but combine information from several atoms in a nonlinear way."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Readout and what it gives"
+    },
+    {
+      "type": "prose",
+      "text": "The readout is a fluorescence image giving the full bitstring $(n_1,\\dots,n_N)$ of ground or Rydberg occupation for each atom in each shot. All one- and two-body correlators $\\langle n_i\\rangle$, $\\langle n_in_j\\rangle$ (equivalent to $\\langle Z_i\\rangle$, $\\langle Z_iZ_j\\rangle$) come from the same shots, as in Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action). For $N$ atoms there are $N+\\binom N2$ such features per evolution time, and measuring at several times multiplies that."
+    },
+    {
+      "type": "prose",
+      "text": "Bravo, Najafi, Gao and Yelin (2022) proposed and analysed QRC on Rydberg arrays. Kornjača and coauthors (2024) ran quantum reservoir learning on an analog neutral-atom computer with up to 108 qubits, using measured correlators over several evolution times as features for binary and multi-class classification and time-series prediction, the largest QRC demonstration reported at the time."
+    },
+    {
+      "type": "prose",
+      "text": "Because each experimental shot reloads and rearranges the atom array, repetition rates are low: of order a few shots per second on current machines, against kHz rates for superconducting circuits. Analog atom reservoirs therefore favour tasks without long recurrence (single-input or short-window processing, closer to a quantum extreme learning machine, see Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines)) and readouts that extract many correlators per shot."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "A small numerical experiment"
+    },
+    {
+      "type": "prose",
+      "text": "The sample below builds a six-atom array on a $2\\times3$ grid, with the input $u$ written as a shift of the detunings of two atoms, and performs the quantum-extreme-learning-machine recipe: evolve from all atoms in $|g\\rangle$ for several times, take the one- and two-body correlators as features (21 per time), and fit a ridge readout to the target $\\sin(2\\pi u)$ with 200 training inputs. It also repeats the fit with features estimated from $S$ sampled bitstrings per evolution time instead of exact probabilities. (Units are arbitrary: $\\Omega=1$, $V=4$ at nearest-neighbour spacing, $C_6$ not tied to a real atom.) Output from an actual run:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\n# Six atoms on a 2 x 3 grid, lattice spacing 1 (arbitrary units). Basis state bit 1 = Rydberg, n_i = (1 - Z_i)/2 = |1><1|.\npos = np.array([[x, y] for y in range(2) for x in range(3)], float); n = len(pos); D = 2**n\nbits = np.array([[(a >> (n - 1 - q)) & 1 for q in range(n)] for a in range(D)])\nOmega, Delta0, V0 = 1.0, 0.5, 4.0           # drive, base detuning, interaction at spacing 1 (V_ij = V0 / r^6)\nV = np.zeros((D, D))\nfor i in range(n):\n    for j in range(i + 1, n):\n        r = np.linalg.norm(pos[i] - pos[j]); V += np.diag(bits[:, i] * bits[:, j] * V0 / r**6)\nXs = np.zeros((D, D))\nfor i in range(n):\n    flip = 1 << (n - 1 - i)\n    for a in range(D): Xs[a ^ flip, a] += 1.0\ndef hamiltonian(delta):\n    \"\"\"H = (Omega/2) sum X_i - sum Delta_i n_i + sum V_ij n_i n_j, with the input shifting the detuning of the left column.\"\"\"\n    return Omega / 2 * Xs - np.diag(bits @ delta) + V\npairs = [(i, j) for i in range(n) for j in range(i + 1, n)]\ndef probabilities(u, tau):\n    delta = np.full(n, Delta0); delta[[0, 3]] += 2.0 * (u - 0.5)       # the input u in [0,1] shifts atoms 1 and 4\n    psi = expm(-1j * hamiltonian(delta) * tau)[:, 0]                   # start from all atoms in the ground state\n    return np.abs(psi)**2\ndef correlators(p, shots, rng):\n    if shots:                                                          # sample bitstrings, as an imaging experiment would\n        counts = rng.multinomial(shots, p / p.sum()); p = counts / shots\n    one = [p @ bits[:, i] for i in range(n)]\n    two = [p @ (bits[:, i] * bits[:, j]) for i, j in pairs]\n    return one + two\ntaus = [0.6, 1.2, 1.8, 2.4, 3.0, 3.6]\nrng = np.random.default_rng(0)\nu_train = rng.uniform(0, 1, 200); u_test = rng.uniform(0, 1, 100)\nP = {(u, t): probabilities(u, t) for u in np.concatenate([u_train, u_test]) for t in taus}\ntarget = lambda u: np.sin(2 * np.pi * u)\ndef feature_matrix(us, shots, ntimes):\n    return np.array([np.concatenate([correlators(P[(u, t)], shots, rng) for t in taus[:ntimes]]) for u in us])\ndef nmse(shots, ntimes, lam=1e-3):\n    Ftr, Fte = feature_matrix(u_train, shots, ntimes), feature_matrix(u_test, shots, ntimes)\n    mu, sd = Ftr.mean(0), Ftr.std(0) + 1e-12\n    Atr = np.hstack([(Ftr - mu) / sd, np.ones((len(Ftr), 1))]); Ate = np.hstack([(Fte - mu) / sd, np.ones((len(Fte), 1))])\n    w = np.linalg.solve(Atr.T @ Atr + lam * len(Atr) * np.eye(Atr.shape[1]), Atr.T @ target(u_train))\n    return np.mean((Ate @ w - target(u_test))**2) / np.var(target(u_test))\nprint(f\"{n} atoms; features per evolution time: {n} + {len(pairs)} = {n + len(pairs)}\")\nprint(\"interaction relative to nearest neighbours at distances 1, sqrt2, 2:\", [round(1 / d**6, 4) for d in (1, 2**0.5, 2)])\nprint(\"task: regress sin(2 pi u) from the correlators; test NMSE\")\nprint(\" evolution times | shots per time | features | NMSE\")\nfor ntimes in [1, 3, 6]:\n    for shots in [0, 1000, 100, 10]:\n        print(f\" {ntimes:15d} | {('exact' if shots == 0 else shots):>14} | {ntimes * (n + len(pairs)):8d} | {nmse(shots, ntimes):.4f}\")\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Interaction relative to nearest neighbours: $1$ at distance 1, $0.125$ at $\\sqrt2$, $0.0156$ at distance 2. Each atom is effectively coupled only to its closest neighbours.",
+        "One evolution time, exact: test NMSE 0.322; three times, exact: 0.0047; six times (126 features), exact: below $5\\times10^{-5}$. More times give more features, and the target becomes easy to fit.",
+        "With sampled bitstrings the picture changes: at $S=1000$ shots per time, six times: 0.054; at 100: 0.267; at 10: 1.14 (worse than predicting the mean, because 126 noisy features overfit 200 training inputs). One time with 1000 shots: 0.84.",
+        "The takeaway: features cost shots. Going from 1 to 6 evolution times improves the exact fit by orders of magnitude, but at a fixed shot budget per time, you pay the shot noise on every one of them."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "(One simplification: the sample re-prepares the atoms in $|g\\rangle$ for each input and evolution time, which is how a quantum-extreme-learning-machine experiment works, and is not the recurrent use of a reservoir.)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Taking an exact simulation as the expected result of an experiment with 1000 shots. The sample shows a factor of more than a thousand in error at six times ($4\\times10^{-5}$ exact against $0.054$ with 1000 shots).",
+        "Counting features without counting shots. $5050$ features is not the same as $5050$ numbers that can be estimated, unless each is estimated well (see the problems)."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: how fast does the interaction fall?",
+      "text": "Two atoms at 5 $\\mu$m interact with strength $V_0$. What is the interaction at 7.5 $\\mu$m, as a fraction of $V_0$?",
+      "hint": "The ratio is $(r_0/r)^6$.",
+      "solution": [
+        "$V\\propto r^{-6}$, so $V(7.5)/V_0=(5/7.5)^6=(2/3)^6$.",
+        "$(2/3)^6 = 64/729 = 0.0878$."
+      ],
+      "answer": "$(2/3)^6\\approx0.088$."
     },
     {
       "type": "heading",
@@ -53,8 +243,83 @@
       "text": "Bosonic modes: oscillators and light"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "A single nonlinear oscillator already has a large Hilbert space. Govia and coauthors (2021) simulated one Kerr-nonlinear mode (natural in superconducting circuits), $H = K a^{\\dagger}a\\,a^{\\dagger}a + \\alpha u(t)(a + a^{\\dagger})$, driven linearly by the input $u(t)$, damped by photon loss (which gives fading memory), and read through the expectation of one quadrature $\\langle X\\rangle$ sampled in time. On a signal-processing task (estimating the phase of a sine wave) it outperformed classical nonlinear-oscillator reservoirs, and the authors traced the improvement to the nonlinearity of quantum measurement. In optics, Gaussian continuous-variable reservoirs (Nokkala et al. 2021) are networks of linearly coupled harmonic modes (for example linear optical systems) whose inputs are encoded into Gaussian states, with squeezed-vacuum encoding giving the best performance; they are efficiently simulable classically, but they show how the encoding and the choice of measured observables set the reservoir's nonlinearity. See Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs)."
+      "text": "All platforms so far get a large state space from many qubits. A single oscillator already has an infinite number of levels: the photon number $n=0,1,2,\\dots$. A reservoir from one device with a large Hilbert space avoids the control overhead of many qubits."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "An ideal harmonic oscillator is evenly spaced: the energy to go from level $n$ to level $n+1$ is the same for all $n$, and it responds linearly to a drive. A linear system can compute only linear functions of its input, however many levels it has. To compute anything else it needs a nonlinearity, and the most natural one in superconducting circuits is the Kerr nonlinearity, in which the energy of the $n$-th level has an extra term $Kn^2$. Then the spacing between levels grows with $n$, so a drive that is on resonance for the first step is off resonance for the second. The oscillator answers a strong drive differently from a weak one: nonlinearity."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "The Hamiltonian is $H = K\\,a^{\\dagger}a\\,a^{\\dagger}a + \\alpha\\,u(t)\\,(a+a^{\\dagger})$, where $a$ and $a^{\\dagger}$ lower and raise the photon number, $K$ is the Kerr strength, $u(t)$ is the input and $\\alpha$ the drive strength. Photon loss at rate $\\kappa$ gives fading memory: the amplitude of the oscillation decays as $e^{-\\kappa t/2}$ unless it is re-driven."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Level energies. The state with $n$ photons has Kerr energy $E_n=Kn^2$. The energy to go up one level is $E_{n+1}-E_n=K(2n+1)$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. So the transitions $0\\to1$, $1\\to2$, $2\\to3$ have energies $K, 3K, 5K$: a drive tuned to the first is detuned from the second by $2K$ and from the third by $4K$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The drive term $\\alpha u\\,(a+a^{\\dagger})$ is proportional to the quadrature $a+a^{\\dagger}$, and displaces the other quadrature $i(a^{\\dagger}-a)$. A linear oscillator ($K=0$) obeys $\\tfrac{d}{dt}\\langle a\\rangle = -i\\alpha u-\\tfrac\\kappa2\\langle a\\rangle$: a linear equation, whose solution is a weighted sum of past inputs with exponentially decaying weights. Any quadrature of it is then linear in the input history; no linear readout of such features can produce a product of two inputs."
+    },
+    {
+      "type": "prose",
+      "text": "Govia and coauthors (2021) simulated one Kerr-nonlinear mode read through the expectation of one quadrature sampled in time. On signal-processing tasks it outperformed classical nonlinear-oscillator reservoirs, and the authors traced the improvement to the nonlinearity of quantum measurement. The sample below is a small demonstration in the same spirit, not a reproduction of their task: it simulates the damped, driven oscillator with Lindblad evolution (Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics)) truncated to 14 levels, 0 to 13 photons (raising the truncation to 22 levels changes the results by at most 0.001), reads $\\langle i(a^{\\dagger}-a)\\rangle$ at four times within each input step, and asks two things."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\n# One damped oscillator, Fock space truncated at N levels.  H = K (a^dag a)^2 + alpha u (a + a^dag), loss rate kappa.\nN = 14\na = np.diag(np.sqrt(np.arange(1, N)), 1); ad = a.T; nop = ad @ a; I = np.eye(N)\nxq = a + ad                                                    # the drive couples to this quadrature (twice the usual x)\npq = 1j * (ad - a)                                             # the quadrature that is read out (twice the usual p): the drive displaces it\ndef liouvillian(Hm, kappa):\n    \"\"\"Vectorised Lindblad generator (column-stacking, vec(A rho B) = (B^T kron A) vec(rho)).\"\"\"\n    L = -1j * (np.kron(I, Hm) - np.kron(Hm.T, I))\n    L += kappa * (np.kron(ad.T, a) - 0.5 * np.kron(I, nop) - 0.5 * np.kron(nop.T, I))\n    return L\ndef features(s, K, alpha=0.8, kappa=0.4, dt=1.0, nodes=4):\n    \"\"\"For each input s_k hold the drive alpha*s_k for time dt; read <i(a^dag - a)> at `nodes` equally spaced times.\"\"\"\n    rho = np.zeros((N, N), complex); rho[0, 0] = 1; F = []\n    cache = {}\n    for u in s:\n        if u not in cache:\n            Hm = K * nop @ nop + alpha * u * xq\n            cache[u] = expm(liouvillian(Hm, kappa) * dt / nodes)\n        step = cache[u]; v = rho.reshape(-1, order=\"F\"); f = []\n        for _ in range(nodes):\n            v = step @ v; r = v.reshape(N, N, order=\"F\"); f.append(np.real(np.trace(pq @ r)))\n        rho = v.reshape(N, N, order=\"F\"); F.append(f)\n    return np.array(F)\ndef r2_for(F, y, w=100, tr=600):\n    A = np.hstack([F, np.ones((len(F), 1))])\n    wt = np.linalg.solve(A[w:w + tr].T @ A[w:w + tr] + 1e-8 * np.eye(A.shape[1]), A[w:w + tr].T @ y[w:w + tr])\n    return np.corrcoef(A[w + tr:] @ wt, y[w + tr:])[0, 1]**2\n# 1. Linearity test: a single input pulse of height u, then silence. For a linear system the response scales with u.\nprint(\"response of the read-out quadrature at the second step after one input pulse of height u\")\nprint(\"  u   | K = 0 : response / u | K = 0.5 : response / u\")\nfor u in [0.25, 0.5, 1.0]:\n    row = []\n    for K in (0.0, 0.5):\n        f = features(np.array([u, 0.0]), K)[1, -1]; row.append(f / u)\n    print(f\" {u:4.2f} | {row[0]:20.4f} | {row[1]:22.4f}\")\n\n# 2. Memory: can a linear read-out recall s(k-1) and s(k-2) from the four readings per step?\nrng = np.random.default_rng(0)\ns = rng.choice(np.linspace(-1, 1, 9), 900)\nprint(\"task: recall | r^2 linear oscillator (K = 0) | r^2 Kerr oscillator (K = 0.5)\")\nF0, F5 = features(s, 0.0), features(s, 0.5)\nfor d in (1, 2):\n    y = np.concatenate([np.zeros(d), s[:-d]])\n    print(f\"s(k-{d})       | {r2_for(F0, y):.3f} | {r2_for(F5, y):.3f}\")\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Linearity test. After a single input pulse of height $u$, the response divided by $u$ is $-1.1873$ for every $u$ when $K=0$ (the response is exactly proportional to the input). With $K=0.5$ it changes with $u$: $-0.831$, $-0.727$, $-0.365$ for $u=0.25, 0.5, 1.0$. The Kerr oscillator is nonlinear in its input.",
+        "Memory. A linear readout of the four readings per step recalls $s(k-1)$ with $r^2=0.329$ for $K=0$ and $0.880$ for $K=0.5$. For $s(k-2)$ the values are 0.200 and 0.049: the memory is short, one to two steps."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The same setup run on the product task $s(k)\\,s(k-1)$ and the square $s(k)^2$ gives $r^2$ below 0.1 for both oscillators, so this small, single-quadrature, four-reading setup does not demonstrate a nonlinear computation, only that the response is nonlinear. A real nonlinear benchmark needs more readings per step, longer memory, or a larger drive; the parameters here were not searched. Do not read the sample as evidence that a Kerr oscillator solves nonlinear tasks."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Gaussian optical reservoirs"
+    },
+    {
+      "type": "prose",
+      "text": "In optics, Gaussian continuous-variable reservoirs (Nokkala et al. 2021) are networks of linearly coupled harmonic modes (for example linear optical systems) whose inputs are encoded into Gaussian states, with squeezed-vacuum encoding giving the best performance. They can be simulated efficiently on a classical computer, but they show how the encoding and the choice of measured observables set the reservoir's nonlinearity. The details are in Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: level spacing",
+      "text": "A Kerr oscillator has $K=0.5$ (in units of the drive frequency). Give the transition energies for $0\\to1$, $1\\to2$ and $2\\to3$, and by how much a drive resonant with the first is detuned from the second.",
+      "hint": "$E_n=Kn^2$.",
+      "solution": [
+        "$E_{n+1}-E_n=K(2n+1)$: $n=0$: $0.5$; $n=1$: $1.5$; $n=2$: $2.5$.",
+        "Detuning from the second: $1.5-0.5=1.0 = 2K$."
+      ],
+      "answer": "0.5, 1.5, 2.5; detuned by 1.0."
     },
     {
       "type": "heading",
@@ -62,8 +327,26 @@
       "text": "Driven-dissipative lattices with quantum inputs"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "Ghosh and coauthors (2019) proposed quantum reservoir processing, a different use of a reservoir: the input is itself a quantum state (an optical field incident on the reservoir) rather than a classical time series. Their reservoir is a 2D lattice of fermionic sites with random hopping, incoherently pumped and decaying, read through the site occupation numbers; trained linear readouts recognise entangled input states and estimate nonlinear functions of the input state such as entropy, purity and logarithmic negativity from that one set of measurements. Candidate platforms they name include semiconductor quantum dots, superconducting qubits, arrays of strongly interacting photons, and exciton-polaritons in microcavities. Being driven-dissipative, such lattices supply the contraction naturally."
+      "text": "Everything so far processes classical inputs: numbers $s_k$. A different use of a reservoir is to process quantum inputs: states that come from other quantum systems, such as light with unknown properties. The reservoir is then a measurement device, not a computer of numbers."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea"
+    },
+    {
+      "type": "prose",
+      "text": "Ghosh and coauthors (2019) proposed quantum reservoir processing for this. The input is itself a quantum state: an optical field incident on the reservoir. Their reservoir is a two-dimensional lattice of fermionic sites with random hopping, incoherently pumped and decaying, read through the site occupation numbers. A trained linear readout recognises entangled input states and estimates nonlinear functions of the input state such as entropy, purity and logarithmic negativity from that one set of measurements. Estimating those quantities directly would normally need many copies of the state and a full tomography; here one fixed set of occupation measurements suffices."
+    },
+    {
+      "type": "prose",
+      "text": "Candidate platforms they name include semiconductor quantum dots, superconducting qubits, arrays of strongly interacting photons, and exciton-polaritons in microcavities. Being driven-dissipative (pumped and decaying), such lattices supply contraction naturally. The related tasks for ordinary reservoirs are discussed in Quantum Data Tasks (#/qrc/models/quantum-data-tasks)."
     },
     {
       "type": "heading",
@@ -73,7 +356,7 @@
     {
       "type": "list",
       "items": [
-        "Superconducting circuits (gate-based or analog): fast (µs steps, kHz–tens of kHz repetition), single-shot bitstrings, mid-circuit measurement available; tens to hundreds of qubits; noise and drift are the main issues.",
+        "Superconducting circuits (gate-based or analog): fast ($\\mu$s steps, kHz to tens of kHz repetition), single-shot bitstrings, mid-circuit measurement available; tens to hundreds of qubits; noise and drift are the main issues.",
         "NMR ensembles: expectation values in one run, gentle readout; small polarisation, limited local control, few distinguishable spins.",
         "Rydberg arrays: hundreds of atoms, full bitstring snapshots, flexible geometry; slow repetition, so shot budgets are tight.",
         "Bosonic modes: large Hilbert space in one device, continuous measurements; Gaussian versions are classically simulable.",
@@ -81,17 +364,62 @@
       ]
     },
     {
+      "type": "prose",
+      "text": "Notice that the speed of repetition differs by a factor of thousands between the extremes. Take the same data set, 300 inputs at 1000 shots each ($3\\times10^{5}$ shots, no recurrence). At 3 shots per second (a neutral-atom machine) that is $10^5$ s, 27.8 hours. At $10^4$ shots per second (a fast superconducting device) it is 30 s. Which platform is better depends on whether the problem needs the large, flexible array (atoms) or the fast repetition (circuits)."
+    },
+    {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "You have three tasks: (a) classify 300 static images after dimension reduction to 6 numbers; (b) predict a time series of 5000 steps that needs memory of 10 steps; (c) estimate the purity of an unknown optical state. Choose a platform for each from this page."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Task (a) is static: no recurrence is needed, so it is quantum-extreme-learning-machine style, and a slow platform is acceptable if it gives many features per shot. A Rydberg array with the 6 numbers written into detunings, 21 or more correlator features per time, and a handful of evolution times fits. Shots: $300\\times1000=3\\times10^5$, 28 hours at 3 shots per second: feasible but slow."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Task (b) has long recurrence: 5000 steps with memory 10. A slow platform would be punishing: even windowed restarts need $S\\,T=5000\\,S$ runs. A fast gate-based device with mid-circuit measurement (Gate-Based Devices (#/qrc/hardware/gate-based-devices) and Online Measurement Protocols (#/qrc/hardware/online-protocols)) is the better fit. For comparison, NMR gives expectation values in one run but needs the series to be run through a bulk sample with enough precision."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Task (c) has a quantum input. That is the case for a driven-dissipative lattice in the style of Ghosh and coauthors, in which the input state is incident on the reservoir directly. A classical-input platform would first need the state converted into numbers, which defeats the purpose."
+    },
+    {
+      "type": "prose",
+      "text": "The exercise shows the selection rule: ask first how many features per run and how fast runs repeat, then whether the input is classical, then whether the dynamics must be recurrent."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A reservoir platform must give an input channel, rich fixed dynamics, forgetting, a readout with many features per run at a workable rate, and stability over the time between training and use.",
+        "NMR gives ensemble averages in one run and gentle readout, but small polarisation ($\\sim3\\times10^{-6}$ for protons at 1 T and 300 K) and little local control.",
+        "Rydberg arrays implement $H=\\frac\\Omega2\\sum X_i-\\sum\\Delta_in_i+\\sum V_{ij}n_in_j$ with $V_{ij}\\propto r_{ij}^{-6}$; each shot gives the full bitstring and so all correlators, but repetition is only a few shots per second.",
+        "The number of correlator features $n+\\binom n2$ per time grows quickly, but each needs its own shot budget; the six-atom sample shows exact fits that degrade strongly with shot noise.",
+        "A linear oscillator responds linearly to its input; a Kerr term makes the level spacing $K(2n+1)$ grow with $n$ and the response nonlinear.",
+        "Driven-dissipative lattices are aimed at quantum inputs, with contraction supplied by pumping and decay."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
       "title": "Correlator features from snapshots",
-      "text": "A Rydberg reservoir of $n = 100$ atoms is imaged at $V = 10$ evolution times per input. How many one- and two-body $Z$-correlator features does that give, and what does it imply for the training set size of an unregularised linear readout?",
-      "hint": "Count pairs with $\\binom{n}{2}$.",
+      "text": "A Rydberg reservoir of $n=100$ atoms is imaged at $V=10$ evolution times per input. How many one- and two-body $Z$-correlator features does that give, and what does it imply for the training set size of an unregularised linear readout?",
+      "hint": "Count pairs with $\\binom n2$.",
       "solution": [
-        "Per time: $n + \\binom{n}{2} = 100 + 4950 = 5050$ features.",
+        "Per time: $n+\\binom n2=100+4950=5050$ features.",
         "Times 10 evolution times: 50,500 features.",
         "An unregularised least-squares readout needs more training examples than features (here more than 50,500), each with its own shot budget; in practice you select or regularise features heavily."
       ],
@@ -100,24 +428,61 @@
     {
       "type": "problem",
       "title": "Interaction range",
-      "text": "In a Rydberg array with $V_{ij}=C_6/r^6$, two atoms 5 µm apart interact with strength $V_0$. What is the interaction at 7.5 µm and at 10 µm, as fractions of $V_0$?",
-      "hint": "Scale by the sixth power of the distance ratio.",
+      "text": "In a Rydberg array with $V_{ij}=C_6/r^6$, two atoms 5 $\\mu$m apart interact with strength $V_0$. What is the interaction at 7.5 $\\mu$m and at 10 $\\mu$m, as fractions of $V_0$?",
+      "hint": "Ratio $(r_0/r)^6$.",
       "solution": [
-        "$V(7.5)/V_0 = (5/7.5)^6 = (2/3)^6 \\approx 0.088$.",
-        "$V(10)/V_0 = (1/2)^6 = 1/64 \\approx 0.016$."
+        "$V(7.5)/V_0=(5/7.5)^6=(2/3)^6 = 0.088$.",
+        "$V(10)/V_0=(1/2)^6=1/64 = 0.016$."
       ],
       "answer": "About 0.088 and 0.016."
     },
     {
       "type": "problem",
       "title": "Shots per hour",
-      "text": "A neutral-atom device takes 3 shots per second. You need 1000 shots per input for 200 training inputs and 100 test inputs, processed QELM-style (no recurrence). How long does data taking take?",
-      "hint": "Total shots divided by the shot rate.",
+      "text": "A neutral-atom device takes 3 shots per second. You need 1000 shots per input for 200 training inputs and 100 test inputs, processed without recurrence. How long does data taking take?",
+      "hint": "Total shots divided by the rate.",
       "solution": [
-        "Shots: $1000\\times 300 = 3\\times 10^5$.",
-        "Time: $3\\times10^5/3 = 10^5$ s $\\approx 27.8$ hours."
+        "Shots: $1000\\times300=3\\times10^5$.",
+        "Time: $3\\times10^5/3=10^5$ s $=27.8$ hours."
       ],
       "answer": "About 28 hours."
+    },
+    {
+      "type": "problem",
+      "title": "Blockade speed-up",
+      "text": "Four atoms lie inside one blockade radius with $\\Omega=2\\pi\\times1$ MHz. What is the collective Rabi frequency, and how long does a half oscillation (from $|gggg\\rangle$ to the shared excitation) take?",
+      "hint": "$\\sqrt{N}$ enhancement.",
+      "solution": [
+        "Collective frequency $\\sqrt N\\,\\Omega=2\\Omega=2\\pi\\times2$ MHz.",
+        "A half oscillation takes $\\pi/(\\sqrt N\\Omega)=\\pi/(2\\times2\\pi\\times10^6\\ \\text{s}^{-1}) = 2.5\\times10^{-7}$ s $=0.25\\ \\mu$s."
+      ],
+      "answer": "$2\\pi\\times2$ MHz; 0.25 $\\mu$s."
+    },
+    {
+      "type": "problem",
+      "title": "Why a linear oscillator cannot multiply",
+      "text": "A damped linear oscillator is driven by $\\alpha u(t)(a+a^{\\dagger})$ and one quadrature is read out. Explain why no linear readout of that quadrature can compute $s_ks_{k-1}$ from inputs with zero mean.",
+      "hint": "Write the features as sums of inputs.",
+      "solution": [
+        "The quadrature is a weighted sum of past inputs: $q_k=\\sum_{m\\ge0}g_m s_{k-m}$, from the linear equation of motion.",
+        "A linear readout of such sums gives another weighted sum $\\sum c_ms_{k-m}$.",
+        "With independent zero-mean inputs, $s_ks_{k-1}$ is uncorrelated with every $s_{k-m}$, so the best linear fit is zero: $r^2=0$."
+      ],
+      "answer": "The features are linear in the inputs, and the product is uncorrelated with every single input."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Resource Accounting (#/qrc/hardware/resource-accounting) turns the platform repetition rates here into a wall-clock cost.",
+        "Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines) and Readout and Multiplexing (#/qrc/models/readout-and-multiplexing) cover the static, feature-heavy use that suits atom arrays.",
+        "Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs) covers the Gaussian optical reservoirs mentioned above.",
+        "Quantum Advantage (#/qrc/theory/quantum-advantage) asks whether any of these platforms can beat classical reservoirs."
+      ]
     },
     {
       "type": "heading",

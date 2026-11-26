@@ -5,20 +5,107 @@
     {
       "type": "heading",
       "level": 2,
-      "text": "The function class: fading-memory filters"
+      "text": "What you need first"
     },
     {
       "type": "prose",
-      "text": "A reservoir maps an input sequence $(\\dots, s_{k-1}, s_k)$ to an output $\\hat y_k$. The natural target class is the causal, time-invariant filters with fading memory: $y_k = G(s_k, s_{k-1}, s_{k-2}, \\dots)$ where inputs far in the past matter less and less. Formally, with a decreasing weight sequence $\\lambda_j \\to 0$, $G$ is continuous in the weighted norm $\\sup_j \\lambda_j |s_{k-j}|$. Boyd and Chua showed that every such filter on bounded inputs is uniformly approximated by a finite Volterra series, a polynomial in finitely many past inputs:"
+      "text": "This page is about what a quantum reservoir can and cannot compute. It assumes the reservoir picture from What Is Reservoir Computing? (#/qrc/start/what-is-reservoir-computing) and the finished example in A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand): an input is written into a qubit, the qubits evolve, expectation values are read out and a linear (ridge) readout is trained (Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge)). From the Quantum Mechanics shelf you need density matrices (Mixed States (#/quantum/many-body/mixed-states)), tensor products (Composite Systems and Tensor Products (#/quantum/many-body/composite-systems)) and the Pauli operators (Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations)). You do not need any earlier theory page on this shelf; where the echo state property or memory capacity come in, they are explained again here in a few lines."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Say precisely which family of input-output maps (fading-memory filters) a reservoir is trying to approximate, and write one as a Volterra series.",
+        "Derive, step by step, why a quantum reservoir with reset encoding produces features built from the three functions $1$, $s$ and $\\sqrt{s(1-s)}$ of each past input, and use that to say which targets are easy and which are impossible.",
+        "Count how many independent single-input functions you get after $r$ uploads of the input, and decide whether an encoding can represent a given target.",
+        "Explain the Stone–Weierstrass argument for universality, including why running two reservoirs side by side gives products of outputs, and say what the theorem does not promise.",
+        "Bound the total capacity of a reservoir by its number of independent features, and compute the largest feature count a given number of qubits can ever supply."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Which maps are we trying to compute?"
+    },
+    {
+      "type": "prose",
+      "text": "Before asking whether a reservoir is expressive we have to say what it is expressive about. A reservoir reads a sequence of inputs $s_1, s_2, s_3, \\dots$ one at a time and, after each one, produces an output $\\hat y_k$. Whatever the output is, it can only depend on the inputs seen so far, so it is a function of the history $(s_k, s_{k-1}, s_{k-2}, \\dots)$. The thing we want to approximate is therefore a map from histories to numbers. We call such a map a filter, as in signal processing: a sequence goes in, a sequence comes out."
+    },
+    {
+      "type": "prose",
+      "text": "Two properties are required of the target. It must be causal: $y_k$ depends on $s_k, s_{k-1}, \\dots$ and never on future inputs. It must be time-invariant: the rule that turns a history into $y_k$ is the same at every $k$, which is why a single trained readout can serve all time steps. Those are the same assumptions made in Time Series and Prediction (#/qrc/start/time-series-and-prediction) when we predicted tomorrow from the past. One more property decides whether a reservoir can reach the target at all."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Fading memory"
+    },
+    {
+      "type": "prose",
+      "text": "A filter has fading memory if inputs far in the past matter less and less. Take a concrete rule, $y_k = 0.5\\,y_{k-1} + s_k^2$: today's output is half of yesterday's output plus the square of today's input. Unrolling it (replace $y_{k-1}$ by $0.5\\,y_{k-2} + s_{k-1}^2$, and so on) gives"
     },
     {
       "type": "math",
-      "tex": "y_k \\approx h_0 + \\sum_{j} h_1(j)\\, s_{k-j} + \\sum_{j \\le l} h_2(j,l)\\, s_{k-j} s_{k-l} + \\dots",
-      "caption": "A truncated Volterra series: the benchmark class for what a reservoir should reach."
+      "tex": "y_k = s_k^2 + 0.5\\,s_{k-1}^2 + 0.25\\,s_{k-2}^2 + 0.125\\,s_{k-3}^2 + \\dots = \\sum_{j=0}^{\\infty} 0.5^{\\,j}\\, s_{k-j}^2",
+      "caption": "Every past input still counts, but an input $j$ steps back is weighted by $0.5^j$: its influence halves each step."
     },
     {
       "type": "prose",
-      "text": "So the expressivity question splits in two. Memory: how far back $j$ can the reservoir reach, which is set by contraction (the echo state property). Nonlinearity: which monomials, and of what degree, can a linear readout of its features form. A classical echo state network gets both from $\\tanh$ and a spectral radius below about one; a quantum reservoir gets memory from dissipation and nonlinearity from somewhere less obvious, because quantum mechanics is linear in $\\rho$."
+      "text": "This is the picture to hold on to: the output is a weighted combination of a function of each past input, with weights that die away. A rule such as $y_k = s_{k-1000}$ would not fade (an input 1000 steps back matters completely and one 999 steps back not at all), and a reservoir that forgets cannot compute it; one that forgot nothing would drown in its own history. The echo state property, which you met in The Echo State Property (#/qrc/foundations/echo-state-property), is the reservoir's side of this bargain: the reservoir state is determined by recent inputs, so it can only represent fading-memory filters. Formally, fix weights $\\lambda_j$ that decrease to zero and measure the distance between two histories as $\\sup_j \\lambda_j\\,|s_{k-j} - s'_{k-j}|$; a filter has fading memory when nearby histories in this distance give nearby outputs. Two histories that agree on the last ten inputs and differ only wildly far back are close, so the outputs must be close."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Volterra series: the filters as polynomials"
+    },
+    {
+      "type": "prose",
+      "text": "Every fading-memory filter on bounded inputs can be approximated uniformly by a finite polynomial in finitely many past inputs. This is the Boyd–Chua theorem (1985), the analogue for filters of the fact that a continuous function on an interval can be approximated by polynomials. The polynomial is called a truncated Volterra series:"
+    },
+    {
+      "type": "math",
+      "tex": "y_k \\approx h_0 + \\sum_{j=0}^{L-1} h_1(j)\\, s_{k-j} + \\sum_{0 \\le j \\le l \\le L-1} h_2(j,l)\\, s_{k-j}\\, s_{k-l} + \\dots",
+      "caption": "The constant $h_0$, the linear terms with weights $h_1(j)$, the pairwise products with weights $h_2(j,l)$, and so on up to some degree. $L$ is the number of lags kept."
+    },
+    {
+      "type": "prose",
+      "text": "In words: pick a number of lags $L$ and a degree $d$. List every monomial of total degree at most $d$ in the $L$ numbers $s_k, \\dots, s_{k-L+1}$. A weighted sum of those monomials can be made as close as you like to the target by taking $L$ and $d$ large enough. Our example is already a Volterra series with only squared terms. Take the history $s_k = 0.6$, $s_{k-1} = 0.8$, $s_{k-2} = 0.2$ and all older inputs 0:"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. The term for the current input is $0.6^2 = 0.36$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. The term one step back is $0.5 \\times 0.8^2 = 0.32$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The term two steps back is $0.25 \\times 0.2^2 = 0.01$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Adding gives $y_k = 0.69$. Keeping only $L$ lags makes an error of at most the tail $\\sum_{j \\ge L} 0.5^j = 2 \\cdot 0.5^L = 0.5^{L-1}$ when $|s| \\le 1$: 0.06250 for $L = 5$ and 0.00195 for $L = 10$. This is how fading memory pays: a finite window is enough for any accuracy you want."
+    },
+    {
+      "type": "prose",
+      "text": "Splitting the question in two now makes everything below easier. Memory asks how far back $j$ the reservoir can reach, and the answer is set by contraction ($\\mathcal{T}$ forgets at some rate). Nonlinearity asks which monomials, of what degree, a linear readout of the reservoir's features can form. A classical echo state network (Echo State Networks (#/qrc/foundations/echo-state-networks)) gets nonlinearity from $\\tanh$ at every unit. A quantum reservoir has no $\\tanh$: its state evolves linearly. So where do the monomials come from? The next section answers that, and it is the central fact of the page."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: how many lags are enough?",
+      "text": "For $y_k = 0.5\\,y_{k-1} + s_k^2$ with inputs in $[0,1]$, what is the smallest number of lags $L$ for which the truncation error bound $0.5^{L-1}$ falls below $0.001$?",
+      "hint": "Take logarithms of $0.5^{L-1} < 0.001$ and remember that dividing by the negative number $\\ln 0.5$ flips the inequality.",
+      "solution": [
+        "We need $0.5^{L-1} < 0.001$, i.e. $(L-1)\\ln 2 > \\ln 1000 = 6.908$, so $L - 1 > 9.97$.",
+        "Hence $L - 1 \\ge 10$ and $L = 11$.",
+        "Check: $0.5^{11 - 1} = 0.00098$ is below $0.001$, while $0.5^{11 - 2} = 0.00195$ is not."
+      ],
+      "answer": "$L = 11$"
     },
     {
       "type": "heading",
@@ -27,29 +114,115 @@
     },
     {
       "type": "prose",
-      "text": "The channel acts linearly on $\\rho$, and the features are linear in $\\rho$. The only route for nonlinearity in $s$ is the dependence of the channel on the input. For the reset (state-injection) encoding of Input Encoding (#/qrc/models/input-encoding), qubit 1 is replaced by $\\vert\\psi(s)\\rangle = \\sqrt{1-s}\\vert 0\\rangle + \\sqrt{s}\\vert 1\\rangle$, whose density matrix has entries $1-s$, $s$ and $\\sqrt{s(1-s)}$. The whole step is therefore an affine combination of three fixed channels:"
+      "text": "Here is the puzzle. A quantum reservoir's state $\\rho_k$ evolves by a channel, a linear map on density matrices (Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels)). The features are expectation values $\\operatorname{Tr}(O\\rho_k)$, again linear in $\\rho_k$. Chain linear maps together and you get a linear map. If the input $s$ only appeared as a number multiplying something, every output would be a linear function of the inputs and the reservoir could only compute linear filters. The nonlinearity must therefore come from how the channel depends on $s$, not from the channel's action on $\\rho$. That dependence is the encoding."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The reset encoding written out"
+    },
+    {
+      "type": "prose",
+      "text": "Use the encoding of the model in The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir): at each step qubit 1 is thrown away (traced out) and replaced by a fresh qubit in the state $\\vert\\psi(s)\\rangle = \\sqrt{1-s}\\,\\vert 0\\rangle + \\sqrt{s}\\,\\vert 1\\rangle$, after which all qubits evolve by a fixed unitary $U$. With $\\operatorname{Tr}_1$ the partial trace over qubit 1 the one-step map is"
+    },
+    {
+      "type": "math",
+      "tex": "\\mathcal{T}_s(\\rho) = U\\Big(\\vert\\psi(s)\\rangle\\langle\\psi(s)\\vert \\otimes \\operatorname{Tr}_1\\rho\\Big)U^\\dagger",
+      "caption": "Replace qubit 1 by the input state, keep the rest of the reservoir, evolve."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Write out the density matrix of the input qubit. Multiplying $\\vert\\psi\\rangle\\langle\\psi\\vert$ out gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\vert\\psi(s)\\rangle\\langle\\psi(s)\\vert = (1-s)\\,\\vert 0\\rangle\\langle 0\\vert + s\\,\\vert 1\\rangle\\langle 1\\vert + \\sqrt{s(1-s)}\\,\\big(\\vert 0\\rangle\\langle 1\\vert + \\vert 1\\rangle\\langle 0\\vert\\big)",
+      "caption": "Diagonal entries $1-s$ and $s$ (the probabilities of reading 0 and 1); off-diagonal entries $\\sqrt{s(1-s)}$ (the coherence)."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Collect the terms by how they depend on $s$: the first two terms equal $\\vert 0\\rangle\\langle 0\\vert + s\\,(\\vert 1\\rangle\\langle 1\\vert - \\vert 0\\rangle\\langle 0\\vert)$. So the input qubit's density matrix is a fixed matrix, plus $s$ times a fixed matrix, plus $\\sqrt{s(1-s)}$ times a fixed matrix."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The map $\\sigma \\mapsto U(\\sigma \\otimes \\operatorname{Tr}_1\\rho)U^\\dagger$ is linear in $\\sigma$, the input qubit's matrix. Therefore the sum splits term by term:"
     },
     {
       "type": "math",
       "tex": "\\mathcal{T}_s = \\mathcal{T}_0 + s\\,\\mathcal{T}_1 + \\sqrt{s(1-s)}\\,\\mathcal{T}_2",
-      "caption": "Each $\\mathcal{T}_m$ is a fixed linear map; $\\mathcal{T}_0$ is the channel for $s = 0$, while $\\mathcal{T}_1$ and $\\mathcal{T}_2$ are not channels on their own. $\\mathcal{T}_s$ is CPTP for every $s \\in [0,1]$."
+      "caption": "$\\mathcal{T}_0$ uses $\\vert 0\\rangle\\langle 0\\vert$, $\\mathcal{T}_1$ uses $\\vert 1\\rangle\\langle 1\\vert - \\vert 0\\rangle\\langle 0\\vert$ and $\\mathcal{T}_2$ uses $\\vert 0\\rangle\\langle 1\\vert + \\vert 1\\rangle\\langle 0\\vert$ in place of the input qubit's matrix."
     },
     {
       "type": "prose",
-      "text": "Unrolling $L$ steps and replacing the state $L$ steps back by a fixed state $\\rho_*$ gives the reservoir's own Volterra-like expansion:"
+      "text": "$\\mathcal{T}_0$ is a genuine channel (it is the step for $s = 0$). $\\mathcal{T}_1$ and $\\mathcal{T}_2$ are not channels on their own, since they can send a state to a matrix with negative eigenvalues, but only the combination for $s \\in [0,1]$ has to be a channel, and it is. Run the sample below to see the identity hold to machine precision for a random three-qubit state. The sample also counts how many different single-input functions appear when the input is uploaded several times, which we need shortly."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# Check that one reset-injection step is T0 + s*T1 + sqrt(s(1-s))*T2, and count the span for r uploads.\nimport numpy as np\nfrom qrc_th_common import *\n\nn = 3\nD = 2**n\nU = propagator(hamiltonian(n), 10.0)\nrng = np.random.default_rng(5)\n\ndef partial_trace_1(rho):\n    r4 = rho.reshape(2, D // 2, 2, D // 2)\n    return r4[0, :, 0, :] + r4[1, :, 1, :]\n\ndef step(rho, block):\n    \"\"\"U ( block (x) Tr_1 rho ) U^dagger for a 2x2 matrix 'block' written on qubit 1.\"\"\"\n    return U @ np.kron(block, partial_trace_1(rho)) @ U.conj().T\n\nP0 = np.array([[1, 0], [0, 0]], dtype=complex)\nPd = np.array([[-1, 0], [0, 1]], dtype=complex)      # |1><1| - |0><0|\nXo = np.array([[0, 1], [1, 0]], dtype=complex)       # |0><1| + |1><0|\n\nA = rng.normal(size=(D, D)) + 1j * rng.normal(size=(D, D))\nrho = A @ A.conj().T\nrho /= np.trace(rho).real\nfor s in (0.0, 0.25, 0.8):\n    psi = np.array([np.sqrt(1 - s), np.sqrt(s)])\n    full = step(rho, np.outer(psi, psi))\n    # the three fixed maps: T0 uses |0><0|, T1 uses |1><1| - |0><0|, T2 uses |0><1| + |1><0|\n    T0, T1, T2 = step(rho, P0), step(rho, Pd), step(rho, Xo)\n    recon = T0 + s * T1 + np.sqrt(s * (1 - s)) * T2\n    print(f\"s = {s:.2f}: max |T_s(rho) - (T0 + s T1 + sqrt(s(1-s)) T2)| = {np.abs(full - recon).max():.1e}\")\n\n# Span of single-input functions after r uploads of the same input: sample c(s)^(x)r on a grid, find the rank.\ns = np.linspace(0.02, 0.98, 200)\nc = np.stack([np.ones_like(s), s, np.sqrt(s * (1 - s))], axis=1)\nprint(\"uploads r -> dimension of the span of functions of s\")\nM = np.ones((len(s), 1))\nfor r in range(1, 6):\n    M = np.einsum(\"ni,nj->nij\", M, c).reshape(len(s), -1)\n    sv = np.linalg.svd(M, compute_uv=False)\n    rank = int((sv > 1e-9 * sv[0]).sum())\n    print(f\"  r = {r}: {M.shape[1]:3d} products, rank {rank}   (2r+1 = {2 * r + 1})\")\n"
+    },
+    {
+      "type": "prose",
+      "text": "The run prints:"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "s = 0.00: max |T_s(rho) - (T0 + s T1 + sqrt(s(1-s)) T2)| = 0.0e+00\ns = 0.25: max |T_s(rho) - (T0 + s T1 + sqrt(s(1-s)) T2)| = 8.6e-17\ns = 0.80: max |T_s(rho) - (T0 + s T1 + sqrt(s(1-s)) T2)| = 5.6e-17\nuploads r -> dimension of the span of functions of s\n  r = 1:   3 products, rank 3   (2r+1 = 3)\n  r = 2:   9 products, rank 5   (2r+1 = 5)\n  r = 3:  27 products, rank 7   (2r+1 = 7)\n  r = 4:  81 products, rank 9   (2r+1 = 9)\n  r = 5: 243 products, rank 11   (2r+1 = 11)\n"
+    },
+    {
+      "type": "prose",
+      "text": "The difference is zero to within rounding, $10^{-16}$ in size, for three very different inputs. The input has entered only through the three numbers $1$, $s$ and $\\sqrt{s(1-s)}$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Unrolling many steps"
+    },
+    {
+      "type": "prose",
+      "text": "Now chain steps. Apply $\\mathcal{T}_{s_k}$ to the state produced by $\\mathcal{T}_{s_{k-1}}$, and so on back $L$ steps to some fixed starting state $\\rho_*$. Each factor is a three-term sum, so multiplying out gives $3^L$ terms:"
     },
     {
       "type": "math",
       "tex": "\\rho_k \\approx \\sum_{m_0, \\dots, m_{L-1} \\in \\{0,1,2\\}} g_{m_0}(s_k)\\, g_{m_1}(s_{k-1}) \\cdots g_{m_{L-1}}(s_{k-L+1})\\; \\mathcal{T}_{m_0}\\mathcal{T}_{m_1}\\cdots \\mathcal{T}_{m_{L-1}}(\\rho_*)",
-      "caption": "With $g_0 = 1$, $g_1(s) = s$, $g_2(s) = \\sqrt{s(1-s)}$. The error is exponentially small in $L$ when the channel contracts."
+      "caption": "With $g_0(s) = 1$, $g_1(s) = s$, $g_2(s) = \\sqrt{s(1-s)}$. The error from starting at $\\rho_*$ instead of the true history is exponentially small in $L$ when the reservoir forgets."
     },
     {
       "type": "prose",
-      "text": "Read the structure off this sum. Every output is a sum of products across time, each factor drawn from $\\mathrm{span}\\{1, s, \\sqrt{s(1-s)}\\}$ of one past input. Cross-time products such as $s_k s_{k-1}$ come for free (they are terms with two non-trivial factors). But the dependence on any single input is confined to a three-dimensional function space, however many qubits or virtual nodes you add. The target $s_k^2$ is outside that span and can only be approximated, through $\\sqrt{s(1-s)}$; the sample in Hands-on Implementation (#/qrc/theory/hands-on-implementation) measures the best possible NMSE inside the span as 0.0018 on its test set (0.0020 exactly for uniform $s$) and a 4-qubit reservoir with 40 features at 0.0113."
+      "text": "Everything in front of the fixed operators is a product of one function of each past input. The fixed operators are matrices that depend only on $U$. A feature $\\operatorname{Tr}(O\\rho_k)$ is then a sum, with fixed coefficients, of terms of the form $g_{m_0}(s_k)\\,g_{m_1}(s_{k-1})\\cdots$. That is the quantum reservoir's own Volterra-like expansion, and reading it off tells us three things."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Products across time are free. A term in which two different steps carry the non-trivial functions, such as $s_k \\cdot s_{k-1}$ (set $m_0 = m_1 = 1$ and every other $m = 0$), is present automatically. Cross-time products are what quantum reservoirs are naturally good at.",
+        "Dependence on any single input is limited. Whatever happens at one time step, the dependence on that step's input lies in the three-dimensional space spanned by $1$, $s$ and $\\sqrt{s(1-s)}$, however many qubits or virtual nodes you add. The Hamiltonian changes the coefficients, not the three functions.",
+        "So $s_k^2$ is not available exactly. It is not in that span. It can only be approximated, through the $\\sqrt{s(1-s)}$ term."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "How good is the approximation? Fit $s^2$ on the span by least squares for uniform $s \\in [0,1]$. The best normalised mean-square error is $0.0020$, small but nonzero. The numbers come from the sample later in this section, run through exact quadrature, and agree with the Hands-on run in Hands-on Implementation (#/qrc/theory/hands-on-implementation), which measured 0.0018 on its finite test set."
     },
     {
       "type": "callout",
-      "text": "This is the quantum counterpart of a classical fact: a linear reservoir driven additively by the input can only produce a linear filter. Nonlinearity in a quantum reservoir is a property of the encoding (and of the readout), not of the Hamiltonian. A richer Hamiltonian changes which combinations of the monomials are reachable and how well conditioned they are, not which monomials exist."
+      "text": "This is the quantum counterpart of a classical fact: a linear reservoir driven additively by the input can only produce a linear filter. The nonlinearity of a quantum reservoir is a property of the encoding (and of the readout), not of the Hamiltonian. A richer Hamiltonian changes which combinations of the monomials are reachable and how well conditioned they are; it does not create new monomials."
+    },
+    {
+      "type": "prose",
+      "text": "A two-step example makes the structure concrete. Take $s_k = 0.25$ for the current input. Then the three functions are $1$, $s = 0.25$ and $\\sqrt{s(1-s)} = \\sqrt{0.1875} = 0.4330$, so the current input contributes the row $(1, 0.25, 0.4330)$. For the previous input, say $s_{k-1} = 0.64$, the row is $(1, 0.64, 0.4800)$. A feature depending on both steps is a weighted sum of the $3 \\times 3 = 9$ products of one entry from each row, for example $0.25 \\times 0.64$ or $0.4330 \\times 0.4800$. Going back $L$ steps gives $3^L$ products: 27 for three steps, 59049 for ten. The coefficients (set by $U$) decide how much of each the features contain."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: the building blocks for a given input",
+      "text": "For an input $s = 0.64$ list the row $(1, s, \\sqrt{s(1-s)})$. Is the target $s^2$ in the span of this row's three functions, as functions of $s$?",
+      "hint": "At $s = 0$ and $s = 1$ the square-root function is zero. What does that force on the other coefficients?",
+      "solution": [
+        "$\\sqrt{0.64 \\times 0.36} = \\sqrt{0.2304} = 0.4800$, so the row is $(1, 0.64, 0.4800)$.",
+        "A function of $s$ is in the span if it equals $a + b s + c\\sqrt{s(1-s)}$ for all $s \\in [0,1]$. At $s = 0$ and $s = 1$ the square-root term vanishes, so $a = 0$ and $a + b = 1$, giving $b = 1$. Then $s^2 = s + c\\sqrt{s(1-s)}$ would need $c\\sqrt{s(1-s)} = s^2 - s = -s(1-s)$ for all $s$, which is false (the left is a square root, the right is a polynomial).",
+        "So $s^2$ is outside the span; the best approximation has normalised error $0.0020$."
+      ],
+      "answer": "Row $(1, 0.64, 0.4800)$; no, $s^2$ is only approximated"
     },
     {
       "type": "heading",
@@ -57,13 +230,86 @@
       "text": "Ways to enrich the encoding"
     },
     {
+      "type": "prose",
+      "text": "If single-input nonlinearity is limited by the encoding, the way to change it is to change the encoding. There are four standard moves. Each one makes the answer to 'which functions of one input can the reservoir build?' larger, and each has a price."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Upload the input more than once"
+    },
+    {
+      "type": "prose",
+      "text": "Write the same $s_k$ into two qubits at the same step. The two input qubits each contribute the row $c(s) = (1, s, \\sqrt{s(1-s)})$, so the step now depends on $s$ through the nine products of entries of $c(s) \\otimes c(s)$. Write $\\xi = \\sqrt{s(1-s)}$ so that $\\xi^2 = s - s^2$. The nine products are $1,\\ s,\\ \\xi,\\ s,\\ s^2,\\ s\\xi,\\ \\xi,\\ s\\xi,\\ \\xi^2$. Remove repeats: $s$ appears twice, $\\xi$ twice, $s\\xi$ twice. And $\\xi^2 = s - s^2$ is a combination of $s$ and $s^2$. What remains is the five functions $1,\\ s,\\ \\xi,\\ s^2,\\ s\\xi$. Now $s^2$ is exact."
+    },
+    {
+      "type": "prose",
+      "text": "With $r$ uploads the pattern is: polynomials in $s$ of degree up to $r$ (that is $r+1$ functions) together with $\\xi$ times polynomials of degree up to $r-1$ (that is $r$ functions), in total $2r + 1$ independent functions. The sample above checked this numerically by building all $3^r$ products on a grid and computing the rank: 3, 5, 7, 9, 11 for $r = 1 \\dots 5$. The next sample asks how good the best fit inside each span is for four targets."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# How well can a target function of ONE input be matched by span{s^a, s^a sqrt(s(1-s))}?\n# The span has dimension 2r+1 after r uploads. Uniform s on [0,1], exact least squares by Gauss-Legendre quadrature.\nimport numpy as np\n\nx, w = np.polynomial.legendre.leggauss(400)\ns = (x + 1) / 2\nw = w / 2                                   # weights of the uniform distribution on [0, 1]\nrt = np.sqrt(s * (1 - s))\n\ndef basis(r):\n    cols = [s**a for a in range(r + 1)] + [rt * s**a for a in range(r)]\n    return np.stack(cols, axis=1)\n\ndef nmse_fit(target, B):\n    sw = np.sqrt(w)\n    coef, *_ = np.linalg.lstsq(B * sw[:, None], target * sw, rcond=None)\n    resid = target - B @ coef\n    mean = (w * target).sum()\n    return (w * resid**2).sum() / (w * (target - mean) ** 2).sum()\n\ntargets = {\"s^2\": s**2, \"s^3\": s**3, \"sin(2 pi s)\": np.sin(2 * np.pi * s), \"exp(3 s)\": np.exp(3 * s)}\nprint(\"uploads r (span dimension 2r+1) -> best NMSE inside the span\")\nprint(\"  r  dim \" + \"\".join(f\"{k:>14s}\" for k in targets))\nfor r in range(1, 6):\n    B = basis(r)\n    print(f\"  {r}  {B.shape[1]:3d} \" + \"\".join(f\"{nmse_fit(t, B):14.2e}\" for t in targets.values()))\n"
+    },
+    {
+      "type": "prose",
+      "text": "Its output (uniform $s$ on $[0,1]$, exact least squares by quadrature):"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "uploads r (span dimension 2r+1) -> best NMSE inside the span\n  r  dim            s^2           s^3   sin(2 pi s)      exp(3 s)\n  1    3       2.04e-03      9.52e-03      3.92e-01      9.31e-03\n  2    5       5.29e-31      2.03e-04      4.71e-02      2.89e-04\n  3    7       4.03e-31      5.78e-31      2.13e-03      1.24e-06\n  4    9       1.01e-30      2.33e-30      7.72e-05      1.13e-08\n  5   11       8.94e-31      5.01e-31      1.30e-06      2.67e-11\n"
+    },
+    {
       "type": "list",
       "items": [
-        "Upload the same input more than once. Writing $s_k$ into two qubits gives $c(s) \\otimes c(s)$ with $c(s) = (1, s, \\sqrt{s(1-s)})$, whose span is $\\{1, s, \\sqrt{s(1-s)}, s^2, s\\sqrt{s(1-s)}\\}$: five functions, now including $s^2$. With $r$ copies the per-input degree grows linearly in $r$. This is the time-series version of data re-uploading.",
-        "Encode in an angle. A rotation $e^{-i\\theta s X/2}$ makes the state depend on $\\cos(\\theta s)$ and $\\sin(\\theta s)$, so each use contributes frequencies $\\{0, \\pm\\theta\\}$; $r$ uses give a truncated Fourier series with frequencies up to $r\\theta$ (Schuld, Sweke and Meyer). The spectrum is fixed by the encoding generator's eigenvalue differences, and the reservoir only sets the coefficients.",
-        "Encode in the Hamiltonian. Driving a field $h(s)$ for time $\\tau$ gives $e^{-i(H_0 + s H_1)\\tau}$, whose dependence on $s$ contains all eigenvalue differences of $H_0 + sH_1$, a much richer (and harder to analyse) function class.",
-        "Make the readout nonlinear. Products of measured features $x_{k,i}x_{k,j}$ are not linear in $\\rho_k$ but are linear in $\\rho_k \\otimes \\rho_k$, the state of two copies. Polynomial readouts are the cheapest classical route to the missing degree; the price is that the readout is no longer what makes the quantum system interesting."
+        "$s^2$ is missed by $2\\times 10^{-3}$ with one upload and hit exactly (the $10^{-31}$ is rounding) with two. $s^3$ needs three uploads: with $r = 2$ it is still off by $2 \\times 10^{-4}$.",
+        "A function that is not a polynomial, such as $\\sin(2\\pi s)$, is approached but never reached: 0.39, 0.047, 0.0021, $7.7\\times10^{-5}$, $1.3\\times10^{-6}$. Each extra upload buys a factor between 10 and 100 here, which is the usual spectral convergence of polynomial approximation of a smooth function.",
+        "The price is qubits (or time). Each upload is a qubit written at the input step, so the reservoir that can hold $s^3$ exactly spends three qubits on the same number."
       ]
+    },
+    {
+      "type": "prose",
+      "text": "This is the time-series version of data re-uploading in variational circuits."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Encode in an angle"
+    },
+    {
+      "type": "prose",
+      "text": "A rotation $e^{-i\\theta s X/2}$ applied to a qubit starts it in a state that depends on $s$ through $\\cos(\\theta s/2)$ and $\\sin(\\theta s/2)$, and the density matrix through $\\cos(\\theta s)$, $\\sin(\\theta s)$ and constants. Each use of the rotation therefore adds the frequencies $0$ and $\\pm\\theta$ to what the reservoir can say about $s$. After $r$ uses the dependence on $s$ is a truncated Fourier series with frequencies up to $r\\theta$. This is the result of Schuld, Sweke and Meyer for parameterised circuits. Two points to take from it. The frequencies available are fixed by the encoding (they are differences of eigenvalues of the encoding generator), and the reservoir's Hamiltonian only sets the coefficients of the series. And an angle encoding is excellent for smooth periodic functions and awkward for something like $s^3$ on an interval, the mirror of the polynomial encoding above."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Encode in the Hamiltonian"
+    },
+    {
+      "type": "prose",
+      "text": "Instead of writing $s$ into a fresh qubit, let it drive a parameter: apply the field $h(s)$ for a time $\\tau$, so that the step is $e^{-i(H_0 + sH_1)\\tau}$. The dependence on $s$ now contains all the eigenvalue differences of $H_0 + sH_1$, which themselves vary with $s$ in a complicated way. The function class is richer and much harder to analyse; this is one reason theory of such encodings is open (see Open Problems (#/qrc/theory/open-problems))."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Make the readout nonlinear"
+    },
+    {
+      "type": "prose",
+      "text": "Products of measured features, $x_i x_j$, are not linear in $\\rho_k$ but are linear in $\\rho_k \\otimes \\rho_k$, the state of two identical copies. A readout that includes such products is therefore the same as reading a two-copy reservoir, and in the per-input span it moves from three functions to five (just as a second upload does). The Hands-on page tested this: squaring the 20 features of a 4-qubit reservoir roughly halved the NARMA2 error. Polynomial readouts are the cheapest classical route to missing degree. The price is that the readout is then no longer a plain linear one, and the interesting part of the model is no longer quantum."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: what an extra upload buys",
+      "text": "A reservoir uploads each input three times (three qubits written with the same $s$). What is the dimension of the span of single-input functions it can form, and does it include $s^3$?",
+      "hint": "Use the pattern $2r+1$ and list the degrees.",
+      "solution": [
+        "With $r$ uploads the span has dimension $2r + 1$, so $r = 3$ gives 7.",
+        "It contains all polynomials in $s$ of degree up to $r = 3$ (four functions: $1, s, s^2, s^3$) plus $\\xi$ times polynomials of degree up to 2 (three functions: $\\xi, s\\xi, s^2\\xi$). $4 + 3 = 7$.",
+        "So $s^3$ is included. The sample confirms: for $r = 3$ the best NMSE for $s^3$ is zero to rounding."
+      ],
+      "answer": "7; yes"
     },
     {
       "type": "heading",
@@ -72,24 +318,87 @@
     },
     {
       "type": "prose",
-      "text": "Many universality theorems for reservoirs follow one template, which goes back to Boyd and Chua's Volterra-series result and was carried to dissipative qubit networks by Chen and Nurdin. (Grigoryeva and Ortega proved that echo state networks themselves are universal by a different route, through the topology of the fading-memory property and approximation of the reservoir map.) Consider a family $\\mathcal{F}$ of reservoir-plus-readout filters. If (i) every member has the echo state property and fading memory, (ii) $\\mathcal{F}$ contains the constants, (iii) $\\mathcal{F}$ separates points (two input histories that differ give different outputs for some member) and (iv) $\\mathcal{F}$ is closed under addition and multiplication, then by Stone–Weierstrass on the compact space of input sequences $\\mathcal{F}$ is dense in the fading-memory filters."
+      "text": "The previous section was about what one input step can express. Universality is the opposite question: given the freedom to choose the reservoir, can a family of reservoirs plus linear readouts approximate every fading-memory filter? Many universality theorems follow one template, taken from the classical Boyd–Chua and Stone–Weierstrass line of argument. We build it up in four steps."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The classical theorem"
     },
     {
       "type": "prose",
-      "text": "Quantum mechanics hands you closure under products almost for free. Run two reservoirs side by side; the joint state is $\\rho^{(1)}_k \\otimes \\rho^{(2)}_k$, and"
+      "text": "Weierstrass's theorem says that on an interval $[a,b]$ any continuous function can be uniformly approximated by polynomials. Stone generalised it to arbitrary compact spaces $K$ and any family $\\mathcal{A}$ of continuous functions on $K$ that satisfies three conditions: it contains the constants, it separates points (for any two different points $p \\neq q$ of $K$ some member takes different values at $p$ and $q$), and it is closed under addition and multiplication. Then $\\mathcal{A}$ is dense in the continuous functions on $K$. The proof is not short. What matters is that the conditions are checkable properties of the family, not of the target."
+    },
+    {
+      "type": "prose",
+      "text": "For us, $K$ is the compact space of bounded input histories (compact in the weighted distance of the fading-memory definition), and the continuous functions on it are the fading-memory filters at one time step. The family $\\mathcal{A}$ is: the outputs of reservoir-plus-readout systems."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Checking the conditions for reservoirs"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The members must be continuous on $K$. This is where the echo state property and fading memory of every member enter: a reservoir that forgets its start and depends continuously on its recent inputs gives a continuous map on histories.",
+        "Constants. A readout bias gives them.",
+        "Separation of points. If two different input histories can never be told apart by any member, the family fails. Typically one needs the reservoir's response to depend on each past input in an injective way, which is a property of the encoding and the dynamics.",
+        "Sums. A linear readout over the union of two reservoirs (their features concatenated) gives the sum of two outputs, because a readout adds its weighted features.",
+        "Products. This is where quantum mechanics is generous."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Products come free"
+    },
+    {
+      "type": "prose",
+      "text": "Run two reservoirs side by side with the same input. Their joint state is $\\rho^{(1)}_k \\otimes \\rho^{(2)}_k$, and if reservoir 1's feature is $\\operatorname{Tr}(O_1\\rho^{(1)}_k)$ and reservoir 2's is $\\operatorname{Tr}(O_2\\rho^{(2)}_k)$, then measuring the product observable $O_1 \\otimes O_2$ on the joint state gives"
     },
     {
       "type": "math",
       "tex": "\\operatorname{Tr}\\!\\left[(O_1 \\otimes O_2)\\,(\\rho^{(1)}_k \\otimes \\rho^{(2)}_k)\\right] = \\operatorname{Tr}(O_1 \\rho^{(1)}_k)\\,\\operatorname{Tr}(O_2 \\rho^{(2)}_k)",
-      "caption": "Products of outputs are outputs of the product reservoir."
+      "caption": "The expectation value of a product observable in a product state is the product of the expectation values."
     },
     {
       "type": "prose",
-      "text": "Sums are a linear readout over the disjoint union of the two reservoirs. So the hard parts are (i) and (iii): contraction for every input, and separation. Chen and Nurdin proved universality in this sense for a class of dissipative qubit-network reservoirs; Nokkala and co-authors did so for Gaussian continuous-variable reservoirs with suitable readouts. Martínez-Peña and Ortega gave conditions for the echo state and fading-memory properties of finite-dimensional quantum reservoirs, including when contraction holds for every input."
+      "text": "Why this holds: $(A \\otimes B)(C \\otimes D) = AC \\otimes BD$ and $\\operatorname{Tr}(X \\otimes Y) = \\operatorname{Tr}X \\cdot \\operatorname{Tr}Y$. Apply the first rule with $A = O_1$, $B = O_2$, $C = \\rho^{(1)}$, $D = \\rho^{(2)}$, then the second. A numerical check with a random qubit state and a random two-qubit state (dimensions 2 and 4) and random Hermitian observables:"
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Products of reservoir outputs are outputs of the product reservoir: Tr[(A (x) B)(rho (x) sigma)] = Tr(A rho) Tr(B sigma).\nimport numpy as np\n\nrng = np.random.default_rng(2)\ndef random_state(d):\n    A = rng.normal(size=(d, d)) + 1j * rng.normal(size=(d, d))\n    r = A @ A.conj().T\n    return r / np.trace(r).real\ndef random_herm(d):\n    A = rng.normal(size=(d, d)) + 1j * rng.normal(size=(d, d))\n    return (A + A.conj().T) / 2\n\nrho, sigma = random_state(2), random_state(4)\nA, B = random_herm(2), random_herm(4)\nlhs = np.trace(np.kron(A, B) @ np.kron(rho, sigma))\nrhs = np.trace(A @ rho) * np.trace(B @ sigma)\nprint(\"Tr(A rho)         = %.6f\" % np.trace(A @ rho).real)\nprint(\"Tr(B sigma)       = %.6f\" % np.trace(B @ sigma).real)\nprint(\"product           = %.6f\" % rhs.real)\nprint(\"Tr[(A x B)(rho x sigma)] = %.6f\" % lhs.real)\nprint(\"difference        = %.1e\" % abs(lhs - rhs))\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "Tr(A rho)         = -0.713361\nTr(B sigma)       = -0.485499\nproduct           = 0.346336\nTr[(A x B)(rho x sigma)] = 0.346336\ndifference        = 5.7e-17\n"
+    },
+    {
+      "type": "prose",
+      "text": "So the family of 'all reservoirs' is closed under products: the product of two outputs is an output of the product reservoir, which is again a reservoir of the same kind (just with more qubits, and driven by the same input). Together with sums, that is closure under the algebra operations."
+    },
+    {
+      "type": "prose",
+      "text": "What remains hard are the other conditions: showing that the family consists of fading-memory systems for every input, and that it separates points. Different papers prove them for different families. Chen and Nurdin proved universality in this sense for a class of dissipative qubit-network reservoirs, Nokkala and co-authors for Gaussian continuous-variable reservoirs with suitable readouts, and Martínez-Peña and Ortega gave conditions for the echo state and fading-memory properties of finite-dimensional quantum reservoirs, including when contraction holds for every input. For classical echo state networks themselves, Grigoryeva and Ortega proved universality through a different route (the topology of the fading-memory property and approximation of the reservoir map)."
     },
     {
       "type": "callout",
-      "text": "Universality is existence, not efficiency. The theorem says some member of the family, of some size, approximates the target; it says nothing about how many qubits, how many observables or how many shots that takes. Every practical limit on this shelf lives in that gap."
+      "text": "Universality is existence, not efficiency. The theorem says that some member of the family, of some size, approximates the target. It says nothing about how many qubits, observables or shots that takes. Take the polynomial picture: a degree-3 Volterra series in $L = 10$ lags has $\\binom{13}{3} = 286$ coefficients; with $L = 20$ lags, $\\binom{23}{3} = 1771$. The cost of reaching the target grows quickly with its complexity, and every practical limit on this shelf lives in the gap between 'exists' and 'can be built and read out cheaply'."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a product reservoir",
+      "text": "Reservoir 1 has $\\langle Z\\rangle = 0.5$ and reservoir 2 has $\\langle Z\\rangle = -0.4$. What does the product reservoir give for the observable $Z \\otimes Z$? What if the two reservoirs were entangled?",
+      "hint": "Use the factorisation rule; then ask when its derivation used the product form of the state.",
+      "solution": [
+        "For the product state, $\\langle Z \\otimes Z\\rangle = 0.5 \\times (-0.4) = -0.2$.",
+        "The factorisation used $\\rho = \\rho^{(1)} \\otimes \\rho^{(2)}$. For an entangled joint state it fails: a Bell state has $\\langle Z\\rangle = 0$ on each side yet $\\langle Z\\otimes Z\\rangle = 1$ (see Entanglement and Reduced States (#/quantum/many-body/entanglement)).",
+        "That is why the universality argument keeps the two reservoirs independent: they only share the classical input."
+      ],
+      "answer": "$-0.2$; the rule fails for entangled states"
     },
     {
       "type": "heading",
@@ -98,20 +407,86 @@
     },
     {
       "type": "prose",
-      "text": "Features are linear functionals of $\\rho_k$, and $\\rho_k$ lives in the real vector space of Hermitian $2^n \\times 2^n$ matrices with unit trace, which has dimension $4^n - 1$. Hence at any time step at most $4^n - 1$ features are linearly independent, no matter how many observables or virtual nodes are read. Time multiplexing (virtual nodes) reads $\\rho$ at $V$ sub-steps; it adds independent features only until it reaches the dimension of the set of states the reservoir actually visits, which is often far smaller than $4^n - 1$."
+      "text": "Universality says what is possible in the limit of unlimited size. This section gives two hard limits that hold at any finite size. They are simple counting arguments, and they are the first things to check about any reservoir."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Feature rank"
     },
     {
       "type": "prose",
-      "text": "Capacity is bounded by the same count. Jaeger showed that the linear memory capacity $\\mathrm{MC} = \\sum_{d \\ge 1} r^2(d)$ of a reservoir with $N$ readout features driven by i.i.d. input is at most $N$; Dambre and co-authors extended this to the total information-processing capacity summed over all orthogonal polynomial targets of the past inputs, which is also at most $N$ and reaches $N$ exactly for a fading-memory system whose features are linearly independent. For a quantum reservoir $N$ is the number of linearly independent features, so"
+      "text": "The state $\\rho_k$ is a Hermitian $2^n \\times 2^n$ matrix with unit trace. How many real numbers fix such a matrix? A Hermitian $D \\times D$ matrix has $D$ real diagonal entries and $D(D-1)/2$ complex entries above the diagonal, which is $D(D-1)$ real numbers; the total is $D^2$. The unit-trace condition removes one. With $D = 2^n$ this is $4^n - 1$. For $n = 2$ that is 15; for $n = 3$, 63; for $n = 4$, 255; for $n = 10$, 1048575."
+    },
+    {
+      "type": "prose",
+      "text": "Every feature is a linear function of $\\rho_k$, so the vector of features $x_k$ is a linear image of a point in a space of dimension $4^n - 1$. At most $4^n - 1$ of the features at one time step can be linearly independent, no matter how many observables or virtual nodes you read (the readout bias supplies the constant). Time multiplexing reads $\\rho$ at $V$ sub-steps; it adds independent features only as long as the sub-step states are not in the span of the earlier ones, and the set of states the reservoir actually visits is often much smaller than the full space: symmetries, such as the parity conservation found in the Hands-on page, cut it further."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Capacity"
+    },
+    {
+      "type": "prose",
+      "text": "Memory capacity of a reservoir (Memory and Processing Capacity (#/qrc/foundations/memory-and-capacity)) is the sum, over delays, of how well a linear readout recalls the input $d$ steps back. Dambre and co-authors generalised it: the information-processing capacity of a target is $C[y] = 1 - \\mathrm{NMSE}$ for the best readout, for each target $y$ in an orthonormal family of functions of the input history (delays, squares, products of delays, and so on), and the total over the family is limited by the number of independent features. Here is the reason, short enough to follow."
+    },
+    {
+      "type": "prose",
+      "text": "Think of each target and each feature as a vector: the list of its values over the $T$ time steps of a long run (a vector in $\\mathbb{R}^T$ after removing the mean and normalising). The readout can only form linear combinations of the $N$ features, so the best fit to a target is the orthogonal projection of the target onto the $N$-dimensional subspace $S$ spanned by the features. Capacity is the fraction of the target kept: $C[y] = \\Vert Py\\Vert^2 / \\Vert y\\Vert^2$ where $P$ is the projector onto $S$. For an orthonormal family $y_1, y_2, \\dots$ of targets, add the capacities:"
+    },
+    {
+      "type": "math",
+      "tex": "\\sum_i C[y_i] = \\sum_i \\Vert P y_i\\Vert^2 = \\sum_i \\langle y_i\\vert P\\vert y_i\\rangle \\le \\operatorname{Tr}P = N",
+      "caption": "The sum over any orthonormal family of $\\langle y_i \\vert P\\vert y_i\\rangle$ cannot exceed the trace of the projector, which is its rank $N$ (for a complete basis it is equal)."
+    },
+    {
+      "type": "prose",
+      "text": "A toy case where you can check every number by hand. Let $T = 4$ and take the orthonormal targets $e_1, e_2, e_3, e_4$ (the four unit vectors of $\\mathbb{R}^4$). Let the two features span the subspace spanned by $f_1 = (1, 1, 0, 0)/\\sqrt{2}$ and $f_2 = (0, 0, 1, 0)$. The projections: $e_1$ and $e_2$ each have squared overlap $(1/\\sqrt2)^2 = 0.5$ with $f_1$ and none with $f_2$, so $C = 0.5$ each. $e_3$ lies exactly along $f_2$, so $C = 1$. $e_4$ is orthogonal to both features, $C = 0$. The sum is $0.5 + 0.5 + 1 + 0 = 2 = N$. The budget is spent in full. This is the key point: the reservoir's capacity is conserved, and it is divided among all the targets."
+    },
+    {
+      "type": "prose",
+      "text": "For a quantum reservoir $N$ is the number of linearly independent features, so"
     },
     {
       "type": "math",
       "tex": "\\sum_{\\text{targets}} C[\\text{target}] \\le N_{\\text{eff}} \\le \\min\\left(nV,\\; 4^n - 1\\right)",
-      "caption": "Total capacity is budgeted: memory and nonlinearity draw on the same $N_{\\text{eff}}$."
+      "caption": "Total capacity is budgeted. $nV$ counts the features read when each of $n$ qubits is read at $V$ sub-steps."
     },
     {
       "type": "prose",
-      "text": "The budget explains the memory–nonlinearity trade-off seen in every reservoir: capacity spent on reproducing old inputs linearly is not available for products, and vice versa. With finite shots the budget shrinks further, because a feature whose input-driven variance is below the shot-noise variance contributes almost nothing; see Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+      "text": "The budget explains the memory–nonlinearity trade-off seen in every reservoir: capacity spent on linear recall is unavailable for products, and vice versa. The next sample measures it on the 4-qubit, $V = 5$ reservoir of the Hands-on page: 20 features, so a budget of 20. It computes the capacity of every linear target (delays 0 to 20) and of every square and pairwise product of the inputs at delays 0 to 10, using orthonormal Legendre polynomials of the uniform input, and adds them up."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# Information-processing capacity of the 4-qubit, V=5 reservoir (20 features) over orthogonal polynomial targets.\nimport numpy as np\nfrom itertools import combinations\nfrom qrc_th_common import *\n\nwashout, train, test = 200, 4000, 2000\nT = washout + train + test\ns = np.random.default_rng(11).uniform(0, 1, T)\nF, _ = run(s, n=4, V=5)\nx = 2 * s - 1                                  # uniform on [-1, 1]\nP1 = x\nP2 = np.sqrt(5) * (3 * x**2 - 1) / 2            # orthonormal Legendre polynomials for the uniform density\ntr, te = slice(washout + 20, washout + train), slice(washout + train, T)\n\ndef capacity(target):\n    w = ridge_fit(F[tr], target[tr], lam=1e-8)\n    p = ridge_predict(w, F[te])\n    return max(0.0, 1 - np.mean((p - target[te]) ** 2) / np.var(target[te]))\n\ndef lag(v, d): return np.roll(v, d)\n\nc1 = np.array([capacity(lag(P1, d)) for d in range(0, 21)])\nprint(\"degree 1 (linear memory), delays 0..20:\")\nprint(\"  \", np.round(c1[:14], 2))\nprint(f\"  sum over delays 0..20 = {c1.sum():.2f}\")\nc2 = {}\nfor d in range(0, 11):\n    c2[(d, d)] = capacity(lag(P2, d))\nfor i, j in combinations(range(0, 11), 2):\n    c2[(i, j)] = capacity(lag(P1, i) * lag(P1, j))\ntot2 = sum(c2.values())\ntop = sorted(c2.items(), key=lambda kv: -kv[1])[:6]\nprint(\"degree 2 (squares and pairwise products, delays 0..10): %d targets\" % len(c2))\nprint(\"  largest:\", \", \".join(f\"{k}:{v:.2f}\" for k, v in top))\nprint(f\"  sum = {tot2:.2f}\")\nprint(f\"total capacity found = {c1.sum() + tot2:.2f}  (bound: 20 independent features)\")\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "degree 1 (linear memory), delays 0..20:\n   [1.   0.95 0.83 0.69 0.58 0.36 0.26 0.12 0.08 0.05 0.03 0.02 0.02 0.01]\n  sum over delays 0..20 = 5.02\ndegree 2 (squares and pairwise products, delays 0..10): 66 targets\n  largest: (0, 1):0.85, (1, 2):0.62, (0, 2):0.60, (0, 3):0.51, (0, 0):0.48, (2, 2):0.45\n  sum = 7.98\ntotal capacity found = 13.00  (bound: 20 independent features)\n"
+    },
+    {
+      "type": "prose",
+      "text": "Reading it: the linear recall (5.02 in total, delays beyond 10 contribute almost nothing) and the quadratic terms (7.98 over 66 targets) together use 13.0 of the 20. The largest quadratic capacities belong to products of the most recent inputs, $s_k s_{k-1}$ at 0.85, in line with the cross-time products being native. The square target (0, 0) reaches only 0.48. That target is the second Legendre polynomial of the input, which is $s^2$ with its linear part removed (proportional to $s^2 - s + 1/6$); fitted inside the one-upload span $\\{1, s, \\xi\\}$ it would reach about 0.97 (its normalised error there is 0.033, larger than the 0.002 for $s^2$ itself because the part of $s^2$ that is easy to fit, the linear part, has been taken out). So the budget, not the expressivity, is the binding limit. The remaining 7 would be found in cubic and higher terms and in products at longer delays, which this sample did not enumerate. With finite shots the budget shrinks further, because a feature whose input-driven variance falls below the shot-noise variance contributes almost nothing; see Concentration and Scalability (#/qrc/theory/concentration-and-scalability)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a capacity budget",
+      "text": "A reservoir with 12 linearly independent features has linear memory capacity 7.5. At most how much total capacity is left for all nonlinear targets together?",
+      "hint": "Total capacity is at most the number of independent features.",
+      "solution": [
+        "The total capacity over all orthonormal targets is at most 12.",
+        "Linear recall takes 7.5 of it.",
+        "$12 - 7.5 = 4.5$ is the most that can remain, to be shared by every square, product and higher-degree target."
+      ],
+      "answer": "4.5"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try it: products are native, squares are not"
     },
     {
       "type": "widget",
@@ -185,12 +560,58 @@
     },
     {
       "type": "prose",
-      "text": "Try the product task first: with the default 4 qubits and $V = 5$ the reservoir predicts $s_k s_{k-1}$ well, because cross-time products are native to the expansion above. Then set $V = 1$ (4 features) and watch NMSE rise: the products are still in the span, but four features cannot hold them together with the linear terms. Switch to NARMA2 and raise $V$ to 10 to see NMSE fall to roughly half its $V = 5$ value. Finally add shots (1000) and watch the fit degrade, though the function class has not changed."
+      "text": "Try this. Leave the task on the product $s_k s_{k-1}$ with 4 qubits and $V = 5$: the prediction follows the target closely, because cross-time products are native to the expansion above. Set $V$ to 1 (only 4 features) and watch the NMSE rise: the products are still in the span, but four features cannot hold them together with the linear terms, which is the budget at work. Switch to NARMA2 and raise $V$ to 10: the NMSE falls to roughly half its $V = 5$ value, since more features means more of the budget. Finally set the shots to 1000: the fit degrades although the function class has not changed, because the budget is eaten by noise."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. You want a reservoir to produce $y_k = s_k^2 - 0.8\\,s_{k-1}s_{k-2}$ from inputs in $[0,1]$. Decide what the encoding must provide, what memory it needs, and whether a 3-qubit reservoir can possibly be enough."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Split the target into its two kinds of term. The square $s_k^2$ is a nonlinearity in a single input. The product $s_{k-1}s_{k-2}$ is a cross-time product of two inputs, each to the first power."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Encoding. A single reset upload gives the span $\\{1, s, \\xi\\}$ of each input, which does not contain $s^2$ (the span fit gives NMSE 0.0020 at best). So the current input needs at least two uploads, giving the five-function span that contains $s^2$ exactly. The previous inputs enter only linearly, so one upload each is enough; the product $s_{k-1}s_{k-2}$ then comes from the expansion's cross-time terms with $m = 1$ at two different lags."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Memory. The target reaches back two steps. The reservoir must remember $s_{k-1}$ and $s_{k-2}$ well enough: from the Hands-on memory run, the 4-qubit $V = 5$ reservoir has $r^2 = 0.95$ at delay 1 and $0.83$ at delay 2. Good, though the product's accuracy is roughly the product of the accuracies of its two factors."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Rank. A 3-qubit reservoir has at most $4^3 - 1 = 63$ independent features; with $V$ sub-steps and $n = 3$ readouts each, $3V$ of them. The targets need: constant, $s_k$, $s_k^2$-related terms, and the product, so a handful of directions; the rank is not the obstacle. The budget is: each of the two target terms must claim a share of the total capacity, and shot noise will reduce it. A sensible plan is $V \\ge 5$ (15 features), two input qubits (hence an input step that writes the same $s_k$ twice), checked against an explicit polynomial baseline on the same budget as in Quantum Advantage (#/qrc/theory/quantum-advantage)."
+    },
+    {
+      "type": "prose",
+      "text": "The takeaway is the workflow: split the target into single-input nonlinearities and cross-time products, give the encoding the single-input degree it needs, give the dynamics the memory it needs, and make sure the number of independent, noise-resistant features exceeds the number of directions the target uses."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The target class is fading-memory filters, which Volterra series (polynomials in finitely many past inputs) approximate uniformly.",
+        "With reset encoding the step is $\\mathcal{T}_s = \\mathcal{T}_0 + s\\mathcal{T}_1 + \\sqrt{s(1-s)}\\mathcal{T}_2$, so every feature is a sum of products over past steps of functions from $\\{1, s, \\sqrt{s(1-s)}\\}$.",
+        "Cross-time products are native; single-input nonlinearity is limited to a three-dimensional span, and $s^2$ is missed by about 0.002 in NMSE.",
+        "$r$ uploads give a $2r+1$-dimensional span (polynomials of degree $\\le r$ plus $\\sqrt{s(1-s)}$ times degree $\\le r-1$); angle encodings give Fourier series; a nonlinear readout acts like a second copy.",
+        "Universality follows Stone–Weierstrass: constants, separation of points, sums (a linear readout) and products (tensor products of reservoirs), plus fading memory for every member.",
+        "Universality is existence only; the number of qubits, features and shots needed is the real question.",
+        "Features are linear in $\\rho$, so at most $4^n - 1$ are independent, and total capacity over orthonormal targets cannot exceed the number of independent features."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
@@ -199,7 +620,7 @@
       "hint": "Count the real dimension of unit-trace Hermitian matrices.",
       "solution": [
         "Features are linear in $\\rho_k$, which lies in the affine space of unit-trace Hermitian $8 \\times 8$ matrices.",
-        "That space has real dimension $4^3 - 1 = 63$, so at most 63 independent features exist (plus the constant, which the readout bias supplies).",
+        "That space has real dimension $4^3 - 1 = 63$, so at most 63 independent features exist (the constant is supplied by the readout bias).",
         "Each virtual node adds $n = 3$ features, so $3V \\le 63$ gives $V \\le 21$. From $V = 22$ on, extra nodes are linearly dependent on earlier ones; in practice the reachable set is smaller and saturation comes sooner."
       ],
       "answer": "$V = 21$ ($3V$ reaches $4^3 - 1 = 63$)"
@@ -207,14 +628,14 @@
     {
       "type": "problem",
       "title": "What a second upload buys",
-      "text": "With reset encoding each use of the input contributes $c(s) = (1, s, \\sqrt{s(1-s)})$. If $s_k$ is written into two qubits at the same step, what is the dimension of the space of single-input functions the reservoir can now form?",
-      "hint": "Expand $(1, s, r)\\otimes(1, s, r)$ with $r^2 = s(1-s)$.",
+      "text": "With reset encoding each use of the input contributes $c(s) = (1, s, \\sqrt{s(1-s)})$. If $s_k$ is written into two qubits at the same step, what is the dimension of the space of single-input functions the reservoir can now form? What if it is written into four?",
+      "hint": "Expand $(1, s, \\xi)\\otimes(1, s, \\xi)$ with $\\xi^2 = s - s^2$.",
       "solution": [
-        "The step depends on $s$ through the products of entries of $c(s) \\otimes c(s)$: $1, s, \\sqrt{s(1-s)}, s^2, s\\sqrt{s(1-s)}$ and $\\sqrt{s(1-s)}^2 = s - s^2$.",
-        "The last is a combination of $s$ and $s^2$, and the cross terms repeat, so the distinct span is $\\{1, s, \\sqrt{s(1-s)}, s^2, s\\sqrt{s(1-s)}\\}$.",
-        "These five functions are linearly independent on $[0,1]$."
+        "The step depends on $s$ through the products of entries of $c(s) \\otimes c(s)$: $1, s, \\xi, s, s^2, s\\xi, \\xi, s\\xi, \\xi^2$ with $\\xi = \\sqrt{s(1-s)}$.",
+        "Since $\\xi^2 = s - s^2$, the last is a combination of $s$ and $s^2$, and the cross terms repeat, so the distinct span is $\\{1, s, \\xi, s^2, s\\xi\\}$: five functions, linearly independent on $[0,1]$.",
+        "For $r$ uploads the dimension is $2r + 1$, so four uploads give 9 (the sample's rank for $r=4$)."
       ],
-      "answer": "5 (up from 3)"
+      "answer": "5 for two uploads; 9 for four"
     },
     {
       "type": "problem",
@@ -223,9 +644,30 @@
       "solution": [
         "The total information-processing capacity over all orthogonal targets is at most the number of independent features, here 20 (with equality for a fading-memory system with independent features).",
         "Linear memory already uses 3.86; the delay-0 recall ($r^2 \\approx 1$) is also a linear target and uses about 1 more.",
-        "That leaves at most about $20 - 3.86 - 1 \\approx 15$ for nonlinear targets (products, squares, higher degrees), shared among all of them."
+        "That leaves at most about $20 - 3.86 - 1 \\approx 15$ for nonlinear targets (products, squares, higher degrees), shared among all of them. The capacity sample above found 7.98 of it in squares and pairwise products at delays up to 10."
       ],
       "answer": "about 15 (out of 20)"
+    },
+    {
+      "type": "problem",
+      "title": "How many monomials?",
+      "text": "A target is approximated by a Volterra series of total degree at most 3 in the last 6 inputs. How many monomials (including the constant) must the readout be able to form, and what is the smallest number of qubits $n$ for which $4^n - 1$ is at least that number?",
+      "hint": "The number of monomials of degree at most $d$ in $L$ variables is $\\binom{L+d}{d}$.",
+      "solution": [
+        "Monomials of total degree at most $d$ in $L$ variables number $\\binom{L+d}{d}$. With $L = 6$ and $d = 3$: $\\binom{9}{3} = 9\\cdot8\\cdot7/6 = 84$.",
+        "Without the constant (the bias supplies it) that is 83 features. We need $4^n - 1 \\ge 83$: $n = 3$ gives 63, too few; $n = 4$ gives 255.",
+        "So $n = 4$ is the least number for which the rank bound does not forbid it. The bound is necessary, not sufficient: the dynamics must also actually produce all 83 independent directions, and with a budget this tight, noise-free."
+      ],
+      "answer": "84 monomials; $n = 4$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "prose",
+      "text": "The structure found here is the lens for the rest of the shelf. Concentration and Scalability (#/qrc/theory/concentration-and-scalability) explains why the features available in principle ($4^n - 1$) are far more than the features readable in practice. Quantum Advantage (#/qrc/theory/quantum-advantage) asks whether a reservoir whose function class is a polynomial in the past can beat a classical model that builds those polynomials directly. Hands-on Implementation (#/qrc/theory/hands-on-implementation) runs every claim above in numpy, including the capacity and the span fit. Input Encoding (#/qrc/models/input-encoding) and Readout and Multiplexing (#/qrc/models/readout-and-multiplexing) describe the encodings and readouts whose function classes were analysed here, and Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points) gives the contraction behind the fading-memory assumption."
     },
     {
       "type": "heading",

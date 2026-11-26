@@ -5,11 +5,69 @@
     {
       "type": "heading",
       "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "You should know what a quantum reservoir looks like from A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand): input written into a qubit, evolution, expectation values as features, a ridge readout (Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge)). You need the Born rule and the statistics of repeated measurement (Measurement and the Born Rule (#/quantum/foundations/measurement)) and expectation values (Observables and Uncertainty (#/quantum/foundations/observables-and-uncertainty)). The page on Expressivity and Universality (#/qrc/theory/expressivity-and-universality) is useful (it explains why features are linear in the state, and the capacity budget) but each use of it here is restated."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Compute the shot-noise error of an estimated expectation value and say when a feature is drowned by it.",
+        "Derive the variance $1/(2^n+1)$ of a Pauli expectation over Haar-random states, and turn it into a count of the shots needed to read one feature.",
+        "Explain why a working reservoir does not look like a Haar-random state, and measure how much it concentrates.",
+        "Estimate an effective number of features $N_{\\text{eff}}(S)$ from a feature covariance matrix and a shot budget.",
+        "Count the cost, in memory, runs and shots, of simulating a reservoir classically and of measuring it on hardware."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
       "text": "The promise and the catch"
     },
     {
       "type": "prose",
-      "text": "The case for quantum reservoirs starts from dimension: $n$ qubits carry a state with $4^n - 1$ real parameters, so the reservoir could in principle offer exponentially many features. The catch is that a feature is an expectation value $\\operatorname{Tr}(O\\rho_k)$, and what the readout sees is its estimate from $S$ single-shot measurements, with standard error about $\\sqrt{(1 - \\langle O\\rangle^2)/S}$ for a Pauli $O$. A feature is useful only if it moves with the input by more than that error. Concentration is the statement that, for generic dynamics, it does not."
+      "text": "The case for a quantum reservoir starts from dimension. A state of $n$ qubits is a density matrix with $4^n - 1$ real parameters (Expressivity and Universality (#/qrc/theory/expressivity-and-universality)), so in principle the reservoir offers exponentially many features to a readout. For 30 qubits that would be about $10^{18}$ numbers, more than any classical reservoir could hold."
+    },
+    {
+      "type": "prose",
+      "text": "The catch is the word 'features'. A feature is an expectation value $\\operatorname{Tr}(O\\rho_k)$ of an observable $O$, and a real device never delivers an expectation value. It delivers single measurement outcomes, $\\pm 1$ for a Pauli observable, and the readout sees the average of $S$ of them. That average has a statistical error. A feature is useful only if its change with the input is larger than that error. Concentration is the statement that, for generic dynamics, it is not, and that the gap grows exponentially with $n$. The page works in four steps: the size of the error, the size of the signal, what happens when noise or scrambling shrink the signal, and what it costs in time and in classical simulation."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Shot noise: the size of the error"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose a Pauli observable $P$ has true expectation $\\mu = \\langle P\\rangle$. A measurement gives $+1$ with probability $(1+\\mu)/2$ and $-1$ with probability $(1-\\mu)/2$. Step 1. The mean outcome is $(1+\\mu)/2 - (1-\\mu)/2 = \\mu$. Step 2. The mean of the squared outcome is $1$ (since $(\\pm1)^2 = 1$), so one outcome has variance $1 - \\mu^2$. Step 3. The average of $S$ independent outcomes has variance $(1-\\mu^2)/S$. So the standard error is"
+    },
+    {
+      "type": "math",
+      "tex": "\\sigma_{\\text{shot}} = \\sqrt{\\frac{1 - \\mu^2}{S}} \\le \\frac{1}{\\sqrt{S}}",
+      "caption": "Standard error of the estimate of a Pauli expectation value from $S$ single-shot outcomes."
+    },
+    {
+      "type": "prose",
+      "text": "For $\\mu = 0.3$ and $S = 100$ shots: $\\sqrt{0.91/100} = 0.0954$. A feature whose value moves between $0.25$ and $0.35$ as the input changes (a signal of 0.1) is therefore only about one standard error from its own noise. Halving the error costs four times the shots, and that square-root law is the basis of everything that follows. Where in the pipeline the shots are spent, and what protocols avoid wasting them, is the subject of Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Online Measurement Protocols (#/qrc/hardware/online-protocols)."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: a noisy feature",
+      "text": "A feature has true value $\\mu = 0.8$ and is estimated from $S = 400$ shots. What is its standard error, and how many shots would you need to halve it?",
+      "hint": "Use $\\sqrt{(1-\\mu^2)/S}$ and remember the square root.",
+      "solution": [
+        "$1 - \\mu^2 = 1 - 0.64 = 0.36$.",
+        "Standard error $\\sqrt{0.36/400} = 0.6/20 = 0.03$.",
+        "Halving it to 0.015 needs $S$ four times larger: $1600$."
+      ],
+      "answer": "$0.03$; 1600"
     },
     {
       "type": "heading",
@@ -18,25 +76,72 @@
     },
     {
       "type": "prose",
-      "text": "Suppose the reservoir dynamics are scrambling enough that, as the input varies, the state $\\vert\\psi\\rangle$ behaves like a Haar-random state on $D = 2^n$ dimensions (it suffices that the induced ensemble of unitaries is a unitary 2-design). For a Pauli string $P \\ne I$, $\\operatorname{Tr}P = 0$ and $P^2 = I$, and the Haar second moment gives"
+      "text": "Why would the signal be small? Because of a fact about large Hilbert spaces: a random vector in a very high-dimensional space is almost orthogonal to any fixed direction, so any fixed observable averages out to almost nothing. Suppose the reservoir dynamics are so scrambling that, as the input varies, the state $\\vert\\psi\\rangle$ behaves like a Haar-random pure state in $D = 2^n$ dimensions. (Haar-random means: uniformly random in the unitarily invariant sense, no direction preferred. It is enough that the ensemble of unitaries the input produces is a unitary 2-design, a collection that matches the Haar ensemble in its first two moments.) What is the spread of $\\langle Z_1\\rangle$ across such states?"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The variance, derived"
+    },
+    {
+      "type": "prose",
+      "text": "Write the state in the computational basis, $\\vert\\psi\\rangle = \\sum_a \\psi_a\\vert a\\rangle$ with probabilities $p_a = \\vert\\psi_a\\vert^2$. The Pauli $Z_1$ is diagonal: it gives $z_a = +1$ if bit 1 of $a$ is 0 and $-1$ otherwise, so $\\langle Z_1\\rangle = \\sum_a z_a p_a$. Exactly half the $z_a$ are $+1$, half are $-1$, so $\\sum_a z_a = 0$ and $\\sum_a z_a^2 = D$."
+    },
+    {
+      "type": "prose",
+      "text": "For a Haar-random state the vector of probabilities $(p_1, \\dots, p_D)$ is uniformly distributed over the set of probability vectors (this is a standard fact: the Dirichlet distribution with all parameters equal to 1). The idea of the proof, without the details: a Haar-random state can be made by drawing $D$ independent complex Gaussian numbers and dividing by their length; each $\\vert g_a\\vert^2$ is then an exponential random variable, and exponentials divided by their sum are uniformly spread over the probability vectors. We state the first two moments without proof (they follow from the Beta distribution of one coordinate, and the numerical check below confirms the result they lead to):"
     },
     {
       "type": "math",
-      "tex": "\\mathbb{E}\\,\\langle\\psi\\vert P\\vert\\psi\\rangle = \\frac{\\operatorname{Tr}P}{D} = 0, \\qquad \\mathbb{E}\\,\\langle\\psi\\vert P\\vert\\psi\\rangle^2 = \\frac{(\\operatorname{Tr}P)^2 + \\operatorname{Tr}(P^2)}{D(D+1)} = \\frac{1}{D+1}",
-      "caption": "Variance of a Pauli expectation over Haar-random states: $1/(2^n + 1)$."
+      "tex": "\\mathbb{E}\\,p_a = \\frac{1}{D}, \\qquad \\mathbb{E}\\,p_a^2 = \\frac{2}{D(D+1)}, \\qquad \\mathbb{E}\\,p_a p_b = \\frac{1}{D(D+1)}\\ (a \\ne b)",
+      "caption": "Moments of the squared amplitudes of a Haar-random state."
     },
     {
       "type": "prose",
-      "text": "So the spread of every Pauli feature across inputs falls as $1/\\sqrt{2^n+1}$: 0.24 at 4 qubits, 0.031 at 10, $3\\times10^{-5}$ at 30. Chebyshev then says that for all but a fraction $\\delta$ of inputs the feature sits within $1/\\sqrt{\\delta(2^n+1)}$ of its mean: the features of different inputs become exponentially hard to tell apart. Xiong and co-authors analyse this for quantum extreme learning machines (memoryless reservoirs), identifying randomness, hardware noise, entanglement and global measurements as sources of concentration, alongside a Fourier-spectrum view of what the encoding can express; Thanasilp and co-authors give the matching result for quantum kernels, and the same mechanism underlies barren plateaus in trained circuits (McClean and co-authors)."
+      "text": "Step 1. From these, $\\operatorname{Var}\\,p_a = \\frac{2}{D(D+1)} - \\frac{1}{D^2} = \\frac{D-1}{D^2(D+1)}$ and, for $a \\ne b$, $\\operatorname{Cov}(p_a, p_b) = \\frac{1}{D(D+1)} - \\frac{1}{D^2} = -\\frac{1}{D^2(D+1)}$."
     },
     {
       "type": "prose",
-      "text": "Resolving a change of a fraction $\\varepsilon$ of that spread needs a standard error below $\\varepsilon/\\sqrt{D+1}$, so"
+      "text": "Step 2. The mean of $\\langle Z_1\\rangle$ is $\\sum_a z_a \\cdot \\frac{1}{D} = 0$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Its variance is $\\sum_a z_a^2 \\operatorname{Var}\\,p_a + \\sum_{a \\ne b} z_a z_b \\operatorname{Cov}(p_a,p_b)$. The first sum is $D \\cdot \\frac{D-1}{D^2(D+1)} = \\frac{D-1}{D(D+1)}$. For the second, $\\sum_{a \\ne b} z_a z_b = (\\sum_a z_a)^2 - \\sum_a z_a^2 = 0 - D = -D$, so it equals $(-D)\\cdot(-\\frac{1}{D^2(D+1)}) = \\frac{1}{D(D+1)}$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Add: $\\frac{D-1}{D(D+1)} + \\frac{1}{D(D+1)} = \\frac{D}{D(D+1)} = \\frac{1}{D+1}$."
+    },
+    {
+      "type": "math",
+      "tex": "\\mathbb{E}\\,\\langle Z_1\\rangle = 0, \\qquad \\operatorname{Var}\\,\\langle Z_1\\rangle = \\frac{1}{2^n + 1}",
+      "caption": "The general result: for any Pauli string $P \\neq I$, $\\mathbb{E}\\langle P\\rangle = \\operatorname{Tr}P/D = 0$ and $\\operatorname{Var} = \\big((\\operatorname{Tr}P)^2 + \\operatorname{Tr}(P^2)\\big)/(D(D+1)) - 0 = 1/(D+1)$."
+    },
+    {
+      "type": "prose",
+      "text": "A numerical check with 4000 random states per size is in Hands-on Implementation (#/qrc/theory/hands-on-implementation): sampled variances 0.1995, 0.0566, 0.0149, 0.00385 against 0.2, 0.0588, 0.0154, 0.00389 for $n = 2, 4, 6, 8$. The spread (standard deviation) of every Pauli feature is therefore $1/\\sqrt{2^n+1}$: 0.2425 at 4 qubits, 0.0312 at 10, 0.000977 at 20, and 0.000031 at 30."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "From spread to shots"
+    },
+    {
+      "type": "prose",
+      "text": "Chebyshev's inequality turns the variance into a statement about individual inputs: the probability that a feature is farther than $t$ from its mean $0$ is at most $\\text{Var}/t^2$. Take 5 per cent of inputs as exceptions ($\\delta = 0.05$): for all the others, $|{\\langle Z_1\\rangle}| \\le 1/\\sqrt{\\delta(2^n+1)}$. At $n = 10$ this is 0.14, at 30 qubits about $10^{-4}$. The features of different inputs crowd together around the mean, and to tell them apart the readout must resolve differences tiny compared with 1."
+    },
+    {
+      "type": "prose",
+      "text": "Resolving a change of a fraction $\\varepsilon$ of the spread needs a standard error below $\\varepsilon/\\sqrt{2^n+1}$. With the shot-noise formula (bound by $1/\\sqrt{S}$) this requires $1/\\sqrt{S} \\lesssim \\varepsilon/\\sqrt{2^n+1}$, hence"
     },
     {
       "type": "math",
       "tex": "S \\gtrsim \\frac{2^n + 1}{\\varepsilon^2}",
       "caption": "Shots per feature per time step to resolve input dependence under full scrambling."
+    },
+    {
+      "type": "prose",
+      "text": "For $\\varepsilon = 0.1$: $n = 4$ needs $1700$ shots, $n = 10$ needs 1.02e+05, $n = 20$ needs 1.05e+08 and $n = 30$ needs 1.07e+11 per feature, per time step. Each step of a time series needs a fresh set. Concentration is also the mechanism behind barren plateaus in trained circuits (McClean and co-authors) and the exponential concentration of quantum kernels (Thanasilp and co-authors); Xiong and co-authors analyse it for quantum extreme learning machines (Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines)), identifying randomness, hardware noise, entanglement and global measurements as sources."
     },
     {
       "type": "widget",
@@ -72,11 +177,53 @@
     },
     {
       "type": "prose",
-      "text": "The two curves are mirror images: every halving of the spread quadruples the shots. At $\\varepsilon = 0.1$, 10 qubits need about $10^5$ shots per feature per step and 30 qubits about $10^{11}$. Set $\\varepsilon$ to 0.5 and the shot line drops by $\\log_{10} 25 \\approx 1.4$ but keeps the same slope: no constant-factor trick escapes $2^n$."
+      "text": "Try this. With ε = 0.1 and the largest qubit count 30, read the spread curve at $n = 10$ (about $-1.5$ in log10, i.e. 0.031) and the shot curve (about 5, i.e. $10^5$). The two lines are mirror images: every halving of the spread quadruples the shots. Set ε to 0.5 and the shot line drops by $\\log_{10} 25 \\approx 1.4$ but keeps the same slope: no constant-factor trick escapes $2^n$. Set the largest count to 40 and see the shots reach $10^{14}$ or more."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: shots at 6 qubits",
+      "text": "A fully scrambling 6-qubit reservoir. How many shots per feature to resolve 20 per cent of a Pauli feature's spread?",
+      "hint": "Use $S \\gtrsim (2^n + 1)/\\varepsilon^2$.",
+      "solution": [
+        "$2^6 + 1 = 65$.",
+        "$S \\gtrsim 65/0.2^2 = 65/0.04 = 1625$."
+      ],
+      "answer": "$1625$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why working reservoirs are not fully scrambled"
+    },
+    {
+      "type": "prose",
+      "text": "If this were the whole story, quantum reservoirs would be useless beyond a few qubits. They are not, and the reason is worth measuring rather than asserting. The next sample compares, for $n = 2$ to 8, the spread of a Haar-random $\\langle Z_1\\rangle$ with the spread, over a series of 400 random inputs, of the first and last features of the Fujii–Nakajima reservoir of The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) (all-to-all random couplings, $h = 1$, $\\Delta t = 10$, reset encoding)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# Does the spread of a reservoir feature over inputs shrink like 1/sqrt(2^n+1)?  Compare a Haar-random state\n# with the Fujii-Nakajima reservoir (all-to-all random XX couplings, h = 1, dt = 10, reset encoding).\nimport numpy as np\nfrom qrc_th_common import *\n\nrng = np.random.default_rng(4)\nprint(\" n   Haar sd   1/sqrt(2^n+1)   reservoir sd of <Z_1>   reservoir sd of <Z_n>\")\nfor n in (2, 3, 4, 5, 6, 7, 8):\n    D = 2**n\n    z1 = np.array([1.0 if b < D // 2 else -1.0 for b in range(D)])\n    v = []\n    for _ in range(3000):\n        psi = rng.normal(size=D) + 1j * rng.normal(size=D)\n        psi /= np.linalg.norm(psi)\n        v.append(z1 @ np.abs(psi) ** 2)\n    s = rng.uniform(0, 1, 400)\n    F, _ = run(s, n=n, V=1, seed=1)\n    F = F[50:]                                 # discard the washout\n    print(f\"{n:2d}   {np.std(v):.4f}    {1/np.sqrt(D+1):.4f}          {F[:, 0].std():.4f}                 {F[:, -1].std():.4f}\")\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": " n   Haar sd   1/sqrt(2^n+1)   reservoir sd of <Z_1>   reservoir sd of <Z_n>\n 2   0.4500    0.4472          0.5540                 0.0507\n 3   0.3299    0.3333          0.4247                 0.1237\n 4   0.2440    0.2425          0.2192                 0.2565\n 5   0.1734    0.1741          0.1654                 0.1288\n 6   0.1217    0.1240          0.1558                 0.1228\n 7   0.0870    0.0880          0.1343                 0.1148\n 8   0.0619    0.0624          0.1485                 0.1369\n"
+    },
+    {
+      "type": "prose",
+      "text": "The Haar column falls by about a factor $\\sqrt2$ per added qubit, as it must: 0.45 down to 0.062. The reservoir's features do not follow it. From $n = 5$ to $n = 8$ the spread of both features stays between 0.11 and 0.17 in this run, and at $n = 8$ it is about 0.14 against the Haar 0.062, more than twice as large. (This is one reservoir draw per size. Repeating it with six other random couplings and input series gives a spread of 0.09 to 0.14 at $n = 8$ and 0.10 to 0.19 at $n = 6$: it does fall slowly with $n$, but far more slowly than the Haar column, and at 8 qubits it stays 1.5 to 2.3 times the Haar value. The point is the trend, not the exact numbers.) Why is this possible? Three mechanisms keep the reservoir off the Haar-random cliff."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Refreshing. At every step qubit 1 is replaced by a state that depends strongly on the input. The state does not have a chance to scramble the input away: a fraction of its information is rewritten at each step. The spread of $\\langle Z_1\\rangle$ is then fixed mostly by how much $s$ moves the injected qubit, not by $n$.",
+        "Locality. The features are low-weight observables ($Z_i$ on one qubit) read after a short evolution time. Scrambling is a property of how large operators grow; a single qubit's reduced state, being fed by a small number of neighbours, need not feel the whole Hilbert space. Concentration is worst for global observables.",
+        "Disorder and symmetry. Field and coupling disorder, or symmetries such as the parity $Z_1Z_2\\cdots Z_n$ found in Hands-on Implementation (#/qrc/theory/hands-on-implementation), restrict the reachable states to a small part of Hilbert space, and the Haar assumption fails."
+      ]
     },
     {
       "type": "callout",
-      "text": "Concentration is about generic, fully scrambled dynamics. Reservoirs that work stay away from it: they read local, low-weight observables after short evolution, so the light cone limits scrambling; they use disorder or symmetries that keep the dynamics from exploring the whole space; and the reset injection keeps refreshing a qubit with a state that depends strongly on the input. The Dynamical Regimes (#/qrc/models/dynamical-regimes) page shows that performance peaks at intermediate fields, not in the most chaotic regime."
+      "text": "The dynamical-regimes page (Dynamical Regimes (#/qrc/models/dynamical-regimes)) shows the other side: performance peaks at intermediate fields, not in the most chaotic regime. Chaos here is the enemy. The design question is how to keep enough richness for memory and nonlinearity while avoiding being Haar-like; the full answer is open (see Open Problems (#/qrc/theory/open-problems))."
     },
     {
       "type": "heading",
@@ -85,12 +232,24 @@
     },
     {
       "type": "prose",
-      "text": "Noise produces the same symptom by another road. Under a global depolarizing channel of strength $p$ per step, $\\rho \\mapsto (1-p)\\rho + p\\,I/D$, every traceless feature shrinks by $(1-p)$ each step. Local noise on deep circuits behaves similarly: with depolarizing probability $p$ per gate on a weight-$w$ observable the signal falls roughly like $(1-p)^{\\#\\text{gates in its light cone}}$. A reservoir needs some dissipation to forget (the echo state property), so the design question is a window: enough contraction to fade old inputs within the memory you need, not so much that the input-dependent part of every feature drowns. Sannia and co-authors and Kubota and co-authors study this window; see Dissipation as a Resource (#/qrc/models/dissipation-as-resource)."
+      "text": "Noise makes the signal shrink by another road. A global depolarizing channel of strength $p$ replaces the state by the maximally mixed state with probability $p$: $\\rho \\mapsto (1-p)\\rho + p\\,I/D$. For a traceless observable $O$, $\\operatorname{Tr}(O\\,I/D) = 0$, so every non-identity feature is multiplied by $(1-p)$ at each application. After $t$ applications the signal is $(1-p)^t$ times its noiseless value. Local noise on a circuit behaves the same way, with $t$ the number of noisy gates in the observable's light cone (the gates that could influence it): depolarizing probability $p$ per gate on a weight-$w$ observable multiplies the signal by roughly $(1-p)^{\\#\\text{gates in its light cone}}$."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. With $p = 0.01$ per gate and 200 gates in the light cone, the signal is $0.99^{200} = 0.134$: about 13 per cent of the noiseless value survives. To keep half the signal you can afford $\\ln 0.5/\\ln 0.99 = 69.0$ gates, about 69."
+    },
+    {
+      "type": "prose",
+      "text": "A reservoir needs dissipation to forget (the echo state property, The Echo State Property (#/qrc/foundations/echo-state-property)). So the design is a window: enough contraction to fade old inputs within the memory you need, not so much that the input-dependent part of every feature drowns. In symbols, two different things contract:"
     },
     {
       "type": "math",
-      "tex": "\\underbrace{\\Vert \\rho_k - \\rho_k' \\Vert_1 \\lesssim \\lambda^k}_{\\text{forgetting: wanted}} \\qquad \\text{vs.} \\qquad \\underbrace{\\big\\vert \\operatorname{Tr}O(\\rho_k - \\rho_*)\\big\\vert \\lesssim (1-p)^{t}}_{\\text{signal loss: unwanted}}",
-      "caption": "Both come from contraction; they differ in what contracts and how fast."
+      "tex": "\\underbrace{\\Vert \\rho_k - \\rho_k' \\Vert_1 \\lesssim \\lambda^k}_{\\text{forgetting initial conditions: wanted}} \\qquad \\text{vs.} \\qquad \\underbrace{\\big\\vert \\operatorname{Tr}O(\\rho_k - \\rho_*)\\big\\vert \\lesssim (1-p)^{t}}_{\\text{signal loss: unwanted}}",
+      "caption": "Both come from contraction; they differ in what contracts and how fast. $\\rho_*$ is the fixed point the noise drives to."
+    },
+    {
+      "type": "prose",
+      "text": "The first contraction acts on the difference between two histories: it is what makes the reservoir forget its start. The second acts on the signal itself, pulling every feature toward the value it would have in the fixed point. Sannia and co-authors and Kubota and co-authors study this window; see Dissipation as a Resource (#/qrc/models/dissipation-as-resource) and Lindblad Dynamics (#/qrc/open-systems/lindblad-dynamics)."
     },
     {
       "type": "heading",
@@ -99,16 +258,46 @@
     },
     {
       "type": "prose",
-      "text": "Put the two effects into one quantity. Let $\\Sigma$ be the covariance of the exact features over the input distribution, with eigenvalues $\\sigma_1^2 \\ge \\sigma_2^2 \\ge \\dots$, and let shot noise add roughly independent variance $1/S$ per feature. A ridge readout can use a direction only if its signal variance beats the noise, so a useful proxy is"
+      "text": "Put the two effects, fewer dimensions with signal and shot noise, into one number. Let $\\Sigma$ be the covariance matrix of the exact features over the input distribution, with eigenvalues $\\sigma_1^2 \\ge \\sigma_2^2 \\ge \\dots$. Each eigenvalue is the signal variance along one independent direction of feature space. Suppose shot noise adds roughly independent variance $1/S$ in every direction. A ridge readout (Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge)) can use a direction only if its signal variance beats the noise, so a useful proxy is"
     },
     {
       "type": "math",
       "tex": "N_{\\text{eff}}(S) \\approx \\sum_i \\frac{\\sigma_i^2}{\\sigma_i^2 + 1/S}",
-      "caption": "Effective number of features: each direction counts fully if its signal variance exceeds the noise variance $1/S$, and hardly at all if not."
+      "caption": "Each direction counts nearly 1 if $\\sigma_i^2 \\gg 1/S$ and nearly 0 if $\\sigma_i^2 \\ll 1/S$."
     },
     {
       "type": "prose",
-      "text": "Adding qubits raises the number of directions but, under concentration, lowers each $\\sigma_i^2$; past some size $N_{\\text{eff}}$ stops growing at fixed $S$. The hands-on sample shows the onset on a small system: a 4-qubit, 20-feature reservoir has memory capacity 3.86 exact, 3.53 at $10^4$ shots, 2.80 at $10^3$ and 1.94 at $10^2$."
+      "text": "A worked example with four directions of variances $1, 0.1, 0.01, 0.001$. At $S = 10$, $1/S = 0.1$: the directions count $1/1.1 = 0.909$, $0.1/0.2 = 0.5$, $0.01/0.11 = 0.091$, $0.001/0.101 = 0.010$: $N_{\\text{eff}} = 1.51$. At $S = 100$ ($1/S = 0.01$): $0.990 + 0.909 + 0.5 + 0.091 = 2.49$. At $S = 1000$: 3.40. Each tenfold increase in shots buys about one more direction, because the variances fall in a geometric ladder with ratio 10. That ladder (eigenvalues falling geometrically) is typical of reservoirs, and it is why shots buy features only logarithmically."
+    },
+    {
+      "type": "prose",
+      "text": "The next sample does this for the real 4-qubit, $V = 5$ reservoir with 20 features."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# Effective number of features N_eff(S) = sum_i  sigma_i^2 / (sigma_i^2 + 1/S)  for the 4-qubit, V=5 reservoir.\nimport numpy as np\nfrom qrc_th_common import *\n\ns = np.random.default_rng(101).uniform(0, 1, 1700)\nF, _ = run(s, n=4, V=5)\nF = F[200:]\nC = np.cov(F.T)\nev = np.sort(np.linalg.eigvalsh(C))[::-1]\nprint(\"largest 6 covariance eigenvalues:\", np.array2string(ev[:6], precision=4))\nprint(\"smallest 3:\", np.array2string(ev[-3:], precision=2))\nprint(\"   S      N_eff\")\nfor S in (10, 100, 1000, 10**4, 10**5, 10**6, 10**8):\n    print(f\"{S:8d}   {np.sum(ev / (ev + 1.0 / S)):5.2f}\")\nprint(\"(maximum possible: 20)\")\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "largest 6 covariance eigenvalues: [0.9113 0.1316 0.027  0.0136 0.0081 0.0067]\nsmallest 3: [7.54e-05 1.15e-05 5.39e-06]\n   S      N_eff\n      10    2.09\n     100    5.30\n    1000   10.71\n   10000   15.79\n  100000   18.53\n 1000000   19.73\n100000000   20.00\n(maximum possible: 20)\n"
+    },
+    {
+      "type": "prose",
+      "text": "The largest eigenvalue (0.91) belongs to a common mode, a direction in which many features move together; then the variances fall by roughly a factor 5 or 10 per direction down to $5 \\times 10^{-6}$. At 100 shots only 5.3 of the 20 directions count, at $10^4$ shots 15.8, and at $10^6$ shots 19.7. This is the same story the hands-on memory table tells: memory capacity 3.86 exact falls to 1.94 at 100 shots, 2.80 at 1000 and 3.53 at $10^4$. Adding qubits raises the number of directions but, under concentration, lowers each $\\sigma_i^2$: past some size $N_{\\text{eff}}$ stops growing at a fixed $S$. This is the precise sense in which a large Hilbert space is not a large usable feature space."
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: effective features",
+      "text": "Four directions have signal variances $0.5, 0.05, 0.005, 0.0005$ and the shot budget is $S = 200$ ($1/S = 0.005$). Which directions count for more than one half?",
+      "hint": "Evaluate $\\sigma^2/(\\sigma^2 + 1/S)$ for each.",
+      "solution": [
+        "The noise variance is $1/S = 0.005$.",
+        "Direction 1: $0.5/(0.5 + 0.005) = 0.990$. Direction 2: $0.05/0.055 = 0.909$. Direction 3: $0.005/0.01 = 0.5$. Direction 4: $0.0005/0.0055 = 0.091$.",
+        "$N_{\\text{eff}} = 0.990 + 0.909 + 0.5 + 0.091 = 2.49$; a direction whose variance equals the noise counts one half."
+      ],
+      "answer": "The first two (0.99 and 0.91); the third counts exactly 0.5"
     },
     {
       "type": "heading",
@@ -117,7 +306,7 @@
     },
     {
       "type": "prose",
-      "text": "A projective measurement of the reservoir destroys the state the next steps need. The simplest faithful protocol therefore restarts: to get the features at step $k$, prepare the initial state, feed inputs $1..k$, measure, and repeat $S$ times. Over a series of length $T$ that costs"
+      "text": "A projective measurement of the reservoir destroys the state the next steps need. The simplest faithful protocol therefore restarts: to get the features at step $k$, prepare the initial state, feed inputs $1, \\dots, k$, measure, and repeat $S$ times. Step $k$ costs $S\\,k$ reservoir steps, and over a series of length $T$"
     },
     {
       "type": "math",
@@ -126,7 +315,7 @@
     },
     {
       "type": "prose",
-      "text": "Fading memory rescues most of it: only the last $L$ inputs matter (to precision $\\lambda^L$), so each feature can be computed from a run that starts $L$ steps back, costing $S\\,T\\,L$. Online protocols go further, using weak measurements, partial measurements or rewinding to keep the run going; see Measurement Back-Action (#/qrc/hardware/measurement-back-action) and Online Protocols (#/qrc/hardware/online-protocols) (Mujal and co-authors; Yasuda and co-authors)."
+      "text": "With $T = 1000$ and $S = 1000$: $1000 \\times 1000 \\times 1001/2 = 5.005e+08$ steps. Fading memory rescues most of it. Only the last $L$ inputs matter (to precision $\\lambda^L$), so each feature can be computed from a run that starts $L$ steps back from the initial state, costing $S\\,T\\,L$: with $L = 20$, 2e+07 steps, 25 times fewer. Is $L = 20$ enough? For the 4-qubit reservoir of the hands-on sample, which contracts by about 0.82 per step, $0.82^{20} = 0.019$, comparable to the shot error at $S = 1000$ (about 0.03): yes, to within the noise. Online protocols go further (weak measurements, partial measurements, rewinding) so the run continues; see Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Online Measurement Protocols (#/qrc/hardware/online-protocols) (Mujal and co-authors; Yasuda and co-authors)."
     },
     {
       "type": "heading",
@@ -135,20 +324,92 @@
     },
     {
       "type": "prose",
-      "text": "The other side of scalability is what a classical computer pays to reproduce the reservoir, which sets the bar any advantage claim has to clear."
+      "text": "The other side of scalability is what a classical computer pays to reproduce the reservoir. That sets the bar any advantage claim has to clear (Quantum Advantage (#/qrc/theory/quantum-advantage))."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Exact density matrices"
+    },
+    {
+      "type": "prose",
+      "text": "A density matrix of $n$ qubits has $4^n$ complex entries at 16 bytes each, so $16\\cdot 4^n$ bytes: 4 GiB at $n = 14$, 16 GiB at 15 and 64 GiB at 16. Each step costs $O(8^n)$ operations with dense matrices. In practice about 14 or 15 qubits is the limit on a large workstation."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Quantum trajectories"
+    },
+    {
+      "type": "prose",
+      "text": "The reset is a measure-and-prepare channel: measure qubit 1 in the computational basis, discard the result, prepare the new input state on qubit 1. The state of the other qubits after the measurement depends on the random outcome, and the density matrix is the average over outcomes. So a state vector can stand in for $\\rho_k$: keep a pure state, at each step measure qubit 1 with the Born probabilities, keep the conditional state of the others, prepare the new qubit 1, evolve, and average the features over $M$ independent trajectories. A state vector takes $16\\cdot 2^n$ bytes: 16 GiB at $n = 30$. The average over $M$ trajectories matches the exact features with error about $\\sigma/\\sqrt{M}$ where $\\sigma$ is the per-trajectory spread of the feature. The sample checks it for 6 qubits and 40 inputs."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "# Requires qrc_th_common.py in the same folder.\n# Quantum trajectories: replace the density matrix by a state vector. The reset on qubit 1 is a measure-and-prepare\n# step, so averaging over the random outcomes of that measurement reproduces the density-matrix features.\nimport numpy as np\nfrom qrc_th_common import *\n\nn, T = 6, 40\nrng = np.random.default_rng(3)\ns = rng.uniform(0, 1, T)\nrho0 = np.zeros((2**n, 2**n), complex); rho0[0, 0] = 1  # both methods start in |00...0>\nexact, _ = run(s, n=n, V=1, rho0=rho0)                  # density-matrix reference, shape (T, n)\nU = propagator(hamiltonian(n), 10.0)\nzs = [np.real(np.diag(op(Z, i, n))) for i in range(n)]\nD = 2**n\n\ndef trajectory(rng):\n    psi = np.zeros(D, complex); psi[0] = 1\n    out = []\n    for x in s:\n        a = psi.reshape(2, D // 2)                      # axis 0 = qubit 1\n        p1 = np.sum(np.abs(a[1]) ** 2)                  # probability that measuring qubit 1 gives 1\n        k = 1 if rng.random() < p1 else 0               # random outcome: this is the \"measure\" half of the reset\n        rest = a[k] / np.linalg.norm(a[k])              # post-measurement state of qubits 2..n\n        new = np.sqrt(1 - x) * np.kron([1, 0], rest) + np.sqrt(x) * np.kron([0, 1], rest)   # the \"prepare\" half\n        psi = U @ new\n        pr = np.abs(psi) ** 2\n        out.append([z @ pr for z in zs])\n    return np.array(out)\n\nprint(\"state vector: %d numbers; density matrix: %d numbers\" % (D, D * D))\nfor M in (10, 100, 1000):\n    avg = np.mean([trajectory(rng) for _ in range(M)], axis=0)\n    err = np.abs(avg - exact)\n    print(f\"M = {M:4d} trajectories: rms error of the features = {np.sqrt(np.mean(err**2)):.4f}   (1/sqrt(M) = {1/np.sqrt(M):.4f})\")\n"
+    },
+    {
+      "type": "code",
+      "lang": "text",
+      "source": "state vector: 64 numbers; density matrix: 4096 numbers\nM =   10 trajectories: rms error of the features = 0.0440   (1/sqrt(M) = 0.3162)\nM =  100 trajectories: rms error of the features = 0.0143   (1/sqrt(M) = 0.1000)\nM = 1000 trajectories: rms error of the features = 0.0060   (1/sqrt(M) = 0.0316)\n"
+    },
+    {
+      "type": "prose",
+      "text": "The error falls from 0.044 to 0.014 to 0.006 as $M$ goes from 10 to 100 to 1000, close to the $1/\\sqrt{M}$ trend (the absolute size is below $1/\\sqrt{M}$ because the per-trajectory feature spread is under 1). The classical simulation inherits the same shot-noise scaling that the device has, but nothing worse. It is one more way of saying that the hardware's advantage cannot come from dimension alone."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Structured dynamics"
+    },
+    {
+      "type": "prose",
+      "text": "Some dynamics are simply easy. A one-dimensional nearest-neighbour transverse-field Ising chain maps to free fermions and can be simulated in polynomial time; Gaussian continuous-variable reservoirs are simulable through their covariance matrices; low-entanglement dynamics yield to tensor networks. A reservoir in one of these classes may still be a good reservoir, but it is not a quantum advantage. The free-fermion case is worked and run in Quantum Advantage (#/qrc/theory/quantum-advantage)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Problem. You are asked whether a 20-qubit scrambling reservoir can be read at 0.1 resolution with $10^6$ shots per step on a 1000-step series, with restarts from a window of 20 steps, and what a classical simulation of it would cost."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Required shots per feature per step: $(2^{20}+1)/0.1^2 = 1.05e+08$, about $10^8$. The budget of $10^6$ is 100 times too small, so only features with larger spread would be readable. Even resolving a whole spread ($\\varepsilon = 1$) needs $2^{20} + 1 \\approx 10^6$ shots, just inside the budget, so a 10 per cent resolution is out of reach."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Cost on the device. With the window protocol: $S\\,T\\,L = 10^6 \\times 1000 \\times 20 = 2 \\times 10^{10}$ reservoir steps per feature set. Features can be read together from the same shots (Pauli-$Z$ strings come from the same bitstrings), so this is not multiplied by the feature count."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Classical simulation. An exact density matrix needs $16 \\cdot 4^{20}$ bytes, 16384 GiB, out of reach; a trajectory simulation needs $16 \\cdot 2^{20}$ bytes = 16 MiB per trajectory, trivial, and $M = 10^6$ trajectories give the same $1/\\sqrt{M}$ error as $10^6$ shots. The classical computer therefore pays about the same sampling cost as the device. A fully scrambling reservoir is both unreadable at useful resolution and cheap to imitate. A useful reservoir has to avoid scrambling, which is also where classical simulation becomes harder or easier depending on structure."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
     },
     {
       "type": "list",
       "items": [
-        "Exact density matrix: $4^n$ complex numbers, 16 bytes each, so $16 \\cdot 4^n$ bytes: 4 GiB at $n = 14$, 16 GiB at $n = 15$, and each step costs $O(8^n)$ with dense matrices.",
-        "Quantum trajectories: the reset is a measure-and-prepare channel, so averaging over random measurement outcomes of qubit 1 reproduces $\\rho_k$ exactly. A state-vector simulation of one trajectory needs $16 \\cdot 2^n$ bytes (16 GiB at $n = 30$), and $M$ trajectories give each feature to precision about $1/\\sqrt{M}$, the same scaling as $S$ hardware shots. The classical simulation inherits the same shot-noise problem the device has, but not more.",
-        "Structured dynamics: a one-dimensional nearest-neighbour transverse-field Ising chain maps to free fermions, so its unitary part is simulable in polynomial time; Gaussian continuous-variable reservoirs are simulable through their covariance matrices; low-entanglement dynamics yield to tensor networks. A reservoir in one of these classes can still be a good reservoir, but not a quantum advantage."
+        "A feature is read as an average of $S$ outcomes with standard error $\\sqrt{(1-\\mu^2)/S} \\le 1/\\sqrt{S}$.",
+        "Under Haar-random scrambling a Pauli feature has mean 0 and variance $1/(2^n+1)$: derived from the moments of the squared amplitudes.",
+        "Resolving a fraction $\\varepsilon$ of that spread takes $S \\gtrsim (2^n+1)/\\varepsilon^2$ shots, exponential in $n$ with no constant-factor escape.",
+        "Working reservoirs avoid it through refreshing by the input, local low-weight features, disorder and symmetry, and the sample reservoir at 8 qubits still spreads 0.09 to 0.15 (depending on the random draw) against the Haar 0.062.",
+        "Noise shrinks signal by $(1-p)^t$; forgetting wants contraction, signal wants little: a window.",
+        "$N_{\\text{eff}}(S) = \\sum_i \\sigma_i^2/(\\sigma_i^2 + 1/S)$ counts the directions that stand above the shot noise; shots buy features only logarithmically.",
+        "Restarting costs $S\\,T(T+1)/2$ steps; a window of $L$ steps reduces it to $S\\,T\\,L$.",
+        "Classical simulation costs $16\\cdot 4^n$ bytes exactly or $16\\cdot 2^n$ per trajectory, with the same $1/\\sqrt{M}$ sampling error."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Problems"
     },
     {
       "type": "problem",
@@ -156,8 +417,8 @@
       "text": "A fully scrambling 10-qubit reservoir is read through Pauli features. How many shots per feature per time step are needed to resolve input-driven changes of 10% of a feature's spread?",
       "hint": "Use $S \\gtrsim (2^n+1)/\\varepsilon^2$.",
       "solution": [
-        "The spread is $1/\\sqrt{2^{10}+1} = 1/\\sqrt{1025} \\approx 0.031$.",
-        "We need standard error $1/\\sqrt{S}$ below $0.1 \\times 0.031$, so $S \\ge 1025/0.01$.",
+        "The spread is $1/\\sqrt{2^{10}+1} = 1/\\sqrt{1025} \\approx 0.0312$.",
+        "We need standard error $1/\\sqrt{S}$ below $0.1 \\times 0.0312$, so $S \\ge 1025/0.01$.",
         "$S \\approx 1.0 \\times 10^5$."
       ],
       "answer": "about $10^5$ ($102{,}500$)"
@@ -167,9 +428,9 @@
       "title": "Restart versus windowed restart",
       "text": "A time series of $T = 1000$ steps is processed with $S = 1000$ shots per step. How many reservoir steps are executed with full restarts, and with restarts from a window of $L = 20$ steps?",
       "solution": [
-        "Full restarts: $S\\,T(T+1)/2 = 1000 \\times 1000 \\times 1001/2 = 5.005 \\times 10^8$.",
-        "Windowed: $S\\,T\\,L = 1000 \\times 1000 \\times 20 = 2 \\times 10^7$.",
-        "The window is justified if the reservoir's contraction factor $\\lambda$ satisfies $\\lambda^{20}$ well below the shot error; for the 4-qubit reservoir of the hands-on sample, which contracts by about 0.82 per step, $0.82^{20} \\approx 0.019$, comparable to the shot error at $S = 1000$ (about 0.03)."
+        "Full restarts: $S\\,T(T+1)/2 = 1000 \\times 1000 \\times 1001/2 = 5.005e+08$.",
+        "Windowed: $S\\,T\\,L = 1000 \\times 1000 \\times 20 = 2e+07$.",
+        "The window is justified if $\\lambda^{20}$ is well below the shot error; for a reservoir contracting by 0.82 per step, $0.82^{20} \\approx 0.019$, comparable to the shot error at $S = 1000$ (about 0.03)."
       ],
       "answer": "$5.0 \\times 10^8$ against $2 \\times 10^7$ (25 times fewer)"
     },
@@ -183,6 +444,27 @@
         "In practice the propagator and a work copy need two or three more matrices of the same size, so 15 qubits is the realistic limit."
       ],
       "answer": "16 (15 in practice)"
+    },
+    {
+      "type": "problem",
+      "title": "Signal through noisy gates",
+      "text": "A reservoir feature has noiseless signal amplitude 0.2 and passes through a light cone of 150 gates, each depolarizing with $p = 0.005$. The shot budget is $S = 10^4$ (standard error at most 0.01). Is the signal still above the noise, and after how many gates would it fall to the noise level?",
+      "hint": "Multiply the signal by $(1-p)^{\\text{gates}}$ and compare with $1/\\sqrt{S}$.",
+      "solution": [
+        "Signal factor: $0.995^{150} = 0.471$ (since $150 \\ln 0.995 = -0.752$).",
+        "Signal: $0.2 \\times 0.471 = 0.094$. The noise is at most $1/\\sqrt{10^4} = 0.01$, so the signal is about 9 times the noise.",
+        "The signal reaches 0.01 when $0.2 \\cdot 0.995^g = 0.01$, i.e. $g = \\ln 0.05 / \\ln 0.995 = 598$ gates."
+      ],
+      "answer": "Yes: 0.094 against 0.01; the crossing is at about 600 gates"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "prose",
+      "text": "Concentration and the shot budget feed the cost accounting in Resource Accounting (#/qrc/hardware/resource-accounting) and the choice of protocol in Online Measurement Protocols (#/qrc/hardware/online-protocols). The question of how small a signal a practical reservoir can tolerate is part of the open list in Open Problems (#/qrc/theory/open-problems). The classical-simulation numbers are the baseline of Quantum Advantage (#/qrc/theory/quantum-advantage), and the code that produced the shot-noise memory-capacity results is in Hands-on Implementation (#/qrc/theory/hands-on-implementation)."
     },
     {
       "type": "heading",

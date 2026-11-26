@@ -1,73 +1,86 @@
 {
   "title": "Measurement and Hardware",
-  "intro": "On a real device a quantum reservoir's features are not numbers you can read off: each one is an expectation value estimated from repeated destructive measurements, and that single fact sets the cost, the protocol and the accuracy of every physical QRC. This topic covers the measurement problem, the protocols that work around it, the platforms that have run QRC, and how to count what a run really costs.",
+  "intro": "On a real device a quantum reservoir's features are not numbers you can read off: each one is an expectation value estimated from repeated destructive measurements, and that single fact sets the cost, the protocol and the accuracy of every physical QRC. This chapter covers the measurement problem, the protocols that work around it, the platforms that have run QRC, and how to count what a run really costs.",
   "blocks": [
     {
       "type": "heading",
       "level": 2,
-      "text": "The gap between the model and the machine"
+      "text": "Why this chapter exists"
     },
     {
       "type": "prose",
-      "text": "In simulation a quantum reservoir is a CPTP map $\\mathcal{T}_{s_k}$ applied to a density matrix, and the features are exact numbers $x_{k,i} = \\operatorname{Tr}(O_i \\rho_k)$. On hardware three things change at once."
-    },
-    {
-      "type": "list",
-      "items": [
-        "Features are estimated, not read. A single projective measurement of $Z_i$ returns $\\pm 1$. The expectation value needs $S$ repetitions, and the estimate has standard deviation $\\sqrt{(1-x^2)/S}$. Shot noise is often the dominant error source in QRC experiments.",
-        "Measurement destroys memory. Projectively measuring the reservoir collapses $\\rho_k$ onto an eigenstate of the measured observables, erasing the coherences that carried the input history. The next input then meets a different state than the model assumed.",
-        "The dynamics are not the ideal Hamiltonian. Gate-based devices run a Trotterised or otherwise compiled circuit with gate errors, decoherence and crosstalk; analog devices have calibration drift and limited control. For a reservoir this matters less than for an algorithm, since the readout is trained on whatever the device does, but the device must do the same thing every time."
-      ]
+      "text": "Everything before this chapter treats a quantum reservoir as a mathematical object: a channel $\\mathcal T_{s}$ applied to a density matrix, and features $x_{k,i}=\\operatorname{Tr}(O_i\\rho_k)$ that are exact numbers. A real device offers none of that. It hands you single measurement outcomes of $+1$ or $-1$; the act of measuring changes the state that carried the memory; and the dynamics are whatever the hardware does, not what the Hamiltonian says. This chapter is about the distance between the model and the machine, and how experiments are designed to cross it."
     },
     {
       "type": "prose",
-      "text": "The first two points interact: since one run yields one bitstring per measurement, and measuring wrecks the state, the naive way to get the feature vector at every time step $k$ is to re-run the whole input sequence up to $k$, $S$ times, for every $k$. That costs $O(S T^2)$ evolution steps for a series of length $T$, and is the reason most early QRC experiments processed short sequences."
-    },
-    {
-      "type": "math",
-      "tex": "\\hat{x}_{k,i} = \\frac{1}{S}\\sum_{m=1}^{S} z^{(m)}_{k,i}, \\qquad z^{(m)}_{k,i}\\in\\{-1,+1\\}, \\qquad \\operatorname{Var}\\,\\hat{x}_{k,i} = \\frac{1 - x_{k,i}^2}{S}",
-      "caption": "A feature as it comes off the device: the mean of S single-shot outcomes."
+      "text": "The chapter assumes the vocabulary of Getting Started (#/qrc/start): a reservoir, a readout, ridge regression, memory capacity, and the small two-qubit reservoir of A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand). The models themselves are introduced in Quantum Reservoir Models (#/qrc/models) and the open-system tools (channels, measurement as a channel) in Open Quantum Systems Toolkit (#/qrc/open-systems). On the quantum side, the Born rule (Measurement and the Born Rule (#/quantum/foundations/measurement)) and mixed states (Mixed States (#/quantum/many-body/mixed-states)) are the two pages worth having read."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Three protocol families"
+      "text": "The gap in three facts"
     },
     {
       "type": "list",
       "items": [
-        "Restart: run the sequence from scratch for each output time, measure at the end. Faithful to the model, quadratically expensive; with fading memory the restart only needs a window of the last $w$ inputs, which cuts the cost to $O(S T w)$.",
-        "Online with weak measurement: measure gently every step so the state is disturbed only slightly; the price is noisier outcomes and hence more shots.",
-        "Online with projective measurement of part of the system: measure (and reset) some qubits every step while the rest keep the memory, using mid-circuit measurement. The cost drops to $O(S T)$ steps in only $S$ runs."
+        "Features are estimated, not read. One measurement of $Z_i$ returns $\\pm1$; the estimate of $x=\\langle Z_i\\rangle$ from $S$ shots has standard deviation $\\sqrt{(1-x^2)/S}$. Shot noise is often the dominant error in QRC experiments.",
+        "Measurement destroys memory. Measuring all qubits in the computational basis replaces the state by its diagonal and erases every coherence. In the 4-qubit example of the first page the memory capacity falls from 3.84 to 1.96.",
+        "The dynamics are not the ideal Hamiltonian. Gate-based devices run a compiled, noisy circuit; analog devices drift. For a reservoir this matters less than for an algorithm, because the readout is trained on whatever the device does, but the device must do the same thing every time."
       ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "Platforms"
     },
     {
       "type": "prose",
-      "text": "QRC has been demonstrated or proposed on superconducting gate-based processors (where the device noise itself has been used as the dissipation that gives fading memory), nuclear spin ensembles in NMR (where an ensemble average arrives in one shot), Rydberg-atom arrays (the largest reservoirs run so far, above 100 atoms), single superconducting nonlinear oscillators, continuous-variable optics, and driven-dissipative lattices fed with quantum inputs. They differ most in how features are read and how fast a run is repeated, not in the abstract model."
+      "text": "The first two facts interact. One run gives one bitstring per measurement and measuring wrecks the state, so the obvious way to get the feature vector at every step $k$ is to rerun the sequence up to $k$, $S$ times, for each $k$. That is $S\\,T(T+1)/2$ evolution steps for a series of length $T$, which is why most early experiments used short series."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Pages in this topic"
+      "text": "The order to read it in"
     },
     {
       "type": "list",
       "items": [
-        "Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action): why measuring breaks the recurrence, the restart protocol and its cost, and what shot noise does to memory capacity, with an interactive plot.",
-        "Online Measurement Protocols (#/qrc/hardware/online-protocols): weak (Gaussian-pointer) measurement and its information–disturbance trade-off, partial projective measurement with reset, and ensemble readout.",
-        "Gate-Based Devices (#/qrc/hardware/gate-based-devices): compiling a spin reservoir into circuits, why Trotter accuracy hardly matters, mid-circuit measurement, and device noise as a resource.",
-        "Analog Platforms (#/qrc/hardware/analog-platforms): NMR ensembles, Rydberg arrays, bosonic modes and driven-dissipative lattices, and what each gives the readout.",
-        "Resource Accounting (#/qrc/hardware/resource-accounting): counting runs, shots, evolution steps and wall-clock time for each protocol, and the shot budget a task needs."
+        "Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action): what one shot returns and what it costs, what a measurement does to the state, the restart protocol and its window, and why shot noise acts like a ridge penalty. Start here: every other page uses its formulas. About an hour.",
+        "Online Measurement Protocols (#/qrc/hardware/online-protocols): three ways of reading the reservoir while it runs (weak measurement with a Gaussian pointer, partial measurement with reset, and ensemble readout), each worked out with its Kraus operators and its price. About an hour.",
+        "Gate-Based Devices (#/qrc/hardware/gate-based-devices): how to compile a spin reservoir into CNOTs and rotations, why Trotter accuracy does not matter for a reservoir, how device noise supplies fading memory and what it costs in shots. About an hour.",
+        "Analog Platforms (#/qrc/hardware/analog-platforms): NMR ensembles, Rydberg arrays, Kerr oscillators and driven-dissipative lattices, with two small numerical experiments. About an hour.",
+        "Resource Accounting (#/qrc/hardware/resource-accounting): the wall-clock cost model, the shot budget a task needs, features per shot, the cost of classical simulation, and a pre-flight checklist. About 45 minutes."
       ]
+    },
+    {
+      "type": "prose",
+      "text": "Reading all five with the exercises takes roughly four to five hours. If you have one evening, read the first page fully and the cost model of the last page; those two give you the language to read any experimental QRC paper. The gate-based and analog pages are surveys with worked numbers, and can be read in either order after the protocols."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key equations of the chapter"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Shot noise: $\\sigma(\\hat x)=\\sqrt{(1-x^2)/S}\\le1/\\sqrt S$. One shot is $\\pm1$; the mean of $S$ is an unbiased estimate of $\\langle Z\\rangle$.",
+        "Non-selective measurement: $\\Delta(\\rho)=\\sum_b|b\\rangle\\langle b|\\rho|b\\rangle\\langle b|$ keeps the diagonal and erases coherences.",
+        "Restart cost: $N_{\\text{runs}}=S\\,T$ and $N_{\\text{steps}}=S\\,T(T+1)/2$, or about $S\\,T\\,w$ with a window $w\\ge\\ln(1/\\epsilon)/\\ln(1/\\gamma)$ for contraction rate $\\gamma$.",
+        "Noisy training is ridge: $\\mathbb E\\Vert y-(X+\\eta)w\\Vert^2=\\Vert y-Xw\\Vert^2+T\\sigma^2\\Vert w\\Vert^2$, so the noise supplies $\\lambda=T\\sigma^2$.",
+        "Weak measurement of strength $\\sigma$: reading variance $\\sigma^2+1-\\langle Z\\rangle^2$, coherence multiplied by $c=e^{-1/(2\\sigma^2)}$ per measurement.",
+        "Ensemble of $N$ copies: $\\sigma=\\sqrt{(1-x^2)/N}$, the same as $N$ shots in one run.",
+        "Trotter error of one split step: $\\tfrac12[A,B]\\,t^2$. Depolarising noise: features multiplied by $1-p$, shots needed grow as $(1-p)^{-2k}$ to read an input $k$ steps back.",
+        "Cost model: $t_{\\text{total}}=N_{\\text{runs}}t_{\\text{rep}}+N_{\\text{steps}}t_{\\text{step}}+N_{\\text{meas}}t_{\\text{meas}}$; shots for noise at a fraction $\\phi$ of a feature's spread $\\Sigma$: $S\\ge1/(\\phi^2\\Sigma^2)$."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What the chapter does not settle"
+    },
+    {
+      "type": "prose",
+      "text": "The numbers in the examples come from one 4-qubit spin reservoir simulated in numpy with Gaussian approximations to shot noise, and from device times that are assumptions, not measurements of a particular machine. They show the structure of the trade-offs, which is robust, and not what a given device will do, which you must measure. The chapter also says little about error mitigation, readout error correction or calibration, which matter in practice. Whether any of this beats a classical reservoir is the subject of Quantum Advantage (#/qrc/theory/quantum-advantage); running a small case yourself is Hands-on Implementation (#/qrc/theory/hands-on-implementation)."
     },
     {
       "type": "callout",
-      "text": "Rule of thumb: on hardware, the useful size of a quantum reservoir is set less by its qubit count than by how many features you can estimate precisely enough within your shot budget. A feature whose variation over time is smaller than its shot noise is worse than useless: it adds noise the ridge readout has to suppress."
+      "text": "Rule of thumb: on hardware, the useful size of a quantum reservoir is set less by its qubit count than by how many features you can estimate precisely enough within your shot budget. A feature whose variation over time is smaller than its shot noise is not worthless on its own (the readout can combine many noisy features), but it costs shots that need to be accounted for."
     },
     {
       "type": "heading",

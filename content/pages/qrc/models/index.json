@@ -1,98 +1,93 @@
 {
   "title": "Quantum Reservoir Models",
-  "intro": "A quantum reservoir is a fixed, driven quantum system whose state carries a fading, nonlinear memory of an input stream, with only a linear readout trained. This topic gives the general framework and then the main model families: spin networks, encodings, readouts, dynamical regimes, dissipation, continuous variables, memoryless extreme learning machines and quantum-data tasks.",
+  "intro": "A quantum reservoir is a fixed, driven quantum system whose state carries a fading, nonlinear memory of an input stream, with only a linear readout trained. This chapter builds the main model families one at a time: spin networks, encodings, readouts, dynamical regimes, dissipation, continuous variables, memoryless extreme learning machines and quantum-data tasks.",
   "blocks": [
+    {
+      "type": "prose",
+      "text": "This chapter is the heart of the shelf. Getting Started taught the machine-learning side and ended with a two-qubit reservoir worked by hand; the foundations and open-systems chapters supplied the classical theory and the density-matrix toolkit. Here we build the actual models: a quantum system that is driven by an input stream, forgets slowly, and is read out through a trained weighted sum. By the end you will be able to take any such model, say what its features are, what functions of the input it can compute, why it forgets, and what it costs to read."
+    },
     {
       "type": "heading",
       "level": 2,
-      "text": "The general framework"
+      "text": "The one idea behind every page"
     },
     {
       "type": "prose",
-      "text": "Every model on this shelf is a special case of one recursion. A quantum system with state $\\rho$ receives one input $s_k$ per time step through an input-dependent quantum channel $\\mathcal{T}_{s}$ (a completely positive, trace-preserving map), and a fixed set of observables $O_1,\\dots,O_M$ is read out:"
+      "text": "Every model in the chapter is a special case of one recursion. A quantum system with state $\\rho$ receives one input $s_k$ per time step through an input-dependent quantum channel $\\mathcal{T}_{s}$ (a completely positive, trace-preserving map: the most general physical operation), and a fixed set of observables $O_1,\\dots,O_M$ is read out. Only the weights $w$ are learned, by ridge regression on recorded features, exactly as in a classical echo state network:"
     },
     {
       "type": "math",
-      "tex": "\\rho_k = \\mathcal{T}_{s_k}(\\rho_{k-1}), \\qquad x_{k,i} = \\operatorname{Tr}(O_i\\,\\rho_k), \\qquad y_k = w_0 + \\sum_{i=1}^{M} w_i\\, x_{k,i}",
+      "tex": "\\rho_k=\\mathcal{T}_{s_k}(\\rho_{k-1}),\\qquad x_{k,i}=\\operatorname{Tr}(O_i\\,\\rho_k),\\qquad y_k=w_0+\\sum_{i=1}^{M}w_i\\,x_{k,i}",
       "caption": "State update, feature extraction and the trained linear readout."
     },
     {
       "type": "prose",
-      "text": "Only $w$ is learned, by ridge regression on recorded features, exactly as in a classical echo state network (see Echo State Networks (#/qrc/foundations/echo-state-networks)). The channel is not trained: it is the physics of the device. What makes the system a reservoir rather than a quantum memory is that $\\mathcal{T}_s$ is contractive, so the influence of the initial state and of old inputs dies away (the quantum echo state property, treated in Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points))."
-    },
-    {
-      "type": "heading",
-      "level": 3,
-      "text": "Why the recursion is linear in the state and nonlinear in the input"
-    },
-    {
-      "type": "prose",
-      "text": "Expand $\\rho$ in the normalised Pauli basis, $\\rho = 2^{-n}(I + \\sum_{\\mu} r_\\mu P_\\mu)$ with $4^n-1$ real coordinates $r_\\mu = \\operatorname{Tr}(P_\\mu\\rho)$. Any channel acts affinely on this Bloch vector, so the reservoir is a state-affine system:"
-    },
-    {
-      "type": "math",
-      "tex": "r_k = A(s_k)\\, r_{k-1} + b(s_k), \\qquad x_k = C\\, r_k",
-      "caption": "A(s) is the Pauli transfer matrix of the channel restricted to traceless parts; b(s) is where the channel pushes the maximally mixed state."
-    },
-    {
-      "type": "prose",
-      "text": "All the nonlinearity in the input comes from how $A$ and $b$ depend on $s$; the dynamics in $r$ is linear. Unrolling gives $x_k$ as a sum of products $b(s_{k-j})$ and $A(s_{k-j+1})\\cdots A(s_k)$, a discrete Volterra-like series whose terms decay as powers of the contraction rate of $A$. Grigoryeva and Ortega showed that a class of non-homogeneous state-affine systems with polynomial dependence on the input, plus linear readouts, can uniformly approximate any fading-memory filter; Chen and Nurdin proved an analogous universality result for a class of dissipative qubit reservoirs, with readouts polynomial in the measured expectations."
+      "text": "The channel is not trained: it is the physics of the device. What makes the system a reservoir rather than a quantum memory is that $\\mathcal{T}_s$ is contractive, so the influence of the initial state and of old inputs dies away (the quantum echo state property of Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points)). The recursion is linear in $\\rho$. All the nonlinearity in the input comes from how the channel depends on $s$, and from products of that dependence across time steps. Expanding $\\rho$ in Pauli matrices turns it into a state-affine system $r_k=A(s_k)r_{k-1}+b(s_k)$, $x_k=Cr_k$, and unrolling it gives features that are sums of products of functions of past inputs; Grigoryeva and Ortega showed that such systems with linear readouts can approximate any fading-memory filter, and Chen and Nurdin proved a related result for a class of dissipative qubit reservoirs."
     },
     {
       "type": "callout",
-      "text": "Size and access are the two key numbers. An $n$-qubit state has $4^n-1$ real coordinates, which is the much-quoted exponential reservoir. But the readout only sees $M$ observables, each estimated from finite shots. Memory capacity is bounded by the number of linearly independent features actually read, not by $4^n$."
+      "text": "Size and access are the two numbers that matter. An $n$-qubit state has $4^n-1$ real coordinates, the much-quoted exponential reservoir. But the readout only sees $M$ observables, each estimated from finite shots, and memory capacity is bounded by the number of linearly independent features actually read, not by $4^n$."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "A taxonomy"
-    },
-    {
-      "type": "list",
-      "items": [
-        "Quantum reservoir computing (QRC): $\\mathcal{T}_s$ has memory (it keeps part of the old state), inputs are a classical time series, targets depend on past inputs. Spin networks with reset-injection inputs are the standard example.",
-        "Quantum extreme learning machine (QELM): the reservoir is reset fully before each input, $\\rho_k = \\mathcal{E}(\\rho_{\\mathrm{in}}(s_k))$. No memory; a fixed random nonlinear feature map for static data. Equivalent to measuring a fixed informationally rich POVM on an encoded state.",
-        "Quantum reservoir processing: the input is itself a quantum state (for example an unknown state to classify by entanglement, or to estimate properties of), so the reservoir acts as a trainable-at-the-readout measurement device.",
-        "Discrete-variable versus continuous-variable: qubits and spins, or bosonic modes (Gaussian networks, a single Kerr oscillator) whose phase space supplies the features.",
-        "Analogue versus digital: a natural Hamiltonian evolving continuously (NMR, Rydberg arrays, superconducting couplers left on), or a gate sequence implementing $U$ (Trotterised or random circuits) on a quantum computer.",
-        "Closed-plus-reset versus open: dissipation enters by discarding the input qubit (reset injection), by engineered or natural noise (amplitude damping, dephasing), or by measurement back-action."
-      ]
-    },
-    {
-      "type": "heading",
-      "level": 2,
-      "text": "The design choices, one per page"
+      "text": "How to read the chapter"
     },
     {
       "type": "prose",
-      "text": "A working QRC is fixed by five choices, and each page below takes one: the Hamiltonian or circuit that mixes information, how the input enters, what is measured and how often, which dynamical regime the parameters put the system in, and where the dissipation that gives fading memory comes from."
+      "text": "Read the pages in order; each uses the previous ones, and every page has the same shape: a question, the idea, the maths in small steps, a worked example with numbers, short checks, a longer problem, and a set of exercises. Plan on about 45 to 75 minutes per page, so roughly eight to ten hours for the chapter, more if you run the programs and move the sliders (you should; most pages say what to try). If you only have a short time, read the first page and the one on dissipation, then skim the rest for their key points."
     },
     {
       "type": "list",
       "items": [
-        "The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir): the Fujii–Nakajima model, with random XX couplings, a Z field and reset injection, worked out completely and simulated.",
-        "Input Encoding (#/qrc/models/input-encoding): amplitude, angle and phase encodings, multi-qubit encoding, Hamiltonian-parameter drive, and the polynomial degree each gives.",
-        "Readout and Multiplexing (#/qrc/models/readout-and-multiplexing): which observables, virtual nodes in time, several reservoirs in parallel, correlators, and what they cost in shots.",
-        "Dynamical Regimes (#/qrc/models/dynamical-regimes): integrable, ergodic and localised reservoirs, level statistics, and why strong disorder destroys memory.",
-        "Dissipation as a Resource (#/qrc/models/dissipation-as-resource): how loss supplies the fading memory, and when natural noise helps.",
-        "Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs): Gaussian networks of oscillators and a single nonlinear oscillator.",
-        "Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines): memoryless reservoirs and what a POVM view says about their limits.",
-        "Quantum Data Tasks (#/qrc/models/quantum-data-tasks): reservoirs that take quantum states as input."
+        "The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir): the founding model, built from scratch: Hamiltonian, parity symmetry, the reset step with a two-qubit example by hand, virtual nodes, training, and a sweep showing what sets the memory. Start here.",
+        "Input Encoding (#/qrc/models/input-encoding): how a number becomes a quantum state or a Hamiltonian parameter, which functions of the input each choice offers, why a phase encoding is invisible to $Z$ readouts, and what writing the input into several qubits buys and costs.",
+        "Readout and Multiplexing (#/qrc/models/readout-and-multiplexing): which observables to measure, virtual nodes in time, parallel reservoirs, correlators, and shot noise: how many repetitions a feature needs and what goes wrong without them.",
+        "Dynamical Regimes (#/qrc/models/dynamical-regimes): integrable, ergodic and localised reservoirs; the detuning formula, level statistics as a diagnostic, and a table of memory against disorder.",
+        "Dissipation as a Resource (#/qrc/models/dissipation-as-resource): why a closed quantum system cannot forget, three sources of dissipation, how to turn a contraction rate into a memory horizon and a washout length, and why only non-unital noise works from the maximally mixed state.",
+        "Continuous-Variable Reservoirs (#/qrc/models/continuous-variable-reservoirs): reservoirs made of oscillators: Gaussian states and their matrix description, which encodings give linear or nonlinear memory, and a single Kerr oscillator.",
+        "Quantum Extreme Learning Machines (#/qrc/models/quantum-extreme-learning-machines): reservoirs without memory; the whole machine as the expectation of one operator, informationally complete measurements, and why the encoding limits the functions that can be fitted.",
+        "Quantum Data Tasks (#/qrc/models/quantum-data-tasks): when the input is itself a quantum state: estimating properties without a calibrated measurement, and why purity and entanglement need two copies."
       ]
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Key quantities at a glance"
+      "text": "A taxonomy of the models"
     },
     {
       "type": "list",
       "items": [
-        "Hilbert-space dimension $2^n$; Bloch coordinates $4^n-1$; diagonal (Z-string) observables $2^n-1$, all estimable from one computational-basis measurement setting.",
-        "Features $M = (\\text{observables per readout}) \\times V$ with $V$ virtual nodes per input step.",
-        "Linear memory capacity $\\mathrm{MC} = \\sum_{d\\ge1} r^2(d) \\le M$ (Jaeger's bound transferred to the readout dimension).",
-        "Shot noise: estimating $\\langle Z\\rangle$ from $S$ shots has standard deviation $\\sqrt{(1-\\langle Z\\rangle^2)/S}$, so precision costs $S\\propto \\epsilon^{-2}$ samples per feature per time step."
+        "Quantum reservoir computing: the channel has memory, inputs are a classical time series, targets depend on past inputs. Spin networks with reset injection are the standard example.",
+        "Quantum extreme learning machine: the reservoir is reset fully before each input. No memory; a fixed random nonlinear feature map for static data.",
+        "Quantum reservoir processing: the input is itself a quantum state, and the reservoir acts as a measurement device whose meaning is learned by training.",
+        "Discrete-variable versus continuous-variable: qubits and spins, or bosonic modes whose phase space supplies the features.",
+        "Analogue versus digital: a natural Hamiltonian evolving continuously, or a gate sequence implementing the unitary on a quantum computer.",
+        "Closed-plus-reset versus open: dissipation enters by discarding the input qubit, by engineered or natural noise, or by measurement back-action."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The key equations of the chapter"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The spin reservoir: $H=\\sum_{i<j}J_{ij}X_iX_j+\\sum_ih_iZ_i$, input step $\\rho_k=U(\\vert\\psi_{s_k}\\rangle\\langle\\psi_{s_k}\\vert\\otimes\\operatorname{Tr}_1\\rho_{k-1})U^\\dagger$ with $\\vert\\psi_s\\rangle=\\sqrt{1-s}\\vert0\\rangle+\\sqrt s\\vert1\\rangle$. Information is written on qubit 1, moved by the couplings, and deleted by the reset.",
+        "Features: $M=nV$ for $n$ qubits and $V$ virtual nodes; memory capacity $\\mathrm{MC}=\\sum_{d\\ge1}r^2(d)\\le M$. The register's $4^n-1$ coordinates do not appear.",
+        "Shot noise: $\\operatorname{Var}(\\hat z)=(1-\\langle Z\\rangle^2)/S$, so precision $\\epsilon$ costs $S\\propto\\epsilon^{-2}$ shots per feature per step.",
+        "Contraction: a per-step factor $c$ gives a memory horizon $1/\\ln(1/c)$ steps and a washout $N=\\ln\\epsilon/\\ln c$; a global depolarising channel has $c=1-p$.",
+        "Detuning: two coupled qubits with field difference $\\delta$ transfer at most $J^2/(J^2+\\delta^2)$ of an excitation, which is why strong disorder kills memory.",
+        "Gap ratio: $r=\\min(g_k,g_{k+1})/\\max(g_k,g_{k+1})$ has mean about $0.386$ for Poisson levels and $0.531$ for GOE levels, computed within one symmetry block.",
+        "QELM: $y=\\operatorname{Tr}[O_w\\rho(x)]+b$ with $O_w=\\sum_kw_kE_k$, $E_k=\\mathcal{E}^\\dagger(\\Pi_k)$; $n$ angle encodings give $2n+1$ functions.",
+        "Gaussian reservoirs: $2N+N(2N+1)$ moments for $N$ modes; moments evolve linearly, so a linear readout gives a sum of functions of single past inputs."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Try the whole thing first"
     },
     {
       "type": "widget",
@@ -175,30 +170,44 @@
     },
     {
       "type": "prose",
-      "text": "With four qubits and five virtual nodes, recall of $s(k-3)$ reaches an NMSE of about 0.13, the product $s(k)s(k-1)$ about 0.05 and NARMA2 about 0.10. Drop $V$ to 1 and recall collapses to about 0.72: four features cannot hold three steps of history. Raise the shots slider from 0 to 1000 and watch the error rise: in practice the shot budget, not the Hilbert space, limits what a reservoir can do."
+      "text": "Try this. (1) With four qubits and five virtual nodes, recall of $s(k-3)$ reaches an NMSE of about 0.13. (2) Switch to the product $s(k)s(k-1)$: about 0.05; and NARMA2 about 0.10. (3) Drop $V$ to 1 and recall collapses to about 0.72: four features cannot hold three steps of history. (4) Raise the shots slider from 0 to 1000 and watch the error rise: in practice the shot budget, not the Hilbert space, limits what a reservoir can do. By the end of the chapter you will be able to say why each of these happens."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Check yourself on the chapter's vocabulary"
     },
     {
       "type": "problem",
       "title": "Counting the reservoir",
-      "text": "A 6-qubit reservoir is read out by measuring every qubit in the Z basis after each of V = 10 virtual-node steps. How many real coordinates does its state have, how many diagonal Pauli expectations could be computed from the bitstrings, and how many features does a readout using only $\\langle Z_i\\rangle$ have?",
-      "hint": "Pauli basis size is 4^n; Z-strings are 2^n.",
+      "text": "A 6-qubit reservoir is read out by measuring every qubit in the $Z$ basis after each of $V=10$ virtual-node steps. How many real coordinates does its state have, how many diagonal Pauli expectations could be computed from the bitstrings, and how many features does a readout using only $\\langle Z_i\\rangle$ have?",
+      "hint": "Pauli basis size is $4^n$; $Z$-strings are $2^n$.",
       "solution": [
-        "State coordinates: $4^6 - 1 = 4095$.",
-        "Diagonal Pauli strings (products of $Z$s, excluding the identity): $2^6 - 1 = 63$ per readout time, all from the same bitstrings.",
-        "Single-qubit features: $6 \\times 10 = 60$. Using all Z-strings would give $63 \\times 10 = 630$, at the price that higher-weight strings are estimated with the same shots and are often small."
+        "State coordinates: $4^6-1=4095$.",
+        "Diagonal Pauli strings (products of $Z$s, excluding the identity): $2^6-1=63$ per readout time, all from the same bitstrings.",
+        "Single-qubit features: $6\\times10=60$. Using all $Z$-strings would give $63\\times10=630$, at the price that higher-weight strings are estimated with the same shots and are often small."
       ],
       "answer": "4095, 63, 60"
     },
     {
       "type": "problem",
       "title": "Reset injection is a channel",
-      "text": "The standard input step is $\\mathcal{T}_s(\\rho) = U\\,(\\vert\\psi_s\\rangle\\langle\\psi_s\\vert \\otimes \\operatorname{Tr}_1\\rho)\\,U^\\dagger$. Write Kraus operators for it and check completeness.",
-      "hint": "Tracing out a qubit has Kraus operators <a| on that qubit.",
+      "text": "The standard input step is $\\mathcal{T}_s(\\rho)=U(\\vert\\psi_s\\rangle\\langle\\psi_s\\vert\\otimes\\operatorname{Tr}_1\\rho)U^\\dagger$. Write Kraus operators for it and check completeness.",
+      "hint": "Tracing out a qubit has Kraus operators $\\langle a\\vert$ on that qubit.",
       "solution": [
-        "Discarding qubit 1 and preparing $\\vert\\psi_s\\rangle$ is $\\rho \\mapsto \\sum_{a=0,1} K_a \\rho K_a^\\dagger$ with $K_a = \\vert\\psi_s\\rangle\\langle a\\vert \\otimes I$.",
-        "Completeness: $\\sum_a K_a^\\dagger K_a = \\sum_a \\vert a\\rangle\\langle\\psi_s\\vert\\psi_s\\rangle\\langle a\\vert\\otimes I = I$.",
-        "Composing with the unitary gives Kraus operators $U K_a$, still complete. The map is linear in $\\rho$ and depends on $s$ only through the prepared state, which is the state-affine structure above."
+        "Discarding qubit 1 and preparing $\\vert\\psi_s\\rangle$ is $\\rho\\mapsto\\sum_{a=0,1}K_a\\rho K_a^\\dagger$ with $K_a=\\vert\\psi_s\\rangle\\langle a\\vert\\otimes I$.",
+        "Completeness: $\\sum_aK_a^\\dagger K_a=\\sum_a\\vert a\\rangle\\langle\\psi_s\\vert\\psi_s\\rangle\\langle a\\vert\\otimes I=I$.",
+        "Composing with the unitary gives Kraus operators $UK_a$, still complete. The map is linear in $\\rho$ and depends on $s$ only through the prepared state, which is the state-affine structure above."
       ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Prerequisites and where this leads"
+    },
+    {
+      "type": "prose",
+      "text": "You need the Getting Started chapter (especially A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand)), the echo state ideas of Echo State Networks (#/qrc/foundations/echo-state-networks) and The Echo State Property (#/qrc/foundations/echo-state-property), and density matrices and channels from Density Matrices and Channels (#/qrc/open-systems/density-matrices-and-channels). The next chapter, Measurement and Hardware (#/qrc/hardware), takes these models onto real devices and counts what they cost; the last chapter asks what they can approximate in principle, where they fail at scale, and whether they can ever beat classical reservoirs."
     },
     {
       "type": "heading",

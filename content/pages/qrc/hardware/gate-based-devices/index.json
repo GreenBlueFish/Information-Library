@@ -5,15 +5,148 @@
     {
       "type": "heading",
       "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "Circuits and gates: Gates and Circuits (#/quantum/qubits/gates-and-circuits); the Pauli operators and rotations $R_X, R_Y, R_Z$: Pauli Operators and Rotations (#/quantum/qubits/pauli-and-rotations); time evolution $e^{-iHt}$: The Schrödinger Equation (#/quantum/dynamics/schrodinger-equation). The reservoir being compiled is the spin reservoir of The Spin-Network Reservoir (#/qrc/models/spin-network-reservoir) with the numbers of A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand). Shot noise and mid-circuit measurement come from Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action) and Online Measurement Protocols (#/qrc/hardware/online-protocols)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you will be able to do"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Turn the reservoir Hamiltonian $H=\\sum J_{ij}X_iX_j + h\\sum Z_i$ into a circuit of rotations and CNOTs, and count its gates.",
+        "Derive the error of a first-order Trotter step, and explain why a reservoir does not need that error to be small.",
+        "Show how device noise, a global depolarising channel in particular, supplies fading memory to a circuit that would otherwise be unitary, and what it costs in shots.",
+        "Estimate the chance that a circuit runs without a gate error, and how long an input step takes on a superconducting device.",
+        "Say what extra problems mid-circuit measurement brings."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
       "text": "A reservoir step as a circuit"
     },
     {
-      "type": "prose",
-      "text": "The Fujii–Nakajima-type reservoir used on these pages evolves under $H = \\sum_{i<j}J_{ij}X_iX_j + h\\sum_i Z_i$ for a time $\\Delta t$ between inputs. A first-order Trotter step of length $t$ is $e^{-iH_Z t}e^{-iH_{XX}t}$. The $Z$ part is $n$ single-qubit $R_Z(2ht)$ rotations; each $e^{-iJ_{ij}t X_iX_j}$ is an $R_{XX}(2J_{ij}t)$ gate, which compiles to two CNOTs plus single-qubit rotations. All-to-all couplings therefore cost $n(n-1)$ CNOTs per Trotter step, before routing on a device with limited connectivity adds SWAPs."
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "Input encoding by state injection: reset qubit 1 and apply $R_Y(\\theta_k)$ with $\\theta_k = 2\\arcsin\\sqrt{s_k}$, which prepares $\\sqrt{1-s_k}\\,|0\\rangle + \\sqrt{s_k}\\,|1\\rangle$. Reset is itself the dissipative step that makes the map contractive (see Input Encoding (#/qrc/models/input-encoding)). An alternative that needs no reset is to rotate in place, $R_Y(\\theta(s_k))$ on one or all qubits, but then a purely unitary circuit has no fading memory at all, and contraction must come from measurement, reset of other qubits, or noise."
+      "text": "The models on this shelf are written as $e^{-iH\\Delta t}$ for a Hamiltonian $H$. A gate-based computer has no knob for $H$. It has a small set of gates: single-qubit rotations and one two-qubit entangling gate (usually a CNOT or a controlled-Z). Before anything can run, the evolution must be compiled into those gates. The compilation decides how deep the circuit is and how many noisy gates the signal has to survive."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The idea in plain words"
+    },
+    {
+      "type": "prose",
+      "text": "The Hamiltonian is a sum of two kinds of terms, and each kind is easy on its own. The field terms $h Z_i$ rotate each qubit about the $z$ axis: single-qubit gates. The coupling terms $J_{ij}X_iX_j$ rotate pairs of qubits about the $XX$ axis: a two-qubit gate that can be built from two CNOTs. The trouble is that the two kinds do not commute, so $e^{-i(A+B)t}$ is not $e^{-iAt}e^{-iBt}$. The standard cure, due to Trotter, is to alternate the two kinds in short bursts. Picture a ship pushed by two crosswinds at once. If you let one wind blow for a minute and then the other for a minute, you end up near, but not at, where both together would have taken you. The shorter the bursts, the closer you get."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Write $H = H_{XX} + H_Z$ with $H_{XX}=\\sum_{i<j}J_{ij}X_iX_j$ and $H_Z = h\\sum_iZ_i$. Two facts make each part easy to compile."
+    },
+    {
+      "type": "prose",
+      "text": "Fact 1. All terms of $H_Z$ commute with each other (they are all built from $Z$ on different qubits), so $e^{-iH_Zt}=\\prod_ie^{-iht Z_i}$ exactly. Since the single-qubit rotation is $R_Z(\\varphi)=e^{-i\\varphi Z/2}$, each factor is $R_Z(2ht)$ on qubit $i$."
+    },
+    {
+      "type": "prose",
+      "text": "Fact 2. All terms of $H_{XX}$ commute with each other too ($X_iX_j$ and $X_kX_l$ commute: $X$ commutes with $X$ and with identity), so $e^{-iH_{XX}t}=\\prod_{i<j}e^{-iJ_{ij}tX_iX_j}$ exactly, a product of two-qubit rotations $R_{XX}(2J_{ij}t) = e^{-i(\\varphi/2)X\\otimes X}$ with $\\varphi=2J_{ij}t$."
+    },
+    {
+      "type": "prose",
+      "text": "Fact 3. One $R_{XX}$ is two CNOTs and some single-qubit gates. Conjugating by Hadamards turns $X\\otimes X$ into $Z\\otimes Z$ ($H_dXH_d = Z$), and $e^{-i(\\varphi/2)Z\\otimes Z}$ is a CNOT, an $R_Z(\\varphi)$ on the target, and the same CNOT again: the CNOT sends $Z_1Z_2$ to $Z_2$, which the $R_Z$ rotates. In symbols $R_{XX}(\\varphi) = (H_d\\otimes H_d)\\,\\mathrm{CNOT}\\,(I\\otimes R_Z(\\varphi))\\,\\mathrm{CNOT}\\,(H_d\\otimes H_d)$. The sample below checks this identity numerically."
+    },
+    {
+      "type": "prose",
+      "text": "The only approximation is between the two groups. Step 1 of the error estimate: expand each exponential to second order in $t$, with $A = H_{XX}$ and $B=H_Z$. The exact evolution is $e^{-i(A+B)t} = 1 - i(A+B)t - \\tfrac12(A+B)^2t^2+\\dots$ and the product is $e^{-iAt}e^{-iBt} = (1-iAt-\\tfrac12A^2t^2)(1-iBt-\\tfrac12B^2t^2)=1-i(A+B)t-\\tfrac12A^2t^2-\\tfrac12B^2t^2 - ABt^2+\\dots$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Subtract. $(A+B)^2 = A^2+AB+BA+B^2$, so exact minus product at order $t^2$ is $-\\tfrac12(AB+BA)t^2 + ABt^2 = \\tfrac12(AB-BA)t^2 = \\tfrac12[A,B]\\,t^2$."
+    },
+    {
+      "type": "math",
+      "tex": "e^{-i(A+B)t} - e^{-iAt}e^{-iBt} \\;=\\; \\tfrac12\\,[A,B]\\,t^2 + O(t^3)",
+      "caption": "Error of one first-order Trotter step: governed by the commutator of the two parts."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. Cut the time $\\Delta t$ into $r$ steps of length $t=\\Delta t/r$. Each has an error of order $t^2\\Vert[A,B]\\Vert/2$ and there are $r$ of them, so the total is of order $\\Delta t^2\\Vert[A,B]\\Vert/(2r)$: it falls like $1/r$ while the circuit depth grows like $r$. Second-order (symmetric) splitting $e^{-iBt/2}e^{-iAt}e^{-iBt/2}$ cancels the $t^2$ term and the total error falls like $1/r^2$ instead."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Worked example: the error of one split step"
+    },
+    {
+      "type": "prose",
+      "text": "Take one qubit with $A = 0.5\\,X$ and $B=0.5\\,Z$ (a field along $x$ and one along $z$). These do not commute. Step 1: the commutator is $[A,B] = 0.25\\,[X,Z] = 0.25\\times(-2iY)=-0.5\\,iY$, whose size (largest singular value) is $0.5$. Step 2: the predicted error of a step of length $t$ is $\\tfrac12\\times0.5\\times t^2 = 0.25\\,t^2$. For $t=0.4$ that is $0.040$. Step 3: compute the exact difference $\\Vert e^{-i(A+B)t}-e^{-iAt}e^{-iBt}\\Vert$ numerically: $0.0396$ for $t=0.4$, $0.00998$ for $t=0.2$, $0.00250$ for $t=0.1$. The prediction holds, and halving $t$ quarters the error. Step 4: split $t=0.4$ into $r=4$ steps of $0.1$: the total error is $0.0099$, four times smaller than the single step's $0.0396$: the $1/r$ law. (These numbers come from a short python run, not a code sample on this page.)"
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Gate count and routing"
+    },
+    {
+      "type": "prose",
+      "text": "A Trotter step has $\\binom{n}{2}$ coupling gates for all-to-all couplings, each costing 2 CNOTs, so $n(n-1)$ CNOTs per step, plus $n$ single-qubit $R_Z$ gates. This is before routing. A device connects each qubit to only a few neighbours, so a coupling between distant qubits needs SWAP gates (each is 3 CNOTs) to bring them next to each other; moving one qubit $d-1$ places and back is $6(d-1)$ extra CNOTs in the naive approach. Choosing a reservoir whose couplings match the device layout (a ring, a heavy-hex lattice) avoids that cost, and a reservoir does not care which graph it lives on."
+    },
+    {
+      "type": "prose",
+      "text": "The sample below checks the XX identity, the encoding angle of the next paragraph, the claim that depolarising noise scales expectation values by $(1-p)$ (used later), and the CNOT budget. Its output, from an actual run, follows the code."
+    },
+    {
+      "type": "prose",
+      "text": "One thing to keep in mind about the $1/r$ law: it is a statement about small steps. The reservoir below uses $\\Delta t=10$, a long time in which the coupling terms of size $\\sim0.5$ accumulate phases of many radians, so the error is not small until $r$ is large (see the fidelity table in the next section)."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Writing the input"
+    },
+    {
+      "type": "prose",
+      "text": "Input encoding by state injection: reset qubit 1 and apply $R_Y(\\theta_k)$ with $\\theta_k = 2\\arcsin\\sqrt{s_k}$. Check: $R_Y(\\theta)|0\\rangle = \\cos(\\theta/2)|0\\rangle + \\sin(\\theta/2)|1\\rangle$, and with that $\\theta$, $\\sin^2(\\theta/2) = s_k$, giving $\\sqrt{1-s_k}|0\\rangle+\\sqrt{s_k}|1\\rangle$ as in A Quantum Reservoir Worked by Hand (#/qrc/start/quantum-reservoir-by-hand). The reset is itself the dissipative step that makes the map contractive (Input Encoding (#/qrc/models/input-encoding)). An alternative with no reset rotates in place, $R_Y(\\theta(s_k))$ on one or all qubits. But then a purely unitary circuit has no fading memory at all, and contraction must come from measurement, from resetting other qubits, or from noise (see below)."
+    },
+    {
+      "type": "code",
+      "lang": "python",
+      "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]]); Y = np.array([[0, -1j], [1j, 0]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\nHd = np.array([[1, 1], [1, -1]]) / np.sqrt(2)\nCNOT = np.array([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, 0, 1], [0, 0, 1, 0]])\nRz = lambda a: expm(-1j * a / 2 * Z); Ry = lambda a: expm(-1j * a / 2 * Y)\n\n# 1. an XX rotation from two CNOTs: exp(-i (phi/2) X x X) = (H x H) CNOT (I x Rz(phi)) CNOT (H x H)\nphi = 0.83\nRXX = expm(-1j * phi / 2 * np.kron(X, X))\nHH = np.kron(Hd, Hd)\nbuilt = HH @ CNOT @ np.kron(I2, Rz(phi)) @ CNOT @ HH\nprint(\"two-CNOT circuit equals R_XX(phi): max entry difference =\", f\"{np.abs(built - RXX).max():.1e}\")\n\n# 2. input injection: reset a qubit and apply R_Y(theta) with theta = 2 arcsin(sqrt(s))\ns = 0.25; theta = 2 * np.arcsin(np.sqrt(s)); psi = Ry(theta) @ np.array([1, 0])\nprint(f\"s = {s}: theta = {theta:.4f} rad = {np.degrees(theta):.1f} deg; amplitudes {psi.real.round(4)}; <Z> = {(psi[0]**2 - psi[1]**2).real:.3f} (= 1 - 2s = {1 - 2*s})\")\n\n# 3. noise multiplies every traceless expectation value by (1 - p)\nrng = np.random.default_rng(3); A = rng.normal(size=(8, 8)) + 1j * rng.normal(size=(8, 8))\nrho = A @ A.conj().T; rho /= np.trace(rho).real\np = 0.05; rho_n = (1 - p) * rho + p * np.eye(8) / 8\nZq = np.kron(Z, np.eye(4))\nprint(\"<Z_1> before:\", round(np.trace(Zq @ rho).real, 5), \" after depolarising p = 0.05:\", round(np.trace(Zq @ rho_n).real, 5), \" ratio:\", round(np.trace(Zq @ rho_n).real / np.trace(Zq @ rho).real, 5))\n\n# 4. a purely unitary circuit has no fading memory; noise supplies it\nn, D = 4, 16\ndef op(o, i):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else I2)\n    return m\nr = np.random.default_rng(1)\nH = sum(r.uniform(-0.5, 0.5) * op(X, i) @ op(X, j) for i in range(n) for j in range(i + 1, n)) + sum(op(Z, i) for i in range(n))\nU = expm(-1j * H * 2.0)\ninputs = np.random.default_rng(0).uniform(0, 1, 40)\ndef evolve(rho0, p):\n    rho = rho0; out = []\n    for x in inputs:\n        R = np.kron(Ry(np.pi * x), np.eye(8))   # rotate qubit 1 in place (no reset)\n        rho = U @ (R @ rho @ R.conj().T) @ U.conj().T\n        rho = (1 - p) * rho + p * np.eye(D) / D\n        out.append(rho)\n    return out\nA0 = np.zeros((D, D), complex); A0[0, 0] = 1\nB0 = np.zeros((D, D), complex); B0[-1, -1] = 1\nprint(\"step | trace distance between two copies from |0000> and |1111>, no noise | p = 0.05 | (1-p)^k\")\na0, b0 = evolve(A0, 0.0), evolve(B0, 0.0); a1, b1 = evolve(A0, 0.05), evolve(B0, 0.05)\ntd = lambda a, b: 0.5 * np.abs(np.linalg.eigvalsh(a - b)).sum()\nfor k in [1, 5, 10, 20, 40]:\n    print(f\"{k:4d} | {td(a0[k-1], b0[k-1]):.4f} | {td(a1[k-1], b1[k-1]):.4f} | {0.95**k:.4f}\")\n\n# 5. CNOT budget of one all-to-all Trotter step and chance of no CNOT error\nprint(\"qubits n | CNOTs per Trotter step n(n-1) | P(no error) at 0.5% | at 0.1%\")\nfor nq in [4, 6, 8, 10]:\n    c = nq * (nq - 1)\n    print(f\"{nq:8d} | {c:29d} | {0.995**c:19.3f} | {0.999**c:.3f}\")\n"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Two CNOTs and Hadamards reproduce $R_{XX}(\\varphi)$: largest entry difference $3\\times10^{-16}$ (round-off).",
+        "For $s=0.25$: $\\theta = 1.0472$ rad $=60^{\\circ}$, amplitudes $(0.866, 0.5)$, $\\langle Z\\rangle = 0.500 = 1-2s$.",
+        "Global depolarising noise with $p=0.05$ takes $\\langle Z_1\\rangle$ from 0.05968 to 0.0567: ratio 0.95 $=1-p$.",
+        "Unitary circuit with in-place input rotation: the trace distance between two copies started in $|0000\\rangle$ and $|1111\\rangle$ stays at 1.0000 for 40 steps. With $p=0.05$ per step it falls as $0.95^k$: 0.7738 at step 5, 0.3585 at step 20, 0.1285 at step 40.",
+        "CNOTs per all-to-all Trotter step $n(n-1)$: 12, 30, 56, 90 for $n=4,6,8,10$. Chance of no CNOT error at 0.5%: 0.942, 0.860, 0.755, 0.637; at 0.1%: 0.988, 0.970, 0.946, 0.914."
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: compile a coupling",
+      "text": "A coupling $J_{12}=0.3$ acts for time $t=2$ and the field is $h=1$. What are the angles of the $R_{XX}$ gate and of each field rotation?",
+      "hint": "$R(\\varphi)=e^{-i\\varphi P/2}$, so $\\varphi$ is twice the coefficient of the Pauli in the exponent.",
+      "solution": [
+        "$e^{-iJtXX} = e^{-i(\\varphi/2)XX}$ with $\\varphi/2=Jt = 0.6$, so $\\varphi=1.2$.",
+        "$e^{-ihtZ}=e^{-i(\\varphi/2)Z}$ with $\\varphi/2 = ht=2$, so $\\varphi=4$ rad."
+      ],
+      "answer": "$R_{XX}(1.2)$, i.e. $\\varphi=2Jt = 1.2$ rad; $R_Z(2ht)=R_Z(4)$ rad."
     },
     {
       "type": "heading",
@@ -21,8 +154,22 @@
       "text": "Trotter accuracy is not the goal"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "For simulating physics you would choose the Trotter step to make the circuit close to $e^{-iH\\Delta t}$. For a reservoir that is unnecessary: the readout is trained on the circuit's actual features, so all that matters is that the circuit is a good reservoir. The numbers make the point. For the 4-qubit model with $h=1$ and $\\Delta t=10$, the gate fidelity $|\\operatorname{Tr}(U^{\\dagger}U_{\\text{Trot}})/2^n|^2$ is 0.02 with one Trotter step and only reaches 0.89 at 20 steps (240 CNOTs per input) and 0.99 at 50 steps (600 CNOTs):"
+      "text": "If you are simulating physics, the Trotter step must be small enough that the circuit is close to $e^{-iH\\Delta t}$, because the answer is the physics. For a reservoir the answer is a trained readout's performance, and the readout is fitted to whatever features the circuit really produces. The question is how much accuracy a reservoir actually needs."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The numbers"
+    },
+    {
+      "type": "prose",
+      "text": "The first sample measures the gate fidelity $|\\operatorname{Tr}(U^{\\dagger}U_{\\text{Trot}})/2^n|^2$ between the exact evolution and $r$ Trotter steps, for the 4-qubit model with $h=1$ and $\\Delta t=10$. It is a long evolution, so the fidelity needs many steps to recover:"
     },
     {
       "type": "code",
@@ -30,8 +177,15 @@
       "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else I2)\n    return m\nn, h, dt = 4, 1.0, 10.0\nr = np.random.default_rng(1)\nHXX = sum(r.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\nHZ = h * sum(op(Z, i, n) for i in range(n))\nU = expm(-1j * (HXX + HZ) * dt)\nUXX = lambda t: expm(-1j * HXX * t); UZ = lambda t: expm(-1j * HZ * t)\nD = 2**n\nprint(\"Trotter steps r | 1st-order gate fidelity | 2nd-order gate fidelity | CNOTs per input step (1st order)\")\nfor steps in [1, 2, 5, 10, 20, 50]:\n    t = dt / steps\n    U1 = np.linalg.matrix_power(UZ(t) @ UXX(t), steps)\n    U2 = np.linalg.matrix_power(UZ(t / 2) @ UXX(t) @ UZ(t / 2), steps)\n    f = lambda V: abs(np.trace(U.conj().T @ V) / D) ** 2\n    cnots = steps * n * (n - 1) // 2 * 2\n    print(f\"{steps:15d} | {f(U1):23.4f} | {f(U2):23.4f} | {cnots}\")\n"
     },
     {
+      "type": "list",
+      "items": [
+        "First-order gate fidelity: 0.018 with one step (12 CNOTs), 0.052 with 2, 0.104 with 5, 0.095 with 10, 0.895 with 20 (240 CNOTs), 0.995 with 50 (600 CNOTs). Second-order: 0.019, 0.039, 0.139, 0.094, 0.919, 0.998.",
+        "The fidelity does not rise smoothly: for ten steps or fewer the Trotter error is so large that the steps are essentially uncorrelated with the exact one. The $1/r$ law is only valid once the error is small."
+      ]
+    },
+    {
       "type": "prose",
-      "text": "Yet a reservoir built from a single coarse Trotter step per virtual node is about as good as the exact one. Using 5 virtual nodes of $t=2$ each, exact evolution gives MC $\\approx 3.84$ on delays 1 to 12, and one first-order Trotter step per node (12 CNOTs per node) gives 3.48, although its gate fidelity to the exact $t=2$ step is only 0.45. Adding global depolarising noise of strength $p$ after each node lowers it only gently (3.43 at $p=0.01$, 3.28 at $p=0.05$, 3.05 at $p=0.2$) when the features are exact; the real cost of noise comes through shots, below."
+      "text": "The second sample asks a different question: how good a reservoir is a coarse circuit? It uses 5 virtual nodes of $t=2$ each (so the same total evolution as before, read after each node), and compares the exact evolution with a single first-order Trotter step per node (12 CNOTs per node), adding global depolarising noise of strength $p$ after each node. Memory capacity over delays 1 to 12, exact features:"
     },
     {
       "type": "code",
@@ -39,8 +193,31 @@
       "source": "import numpy as np\nfrom scipy.linalg import expm\nX = np.array([[0, 1], [1, 0]]); Z = np.diag([1., -1.]); I2 = np.eye(2)\ndef op(o, i, n):\n    m = np.eye(1)\n    for k in range(n): m = np.kron(m, o if k == i else I2)\n    return m\nn, D = 4, 16\nr = np.random.default_rng(1)\nHXX = sum(r.uniform(-0.5, 0.5) * op(X, i, n) @ op(X, j, n) for i in range(n) for j in range(i + 1, n))\nHZ = sum(op(Z, i, n) for i in range(n))\nZd = [np.diag(op(Z, i, n)) for i in range(n)]\ndef feats(s, Us, p=0.0):\n    rho = np.eye(D) / D; F = []\n    for x in s:\n        r4 = rho.reshape(2, 8, 2, 8); rest = r4[0, :, 0, :] + r4[1, :, 1, :]\n        psi = np.array([np.sqrt(1 - x), np.sqrt(x)]); rho = np.kron(np.outer(psi, psi), rest)\n        f = []\n        for U in Us:\n            rho = U @ rho @ U.conj().T\n            rho = (1 - p) * rho + p * np.eye(D) / D   # global depolarising noise per layer\n            f += [z @ np.real(np.diag(rho)) for z in Zd]\n        F.append(f)\n    return np.array(F)\ndef mc(F, s, w=200, tr=800, dmax=12):\n    A = np.hstack([F, np.ones((len(F), 1))]); tot = 0\n    for d in range(1, dmax + 1):\n        y = s[w - d:len(s) - d]\n        wt = np.linalg.solve(A[w:w+tr].T @ A[w:w+tr] + 1e-6*np.eye(A.shape[1]), A[w:w+tr].T @ y[:tr])\n        tot += np.corrcoef(A[w+tr:] @ wt, y[tr:])[0, 1]**2\n    return tot\ns = np.random.default_rng(0).uniform(0, 1, 1400)\nt = 2.0\nexact = [expm(-1j*(HXX+HZ)*t)]*5\ntrot = [expm(-1j*HZ*t) @ expm(-1j*HXX*t)]*5\nprint(f\"exact evolution, 5 virtual nodes of t=2: MC = {mc(feats(s, exact), s):.2f}\")\nprint(f\"one Trotter step per node (same t): MC = {mc(feats(s, trot), s):.2f}\")\nfor p in [0.01, 0.05, 0.2]:\n    print(f\"Trotter circuit with global depolarising p={p} per node: MC = {mc(feats(s, trot, p), s):.2f}\")\nUe, Ut = exact[0], trot[0]\nprint(f\"gate fidelity of one Trotter step to the exact t=2 step: {abs(np.trace(Ue.conj().T @ Ut) / D)**2:.2f}\")\n"
     },
     {
+      "type": "list",
+      "items": [
+        "Exact evolution: MC = 3.84. One Trotter step per node: MC = 3.48, although the gate fidelity of that step to the exact $t=2$ step is only 0.45.",
+        "Depolarising noise of $p=0.01$, $0.05$, $0.2$ per node: MC = 3.43, 3.28, 3.05."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The coarse circuit is a different unitary from the exact one, and its fidelity is poor, but as a reservoir it is nearly as good: it still mixes the input into all qubits and still has the kind of random-looking dynamics that gives rich features. Even strong global noise lowers capacity only gently when the features are exact; the real cost of noise comes through shots, below."
+    },
+    {
       "type": "callout",
       "text": "Design rule: choose the shallowest circuit that mixes the input qubit into the whole register within one input step, and spend the saved depth on virtual nodes (measuring after each sub-block), not on Trotter accuracy."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Using the exact simulation to train the readout and then running the Trotter circuit on the device. The readout belongs to the circuit that produces the features. Simulate the circuit you will run (with its gates), or train on device data.",
+        "Changing the compilation between training and test (a different routing, a different gate decomposition). The circuit must be the same every run."
+      ]
     },
     {
       "type": "heading",
@@ -48,12 +225,75 @@
       "text": "Noise: resource and cost"
     },
     {
-      "type": "prose",
-      "text": "Noise acts on a reservoir in two ways. As a CPTP map, amplitude damping or depolarising noise is contractive, so it can supply the echo state property to a circuit that would otherwise be unitary and so never forget its initial state. Chen, Nurdin and Yamamoto (2020) proposed a universal class of dissipative quantum reservoirs with a subclass built from native gates, and showed in proof-of-principle runs on cloud superconducting processors that small, noisy reservoirs can handle nonlinear temporal tasks; Suzuki and coauthors (2022) went further and used the natural noise of such devices as the reservoir's dissipative resource; Kubota and coauthors (2023) analysed how different quantum noise channels induce memory and nonlinearity."
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
     },
     {
       "type": "prose",
-      "text": "The cost is signal amplitude. Global depolarising noise of strength $p$ per step maps $\\rho\\mapsto(1-p)\\rho + pI/2^n$, which multiplies every traceless expectation value by $(1-p)$. Information about an input $k$ steps back reaches the features attenuated by $(1-p)^k$ (on top of the reservoir's own fading), so to keep the shot-noise-to-signal ratio fixed, the shots must grow as $(1-p)^{-2k}$. With exact features the readout can undo a uniform attenuation simply by rescaling its weights, which is why the exact-feature capacity above barely moves; with finite shots the attenuated signal sinks under the noise floor."
+      "text": "A purely unitary reservoir never forgets: two copies started in different states remain exactly as distinguishable as they began (the sample above: trace distance stuck at 1.0000). A reservoir without fading memory has no echo state property (The Echo State Property (#/qrc/foundations/echo-state-property)) and its features depend on the initial state forever. On a real device, noise destroys information and so provides contraction, whether the designer wants it or not."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "The maths, one step at a time"
+    },
+    {
+      "type": "prose",
+      "text": "Take global depolarising noise of strength $p$, the simplest model: $\\rho\\mapsto(1-p)\\rho + p\\,I/2^n$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. Any Pauli expectation value, other than that of the identity, is $\\operatorname{Tr}(P\\rho)$ with $\\operatorname{Tr}P=0$. After noise it is $(1-p)\\operatorname{Tr}(P\\rho) + p\\operatorname{Tr}(P)/2^n = (1-p)\\operatorname{Tr}(P\\rho)$. Every feature is multiplied by $(1-p)$. The sample confirms 0.95."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Two copies: $\\rho_A-\\rho_B\\mapsto(1-p)(\\rho_A-\\rho_B)$ (the $I/2^n$ parts cancel), and unitaries do not change the trace distance, so the trace distance after $k$ steps is $(1-p)^k$ times the start: the contraction rate is $\\gamma = 1-p$. The sample shows 0.7738 at step 5 (for $0.95^5 = 0.7738$). Noise gives a memory time of about $1/p$ steps."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The cost. The information about an input $k$ steps back reaches the features attenuated by $(1-p)^{k}$, on top of the reservoir's own fading. The shot noise does not shrink with the attenuation, so to keep the signal-to-noise ratio fixed the shot noise must shrink by the same factor, and since $\\sigma\\propto1/\\sqrt S$, the shots must grow by $(1-p)^{-2k}$."
+    },
+    {
+      "type": "math",
+      "tex": "S_{\\text{needed}}\\;=\\;S_{\\text{noiseless}}\\,(1-p)^{-2k}",
+      "caption": "Shot overhead for recovering the influence of an input k steps back through global depolarising noise of strength p per step."
+    },
+    {
+      "type": "prose",
+      "text": "With exact features the readout can undo a uniform attenuation just by rescaling its weights, which is why the exact-feature capacity barely moves in the Trotter sample. With finite shots the attenuated signal sinks under the noise floor. For $p=0.05$ and $k=10$ the signal is $0.95^{10}=0.599$ of its noiseless size, and the shots needed grow by $0.95^{-20}=2.79$."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "What has been done"
+    },
+    {
+      "type": "prose",
+      "text": "Chen, Nurdin and Yamamoto (2020) proposed a class of dissipative quantum reservoirs with a subclass built from native gates, and showed in proof-of-principle runs on cloud superconducting processors that small, noisy reservoirs can handle nonlinear temporal tasks. Suzuki and coauthors (2022) used the natural noise of such devices as the reservoir's dissipative resource instead of adding an artificial reset. Kubota and coauthors (2023) analysed how different quantum noise channels induce memory and nonlinearity. In all three the common point is that noise is not only an enemy; its contraction is the memory mechanism, and what has to be controlled is how much."
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "text": "Common mistakes"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Treating real noise as depolarising. Depolarising is the simplest model. Amplitude damping, which relaxes towards $|0\\rangle$, adds a bias; crosstalk correlates errors between qubits; the rates drift over hours. The attenuation formula is a first estimate, not a measurement.",
+        "Using the noise as the only contraction without checking that it is the same each run. If the noise level drifts between training and test, the trained weights no longer fit. (See the drift item in Analog Platforms (#/qrc/hardware/analog-platforms).)"
+      ]
+    },
+    {
+      "type": "problem",
+      "title": "Check yourself: shots against noise",
+      "text": "Global depolarising noise of $p=0.1$ acts once per step. By what factor must the shots grow to read an input 5 steps back with the noiseless signal-to-noise ratio?",
+      "hint": "Attenuation $(1-p)^k$; shots scale as the inverse of its square.",
+      "solution": [
+        "Attenuation after 5 steps: $0.9^5=0.590$.",
+        "Shots grow as the inverse square: $0.9^{-10} = 1/0.3487 = 2.87$."
+      ],
+      "answer": "$0.9^{-10} = 2.87$."
     },
     {
       "type": "heading",
@@ -61,8 +301,25 @@
       "text": "Device time scales"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "Representative numbers for current superconducting processors (they vary by device and generation, so check the calibration data of the machine you use): two-qubit gates take of order 100 ns with errors of order $10^{-3}$ to $10^{-2}$, readout takes of order 1 µs, and $T_1$ and $T_2$ are of order 100 µs. A reservoir step of a few tens of two-qubit gates therefore takes a few µs, comparable to a mid-circuit measurement. The other cost is per-execution overhead: the repetition rate of circuit executions on cloud devices is typically limited to the kHz range or so by reset and control latency, which is why the number of separate runs, not the number of gates, usually decides the wall-clock time (see Resource Accounting (#/qrc/hardware/resource-accounting))."
+      "text": "Whether a reservoir step is cheap or expensive depends on the machine. The numbers vary by device and generation, so check the calibration data of the machine you use; the following are only representative orders of magnitude for current superconducting processors."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Two-qubit gates: of order 100 ns each, with errors of order $10^{-3}$ to $10^{-2}$.",
+        "Readout: of order 1 $\\mu$s; $T_1$ and $T_2$ are of order 100 $\\mu$s.",
+        "Repetition rate of circuit executions on cloud devices: typically limited to the kHz range by reset and control latency."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Worked example. A 4-qubit all-to-all Trotter step has 12 CNOTs. If they all ran one after the other that is $12\\times100$ ns $=1.2\\ \\mu$s (some can run in parallel, so this is an upper bound), well below $T_1$. With 5 virtual nodes that is about 6 $\\mu$s per input step. A 3000-input series takes $18$ ms of pure gate time. But if each of those runs must be repeated for every output time and every shot, and each run takes 1 ms of overhead, the gate time disappears into the overhead. This is why the number of separate runs, not the number of gates, usually decides the wall-clock time (Resource Accounting (#/qrc/hardware/resource-accounting))."
     },
     {
       "type": "heading",
@@ -70,46 +327,141 @@
       "text": "Mid-circuit measurement"
     },
     {
+      "type": "heading",
+      "level": 3,
+      "text": "Why we need it"
+    },
+    {
       "type": "prose",
-      "text": "Online protocols on gate-based hardware rely on measuring and resetting a subset of qubits in the middle of a circuit while the others keep evolving coherently. Three practical issues: measurement-induced crosstalk can dephase the unmeasured neighbours (this acts as extra noise on the memory qubits); conditional reset adds latency and error; and the readout resonator must be quiet again before the next gate on that qubit. Each of these changes the reservoir map, but consistently from run to run, which is all a trained readout needs."
+      "text": "Online protocols on gate-based hardware (Online Measurement Protocols (#/qrc/hardware/online-protocols)) measure and reset a subset of qubits in the middle of a circuit while the others keep evolving coherently. Three practical issues arise."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Crosstalk: measuring some qubits can dephase their unmeasured neighbours, acting as extra noise on the memory qubits.",
+        "Conditional reset adds latency and error: the reset needs a classical decision (or a fixed delay for the readout resonator to ring down) before the next gate.",
+        "The readout resonator must be quiet again before the next gate on that qubit."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Each of these changes the reservoir map, but consistently from run to run, which is all a trained readout needs. They also set the practical lower bound on the time per step, usually a few microseconds per measure-and-reset cycle on current devices (representative; check your device)."
     },
     {
       "type": "heading",
       "level": 2,
-      "text": "Worked problems"
+      "text": "Putting it together"
+    },
+    {
+      "type": "prose",
+      "text": "Design the gate budget for a 6-qubit reservoir with 5 virtual nodes, one first-order Trotter step per node and all-to-all couplings, on a device with CNOT error $0.5\\%$ and $0.1\\%$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1. CNOTs per node: $n(n-1) = 30$. Per input step: $5\\times30=150$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2. Chance of no CNOT error in one input step: $0.995^{150} = 0.471$; at 0.1%: $0.999^{150}=0.861$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3. The chance of no error is a crude pessimistic stand-in for how much of the signal survives one input step (many errors do not flip a given feature, so the true surviving fraction is larger: read it as a worst case, not a measured value). Take $\\gamma\\approx0.471$ per input step at 0.5%. An input three steps back is then attenuated by $0.47^3 = 0.105$, and the shots grow as $0.47^{-6} = 91$ to read it with the noiseless precision. At 0.1% the factor is $0.861^{-6}=2.5$."
+    },
+    {
+      "type": "prose",
+      "text": "Step 4. Conclusion: at 0.5% error, 150 CNOTs per input step is too many for long memory: use fewer virtual nodes or fewer couplings (a sparse graph with 2 CNOTs per edge), or accept short memory. At 0.1% the same circuit is usable. The reservoir does not need all-to-all couplings; a ring of 6 qubits has 6 edges (12 CNOTs per node against 30), two fifths of the cost."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Key points"
+    },
+    {
+      "type": "list",
+      "items": [
+        "The reservoir Hamiltonian compiles to $R_Z$ rotations and $R_{XX}$ gates, each two CNOTs plus single-qubit gates; all-to-all couplings cost $n(n-1)$ CNOTs per Trotter step before routing.",
+        "One first-order Trotter step has error $\\tfrac12[A,B]t^2$; $r$ steps cut the total error as $1/r$, and symmetric splitting as $1/r^2$.",
+        "A reservoir does not need Trotter accuracy: a coarse single-step circuit with gate fidelity 0.45 had MC 3.48 against 3.84 for the exact evolution.",
+        "A purely unitary circuit never forgets; noise supplies contraction. Global depolarising noise multiplies every feature by $1-p$ and the contraction rate is $1-p$.",
+        "The cost of noise is shots: reading an input $k$ steps back needs $(1-p)^{-2k}$ times as many.",
+        "Runs, not gates, usually set the wall-clock time; and mid-circuit measurement changes the reservoir map, consistently."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
     },
     {
       "type": "problem",
       "title": "Gate budget of one input step",
       "text": "A 6-qubit reservoir with all-to-all $XX$ couplings uses 3 first-order Trotter steps per input, each $R_{XX}$ compiled to 2 CNOTs. With CNOT error 0.5% and no other errors, estimate the probability that an input step runs without a CNOT error.",
-      "hint": "Count the pairs, then the CNOTs per pair.",
+      "hint": "Count pairs, then raise $0.995$ to the number of CNOTs.",
       "solution": [
-        "Pairs: $\\binom{6}{2} = 15$; CNOTs per Trotter step $15\\times 2 = 30$; per input $3\\times 30 = 90$.",
-        "Error-free probability $\\approx 0.995^{90} \\approx 0.637$."
+        "Pairs: $\\binom62 = 15$; CNOTs per Trotter step $15\\times2=30$; per input $3\\times30=90$.",
+        "Error-free probability $0.995^{90} = 0.637$."
       ],
       "answer": "90 CNOTs, about 64%."
     },
     {
       "type": "problem",
       "title": "Shots under depolarising noise",
-      "text": "Global depolarising noise of $p = 0.05$ acts once per step. By what factor must the shot count grow to read the influence of the input 10 steps back with the same signal-to-noise ratio as in a noiseless device?",
-      "hint": "The signal scales as $(1-p)^k$, the noise as $S^{-1/2}$.",
+      "text": "Global depolarising noise of $p=0.05$ acts once per step. By what factor must the shot count grow to read the influence of the input 10 steps back with the same signal-to-noise ratio as on a noiseless device?",
+      "hint": "Shots scale as the inverse square of the attenuation.",
       "solution": [
-        "The signal from 10 steps back is multiplied by $(1-p)^{10} = 0.95^{10} \\approx 0.599$.",
-        "Shot noise falls as $1/\\sqrt{S}$, so keeping SNR needs $S$ multiplied by $0.95^{-20} \\approx 2.79$."
+        "The signal from 10 steps back is multiplied by $0.95^{10}=0.599$.",
+        "Shot noise falls as $1/\\sqrt S$, so keeping the SNR needs $S$ multiplied by $0.95^{-20}=2.79$."
       ],
       "answer": "About 2.8 times more shots."
     },
     {
       "type": "problem",
       "title": "Encoding angle",
-      "text": "With injection $R_Y(\\theta)|0\\rangle$, what angle encodes $s = 0.25$, and what is $\\langle Z\\rangle$ of the input qubit right after injection?",
-      "hint": "$|1\\rangle$ population is $s$.",
+      "text": "With injection $R_Y(\\theta)|0\\rangle$, what angle encodes $s=0.25$, and what is $\\langle Z\\rangle$ of the input qubit right after injection?",
+      "hint": "Match $\\sin^2(\\theta/2)$ to $s$.",
       "solution": [
-        "$R_Y(\\theta)|0\\rangle = \\cos(\\theta/2)|0\\rangle + \\sin(\\theta/2)|1\\rangle$, so $\\sin(\\theta/2) = \\sqrt{0.25} = 0.5$, $\\theta = 2\\arcsin 0.5 = \\pi/3$.",
-        "$\\langle Z\\rangle = \\cos^2(\\theta/2) - \\sin^2(\\theta/2) = 1 - 2s = 0.5$."
+        "$R_Y(\\theta)|0\\rangle = \\cos(\\theta/2)|0\\rangle+\\sin(\\theta/2)|1\\rangle$, so $\\sin(\\theta/2)=\\sqrt{0.25}=0.5$, $\\theta=2\\arcsin0.5=\\pi/3$.",
+        "$\\langle Z\\rangle=\\cos^2(\\theta/2)-\\sin^2(\\theta/2) = 1-2s = 0.5$."
       ],
-      "answer": "$\\theta = \\pi/3$ (60°); $\\langle Z\\rangle = 0.5$."
+      "answer": "$\\theta=\\pi/3$ ($60^\\circ$); $\\langle Z\\rangle=0.5$."
+    },
+    {
+      "type": "problem",
+      "title": "How many Trotter steps?",
+      "text": "Suppose that with $r=10$ first-order steps the total Trotter error is $0.05$ (in the regime where it falls as $1/r$). How many steps give $0.01$, and how many with second-order splitting, if second order falls as $1/r^2$ with the same error at $r=10$?",
+      "hint": "Scale $1/r$ and $1/r^2$ from the known point.",
+      "solution": [
+        "First order: error $\\propto1/r$, so $r = 10\\times0.05/0.01=50$.",
+        "Second order: error $\\propto1/r^2$, so $r = 10\\sqrt{0.05/0.01}=10\\sqrt5 = 22.4$, so 23 steps.",
+        "Remember each second-order step has more rotations than a first-order one, so compare CNOT counts, not steps: the extra single-qubit gates are cheap, the CNOTs are the same per step."
+      ],
+      "answer": "50 first-order steps; 23 second-order steps."
+    },
+    {
+      "type": "problem",
+      "title": "Noise as memory time",
+      "text": "A circuit has global depolarising noise $p=0.02$ per step and no other forgetting. After how many steps has the trace distance between two copies fallen to $10\\%$ of its start?",
+      "hint": "Solve $(1-p)^k=0.1$ with logarithms.",
+      "solution": [
+        "$0.98^k=0.1$ gives $k=\\ln0.1/\\ln0.98 = -2.3026/-0.02020 = 114$.",
+        "So about 114 steps: noise at this level gives a very long memory, and it will be limited by the shot cost $0.98^{-2k}$ instead."
+      ],
+      "answer": "About 114 steps."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where this is used"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Resource Accounting (#/qrc/hardware/resource-accounting) converts gate counts and shot counts into wall-clock time.",
+        "Online Measurement Protocols (#/qrc/hardware/online-protocols) is the protocol side of the mid-circuit measurements discussed here.",
+        "Hands-on Implementation (#/qrc/theory/hands-on-implementation) builds and runs a small reservoir end to end.",
+        "The theory of noise as contraction is in Contraction and Fixed Points (#/qrc/open-systems/contraction-and-fixed-points) and Dissipation as a Resource (#/qrc/models/dissipation-as-resource)."
+      ]
     },
     {
       "type": "heading",
