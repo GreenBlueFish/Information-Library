@@ -1,0 +1,428 @@
+{
+  "title": "Diagonalisation and Powers",
+  "intro": "If a matrix has enough eigenvectors, then in their directions it does nothing but stretch, and every hard question about it becomes easy. This page turns that idea into the factorisation $A = PDP^{-1}$, uses it to compute $A^{10}$ without multiplying ten times, and then finds the closed formula for the Fibonacci numbers.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why change the axes"
+    },
+    {
+      "type": "prose",
+      "text": "Look at $A = \\begin{pmatrix} 4 & 1 \\\\ 2 & 3 \\end{pmatrix}$ again. In the usual axes it turns most vectors, and applying it twice means a messy product. But we know two special directions, $v_1 = (1, 1)$ with $\\lambda_1 = 5$ and $v_2 = (1, -2)$ with $\\lambda_2 = 2$ (found on Finding Eigenvalues and Eigenvectors (#/math/eigenvalues/finding-eigenvalues)). Any vector can be written as a combination of them. Take $(3, 0)$. We want $c_1 (1, 1) + c_2 (1, -2) = (3, 0)$: the second entries give $c_1 = 2c_2$ and the first give $c_1 + c_2 = 3$, so $c_2 = 1$ and $c_1 = 2$, and $(3, 0) = 2\\,v_1 + 1\\,v_2$. Now apply $A$, using only that $A$ is linear and that $v_1, v_2$ are eigenvectors:"
+    },
+    {
+      "type": "math",
+      "tex": "A(3, 0) = 2\\,Av_1 + 1\\,Av_2 = 2 \\cdot 5\\,v_1 + 1 \\cdot 2\\,v_2 = 10\\,(1, 1) + 2\\,(1, -2) = (12, 6)"
+    },
+    {
+      "type": "prose",
+      "text": "Check with the matrix: $A(3, 0) = (12, 6)$. It agrees. In the coordinates $(c_1, c_2)$ built on the eigenvectors, $A$ just multiplies the first by 5 and the second by 2, and nothing is mixed. Applying $A$ ten times multiplies them by $5^{10}$ and $2^{10}$. That is the entire idea of diagonalisation (US spelling: diagonalization); what remains is to write it as matrix algebra."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Building P and D"
+    },
+    {
+      "type": "prose",
+      "text": "Put the eigenvectors side by side as the columns of a matrix $P$, and the eigenvalues, in the same order, on the diagonal of a matrix $D$:"
+    },
+    {
+      "type": "math",
+      "tex": "P = \\begin{pmatrix} v_1 & v_2 \\end{pmatrix} = \\begin{pmatrix} 1 & 1 \\\\ 1 & -2 \\end{pmatrix}, \\qquad D = \\begin{pmatrix} 5 & 0 \\\\ 0 & 2 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Multiply $A$ by $P$. A matrix times a matrix works column by column: the first column of $AP$ is $A$ times the first column of $P$, and so on. So the columns of $AP$ are $Av_1$ and $Av_2$, which are $\\lambda_1 v_1$ and $\\lambda_2 v_2$:"
+    },
+    {
+      "type": "math",
+      "tex": "AP = \\begin{pmatrix} Av_1 & Av_2 \\end{pmatrix} = \\begin{pmatrix} \\lambda_1 v_1 & \\lambda_2 v_2 \\end{pmatrix} = \\begin{pmatrix} v_1 & v_2 \\end{pmatrix} \\begin{pmatrix} \\lambda_1 & 0 \\\\ 0 & \\lambda_2 \\end{pmatrix} = PD"
+    },
+    {
+      "type": "prose",
+      "text": "The last step is also a column statement: $P$ times a diagonal matrix scales its first column by $\\lambda_1$ and its second by $\\lambda_2$. With the numbers, $AP$ has first column $A(1, 1) = (5, 5)$ and second column $A(1, -2) = (2, -4)$; and $PD$ has columns $5\\,(1, 1) = (5, 5)$ and $2\\,(1, -2) = (2, -4)$. Both are $\\begin{pmatrix} 5 & 2 \\\\ 5 & -4 \\end{pmatrix}$. So $AP = PD$ holds. Because the eigenvectors are not parallel, $P$ is invertible (its determinant is $-2 - 1 = -3$), and multiplying on the right by $P^{-1}$ gives the factorisation"
+    },
+    {
+      "type": "math",
+      "tex": "A = P D P^{-1}"
+    },
+    {
+      "type": "prose",
+      "text": "The inverse of a 2×2 matrix swaps the diagonal, negates the off-diagonal and divides by the determinant: $P^{-1} = \\tfrac{1}{-3}\\begin{pmatrix} -2 & -1 \\\\ -1 & 1 \\end{pmatrix} = \\tfrac13 \\begin{pmatrix} 2 & 1 \\\\ 1 & -1 \\end{pmatrix}$. Check that it is the inverse: the top row of $P$ times the columns of $P^{-1}$ gives $\\tfrac13(2 + 1) = 1$ and $\\tfrac13(1 - 1) = 0$, and the bottom row gives $\\tfrac13(2 - 2) = 0$ and $\\tfrac13(1 + 2) = 1$. It is $I$. The full check of the factorisation is"
+    },
+    {
+      "type": "math",
+      "tex": "P D P^{-1} = \\begin{pmatrix} 5 & 2 \\\\ 5 & -4 \\end{pmatrix} \\cdot \\tfrac13 \\begin{pmatrix} 2 & 1 \\\\ 1 & -1 \\end{pmatrix} = \\tfrac13 \\begin{pmatrix} 12 & 3 \\\\ 6 & 9 \\end{pmatrix} = \\begin{pmatrix} 4 & 1 \\\\ 2 & 3 \\end{pmatrix} = A"
+    },
+    {
+      "type": "prose",
+      "text": "Read $A = PDP^{-1}$ from right to left as a recipe: $P^{-1}$ turns ordinary coordinates into eigenvector coordinates (that is how the numbers $c_1 = 2$, $c_2 = 1$ were found: $P^{-1}(3, 0) = (2, 1)$); $D$ stretches each coordinate; $P$ turns the result back into ordinary coordinates. The word for this is a change of basis."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Powers"
+    },
+    {
+      "type": "prose",
+      "text": "Now square it. $A^2 = (PDP^{-1})(PDP^{-1}) = PD(P^{-1}P)DP^{-1} = PD^2P^{-1}$, because $P^{-1}P = I$ in the middle. The same cancellation happens at every join, so for every $k$"
+    },
+    {
+      "type": "math",
+      "tex": "A^k = P D^k P^{-1}, \\qquad D^k = \\begin{pmatrix} \\lambda_1^k & 0 \\\\ 0 & \\lambda_2^k \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The power of a diagonal matrix is just the powers of its entries, with no multiplication of matrices at all. For our example:"
+    },
+    {
+      "type": "math",
+      "tex": "A^k = \\tfrac13 \\begin{pmatrix} 1 & 1 \\\\ 1 & -2 \\end{pmatrix} \\begin{pmatrix} 5^k & 0 \\\\ 0 & 2^k \\end{pmatrix} \\begin{pmatrix} 2 & 1 \\\\ 1 & -1 \\end{pmatrix} = \\tfrac13 \\begin{pmatrix} 2\\cdot 5^k + 2^k & 5^k - 2^k \\\\ 2\\cdot 5^k - 2^{k+1} & 5^k + 2^{k+1} \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Check $k = 1$: $\\tfrac13 \\begin{pmatrix} 12 & 3 \\\\ 6 & 9 \\end{pmatrix}$, which is $A$. Check $k = 0$: $\\tfrac13 \\begin{pmatrix} 3 & 0 \\\\ 0 & 3 \\end{pmatrix} = I$. Check $k = 2$ against the direct product $A \\cdot A$: the top left is $4 \\cdot 4 + 1 \\cdot 2 = 18$, and the formula gives $\\tfrac13(2 \\cdot 25 + 4) = 18$. Good. Now $k = 10$, where $5^{10} = 9\\,765\\,625$ and $2^{10} = 1024$:"
+    },
+    {
+      "type": "math",
+      "tex": "A^{10} = \\tfrac13 \\begin{pmatrix} 19\\,532\\,274 & 9\\,764\\,601 \\\\ 19\\,529\\,202 & 9\\,767\\,673 \\end{pmatrix} = \\begin{pmatrix} 6\\,510\\,758 & 3\\,254\\,867 \\\\ 6\\,509\\,734 & 3\\,255\\,891 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Look at the sizes. $5^{10}$ is nearly ten thousand times larger than $2^{10}$, so $A^{10}$ is almost entirely the $5^{10}$ part: every column is close to a multiple of $v_1 = (1, 1)$. Apply it to $(1, 0)$ and you get $(6\\,510\\,758,\\ 6\\,509\\,734)$, whose entries differ by only 0.016 percent. After ten steps the vector has been pulled almost exactly onto the dominant eigen-direction. That is power iteration, taken up in Power Iteration and Markov Chains (#/math/eigenvalues/power-iteration)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-plane",
+        "title": "Powers of A in the eigenbasis",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "stretch: diag(2, 0.5)",
+              "symmetric [[2, 1], [1, 2]]",
+              "not symmetric [[4, 1], [2, 3]]",
+              "a negative eigenvalue [[1, 2], [2, −2]]",
+              "Fibonacci [[1, 1], [1, 0]]",
+              "Markov chain [[0.9, 0.2], [0.1, 0.8]]",
+              "reflection across y = x [[0, 1], [1, 0]]",
+              "projection onto the x-axis [[1, 0], [0, 0]]",
+              "shear [[1, 1], [0, 1]]",
+              "scaling 1.5I [[1.5, 0], [0, 1.5]]",
+              "rotation by 30°",
+              "rotate and grow [[1, −1], [1, 1]]",
+              "spiral in [[0.8, −0.3], [0.3, 0.8]]",
+              "your own (use the sliders a, b, c, d)"
+            ],
+            "default": "not symmetric [[4, 1], [2, 3]]"
+          },
+          {
+            "key": "a",
+            "label": "a (top left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "b",
+            "label": "b (top right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "c",
+            "label": "c (bottom left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "d",
+            "label": "d (bottom right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "theta",
+            "label": "Direction of v (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 8
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The numbered purple dots on the unit circle are the directions of $v, Av, A^2v, \\ldots, A^8v$. With k at 8 they swing from 20° (dot 0) towards the 45° line of $(1, 1)$: dot 1 is at 35.3°, dot 2 at 41.2°, and from dot 4 on (44.4°) they sit almost on the line. The readout adds $A^8v$ with its length and the angle from the $\\lambda_1$ line (about 0.02°). Move Powers shown, k, from 0 to 8 one step at a time and see the dots creep to the blue line. Then press Next step ▶ eight times: step 8, In the eigenbasis A only stretches, draws the light parallelogram on $v_1$ and $v_2$ and its image, the green parallelogram on $5v_1$ and $2v_2$. That is $A = PDP^{-1}$ drawn: in the basis $v_1, v_2$ the matrix is $D$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Example: the Fibonacci numbers"
+    },
+    {
+      "type": "prose",
+      "text": "The Fibonacci numbers are $0, 1, 1, 2, 3, 5, 8, 13, \\ldots$, each the sum of the two before: $F_{n+1} = F_n + F_{n-1}$. To put that in matrix form, keep the last two in a vector and ask what one step does:"
+    },
+    {
+      "type": "math",
+      "tex": "\\begin{pmatrix} F_{n+1} \\\\ F_n \\end{pmatrix} = \\begin{pmatrix} 1 & 1 \\\\ 1 & 0 \\end{pmatrix} \\begin{pmatrix} F_n \\\\ F_{n-1} \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The top row says $F_{n+1} = F_n + F_{n-1}$ and the bottom says $F_n = F_n$. Starting from $(F_1, F_0) = (1, 0)$, after $n$ steps the vector is $(F_{n+1}, F_n)$, so with $M = \\begin{pmatrix} 1 & 1 \\\\ 1 & 0 \\end{pmatrix}$ we have $M^n = \\begin{pmatrix} F_{n+1} & F_n \\\\ F_n & F_{n-1} \\end{pmatrix}$. (Check $n = 2$: $M^2 = \\begin{pmatrix} 2 & 1 \\\\ 1 & 1 \\end{pmatrix}$, with $F_3 = 2$, $F_2 = 1$, $F_1 = 1$.) To get a far-off Fibonacci number we need the power of $M$, so diagonalise it."
+    },
+    {
+      "type": "prose",
+      "text": "The trace is 1 and the determinant is $-1$, so the characteristic polynomial is $\\lambda^2 - \\lambda - 1$. The roots are $\\lambda = (1 \\pm \\sqrt{5})/2$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\varphi = \\frac{1 + \\sqrt5}{2} \\approx 1.618034, \\qquad \\psi = \\frac{1 - \\sqrt5}{2} \\approx -0.618034"
+    },
+    {
+      "type": "prose",
+      "text": "These are the golden ratio $\\varphi$ and its partner. Their sum is 1 (the trace) and their product is $-1$ (the determinant), so $\\psi = -1/\\varphi$. Each satisfies $\\lambda^2 = \\lambda + 1$. The shortcut $(b, \\lambda - a)$ gives $(1, \\lambda - 1)$ as an eigenvector, but a neater choice is $(\\lambda, 1)$: check $M(\\lambda, 1) = (\\lambda + 1,\\ \\lambda) = (\\lambda^2, \\lambda) = \\lambda\\,(\\lambda, 1)$, using $\\lambda^2 = \\lambda + 1$. So $v_1 = (\\varphi, 1)$ and $v_2 = (\\psi, 1)$."
+    },
+    {
+      "type": "prose",
+      "text": "Now write the starting vector $(1, 0)$ in the eigenvectors: $(1, 0) = c_1 (\\varphi, 1) + c_2 (\\psi, 1)$. The second entries give $c_1 + c_2 = 0$, so $c_2 = -c_1$; the first give $c_1(\\varphi - \\psi) = 1$ and $\\varphi - \\psi = \\sqrt5$, so $c_1 = 1/\\sqrt5$ and $c_2 = -1/\\sqrt5$. Applying $M^n$ multiplies each part by its eigenvalue $n$ times:"
+    },
+    {
+      "type": "math",
+      "tex": "\\begin{pmatrix} F_{n+1} \\\\ F_n \\end{pmatrix} = \\frac{1}{\\sqrt5}\\,\\varphi^n \\begin{pmatrix} \\varphi \\\\ 1 \\end{pmatrix} - \\frac{1}{\\sqrt5}\\,\\psi^n \\begin{pmatrix} \\psi \\\\ 1 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The second entry is Binet's formula:"
+    },
+    {
+      "type": "math",
+      "tex": "F_n = \\frac{\\varphi^n - \\psi^n}{\\sqrt5}"
+    },
+    {
+      "type": "prose",
+      "text": "Check small cases. $n = 1$: $(\\varphi - \\psi)/\\sqrt5 = \\sqrt5/\\sqrt5 = 1$. $n = 2$: $\\varphi^2 - \\psi^2 = (\\varphi - \\psi)(\\varphi + \\psi) = \\sqrt5 \\cdot 1$, so $F_2 = 1$. For larger $n$ use numbers. $n = 10$: $\\varphi^{10} = 122.99187$ and $\\psi^{10} = 0.00813$, so $F_{10} = (122.99187 - 0.00813)/2.236068 = 55$. For $n = 30$: $\\varphi^{30} = 1\\,860\\,498.0$ (to one decimal), $\\psi^{30} \\approx 5.4 \\times 10^{-7}$ and $F_{30} = 832\\,040$, the true value."
+    },
+    {
+      "type": "prose",
+      "text": "Because $|\\psi| < 1$, the term $\\psi^n$ shrinks to nothing, and for $n = 20$ it is $0.00007$. So $F_n$ is simply the whole number nearest to $\\varphi^n/\\sqrt5$: for $n = 20$, $\\varphi^{20}/\\sqrt5 = 6765.00003$, and $F_{20} = 6765$. It also shows why the ratio of neighbours settles down: $F_{n+1}/F_n \\to \\varphi$, the dominant eigenvalue (that ratio is 1.6 at $n = 5$, 1.619 at $n = 8$ and 1.6182 at $n = 10$, since $F_6/F_5 = 8/5$, $F_9/F_8 = 34/21$, $F_{11}/F_{10} = 89/55$). It is power iteration again: the $\\varphi$ part of the vector grows and the $\\psi$ part dies."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-plane",
+        "title": "The Fibonacci matrix",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "stretch: diag(2, 0.5)",
+              "symmetric [[2, 1], [1, 2]]",
+              "not symmetric [[4, 1], [2, 3]]",
+              "a negative eigenvalue [[1, 2], [2, −2]]",
+              "Fibonacci [[1, 1], [1, 0]]",
+              "Markov chain [[0.9, 0.2], [0.1, 0.8]]",
+              "reflection across y = x [[0, 1], [1, 0]]",
+              "projection onto the x-axis [[1, 0], [0, 0]]",
+              "shear [[1, 1], [0, 1]]",
+              "scaling 1.5I [[1.5, 0], [0, 1.5]]",
+              "rotation by 30°",
+              "rotate and grow [[1, −1], [1, 1]]",
+              "spiral in [[0.8, −0.3], [0.3, 0.8]]",
+              "your own (use the sliders a, b, c, d)"
+            ],
+            "default": "Fibonacci [[1, 1], [1, 0]]"
+          },
+          {
+            "key": "a",
+            "label": "a (top left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "b",
+            "label": "b (top right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "c",
+            "label": "c (bottom left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "d",
+            "label": "d (bottom right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "theta",
+            "label": "Direction of v (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 8
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The readout shows $\\lambda_1 = 1.618$ along $(0.85, 0.53)$, which is $(\\varphi, 1)/\\sqrt{\\varphi^2 + 1}$, and $\\lambda_2 = -0.618$ along $(-0.53, 0.85)$, perpendicular to it because $M$ is symmetric. With $v$ at 20° and k at 8 it reports $A^8 v = (39.13, 24.18)$, length 46, and 0.01° from the $\\lambda_1$ line: the ratio $39.13 / 24.18$ is already 1.618. The negative eigenvalue makes the dots alternate from one side of the blue line to the other as k increases (since $\\psi^n$ alternates in sign). Turn Powers shown, k, down to 1 or 2 and the dots are still well apart."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When it works, and when it fails"
+    },
+    {
+      "type": "prose",
+      "text": "The factorisation needs $n$ independent eigenvectors for an $n \\times n$ matrix, so that $P$ has an inverse. A matrix with that property is diagonalisable. There are two cases to know."
+    },
+    {
+      "type": "prose",
+      "text": "Distinct eigenvalues guarantee it. Eigenvectors for different eigenvalues are never parallel: if $v_2 = c\\,v_1$ then $Av_2 = \\lambda_2 v_2 = \\lambda_2 c\\,v_1$, but also $Av_2 = c\\,Av_1 = c\\lambda_1 v_1$, so $\\lambda_2 = \\lambda_1$, which contradicts the eigenvalues being different. (For more than two eigenvalues a similar argument, adding one vector at a time, shows that eigenvectors for different eigenvalues are always linearly independent.) So $n$ different eigenvalues give $n$ independent eigenvectors."
+    },
+    {
+      "type": "prose",
+      "text": "A repeated eigenvalue may go either way. The identity matrix has $\\lambda = 1$ twice and every vector is an eigenvector, so it is diagonalisable (it is already diagonal). The matrix $\\begin{pmatrix} 2 & 1 \\\\ 0 & 2 \\end{pmatrix}$ has $\\lambda = 2$ twice, but $A - 2I = \\begin{pmatrix} 0 & 1 \\\\ 0 & 0 \\end{pmatrix}$ says $y = 0$, leaving only the line of $(1, 0)$. One eigenvector in a plane that needs two: the matrix is defective and cannot be diagonalised. Repeated Eigenvalues and Defective Matrices (#/math/eigenvalues/repeated-eigenvalues) explains this and what to do about it. A real matrix whose eigenvalues are complex but all different can still be diagonalised, with complex $P$ and $D$ (see Complex Eigenvalues and Rotation (#/math/eigenvalues/complex-eigenvalues)), and a symmetric matrix always can, with perpendicular eigenvectors (see Symmetric Matrices and the Spectral Theorem (#/math/eigenvalues/symmetric-matrices))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Similar matrices"
+    },
+    {
+      "type": "prose",
+      "text": "Two matrices $A$ and $B$ are similar if $B = Q^{-1}AQ$ for some invertible $Q$: $B$ is the same linear map, described in a different basis. Diagonalisation says that a diagonalisable $A$ is similar to a diagonal matrix. Similar matrices share their eigenvalues, because"
+    },
+    {
+      "type": "math",
+      "tex": "\\det(B - \\lambda I) = \\det\\bigl(Q^{-1}(A - \\lambda I)Q\\bigr) = \\det(Q^{-1})\\,\\det(A - \\lambda I)\\,\\det(Q) = \\det(A - \\lambda I)"
+    },
+    {
+      "type": "prose",
+      "text": "since $Q^{-1}AQ - \\lambda I = Q^{-1}(A - \\lambda I)Q$ and $\\det(Q^{-1})\\det(Q) = 1$. So they also share trace and determinant. The eigenvectors change with the basis: if $Av = \\lambda v$ then $B(Q^{-1}v) = Q^{-1}AQQ^{-1}v = \\lambda\\,Q^{-1}v$. A small example: with $Q = \\begin{pmatrix} 1 & 1 \\\\ 0 & 1 \\end{pmatrix}$, our $A$ becomes $B = Q^{-1}AQ = \\begin{pmatrix} 2 & 0 \\\\ 2 & 5 \\end{pmatrix}$, a triangular matrix with eigenvalues 2 and 5 on its diagonal, as expected. The vector $v_1 = (1, 1)$ becomes $Q^{-1}v_1 = (0, 1)$, and indeed $B(0, 1) = (0, 5) = 5\\,(0, 1)$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Functions of a matrix"
+    },
+    {
+      "type": "prose",
+      "text": "Once $A = PDP^{-1}$, any polynomial or power series in $A$ works the same way: $p(A) = P\\,p(D)\\,P^{-1}$, where $p(D)$ applies $p$ to each diagonal entry. So does the inverse, when no eigenvalue is zero: $A^{-1} = PD^{-1}P^{-1}$ with $D^{-1} = \\operatorname{diag}(\\tfrac15, \\tfrac12)$, which gives $A^{-1} = \\begin{pmatrix} 0.3 & -0.1 \\\\ -0.2 & 0.4 \\end{pmatrix}$ (check: its top row times the first column of $A$ is $0.3 \\cdot 4 - 0.1 \\cdot 2 = 1$). The exponential, which solves the equation $x' = Ax$, is $e^{At} = P\\,\\operatorname{diag}(e^{5t}, e^{2t})\\,P^{-1}$: at $t = 0$ this is $PP^{-1} = I$, and for large $t$ it is dominated by $e^{5t}$. Eigenvalues in Practice (#/math/eigenvalues/applications) takes this to differential equations and stability."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "Diagonalise and take a power",
+      "text": "Diagonalise $S = \\begin{pmatrix} 2 & 1 \\\\ 1 & 2 \\end{pmatrix}$ and find $S^5$.",
+      "solution": [
+        "Eigenvalues 3 and 1 with vectors $(1, 1)$ and $(1, -1)$. So $P = \\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$, $D = \\operatorname{diag}(3, 1)$, and $P^{-1} = \\tfrac12 \\begin{pmatrix} 1 & 1 \\\\ 1 & -1 \\end{pmatrix}$ (determinant $-2$).",
+        "$S^5 = P\\,\\operatorname{diag}(3^5, 1)\\,P^{-1}$ with $3^5 = 243$. First $P D^5 = \\begin{pmatrix} 243 & 1 \\\\ 243 & -1 \\end{pmatrix}$, then times $P^{-1}$: $\\tfrac12 \\begin{pmatrix} 243 + 1 & 243 - 1 \\\\ 243 - 1 & 243 + 1 \\end{pmatrix} = \\begin{pmatrix} 122 & 121 \\\\ 121 & 122 \\end{pmatrix}$.",
+        "Check: the entries of $S^5$ must sum along a row to $3^5 = 243$ (since $(1, 1)$ has eigenvalue 3): $122 + 121 = 243$."
+      ],
+      "answer": "$S^5 = \\begin{pmatrix} 122 & 121 \\\\ 121 & 122 \\end{pmatrix}$."
+    },
+    {
+      "type": "problem",
+      "title": "Fibonacci by formula",
+      "text": "Use Binet's formula to find $F_{20}$, and say how large the correction $\\psi^{20}/\\sqrt5$ is.",
+      "solution": [
+        "$\\varphi^{20} = 15\\,126.99993$ and $\\psi^{20} = 0.0000661$. So $F_{20} = (15\\,126.99993 - 0.00007)/2.236068 = 6765$. The correction $\\psi^{20}/\\sqrt5$ is about $3 \\times 10^{-5}$, far below the 0.5 needed to change the nearest whole number, so $F_{20}$ is the integer nearest to $\\varphi^{20}/\\sqrt5 = 6765.00003$."
+      ],
+      "answer": "$F_{20} = 6765$."
+    },
+    {
+      "type": "problem",
+      "title": "Where does a Markov chain end up?",
+      "text": "The matrix $A = \\begin{pmatrix} 0.9 & 0.2 \\\\ 0.1 & 0.8 \\end{pmatrix}$ has columns that sum to 1. Show that $A(2, 1) = (2, 1)$ and $A(1, -1) = 0.7\\,(1, -1)$, then find the limit of $A^k$ as $k \\to \\infty$.",
+      "solution": [
+        "$A(2, 1) = (1.8 + 0.2,\\ 0.2 + 0.8) = (2, 1)$, so $\\lambda = 1$. $A(1, -1) = (0.9 - 0.2,\\ 0.1 - 0.8) = (0.7, -0.7)$, so $\\lambda = 0.7$. Then $P = \\begin{pmatrix} 2 & 1 \\\\ 1 & -1 \\end{pmatrix}$, $P^{-1} = \\tfrac13 \\begin{pmatrix} 1 & 1 \\\\ 1 & -2 \\end{pmatrix}$, and $A^k = P\\,\\operatorname{diag}(1, 0.7^k)\\,P^{-1}$.",
+        "As $k \\to \\infty$, $0.7^k \\to 0$, so $A^k \\to P\\,\\operatorname{diag}(1, 0)\\,P^{-1} = \\begin{pmatrix} 2 & 0 \\\\ 1 & 0 \\end{pmatrix} \\tfrac13 \\begin{pmatrix} 1 & 1 \\\\ 1 & -2 \\end{pmatrix} = \\tfrac13 \\begin{pmatrix} 2 & 2 \\\\ 1 & 1 \\end{pmatrix}$. Every column of the limit is $(2/3, 1/3)$, the eigenvector with $\\lambda = 1$ scaled to sum 1. Numerically $A^{60}$ already agrees to eight places."
+      ],
+      "answer": "$A^k \\to \\tfrac13 \\begin{pmatrix} 2 & 2 \\\\ 1 & 1 \\end{pmatrix}$."
+    },
+    {
+      "type": "problem",
+      "title": "Can it be diagonalised?",
+      "text": "Is $\\begin{pmatrix} 3 & 1 \\\\ 0 & 3 \\end{pmatrix}$ diagonalisable? What about $\\begin{pmatrix} 3 & 0 \\\\ 0 & 3 \\end{pmatrix}$ and $\\begin{pmatrix} 3 & 1 \\\\ 0 & 2 \\end{pmatrix}$?",
+      "solution": [
+        "The first has $\\lambda = 3$ twice, and $A - 3I = \\begin{pmatrix} 0 & 1 \\\\ 0 & 0 \\end{pmatrix}$ forces $y = 0$: one eigen-direction. Not diagonalisable. The second is already diagonal. The third has the distinct eigenvalues 3 and 2 (the triangular diagonal), so it is diagonalisable. Its eigenvectors are $(1, 0)$ for $\\lambda = 3$ and, from $A - 2I = \\begin{pmatrix} 1 & 1 \\\\ 0 & 0 \\end{pmatrix}$, which says $x + y = 0$, the vector $(1, -1)$ for $\\lambda = 2$. Check: the matrix sends $(1, -1)$ to $(3 - 1,\\ -2) = (2, -2) = 2\\,(1, -1)$."
+      ],
+      "answer": "No; yes; yes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gilbert Strang, Introduction to Linear Algebra, 5th edition (Wellesley-Cambridge Press, 2016), chapter 6, Eigenvalues and Eigenvectors. Section 6.2, Diagonalizing a Matrix, including the Fibonacci example.",
+        "Sheldon Axler, Linear Algebra Done Right, 3rd edition (Springer, 2015). Chapter 5, section on diagonalizable operators.",
+        "Roger A. Horn and Charles R. Johnson, Matrix Analysis, 2nd edition (Cambridge University Press, 2013), chapter 1."
+      ]
+    }
+  ]
+}

@@ -20,7 +20,7 @@
 
 import { registerWidget } from "../registry.js";
 import { buildFrame, buildControlPanel, buildActions, buildReadout, buildStage, svgEl } from "../sim-kit.js";
-import { MATRICES3, MATRIX3_OPTIONS, preset3, eig3, apply, norm, unit, dir3, powers, circle3, charPoly3, lineAngle, dot, fmt, sfmt } from "../sims/eigen.js";
+import { MATRICES3, MATRIX3_OPTIONS, preset3, eig3, apply, norm, unit, dir3, powers, circle3, charPoly3, lineAngle, dot, fmt, sfmt, polyText } from "../sims/eigen.js";
 import { project3 } from "./z-surface.js";
 
 export const DEFAULT_PARAMS = [
@@ -85,12 +85,14 @@ export function walkSteps(m, around, up, k) {
     ? "Repeated multiplication sends this v to zero."
     : dominant
       ? `Multiply by A again and again (the numbered dots on the sphere are the directions of v, Av, A²v, …). The component along the eigenvector with the largest |λ| = ${sfmt(mags[0])} grows fastest, so the direction swings onto that line: after ${pw.length - 1} steps it is ${sfmt(lineAngle(last, e.distinct[0].vectors[0]), 2)}° away.`
-      : "Multiply by A again and again (the numbered dots): no single eigenvalue is largest in size here, so the direction does not settle onto one line.";
+      : e.defective && e.complex.length === 0 && e.distinct.length === 1
+        ? `Multiply by A again and again (the numbered dots): the only eigenvalue is λ = ${sfmt(e.values[0])}, repeated with too few eigenvectors, so no eigenvalue wins by size. The direction still creeps towards the eigen-line ${vec(e.distinct[0].vectors[0])}, but only slowly, like 1/k rather than a fixed ratio per step.`
+        : "Multiply by A again and again (the numbered dots): no single eigenvalue is largest in size here, so the direction does not settle onto one line.";
   return [
     { title: "The sphere and its image", text: "The wire globe is every unit vector. A sends it to the green surface: an ellipsoid, or a flat ellipse or segment if A squashes some direction to zero. The columns of A are where the x, y and z axes land." },
     { title: "Most vectors turn", text: `The probe v = ${vec(v)} goes to Av = ${vec(Av)}, which points ${sfmt(lineAngle(v, Av), 1)}° off v's line. Turn v with the two direction sliders, and the view with Turn and Tilt or by dragging.` },
     { title: "Directions that stay on their line", text: `The dashed lines are the eigen-directions: there Av = λv, and the thick arrow is λv. ${e.complex.length ? "A real 3×3 matrix always has at least one, because its characteristic polynomial is a cubic, and a cubic always crosses zero." : `This matrix has ${nReal === 3 ? "three independent ones" : nReal === 2 ? "only two independent ones" : "only one"}.`} Move v onto a dashed line and Av lands on the same line.` },
-    { title: "The characteristic polynomial", text: `The eigenvalues are the roots of p(λ) = det(λI − A) = λ³ − ${sfmt(tr)}λ² + ${sfmt(mn)}λ − ${sfmt(det)}: the coefficients are the trace, the sum of the three 2×2 minors on the diagonal, and the determinant. The graph below shows it crossing zero at each real eigenvalue.` },
+    { title: "The characteristic polynomial", text: `The eigenvalues are the roots of p(λ) = det(λI − A) = ${polyText([-tr, mn, -det])}: the coefficients are the trace, the sum of the three 2×2 minors on the diagonal, and the determinant. The graph below shows it crossing zero at each real eigenvalue.` },
     { title: e.symmetric ? "Symmetric: perpendicular axes" : "The shape of the eigen-structure", text: shape },
     { title: "Trace and determinant", text: `The roots add up to the trace and multiply to the determinant: ${sumText}. The determinant is also how much A scales volume, so the green surface encloses |det A| = ${sfmt(Math.abs(det))} times the volume of the unit ball${Math.abs(det) < 1e-9 ? ": none at all, since A flattens space" : ""}.` },
     { title: "Powers of A", text: step7 },
@@ -307,7 +309,7 @@ function mountEigen3d(ctx) {
       text(g, X(d.value), Y(0) - 8 - 12 * (i % 2), sfmt(d.value), `sim-label eg-lab eg-e${Math.min(i, 2)}`);
     });
     const [tr, mn, det] = e.coeffs;
-    text(g, left + 2, topY + 10, `λ³ − ${sfmt(tr)}λ² + ${sfmt(mn)}λ − ${sfmt(det)}`.replace("+ −", "− ").replace("− −", "+ "), "sim-label", "start");
+    text(g, left + 2, topY + 10, polyText([-tr, mn, -det]), "sim-label", "start");
     // Numbers.
     const g2 = add(svg, "g", { class: `zs-panel${stepIndex === 7 ? " zs-focus" : ""}` });
     const xa = pw + 10;

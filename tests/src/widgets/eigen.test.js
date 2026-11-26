@@ -136,6 +136,13 @@ describe("eigen sims — 3×3", () => {
       close(E.dot(vs[0], vs[1]), 0, 1e-9); close(E.dot(vs[0], vs[2]), 0, 1e-9); close(E.dot(vs[1], vs[2]), 0, 1e-9);
     }
   });
+  it("writes characteristic polynomials without zero or unit coefficients", () => {
+    expect(E.polyText([-6, 10, -4])).toBe("λ³ − 6λ² + 10λ − 4");
+    expect(E.polyText([0, 0, -1])).toBe("λ³ − 1");
+    expect(E.polyText([-2, 1, 0])).toBe("λ³ − 2λ² + λ");
+    expect(E.polyText([0, -1])).toBe("λ² − 1");
+    expect(E.polyText([-Math.sqrt(3), 1])).toBe("λ² − 1.732λ + 1");
+  });
   it("formats very large numbers with a power of ten", () => {
     expect(E.fmt(5e9)).toBe("5.00×10⁹");
     expect(E.sfmt(-123456)).toBe("−1.23×10⁵");

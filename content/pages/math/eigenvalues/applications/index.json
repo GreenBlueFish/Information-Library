@@ -1,0 +1,731 @@
+{
+  "title": "Eigenvalues in Practice",
+  "intro": "Where eigenvalues earn their keep: whether a system settles or blows up, how a structure vibrates, which directions carry the most variance in data, and how a computer finds them when the characteristic polynomial is out of reach.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why anyone computes eigenvalues"
+    },
+    {
+      "type": "prose",
+      "text": "Whenever something is described by a matrix and then repeated or let run, the eigenvalues say what happens in the long run, and the eigenvectors say in which patterns. A matrix is a snapshot; its eigen-structure is the behaviour. This page takes several settings where that is the whole point, and then looks at how the numbers are actually found."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Differential equations: x′ = Ax"
+    },
+    {
+      "type": "prose",
+      "text": "Many systems are described by several quantities that change together, each rate of change a mix of all the quantities. Two connected tanks exchanging liquid, two coupled circuits, a mass on a spring (position and velocity). Collect the quantities in a vector $x(t)$ and the mix in a matrix $A$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{dx}{dt} = A\\, x"
+    },
+    {
+      "type": "prose",
+      "text": "For one quantity, $x' = ax$ is solved by $x = ce^{at}$. For a vector, try the same shape with a fixed direction: $x(t) = e^{\\lambda t} v$. The left side is $\\lambda e^{\\lambda t}v$ and the right side is $A e^{\\lambda t} v = e^{\\lambda t} A v$. They agree exactly when $Av = \\lambda v$. So every eigenpair gives a solution, one that keeps its direction while its size changes like $e^{\\lambda t}$. The equation is linear, so any sum of solutions is a solution, and with two independent eigenvectors the general solution is"
+    },
+    {
+      "type": "math",
+      "tex": "x(t) = c_1 e^{\\lambda_1 t} v_1 + c_2 e^{\\lambda_2 t} v_2"
+    },
+    {
+      "type": "prose",
+      "text": "where the constants $c_1, c_2$ are fixed by the start $x(0) = c_1v_1 + c_2v_2$, the same splitting into eigenvectors that power iteration used. This is the continuous version of $A^k = PD^kP^{-1}$ on the page Diagonalisation and Powers (#/math/eigenvalues/diagonalisation): powers $\\lambda^k$ in discrete steps become $e^{\\lambda t}$ in continuous time."
+    },
+    {
+      "type": "prose",
+      "text": "A worked case. A damped oscillator $y'' + 3y' + 2y = 0$ becomes a system by taking $x = (y, y')$: then $x_1' = x_2$ and $x_2' = y'' = -2x_1 - 3x_2$, so"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\begin{pmatrix} 0 & 1 \\\\ -2 & -3 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Its trace is $-3$ and its determinant is $2$, so $p(\\lambda) = \\lambda^2 + 3\\lambda + 2 = (\\lambda + 1)(\\lambda + 2)$ and $\\lambda = -1, -2$. The vector for $\\lambda = -1$: $A + I = [[1, 1], [-2, -2]]$, so $v_1 = (1, -1)$. For $\\lambda = -2$: $A + 2I = [[2, 1], [-2, -1]]$, so $v_2 = (1, -2)$. Start with the oscillator displaced by 1 and at rest, $x(0) = (1, 0)$. Solve $c_1(1, -1) + c_2(1, -2) = (1, 0)$: $c_1 + c_2 = 1$ and $-c_1 - 2c_2 = 0$, so $c_2 = -1$ and $c_1 = 2$. Therefore"
+    },
+    {
+      "type": "math",
+      "tex": "x(t) = 2e^{-t} \\begin{pmatrix} 1 \\\\ -1 \\end{pmatrix} - e^{-2t} \\begin{pmatrix} 1 \\\\ -2 \\end{pmatrix}, \\qquad y(t) = 2e^{-t} - e^{-2t}"
+    },
+    {
+      "type": "prose",
+      "text": "Check: $y(0) = 2 - 1 = 1$ and $y'(0) = -2 + 2 = 0$, as required; and $y'' + 3y' + 2y$ for each exponential is $(\\lambda^2 + 3\\lambda + 2)e^{\\lambda t} = 0$. The displacement falls back to zero without oscillating: both rates $-1$ and $-2$ are negative real numbers."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-plane",
+        "title": "Eigenvalues of a damped oscillator",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "stretch: diag(2, 0.5)",
+              "symmetric [[2, 1], [1, 2]]",
+              "not symmetric [[4, 1], [2, 3]]",
+              "a negative eigenvalue [[1, 2], [2, −2]]",
+              "Fibonacci [[1, 1], [1, 0]]",
+              "Markov chain [[0.9, 0.2], [0.1, 0.8]]",
+              "reflection across y = x [[0, 1], [1, 0]]",
+              "projection onto the x-axis [[1, 0], [0, 0]]",
+              "shear [[1, 1], [0, 1]]",
+              "scaling 1.5I [[1.5, 0], [0, 1.5]]",
+              "rotation by 30°",
+              "rotate and grow [[1, −1], [1, 1]]",
+              "spiral in [[0.8, −0.3], [0.3, 0.8]]",
+              "your own (use the sliders a, b, c, d)"
+            ],
+            "default": "your own (use the sliders a, b, c, d)"
+          },
+          {
+            "key": "a",
+            "label": "a (top left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 0
+          },
+          {
+            "key": "b",
+            "label": "b (top right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "c",
+            "label": "c (bottom left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": -2
+          },
+          {
+            "key": "d",
+            "label": "d (bottom right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": -3
+          },
+          {
+            "key": "theta",
+            "label": "Direction of v (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The matrix is entered with the sliders a = 0, b = 1, c = −2, d = −3 (Matrix A then reads 'your own'). The readout says 'trace −3, det 2, two eigenvalues, λ₁ = −2 along (−0.45, 0.89) and λ₂ = −1 along (0.71, −0.71)'. Those are $(1, -2)$ and $(1, -1)$ scaled to length 1 (and with a sign that the viewer chooses). The bottom right graph shows $p(\\lambda) = \\lambda^2 + 3\\lambda + 2$ crossing zero at $-2$ and $-1$. Now drag the slider d up from −3. The determinant stays at $2$ and the trace is $d$. The two crossing points slide together and meet at $d = -2\\sqrt{2} = -2.83$ (a critical damping); beyond that the graph lifts off zero, and the readout shows a complex pair with negative real part $d/2$, a decaying oscillation. At $d = 0$ the pair is $\\pm 1.41j$, an undamped oscillation, and for $d > 0$ the real part is positive and the solution would grow."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stability"
+    },
+    {
+      "type": "prose",
+      "text": "The solution $e^{\\lambda t}$ decays if $\\lambda$ is negative and grows if it is positive. For complex $\\lambda = a + bj$ it is $e^{at}(\\cos bt + j \\sin bt)$: the real part $a$ sets the growth and the imaginary part $b$ the oscillation. So the rule for $x' = Ax$ is:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Every eigenvalue has negative real part: all solutions decay to zero. The system is stable (precisely, asymptotically stable).",
+        "Some eigenvalue has positive real part: some start grows without limit. Unstable.",
+        "The largest real part is exactly zero: solutions neither decay nor explode (an undamped oscillation, for instance), and a repeated zero real part in a defective matrix makes them drift (see Repeated Eigenvalues and Defective Matrices (#/math/eigenvalues/repeated-eigenvalues))."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "A concrete spiral: $A = [[-0.5, -2], [2, -0.5]]$ has $\\lambda = -0.5 \\pm 2j$. Write $A = -0.5I + 2J$ where $J = [[0, -1], [1, 0]]$ is a quarter turn. Then $x(t) = e^{-0.5t}$ times a rotation by $2t$ radians applied to $x(0)$: a spiral that goes round once every $2\\pi/2 = 3.14$ time units and shrinks, in one turn, by the factor $e^{-0.5 \\cdot 3.14} = 0.208$. Change the sign of the diagonal (to $+0.5$) and the same spiral grows."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-plane",
+        "title": "A stable spiral",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "stretch: diag(2, 0.5)",
+              "symmetric [[2, 1], [1, 2]]",
+              "not symmetric [[4, 1], [2, 3]]",
+              "a negative eigenvalue [[1, 2], [2, −2]]",
+              "Fibonacci [[1, 1], [1, 0]]",
+              "Markov chain [[0.9, 0.2], [0.1, 0.8]]",
+              "reflection across y = x [[0, 1], [1, 0]]",
+              "projection onto the x-axis [[1, 0], [0, 0]]",
+              "shear [[1, 1], [0, 1]]",
+              "scaling 1.5I [[1.5, 0], [0, 1.5]]",
+              "rotation by 30°",
+              "rotate and grow [[1, −1], [1, 1]]",
+              "spiral in [[0.8, −0.3], [0.3, 0.8]]",
+              "your own (use the sliders a, b, c, d)"
+            ],
+            "default": "your own (use the sliders a, b, c, d)"
+          },
+          {
+            "key": "a",
+            "label": "a (top left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": -0.5
+          },
+          {
+            "key": "b",
+            "label": "b (top right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": -2
+          },
+          {
+            "key": "c",
+            "label": "c (bottom left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "d",
+            "label": "d (bottom right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": -0.5
+          },
+          {
+            "key": "theta",
+            "label": "Direction of v (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Sliders a = −0.5, b = −2, c = 2, d = −0.5. The readout says 'no real eigenvalues: λ = −0.5 ± 2j, size |λ| = 2.062 and angle 104°'. The plane viewer shows the matrix, not the flow, so what you read here is the real part $-0.5$: negative, therefore stable. The polynomial graph never reaches zero, and says 'no real roots'. Move the sliders a and d together to $+0.5$ and the readout shows $0.5 \\pm 2j$ with angle $76°$: the same size, now unstable. Passing through $a = d = 0$ is the change between the two: a pair of eigenvalues crossing the imaginary axis."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Connection to poles and the Z-transform"
+    },
+    {
+      "type": "prose",
+      "text": "If you have met the Laplace transform, the numbers $-1$ and $-2$ above have a familiar look. The transform of $y'' + 3y' + 2y = 0$ has $s^2 + 3s + 2$ in its denominator, and its poles are $s = -1, -2$. That is not a coincidence: $\\det(sI - A) = s^2 + 3s + 2$ for the matrix above, so the eigenvalues of $A$ are the poles of the system, and the rule 'all poles in the left half plane' on Pole Positions and the Time Signal (#/math/laplace-transform/poles-and-time) is the same as 'all eigenvalues have negative real part'. (A pole can disappear if its mode is invisible to the output, so the exact statement is that the poles are a subset of the eigenvalues, equal when no mode is cancelled.)"
+    },
+    {
+      "type": "prose",
+      "text": "Discrete time says the same with the unit circle in place of the imaginary axis. A system updated once per tick, $x_{k+1} = Ax_k$, has $x_k = c_1\\lambda_1^k v_1 + c_2\\lambda_2^k v_2$, which dies away if every $|\\lambda| < 1$ and grows if any $|\\lambda| > 1$. As an example, $A = [[0.5, 0.4], [-0.4, 0.5]]$ has $\\lambda = 0.5 \\pm 0.4j$, of size $\\sqrt{0.25 + 0.16} = 0.640$ and angle $38.7°$: each tick turns the vector by $38.7°$ and shrinks it to $0.64$ of its length, so after 10 ticks it is $|\\lambda|^{10} = 0.41^5 = 0.0116$ of its start. Poles of the Z-transform are the same eigenvalues, and the stable region is the inside of the unit circle (see The Z-Transform (#/math/z-transform) and Pole Positions and the Time Signal (#/math/z-transform/poles-and-time))."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-plane",
+        "title": "A discrete spiral, six steps",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "stretch: diag(2, 0.5)",
+              "symmetric [[2, 1], [1, 2]]",
+              "not symmetric [[4, 1], [2, 3]]",
+              "a negative eigenvalue [[1, 2], [2, −2]]",
+              "Fibonacci [[1, 1], [1, 0]]",
+              "Markov chain [[0.9, 0.2], [0.1, 0.8]]",
+              "reflection across y = x [[0, 1], [1, 0]]",
+              "projection onto the x-axis [[1, 0], [0, 0]]",
+              "shear [[1, 1], [0, 1]]",
+              "scaling 1.5I [[1.5, 0], [0, 1.5]]",
+              "rotation by 30°",
+              "rotate and grow [[1, −1], [1, 1]]",
+              "spiral in [[0.8, −0.3], [0.3, 0.8]]",
+              "your own (use the sliders a, b, c, d)"
+            ],
+            "default": "your own (use the sliders a, b, c, d)"
+          },
+          {
+            "key": "a",
+            "label": "a (top left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "b",
+            "label": "b (top right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 0.4
+          },
+          {
+            "key": "c",
+            "label": "c (bottom left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": -0.4
+          },
+          {
+            "key": "d",
+            "label": "d (bottom right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "theta",
+            "label": "Direction of v (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 6
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Sliders a = 0.5, b = 0.4, c = −0.4, d = 0.5 and Powers shown, k = 6. The readout says 'no real eigenvalues: λ = 0.5 ± 0.4j, size |λ| = 0.64 and angle 38.7°' and ends with 'A^6v = …, length 0.069' (that is $0.64^6$, since the probe has length 1). The numbered dots go round the unit circle, each $38.7°$ from the last; they show directions only, and the shrinking is in the length. Raise a and d to 1 and the size becomes $\\sqrt{1.16} = 1.077$: unstable."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Vibration: masses on springs"
+    },
+    {
+      "type": "prose",
+      "text": "Three equal masses $m$ sit in a row between two walls, joined to each other and to the walls by four identical springs of stiffness $k$. Let $x_1, x_2, x_3$ be the displacements from rest. Mass 2 is pulled by its neighbours in proportion to how much it is stretched relative to each: $m x_2'' = k(x_1 - x_2) + k(x_3 - x_2) = k(x_1 - 2x_2 + x_3)$. The end masses have a wall on one side, giving $m x_1'' = k(-2x_1 + x_2)$ and $m x_3'' = k(x_2 - 2x_3)$. All three at once:"
+    },
+    {
+      "type": "math",
+      "tex": "m\\, x'' = -k \\begin{pmatrix} 2 & -1 & 0 \\\\ -1 & 2 & -1 \\\\ 0 & -1 & 2 \\end{pmatrix} x = -k K x"
+    },
+    {
+      "type": "prose",
+      "text": "Look for motion in which everything oscillates together with one frequency, $x(t) = \\cos(\\omega t)\\, v$ for a fixed shape $v$. Then $x'' = -\\omega^2 x$, and the equation becomes $m\\omega^2 v = k K v$, that is"
+    },
+    {
+      "type": "math",
+      "tex": "K v = \\lambda v, \\qquad \\lambda = \\frac{m \\omega^2}{k}, \\qquad \\omega = \\sqrt{\\lambda}\\, \\sqrt{k/m}"
+    },
+    {
+      "type": "prose",
+      "text": "The shapes are the eigenvectors of $K$, and each squared frequency is proportional to its eigenvalue. These patterns are the normal modes: each is a way the whole structure can move with a single pure tone, and any motion is a sum of them (the same splitting-into-eigenvectors idea as before). The eigenvalues of $K$ are $2 - \\sqrt{2} = 0.586$, $2$, and $2 + \\sqrt{2} = 3.414$ (the characteristic polynomial is $\\lambda^3 - 6\\lambda^2 + 10\\lambda - 4$; see Finding Eigenvalues and Eigenvectors (#/math/eigenvalues/finding-eigenvalues) where it is solved), so"
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Mode",
+        "$\\lambda$",
+        "Frequency $\\omega$ in units of $\\sqrt{k/m}$",
+        "Shape $v$",
+        "Picture"
+      ],
+      "rows": [
+        [
+          "1",
+          "$2 - \\sqrt{2} = 0.586$",
+          "$\\sqrt{2 - \\sqrt{2}} = 0.765$",
+          "$(1, \\sqrt{2}, 1)$",
+          "all move together, the middle most"
+        ],
+        [
+          "2",
+          "$2$",
+          "$\\sqrt{2} = 1.414$",
+          "$(1, 0, -1)$",
+          "the ends swing opposite, the middle stays still"
+        ],
+        [
+          "3",
+          "$2 + \\sqrt{2} = 3.414$",
+          "$\\sqrt{2 + \\sqrt{2}} = 1.848$",
+          "$(1, -\\sqrt{2}, 1)$",
+          "neighbours always opposite"
+        ]
+      ],
+      "caption": "The three normal modes. Check the first: $K(1, \\sqrt{2}, 1) = (2 - \\sqrt{2}, -1 + 2\\sqrt{2} - 1, -\\sqrt{2} + 2) = (2 - \\sqrt{2})(1, \\sqrt{2}, 1)$."
+    },
+    {
+      "type": "prose",
+      "text": "Notice that the number of sign changes in the shape grows with the frequency: none, one, two. This is general for such chains, and it is the same reason a guitar string's higher overtones have more nodes. With $m = 1$ kg and $k = 100$ N/m, the unit is $\\sqrt{k/m} = 10$ rad/s, so the three tones are at $7.65$, $14.14$ and $18.48$ rad/s, which is $1.22$, $2.25$ and $2.94$ Hz. The matrix $K$ is symmetric, so its eigenvalues are real (frequencies are real) and its eigenvectors are perpendicular: the modes do not exchange energy (see Symmetric Matrices and the Spectral Theorem (#/math/eigenvalues/symmetric-matrices))."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-3d",
+        "title": "Three masses on springs",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "diagonal diag(2, 1, 0.5)",
+              "symmetric [[2, 1, 0], [1, 2, 1], [0, 1, 2]]",
+              "masses on springs [[2, −1, 0], [−1, 2, −1], [0, −1, 2]]",
+              "covariance of a data cloud",
+              "upper triangular [[2, 1, 0], [0, 3, 1], [0, 0, 1]]",
+              "three-state Markov chain",
+              "rotation by 60° about the z-axis",
+              "cyclic shift (x, y, z) → (z, x, y)",
+              "projection onto the plane x + y + z = 0",
+              "shear chain [[1, 1, 0], [0, 1, 1], [0, 0, 1]]"
+            ],
+            "default": "masses on springs [[2, −1, 0], [−1, 2, −1], [0, −1, 2]]"
+          },
+          {
+            "key": "around",
+            "label": "v: direction around (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 5,
+            "default": 30
+          },
+          {
+            "key": "up",
+            "label": "v: direction up (degrees)",
+            "control": "range",
+            "min": -90,
+            "max": 90,
+            "step": 5,
+            "default": 25
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -35
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 25
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The preset is Matrix A = masses on springs. The numbers panel lists three real eigenvalues, 3.414, 2 and 0.586, with vectors that the readout prints as (−0.50, 0.71, −0.50), (0.71, 0.00, −0.71) and (0.50, 0.71, 0.50): the shapes in the table above, scaled to length 1 (and either sign is equally good). Press Next step ▶ five times to reach the symmetric step: because $K$ is symmetric the three dashed lines are perpendicular, and they are the axes of the green ellipsoid, whose half-lengths are the eigenvalues. The lowest frequency belongs to the line with the smallest eigenvalue, the shortest axis."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Principal components: the spread of data"
+    },
+    {
+      "type": "prose",
+      "text": "A cloud of data points in three measurements (height, weight, age, say) is a blob in space. The covariance matrix $C$ records how the measurements vary and co-vary (see Covariance and Correlation (#/probability/multivariate/covariance-and-correlation)): its diagonal holds the variances, and the entry in row $i$, column $j$ the covariance of measurement $i$ with measurement $j$. The variance of the data along a unit direction $u$ is $u^{\\top}Cu$, the Rayleigh quotient from Symmetric Matrices and the Spectral Theorem (#/math/eigenvalues/symmetric-matrices), and it is largest, equal to the top eigenvalue $\\lambda_1$, along the top eigenvector. That direction is the first principal component, the line along which the cloud is most spread out. The next, perpendicular to it, is the direction of greatest spread that remains, and so on. Keeping only the top few components is principal component analysis, the standard way to compress and plot data."
+    },
+    {
+      "type": "prose",
+      "text": "Take the covariance matrix of the preset,"
+    },
+    {
+      "type": "math",
+      "tex": "C = \\begin{pmatrix} 3 & 1.5 & 0.5 \\\\ 1.5 & 2 & 0.3 \\\\ 0.5 & 0.3 & 0.6 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "with trace $3 + 2 + 0.6 = 5.6$, the total variance. Its eigenvalues are $4.176$, $0.924$ and $0.500$ (and they add to $5.6$, as the sum of the eigenvalues is the trace). So the first component carries $4.176/5.6 = 74.6\\%$ of the total variance, the second $16.5\\%$ and the third $8.9\\%$. Two components together keep $91.1\\%$. The first component points along $(0.80, 0.58, 0.16)$: mostly the first two measurements moving together, since their covariance $1.5$ is large. The matrix is positive definite, all eigenvalues being positive (a covariance matrix can never have a negative eigenvalue, since the variance $u^{\\top}Cu$ along a direction cannot be negative), which is also what makes The Multivariate Normal (#/probability/multivariate/multivariate-normal) a proper distribution with ellipsoidal level sets."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-3d",
+        "title": "Covariance of a data cloud",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "diagonal diag(2, 1, 0.5)",
+              "symmetric [[2, 1, 0], [1, 2, 1], [0, 1, 2]]",
+              "masses on springs [[2, −1, 0], [−1, 2, −1], [0, −1, 2]]",
+              "covariance of a data cloud",
+              "upper triangular [[2, 1, 0], [0, 3, 1], [0, 0, 1]]",
+              "three-state Markov chain",
+              "rotation by 60° about the z-axis",
+              "cyclic shift (x, y, z) → (z, x, y)",
+              "projection onto the plane x + y + z = 0",
+              "shear chain [[1, 1, 0], [0, 1, 1], [0, 0, 1]]"
+            ],
+            "default": "covariance of a data cloud"
+          },
+          {
+            "key": "around",
+            "label": "v: direction around (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 5,
+            "default": 30
+          },
+          {
+            "key": "up",
+            "label": "v: direction up (degrees)",
+            "control": "range",
+            "min": -90,
+            "max": 90,
+            "step": 5,
+            "default": 25
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -35
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 25
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The preset is Matrix A = covariance of a data cloud. The numbers panel shows $\\lambda = 4.176$ along (0.80, 0.58, 0.16), $0.924$ along (−0.56, 0.82, −0.11) and $0.5$ along (−0.20, 0.00, 0.98). The dashed lines are the principal axes, and the green ellipsoid has them as its axes. One difference to keep in mind: the green surface is where $C$ sends the unit sphere, with half-lengths $\\lambda$, while the ellipsoid that wraps the data itself has half-lengths $\\sqrt{\\lambda}$ (standard deviations) along the same axes. Turn v with the two direction sliders towards the first axis: at v: direction around 35° and v: direction up 10° the readout says '0.8° off v's line', as close as the 5° slider steps allow, so v is almost on the first principal axis, and the length of Av, 4.175, is almost $\\lambda_1 = 4.176$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Quantum mechanics and graphs, in a paragraph each"
+    },
+    {
+      "type": "prose",
+      "text": "In quantum mechanics the possible energies of a system are the eigenvalues of its Hamiltonian matrix $H$, and the states of definite energy are its eigenvectors. $H$ is Hermitian (the complex cousin of symmetric), and the same proof as for real symmetric matrices says that its eigenvalues are real and its eigenvectors perpendicular; the physics names them energy levels and stationary states. The quantum shelf covers this from the physics side in Eigenvalues and Eigenvectors (#/quantum/foundations/eigenvalues-and-eigenvectors) and Linear Algebra for Quantum Mechanics (#/quantum/foundations/linear-algebra)."
+    },
+    {
+      "type": "prose",
+      "text": "A graph, a set of nodes joined by links, has an adjacency matrix $A$ with $A_{ij} = 1$ when nodes $i$ and $j$ are joined. Then $(A^k)_{ij}$ counts the walks of length $k$ from $i$ to $j$, and for large $k$ it is governed by the biggest eigenvalue, exactly as in power iteration. For a triangle (three nodes, all joined) the eigenvalues are $2, -1, -1$, and the number of closed walks of length $k$ from a node is $(2^k + 2(-1)^k)/3$: that is $2$ for $k = 2$ (out to either neighbour and back) and $2$ for $k = 3$ (round the triangle either way). The graph Laplacian $L = D - A$ ($D$ lists how many links each node has) is another symmetric matrix; for a path of three nodes its eigenvalues are $0, 1, 3$, and in general the number of zero eigenvalues equals the number of separate pieces the graph falls into. The matrix $K$ of the springs above is a Laplacian with the walls added as extra, fixed nodes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How computers find eigenvalues"
+    },
+    {
+      "type": "prose",
+      "text": "On the page Finding Eigenvalues and Eigenvectors (#/math/eigenvalues/finding-eigenvalues) the recipe was: write $\\det(A - \\lambda I) = 0$ and solve. For a 2×2 or 3×3 matrix that is fine. For a 100×100 matrix it is a terrible idea, for a numerical reason. Polynomial roots can be extremely sensitive to the coefficients. The classic warning is Wilkinson's polynomial $w(x) = (x - 1)(x - 2)\\cdots(x - 20)$, whose roots are the integers 1 to 20, perfectly well spaced. Multiplied out, the coefficient of $x^{19}$ is $-(1 + 2 + \\cdots + 20) = -210$. Change it by $2^{-23} \\approx 1.2 \\times 10^{-7}$, a relative change of less than one part in $10^9$, and the roots (computed in high precision) move to"
+    },
+    {
+      "type": "math",
+      "tex": "1, 2, \\ldots, 6 \\text{ (to four decimals)},\\; 6.9997,\\; 8.0073,\\; 8.9173,\\; 10.095 \\pm 0.644j,\\; 11.794 \\pm 1.652j,\\; 13.992 \\pm 2.519j,\\; 16.731 \\pm 2.813j,\\; 19.502 \\pm 1.940j,\\; 20.847"
+    },
+    {
+      "type": "prose",
+      "text": "Ten of the twenty roots become complex, and some move by almost 3 units. A matrix whose characteristic polynomial is Wilkinson's is perfectly fine, and good eigenvalue routines find its eigenvalues accurately, because they never form the polynomial. They work on the matrix itself, using only steps that keep eigenvalues unchanged, the similarity transformations $A \\to Q^{-1}AQ$ from Diagonalisation and Powers (#/math/eigenvalues/diagonalisation)."
+    },
+    {
+      "type": "prose",
+      "text": "The workhorse is the QR algorithm (J. G. F. Francis and, independently, Vera Kublanovskaya, around 1960). Factor $A$ as $A = QR$, with $Q$ having perpendicular unit columns and $R$ upper triangular (Gram–Schmidt does this), then multiply the factors in reverse order:"
+    },
+    {
+      "type": "math",
+      "tex": "A_0 = A, \\qquad A_k = Q_k R_k, \\qquad A_{k+1} = R_k Q_k"
+    },
+    {
+      "type": "prose",
+      "text": "Since $R_kQ_k = Q_k^{\\top}(Q_kR_k)Q_k = Q_k^{\\top}A_kQ_k$, each $A_{k+1}$ is similar to $A_k$ and has the same eigenvalues. Run it on our favourite $A = [[4, 1], [2, 3]]$. Gram–Schmidt on the columns $(4, 2)$ and $(1, 3)$ gives $Q = [[0.894, -0.447], [0.447, 0.894]]$ and $R = [[4.472, 2.236], [0, 2.236]]$. Then"
+    },
+    {
+      "type": "math",
+      "tex": "A_1 = RQ = \\begin{pmatrix} 5 & 0 \\\\ 1 & 2 \\end{pmatrix}, \\quad A_2 = \\begin{pmatrix} 5.077 & -0.615 \\\\ 0.385 & 1.923 \\end{pmatrix}, \\quad A_5 = \\begin{pmatrix} 5.008 & -0.977 \\\\ 0.023 & 1.992 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The diagonal is heading for $5$ and $2$, the eigenvalues, and the entry below the diagonal shrinks, $1, 0.385, 0.148, 0.058, 0.023$, by about $2/5$ at each step. That ratio $\\lambda_2/\\lambda_1$ is the power-iteration rate again: the QR algorithm is power iteration run on a whole set of vectors at once, with the factor $Q$ keeping them perpendicular. (The $5.077$ in the corner of $A_2$ is the Rayleigh quotient found on the page Power Iteration and Markov Chains (#/math/eigenvalues/power-iteration).) A matrix with zeros under the diagonal, triangular, has its eigenvalues on the diagonal, so in the limit they can be read off. Real implementations add three things: a first reduction of $A$ to a nearly triangular form (Hessenberg) so that each step is cheap, shifts, as in inverse iteration, to make convergence fast, and deflation, which splits the problem in two as soon as an eigenvalue has been found. For huge sparse matrices, such as a vibrating bridge model with a million unknowns, methods that only multiply by $A$, named after Lanczos and Arnoldi, find the few extreme eigenvalues wanted."
+    },
+    {
+      "type": "prose",
+      "text": "Sometimes you do not want the eigenvalues, only a rough idea where they are. Gershgorin's circle theorem gives one almost for free: every eigenvalue of $A$ lies in at least one disc in the complex plane, centred at a diagonal entry $a_{ii}$, with radius the sum of the sizes of the other entries in its row, $r_i = \\sum_{j \\ne i}|a_{ij}|$. The reason is short. Take an eigenvector $v$ and let $v_i$ be its entry of largest size. Row $i$ of $Av = \\lambda v$ reads $(\\lambda - a_{ii})v_i = \\sum_{j \\ne i} a_{ij}v_j$. Divide by $v_i$ and use $|v_j/v_i| \\le 1$ to get $|\\lambda - a_{ii}| \\le \\sum_{j \\ne i}|a_{ij}| = r_i$."
+    },
+    {
+      "type": "prose",
+      "text": "Worked example: $A = [[4, 1, 0], [1, 3, 1], [0, 2, -3]]$. The row discs are centred at $4$ with radius $1$, at $3$ with radius $2$, and at $-3$ with radius $2$, so on the real line they cover $[3, 5]$, $[1, 5]$ and $[-5, -1]$. The last disc is separate from the other two, and a further part of the theorem says that a group of $m$ discs that does not touch the others contains exactly $m$ eigenvalues. So exactly one eigenvalue lies in the disc around $-3$, and it is real (a complex eigenvalue of a real matrix brings its conjugate into the same disc), so it is in $[-5, -1]$; the other two lie in the union of the first two discs. The true values are $4.70$, $2.63$ and $-3.32$. Also $0$ lies in none of the discs, so $A$ has no zero eigenvalue and is invertible, and the largest eigenvalue size is at most $5$. A matrix whose diagonal entries beat the rest of the row in this way is called diagonally dominant."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "A system of two tanks",
+      "text": "Solve $x' = Ax$ with $A = [[-2, 1], [1, -2]]$ and $x(0) = (1, 0)$. Is it stable? What is the time constant of the slowest part?",
+      "solution": [
+        "The trace is $-4$ and the determinant is $4 - 1 = 3$, so $p(\\lambda) = \\lambda^2 + 4\\lambda + 3 = (\\lambda + 1)(\\lambda + 3)$ and $\\lambda = -1, -3$.",
+        "For $\\lambda = -1$: $A + I = [[-1, 1], [1, -1]]$, so $v_1 = (1, 1)$. For $\\lambda = -3$: $A + 3I = [[1, 1], [1, 1]]$, so $v_2 = (1, -1)$.",
+        "Split $(1, 0) = \\tfrac12(1, 1) + \\tfrac12(1, -1)$. Hence $x(t) = \\tfrac12 e^{-t}(1, 1) + \\tfrac12 e^{-3t}(1, -1)$, that is $x_1 = \\tfrac12(e^{-t} + e^{-3t})$ and $x_2 = \\tfrac12(e^{-t} - e^{-3t})$. Check $t = 0$: $(1, 0)$. Check the equation: $x_1'(0) = \\tfrac12(-1 - 3) = -2$, and $(Ax)_1 = -2 \\cdot 1 + 0 = -2$.",
+        "Both eigenvalues are negative, so it is stable. The slow part is $e^{-t}$, which shrinks by a factor $e$ per unit of time: the time constant is $1$ (the fast part has $1/3$)."
+      ],
+      "answer": "$x = \\tfrac12 e^{-t}(1,1) + \\tfrac12 e^{-3t}(1,-1)$; stable; time constant 1"
+    },
+    {
+      "type": "problem",
+      "title": "Two masses",
+      "text": "Two equal masses $m$ are joined to each other and to two walls by three springs $k$. Find the normal-mode frequencies and shapes.",
+      "solution": [
+        "As for three masses, $m x'' = -kKx$ with $K = [[2, -1], [-1, 2]]$.",
+        "$p(\\lambda) = \\lambda^2 - 4\\lambda + 3 = (\\lambda - 1)(\\lambda - 3)$, so $\\lambda = 1$ and $3$. For $\\lambda = 1$: $K - I = [[1, -1], [-1, 1]]$, so the shape is $(1, 1)$. For $\\lambda = 3$: $K - 3I = [[-1, -1], [-1, -1]]$, so the shape is $(1, -1)$.",
+        "The frequencies are $\\omega = \\sqrt{\\lambda k/m}$, that is $\\sqrt{k/m}$ and $\\sqrt{3k/m}$. In the lower mode the two masses move together (the middle spring is never stretched, so only the wall springs act, and the frequency is that of a single mass on a single spring, $\\sqrt{k/m}$). In the upper mode they move in opposite directions, and the middle spring helps."
+      ],
+      "answer": "$\\omega = \\sqrt{k/m}$ for $(1,1)$ and $\\sqrt{3k/m}$ for $(1,-1)$"
+    },
+    {
+      "type": "problem",
+      "title": "Variance explained",
+      "text": "A data set has covariance matrix $C = [[5, 2], [2, 2]]$. Find the first principal direction and the fraction of the variance it explains.",
+      "solution": [
+        "The trace is $7$ and the determinant is $10 - 4 = 6$, so $p(\\lambda) = \\lambda^2 - 7\\lambda + 6 = (\\lambda - 1)(\\lambda - 6)$, with $\\lambda = 6$ and $1$.",
+        "For $\\lambda = 6$: $C - 6I = [[-1, 2], [2, -4]]$, so the first row gives $-x + 2y = 0$ and the direction is $(2, 1)$, that is $(0.894, 0.447)$ as a unit vector.",
+        "The first component explains $6/7 = 85.7\\%$ of the total variance (the trace, $7$). The second, along $(-1, 2)$, explains the remaining $14.3\\%$."
+      ],
+      "answer": "direction $(2,1)/\\sqrt{5}$, $6/7 = 85.7\\%$"
+    },
+    {
+      "type": "problem",
+      "title": "Gershgorin and stability",
+      "text": "For $A = [[-5, 1, 1], [0, -4, 2], [1, 0, -6]]$, show that every eigenvalue has a negative real part, so $x' = Ax$ is stable.",
+      "solution": [
+        "The row discs have centres $-5$, $-4$, $-6$ and radii $1 + 1 = 2$, $0 + 2 = 2$, $1 + 0 = 1$.",
+        "The rightmost point of any disc is at most $-5 + 2 = -3$, $-4 + 2 = -2$ and $-6 + 1 = -5$. The largest of these is $-2$.",
+        "Every eigenvalue lies in some disc, so its real part is at most $-2 < 0$. No eigenvalue was computed: the stability follows from the matrix entries alone. (The discs also say how fast: every solution decays at least at the rate $e^{-2t}$, up to a constant factor.)"
+      ],
+      "answer": "all real parts are at most $-2$"
+    },
+    {
+      "type": "problem",
+      "title": "Discrete stability",
+      "text": "Is $x_{k+1} = Ax_k$ stable for $A = [[1, -1], [1, 1]]$? For $A = [[0.5, 0.4], [-0.4, 0.5]]$?",
+      "solution": [
+        "For $[[1, -1], [1, 1]]$ the trace is $2$ and the determinant is $2$, so $\\lambda^2 - 2\\lambda + 2 = 0$ and $\\lambda = 1 \\pm j$. The size is $\\sqrt{2} = 1.414 > 1$: unstable, each step turns by $45°$ and stretches by $1.414$ (the 'rotate and grow' preset).",
+        "For $[[0.5, 0.4], [-0.4, 0.5]]$ the trace is $1$ and the determinant is $0.25 + 0.16 = 0.41$, so $\\lambda = 0.5 \\pm \\sqrt{0.25 - 0.41} = 0.5 \\pm 0.4j$, of size $\\sqrt{0.41} = 0.640 < 1$: stable.",
+        "Both are checked by the same rule: the product of the two sizes is the determinant, so for a complex pair $|\\lambda|^2 = \\det A$ and the test is $\\det A < 1$."
+      ],
+      "answer": "the first is unstable ($|\\lambda| = 1.414$), the second stable ($|\\lambda| = 0.640$)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gilbert Strang, Introduction to Linear Algebra, 5th edition (Wellesley-Cambridge Press, 2016), chapter 6, Eigenvalues and Eigenvectors.",
+        "Lloyd N. Trefethen and David Bau III, Numerical Linear Algebra (SIAM, 1997).",
+        "Gene H. Golub and Charles F. Van Loan, Matrix Computations, 4th edition (Johns Hopkins University Press, 2013).",
+        "Roger A. Horn and Charles R. Johnson, Matrix Analysis, 2nd edition (Cambridge University Press, 2013). Chapter 6 for Gershgorin discs.",
+        "Brin and Page's PageRank paper and the Markov chain pages are on Power Iteration and Markov Chains (#/math/eigenvalues/power-iteration)."
+      ]
+    }
+  ]
+}

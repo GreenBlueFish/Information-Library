@@ -25,7 +25,7 @@
 
 import { registerWidget } from "../registry.js";
 import { buildFrame, buildControlPanel, buildActions, buildReadout, buildStage, svgEl, makeTicker } from "../sim-kit.js";
-import { MATRICES2, MATRIX2_OPTIONS, CUSTOM2, preset2, eig2, probe2, angleOf, powers, apply, norm, unit, charPoly2, lineAngle, fmt, sfmt } from "../sims/eigen.js";
+import { MATRICES2, MATRIX2_OPTIONS, CUSTOM2, preset2, eig2, probe2, angleOf, powers, apply, norm, unit, charPoly2, lineAngle, fmt, sfmt, polyText } from "../sims/eigen.js";
 
 export const DEFAULT_PARAMS = [
   { key: "matrix", label: "Matrix A", control: "select", options: MATRIX2_OPTIONS, default: MATRICES2[1].name },
@@ -120,7 +120,7 @@ export function walkSteps(m, theta, k) {
     { title: "Look for directions that do not turn", text: "Split Av into a part along v (v·Av) and a part sideways (v × Av). The top-right panel plots both as v turns from 0° to 180° (after that the pattern repeats with signs flipped). Where the sideways part crosses zero, Av lies on v's own line: that direction is an eigenvector. Press Sweep v to turn the probe." },
     { title: e.kind === "complex" ? "No direction stays put" : "The first eigenvector", text: step4 },
     { title: e.kind === "real" ? "The second eigenvector" : "Only one line, or every line", text: step5 },
-    { title: "The characteristic polynomial", text: `Av = λv means (A − λI)v = 0 for some v ≠ 0, which happens exactly when det(A − λI) = 0. For a 2×2 matrix that is λ² − (a + d)λ + (ad − bc) = λ² − ${sfmt(e.tr)}λ + ${sfmt(e.det)} = 0, drawn bottom right. ${e.kind === "complex" ? "This parabola never crosses zero, so the roots are complex." : `It crosses zero at the eigenvalues${e.kind === "real" ? "" : " (here it only touches, at a double root)"}.`} The roots always satisfy: ${trDet}.` },
+    { title: "The characteristic polynomial", text: `Av = λv means (A − λI)v = 0 for some v ≠ 0, which happens exactly when det(A − λI) = 0. For a 2×2 matrix that is λ² − (a + d)λ + (ad − bc) = ${polyText([-e.tr, e.det])} = 0, drawn bottom right. ${e.kind === "complex" ? "This parabola never crosses zero, so the roots are complex." : `It crosses zero at the eigenvalues${e.kind === "real" ? "" : " (here it only touches, at a double root)"}.`} The roots always satisfy: ${trDet}.` },
     { title: "Powers of A", text: step7 },
     { title: "In the eigenbasis A only stretches", text: e.kind === "real"
       ? `Measure vectors in the eigenvectors instead of e₁ and e₂ and A does nothing but stretch: by ${sfmt(e.values[0])} along one line and by ${sfmt(e.values[1])} along the other. The light parallelogram on v₁ and v₂ maps to the green one on λ₁v₁ and λ₂v₂. That is diagonalisation, A = PDP⁻¹, and it is why A^k is easy: just raise the λs to the k-th power.`

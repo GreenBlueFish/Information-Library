@@ -1,0 +1,700 @@
+{
+  "title": "Power Iteration and Markov Chains",
+  "intro": "Multiply any vector by a matrix, and again, and again, and its direction swings round to the matrix's strongest eigenvector. This page shows why, how fast, how to read off the eigenvalue as you go, and how the same idea gives the steady state of a Markov chain and the ranking of web pages.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why multiply again and again?"
+    },
+    {
+      "type": "prose",
+      "text": "Most of this topic has been about finding eigenvectors by solving equations. There is a quite different way to find one, and it needs nothing but the ability to multiply a matrix by a vector: pick any vector, multiply it by $A$, multiply the result by $A$, and keep going. The vectors $v, Av, A^2v, A^3v, \\ldots$ are the orbit of $v$. Watch only their directions and a pattern appears: they line up. The line they settle on is an eigenvector."
+    },
+    {
+      "type": "prose",
+      "text": "This matters for two reasons. First, it is how eigenvectors of enormous matrices are found in practice. A matrix with a billion rows, such as the link structure of the web, cannot have its characteristic polynomial written down, but it can be multiplied by a vector. Second, it explains what repeated processes do: a population that grows by age group, a chain that hops between states, a system updated once per tick. All of them are 'apply $A$ again', and the eigenvalues say where they end up. The page Diagonalisation and Powers (#/math/eigenvalues/diagonalisation) showed the same fact with $A^k = PD^kP^{-1}$; here we use it as an algorithm."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Splitting a vector into eigenvectors"
+    },
+    {
+      "type": "prose",
+      "text": "We use the matrix from Finding Eigenvalues and Eigenvectors (#/math/eigenvalues/finding-eigenvalues) and Diagonalisation and Powers (#/math/eigenvalues/diagonalisation):"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\begin{pmatrix} 4 & 1 \\\\ 2 & 3 \\end{pmatrix}, \\qquad \\lambda_1 = 5 \\text{ along } v_1 = \\begin{pmatrix} 1 \\\\ 1 \\end{pmatrix}, \\qquad \\lambda_2 = 2 \\text{ along } v_2 = \\begin{pmatrix} 1 \\\\ -2 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Start with the plain vector $v = (1, 0)$. Because $v_1$ and $v_2$ are two independent vectors in the plane, $v$ can be written as a mix of them. Solving $c_1(1, 1) + c_2(1, -2) = (1, 0)$ means $c_1 + c_2 = 1$ and $c_1 - 2c_2 = 0$. The second equation gives $c_1 = 2c_2$, so $3c_2 = 1$, hence $c_2 = \\tfrac13$ and $c_1 = \\tfrac23$:"
+    },
+    {
+      "type": "math",
+      "tex": "v = \\tfrac{2}{3}\\, v_1 + \\tfrac{1}{3}\\, v_2"
+    },
+    {
+      "type": "prose",
+      "text": "Now apply $A$. Since $Av_1 = 5v_1$ and $Av_2 = 2v_2$, each piece is simply multiplied by its own eigenvalue. Applying $A$ a second time multiplies each piece again, and after $k$ times:"
+    },
+    {
+      "type": "math",
+      "tex": "A^k v = \\tfrac{2}{3}\\, 5^k\\, v_1 + \\tfrac{1}{3}\\, 2^k\\, v_2"
+    },
+    {
+      "type": "prose",
+      "text": "This is the whole story of power iteration. Both pieces grow, but the $v_1$ piece grows by a factor 5 each step and the $v_2$ piece by a factor 2. After 10 steps the first has grown $5^{10} \\approx 9.8$ million times, the second only $2^{10} = 1024$ times. The vector is still a mix of the two, but the mix is overwhelmingly $v_1$. In general, if $v = c_1v_1 + c_2v_2 + \\cdots + c_nv_n$ and $|\\lambda_1| > |\\lambda_2| \\ge \\cdots$, then"
+    },
+    {
+      "type": "math",
+      "tex": "A^k v = c_1 \\lambda_1^k v_1 + c_2 \\lambda_2^k v_2 + \\cdots + c_n \\lambda_n^k v_n = \\lambda_1^k \\left( c_1 v_1 + c_2 \\left(\\tfrac{\\lambda_2}{\\lambda_1}\\right)^{k} v_2 + \\cdots \\right)"
+    },
+    {
+      "type": "prose",
+      "text": "Pulling $\\lambda_1^k$ out front shows what is going on: inside the bracket every term except the first carries a factor $(\\lambda_i/\\lambda_1)^k$, which is a number smaller than 1 in size raised to a growing power, so it dies away. What is left is $c_1 v_1$, and that is an eigenvector. The eigenvalue with the largest size, $\\lambda_1$, is called the dominant eigenvalue, and $v_1$ the dominant eigenvector."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What the numbers do"
+    },
+    {
+      "type": "prose",
+      "text": "Here is the orbit of $v = (1, 0)$ computed by plain multiplication, together with how far each vector points from the $v_1$ line (the line $y = x$). The first line is the start, $v = (1, 0)$, which is $45°$ away."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Step $k$",
+        "$A^k v$",
+        "Angle from the $\\lambda_1$ line",
+        "Ratio to the step before"
+      ],
+      "rows": [
+        [
+          "0",
+          "$(1, 0)$",
+          "$45.00°$",
+          ""
+        ],
+        [
+          "1",
+          "$(4, 2)$",
+          "$18.43°$",
+          "$0.41$"
+        ],
+        [
+          "2",
+          "$(18, 14)$",
+          "$7.13°$",
+          "$0.39$"
+        ],
+        [
+          "3",
+          "$(86, 78)$",
+          "$2.79°$",
+          "$0.39$"
+        ],
+        [
+          "4",
+          "$(422, 406)$",
+          "$1.11°$",
+          "$0.40$"
+        ],
+        [
+          "5",
+          "$(2094, 2062)$",
+          "$0.44°$",
+          "$0.40$"
+        ]
+      ],
+      "caption": "Orbit of $(1, 0)$ under $A = [[4, 1], [2, 3]]$. Check a row: $A(18, 14) = (4 \\cdot 18 + 14, 2 \\cdot 18 + 3 \\cdot 14) = (86, 78)$."
+    },
+    {
+      "type": "prose",
+      "text": "The entries explode (the lengths are multiplied by about 5 each time) but the direction settles. And each row's angle is about $0.4$ of the one before. That number is no accident: $0.4 = \\lambda_2 / \\lambda_1 = 2/5$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-plane",
+        "title": "Power iteration on [[4, 1], [2, 3]]",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "stretch: diag(2, 0.5)",
+              "symmetric [[2, 1], [1, 2]]",
+              "not symmetric [[4, 1], [2, 3]]",
+              "a negative eigenvalue [[1, 2], [2, −2]]",
+              "Fibonacci [[1, 1], [1, 0]]",
+              "Markov chain [[0.9, 0.2], [0.1, 0.8]]",
+              "reflection across y = x [[0, 1], [1, 0]]",
+              "projection onto the x-axis [[1, 0], [0, 0]]",
+              "shear [[1, 1], [0, 1]]",
+              "scaling 1.5I [[1.5, 0], [0, 1.5]]",
+              "rotation by 30°",
+              "rotate and grow [[1, −1], [1, 1]]",
+              "spiral in [[0.8, −0.3], [0.3, 0.8]]",
+              "your own (use the sliders a, b, c, d)"
+            ],
+            "default": "not symmetric [[4, 1], [2, 3]]"
+          },
+          {
+            "key": "a",
+            "label": "a (top left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "b",
+            "label": "b (top right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "c",
+            "label": "c (bottom left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "d",
+            "label": "d (bottom right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "theta",
+            "label": "Direction of v (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 3
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The preset is Matrix A = not symmetric, with Direction of v at 0° (so $v = (1, 0)$) and Powers shown, k = 3. The readout ends 'A^3v = (86.00, 78.00), length 116.103, 2.79° from the λ₁ line', exactly the row $k = 3$ above. The purple dots numbered 1, 2, 3 on the unit circle are the directions of $Av$, $A^2v$, $A^3v$, closing in on the blue line. Drag Powers shown, k up to 8 and the readout gives $0.03°$. Then set Direction of v to 117°, almost exactly along the teal line (which sits at 116.6°). The first dots stay close to the teal line, but the small blue part of $v$ grows by a factor $5/2$ per step, and by k = 10 the dots have swung across onto the blue line: the second eigenvector is never stable under rounding or a nudge."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How fast: the ratio of eigenvalues"
+    },
+    {
+      "type": "prose",
+      "text": "The angle can be written exactly. The part of $A^kv$ along $v_1$ is $\\tfrac23 5^k$ times $v_1$ and the part along $v_2$ is $\\tfrac13 2^k$ times $v_2$. Measuring the sideways part against the along part (with perpendicular directions $(1, 1)$ and $(1, -1)$) gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\tan(\\text{angle}) = \\frac{3 \\cdot 2^k}{4 \\cdot 5^k - 2^k} \\approx \\frac{3}{4} \\left( \\frac{2}{5} \\right)^{k}"
+    },
+    {
+      "type": "prose",
+      "text": "Check it at $k = 3$: $3 \\cdot 8 = 24$ and $4 \\cdot 125 - 8 = 492$, so $\\tan = 24/492 = 0.0488$, and the angle whose tangent is $0.0488$ is $2.79°$, matching both the table and the viewer. At $k = 0$ it gives $3/3 = 1$, so $45°$, as it should."
+    },
+    {
+      "type": "prose",
+      "text": "So the error shrinks by the factor $|\\lambda_2/\\lambda_1|$ at every step. This ratio decides everything about the method:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "A ratio of $0.4$, as here, is fast: each step gains about 0.4 of a decimal digit (since $-\\log_{10} 0.4 = 0.398$), and 10 steps already give an angle of $0.0045°$.",
+        "A ratio of $0.9$ is slow: you need about 22 steps just to reduce the error by a factor of 10 (since $0.9^{22} \\approx 0.1$).",
+        "A ratio of $0.99$ is hopeless for hand work: 230 steps per factor of 10. This happens when the two largest eigenvalues are nearly equal in size, and it is the method's main weakness."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The starting vector only changes the constant in front, through $c_1$ and $c_2$, not the rate. The one thing it must not do is have $c_1 = 0$, and we come back to that."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Keeping the numbers sensible: normalise"
+    },
+    {
+      "type": "prose",
+      "text": "The entries of $A^kv$ grow like $5^k$ (or shrink like $0.5^k$ for a matrix with $|\\lambda_1| < 1$), so on a computer they would soon overflow or vanish. We only want the direction, so divide by the length after every multiplication:"
+    },
+    {
+      "type": "math",
+      "tex": "w_{k+1} = \\frac{A\\, w_k}{\\left| A\\, w_k \\right|}"
+    },
+    {
+      "type": "prose",
+      "text": "Dividing by a number does not change a direction, and $A$ is linear, so the normalised vectors point exactly where the raw ones would. Starting from $w_0 = (1, 0)$ for the same matrix, $A w_0 = (4, 2)$ has length $\\sqrt{20} = 4.472$, so $w_1 = (0.894, 0.447)$; then $A w_1 = (4.025, 3.130)$, whose length is $5.099$, so $w_2 = (0.789, 0.614)$; and $w_3 = (0.741, 0.672)$, $w_4 = (0.721, 0.693)$, $w_5 = (0.713, 0.702)$. The unit vector along $v_1$ is $(0.7071, 0.7071)$, and the $w_k$ are walking towards it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Reading off the eigenvalue: the Rayleigh quotient"
+    },
+    {
+      "type": "prose",
+      "text": "Once $w$ is nearly an eigenvector, how do we get $\\lambda_1$? If $Aw = \\lambda w$ exactly, then $w \\cdot Aw = \\lambda\\, w \\cdot w$, so $\\lambda = (w \\cdot Aw)/(w \\cdot w)$. For a vector that is only nearly an eigenvector the same formula is still a good estimate, and it has a name, the Rayleigh quotient:"
+    },
+    {
+      "type": "math",
+      "tex": "\\rho(w) = \\frac{w^{\\top} A\\, w}{w^{\\top} w}"
+    },
+    {
+      "type": "prose",
+      "text": "Computed for the vectors in the table above it gives $4$, $5$, $5.077$, $5.042$, $5.018$, $5.008$ for $k = 0, \\ldots, 5$. Check $k = 2$ by hand: $w = (18, 14)$, $Aw = (86, 78)$, $w \\cdot Aw = 18 \\cdot 86 + 14 \\cdot 78 = 1548 + 1092 = 2640$ and $w \\cdot w = 324 + 196 = 520$, and $2640/520 = 5.077$. The error shrinks like $0.4^k$ too, about $0.0075$ at $k = 5$."
+    },
+    {
+      "type": "prose",
+      "text": "For a symmetric matrix the Rayleigh quotient is much better: its error shrinks like $(\\lambda_2/\\lambda_1)^{2k}$, twice as fast. Take $A = [[2, 1], [1, 2]]$ (eigenvalues 3 and 1, so the ratio is $\\tfrac13$) from $v = (1, 0)$. The orbit is $(1, 0), (2, 1), (5, 4), (14, 13), (41, 40)$ and the Rayleigh quotients are $2$, $2.8$, $2.976$, $2.9973$, $2.99970$. The errors $1$, $0.2$, $0.0244$, $0.0027$, $0.0003$ drop by roughly $\\tfrac19 = (\\tfrac13)^2$ per step. The reason is on the page Symmetric Matrices and the Spectral Theorem (#/math/eigenvalues/symmetric-matrices): for a symmetric $A$, a vector with a small error angle $\\varepsilon$ from an eigenvector has a Rayleigh quotient whose error is proportional to $\\varepsilon^2$, not to $\\varepsilon$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "When power iteration fails"
+    },
+    {
+      "type": "prose",
+      "text": "The argument assumed that the start contains some $v_1$, that one eigenvalue is strictly the largest in size, and that there are enough eigenvectors to split $v$ into. Each of these can fail."
+    },
+    {
+      "type": "list",
+      "items": [
+        "The starting vector has no $v_1$ in it ($c_1 = 0$). Start the matrix above at $v = (1, -2)$, exactly along $v_2$: then $A^kv = 2^kv$ and the orbit stays on the $v_2$ line for ever. In practice this is cured by rounding error, which puts a tiny $v_1$ component into the vector, and that component then grows by $5/2$ per step until it takes over. A random starting vector has $c_1 \\ne 0$ with probability 1.",
+        "Two eigenvalues tie in size. For the reflection $[[0, 1], [1, 0]]$ the eigenvalues are $1$ and $-1$. From $(1, 0)$ the orbit is $(1,0), (0,1), (1,0), (0,1), \\ldots$: no limit, because the $v_2$ piece, multiplied by $-1$ each time, never fades. The same happens for $\\lambda_1 = 3$, $\\lambda_2 = -3$.",
+        "The dominant eigenvalue is complex. For a rotation there is no real direction to settle on at all, and the dots go round the circle (see Complex Eigenvalues and Rotation (#/math/eigenvalues/complex-eigenvalues)). The complex pair has equal size, a tie of the previous kind.",
+        "The matrix is defective (see Repeated Eigenvalues and Defective Matrices (#/math/eigenvalues/repeated-eigenvalues)). The shear $[[1, 1], [0, 1]]$ sends $(x, y)$ to $(x + y, y)$, so $A^k(0, 1) = (k, 1)$: the direction does approach the $x$-axis, but only like $1/k$, not geometrically."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Markov chains: a matrix that always has the eigenvalue 1"
+    },
+    {
+      "type": "prose",
+      "text": "A Markov chain hops between a few states, and the chance of the next state depends only on the present one. Suppose a town's weather is sunny or cloudy each day. If today is sunny, tomorrow is sunny with probability $0.9$ and cloudy with probability $0.1$; if today is cloudy, tomorrow is sunny with probability $0.2$ and cloudy with probability $0.8$. Write the chances of the two states as a column vector $p = (p_1, p_2)$ with $p_1 + p_2 = 1$. Then tomorrow's chances are $p_1' = 0.9p_1 + 0.2p_2$ and $p_2' = 0.1p_1 + 0.8p_2$, which is a matrix times a vector:"
+    },
+    {
+      "type": "math",
+      "tex": "p_{k+1} = A\\, p_k, \\qquad A = \\begin{pmatrix} 0.9 & 0.2 \\\\ 0.1 & 0.8 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Each column of $A$ lists where one state goes, so each column adds up to 1. A matrix of non-negative numbers with columns summing to 1 is called column-stochastic. Convention warning: the page Markov Chains (#/probability/processes/markov-chains) on the probability shelf writes the transition matrix with rows summing to 1 and multiplies a row vector from the left, $\\pi_{k+1} = \\pi_k P$. The two are transposes of each other, $A = P^{\\top}$, and say the same thing. Here we use columns because that is the usual convention for eigenvectors, $Av = \\lambda v$ with $v$ a column."
+    },
+    {
+      "type": "prose",
+      "text": "Why does a column-stochastic matrix always have the eigenvalue 1? Let $\\mathbf{1} = (1, 1, \\ldots, 1)$ be the row of ones. Multiplying it by $A$ adds up each column, and every column adds to 1, so $\\mathbf{1}A = \\mathbf{1}$. That says the transpose has an eigenvector: $A^{\\top}\\mathbf{1}^{\\top} = \\mathbf{1}^{\\top}$, an eigenvalue 1. And a matrix and its transpose have the same eigenvalues (they have the same characteristic polynomial, since a determinant does not change when you transpose). So $A$ has an eigenvalue 1 too. Meaning: the total probability is conserved, because the sum of the entries of $p$ is $\\mathbf{1}p$ and it stays at 1. No eigenvalue can be larger than 1 in size: for any vector $x$, the sizes of the entries of $Ax$ add up to at most $\\sum_i\\sum_j a_{ij}|x_j| = \\sum_j |x_j|$ (each column adds to 1), so $A$ never makes the total size of a vector bigger, and $Av = \\lambda v$ with $|\\lambda| > 1$ would."
+    },
+    {
+      "type": "prose",
+      "text": "The eigenvector for $\\lambda = 1$ is the steady state: a distribution that $A$ leaves alone. Find it for our matrix by solving $(A - I)p = 0$. The matrix $A - I$ is $[[-0.1, 0.2], [0.1, -0.2]]$, and the first row says $-0.1p_1 + 0.2p_2 = 0$, so $p_1 = 2p_2$: the direction is $(2, 1)$. Eigenvectors can be scaled any way we like, and for a probability we scale to sum 1, giving"
+    },
+    {
+      "type": "math",
+      "tex": "p_{\\infty} = \\left( \\tfrac{2}{3},\\; \\tfrac{1}{3} \\right) \\approx (0.667,\\; 0.333)"
+    },
+    {
+      "type": "prose",
+      "text": "In the long run two days out of three are sunny. The other eigenvalue follows from the trace: $0.9 + 0.8 = 1.7 = 1 + \\lambda_2$, so $\\lambda_2 = 0.7$, with eigenvector $(1, -1)$ (check: $A(1, -1) = (0.7, -0.7)$). A distribution that starts as certain sunshine, $p_0 = (1, 0)$, splits as $\\tfrac13(2, 1) + \\tfrac13(1, -1)$ (check: $(2/3 + 1/3,\\; 1/3 - 1/3) = (1, 0)$). So"
+    },
+    {
+      "type": "math",
+      "tex": "p_k = \\tfrac{1}{3}(2, 1) + \\tfrac{1}{3}(0.7)^k (1, -1) = \\left( \\tfrac{2}{3} + \\tfrac{0.7^k}{3},\\; \\tfrac{1}{3} - \\tfrac{0.7^k}{3} \\right)"
+    },
+    {
+      "type": "prose",
+      "text": "At $k = 1$ this gives $(0.9, 0.1)$, which is the first column of $A$, as it must. At $k = 2$, $(0.83, 0.17)$; at $k = 5$, $(0.7227, 0.2773)$; at $k = 10$, $(0.6761, 0.3239)$. The difference from the steady state shrinks by $0.7$ per day, because the second eigenvalue is $0.7$. Power iteration, in disguise: the probabilities are the vector, and the weather forgets its start at the rate of the second eigenvalue. The gap $1 - |\\lambda_2|$ is called the spectral gap: a big gap means a quick return to the steady state."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-plane",
+        "title": "The weather chain",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "stretch: diag(2, 0.5)",
+              "symmetric [[2, 1], [1, 2]]",
+              "not symmetric [[4, 1], [2, 3]]",
+              "a negative eigenvalue [[1, 2], [2, −2]]",
+              "Fibonacci [[1, 1], [1, 0]]",
+              "Markov chain [[0.9, 0.2], [0.1, 0.8]]",
+              "reflection across y = x [[0, 1], [1, 0]]",
+              "projection onto the x-axis [[1, 0], [0, 0]]",
+              "shear [[1, 1], [0, 1]]",
+              "scaling 1.5I [[1.5, 0], [0, 1.5]]",
+              "rotation by 30°",
+              "rotate and grow [[1, −1], [1, 1]]",
+              "spiral in [[0.8, −0.3], [0.3, 0.8]]",
+              "your own (use the sliders a, b, c, d)"
+            ],
+            "default": "Markov chain [[0.9, 0.2], [0.1, 0.8]]"
+          },
+          {
+            "key": "a",
+            "label": "a (top left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "b",
+            "label": "b (top right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "c",
+            "label": "c (bottom left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "d",
+            "label": "d (bottom right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "theta",
+            "label": "Direction of v (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 10
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The preset is Matrix A = Markov chain with Direction of v at 0° (so $v = (1, 0)$, certain sunshine) and Powers shown, k = 10. The readout ends 'A^10v = (0.68, 0.32), length 0.75, 0.97° from the λ₁ line'. The first two numbers are the probabilities $(0.6761, 0.3239)$ computed above. The blue line is the steady state $(2, 1)$ with the label λ = 1, the teal one is $(1, -1)$ with λ = 0.7. Drag Powers shown, k from 1 to 10 and watch the numbered dots creep onto the blue line, each step about $0.7$ as far as the one before. Change Direction of v to 90° (certain cloud): the same line, approached from the other side."
+    },
+    {
+      "type": "prose",
+      "text": "Does every Markov chain settle? If every state can reach every other and the chain does not cycle with a fixed period, the eigenvalue 1 is the only one of size 1 and all the others are smaller in size, so the chain forgets its start (this follows from the Perron–Frobenius theorem; the page Markov Chains (#/probability/processes/markov-chains) states the same convergence result from the probability side). A chain that alternates, like the reflection above, has $-1$ as well and never settles."
+    },
+    {
+      "type": "prose",
+      "text": "A three-state chain works the same way. The matrix below says that state 1 keeps $0.8$ of its probability and sends $0.1$ to each of the others, and so on; every column adds up to 1 ($0.8 + 0.1 + 0.1$, then $0.1 + 0.7 + 0.2$, then $0.1 + 0.3 + 0.6$)."
+    },
+    {
+      "type": "math",
+      "tex": "A = \\begin{pmatrix} 0.8 & 0.1 & 0.1 \\\\ 0.1 & 0.7 & 0.3 \\\\ 0.1 & 0.2 & 0.6 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Its eigenvalues are $1$, $0.7$ and $0.4$ (trace $2.1$, determinant $0.28$: and $1 \\cdot 0.7 \\cdot 0.4 = 0.28$). To find the steady state solve $(A - I)p = 0$ with the three rows $-0.2p_1 + 0.1p_2 + 0.1p_3 = 0$, $0.1p_1 - 0.3p_2 + 0.3p_3 = 0$, $0.1p_1 + 0.2p_2 - 0.4p_3 = 0$. The first row says $p_3 = 2p_1 - p_2$. Putting that into the second: $0.1p_1 - 0.3p_2 + 0.6p_1 - 0.3p_2 = 0$, so $0.7p_1 = 0.6p_2$ and $p_2 = \\tfrac76 p_1$. Then $p_3 = 2p_1 - \\tfrac76p_1 = \\tfrac56p_1$. The vector $(6, 7, 5)$ has this shape, and its entries add to 18, so"
+    },
+    {
+      "type": "math",
+      "tex": "p_{\\infty} = \\left( \\tfrac{6}{18},\\; \\tfrac{7}{18},\\; \\tfrac{5}{18} \\right) = \\left( \\tfrac{1}{3},\\; \\tfrac{7}{18},\\; \\tfrac{5}{18} \\right) \\approx (0.333,\\; 0.389,\\; 0.278)"
+    },
+    {
+      "type": "prose",
+      "text": "The slowest decaying part goes like $0.7^k$, so from state 1, $p_0 = (1, 0, 0)$, the vectors are $(0.8, 0.1, 0.1)$, $(0.66, 0.18, 0.16)$, $(0.562, 0.24, 0.198)$ and so on, reaching $(0.352, 0.376, 0.271)$ at step 10."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-3d",
+        "title": "The three-state chain",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "diagonal diag(2, 1, 0.5)",
+              "symmetric [[2, 1, 0], [1, 2, 1], [0, 1, 2]]",
+              "masses on springs [[2, −1, 0], [−1, 2, −1], [0, −1, 2]]",
+              "covariance of a data cloud",
+              "upper triangular [[2, 1, 0], [0, 3, 1], [0, 0, 1]]",
+              "three-state Markov chain",
+              "rotation by 60° about the z-axis",
+              "cyclic shift (x, y, z) → (z, x, y)",
+              "projection onto the plane x + y + z = 0",
+              "shear chain [[1, 1, 0], [0, 1, 1], [0, 0, 1]]"
+            ],
+            "default": "three-state Markov chain"
+          },
+          {
+            "key": "around",
+            "label": "v: direction around (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 5,
+            "default": 0
+          },
+          {
+            "key": "up",
+            "label": "v: direction up (degrees)",
+            "control": "range",
+            "min": -90,
+            "max": 90,
+            "step": 5,
+            "default": 0
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 10
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -35
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 25
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The preset is Matrix A = three-state Markov chain, with v: direction around 0° and v: direction up 0° (so $v = (1, 0, 0)$, certainty in state 1) and Powers shown, k = 10. The readout ends 'A^10v = (0.35, 0.38, 0.27), length 0.583', and the entries add to 1. The numbers panel lists $\\lambda = 1$ along $(0.57, 0.67, 0.48)$, which is the steady state $(6, 7, 5)/18$ scaled to length 1. Turn the globe and the dots from 1 to 10 close in on the blue line."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "PageRank: a Markov chain on the web"
+    },
+    {
+      "type": "prose",
+      "text": "A web search has to decide, among thousands of pages that contain your words, which to show first. Brin and Page's idea was to say that a page is important if important pages link to it, which is circular, and the way out of the circle is an eigenvector. Imagine a reader who clicks a random link on each page, for ever. The fraction of time that reader spends on each page is that page's rank. The chain's states are the pages, and its steady state is the answer."
+    },
+    {
+      "type": "prose",
+      "text": "Take four pages. Page 1 links to pages 2 and 3, page 2 links to page 3, page 3 links to page 1, and page 4 links to pages 1 and 3. Column $j$ of the link matrix $H$ says where page $j$ sends its reader, splitting evenly between its links:"
+    },
+    {
+      "type": "math",
+      "tex": "H = \\begin{pmatrix} 0 & 0 & 1 & \\tfrac12 \\\\ \\tfrac12 & 0 & 0 & 0 \\\\ \\tfrac12 & 1 & 0 & \\tfrac12 \\\\ 0 & 0 & 0 & 0 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Each column adds up to 1, so $H$ is column-stochastic. One more ingredient: a real reader sometimes gets bored and jumps to a page chosen at random. Say that with probability $d = 0.85$ (the damping factor; Brin and Page used this value as their usual choice) the reader follows a link, and with probability $0.15$ jumps to one of the 4 pages, each with chance $\\tfrac14$. The matrix of the combined chain is"
+    },
+    {
+      "type": "math",
+      "tex": "G = 0.85\\, H + \\frac{0.15}{4} \\begin{pmatrix} 1 & 1 & 1 & 1 \\\\ 1 & 1 & 1 & 1 \\\\ 1 & 1 & 1 & 1 \\\\ 1 & 1 & 1 & 1 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The jumps have two good effects. A reader can never get stuck in a corner of the web with no way out (a page with no links, a 'dangling' page, is usually treated as linking to every page), and $G$ has all entries positive, so the chain settles to one steady state from any start. A theorem says that every eigenvalue of $G$ other than the 1 has size at most $0.85$, so power iteration on $G$ converges at least as fast as $0.85^k$, whatever the size of the web."
+    },
+    {
+      "type": "prose",
+      "text": "Start with every page equal, $r_0 = (0.25, 0.25, 0.25, 0.25)$, and multiply by $G$. One step gives $r_1 = (0.356, 0.144, 0.463, 0.0375)$: page 3 is already ahead. Check the first entry: $0.0375 \\cdot 0.25 + 0.0375 \\cdot 0.25 + 0.8875 \\cdot 0.25 + 0.4625 \\cdot 0.25 = 0.35625$, where $0.0375 = 0.15/4$, $0.8875 = 0.0375 + 0.85$ and $0.4625 = 0.0375 + 0.425$. Later steps:"
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Step",
+        "Page 1",
+        "Page 2",
+        "Page 3",
+        "Page 4"
+      ],
+      "rows": [
+        [
+          "0",
+          "$0.2500$",
+          "$0.2500$",
+          "$0.2500$",
+          "$0.2500$"
+        ],
+        [
+          "1",
+          "$0.3563$",
+          "$0.1438$",
+          "$0.4625$",
+          "$0.0375$"
+        ],
+        [
+          "2",
+          "$0.4466$",
+          "$0.1889$",
+          "$0.3270$",
+          "$0.0375$"
+        ],
+        [
+          "5",
+          "$0.3828$",
+          "$0.2061$",
+          "$0.3736$",
+          "$0.0375$"
+        ],
+        [
+          "10",
+          "$0.3809$",
+          "$0.1987$",
+          "$0.3829$",
+          "$0.0375$"
+        ],
+        [
+          "30",
+          "$0.3797$",
+          "$0.1989$",
+          "$0.3839$",
+          "$0.0375$"
+        ]
+      ],
+      "caption": "Power iteration for the four-page web, damping 0.85. The ranks always add to 1."
+    },
+    {
+      "type": "prose",
+      "text": "The limit is $(0.3797, 0.1989, 0.3839, 0.0375)$: pages 1 and 3 are close and page 3 is narrowly ahead (it collects half of page 1's rank, all of page 2's and half of page 4's, while page 1 collects all of page 3's and half of page 4's), and page 2 is a distant third. Page 4 sits at exactly $0.15/4 = 0.0375$ from the first step on, because nobody links to it: it only receives random jumps. The other eigenvalues of $G$ are $-0.425 \\pm 0.425j$ (size $0.601$) and $0$, so the error shrinks by about $0.6$ per step here, faster than the $0.85$ worst case."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Inverse and shifted iteration"
+    },
+    {
+      "type": "prose",
+      "text": "Power iteration finds the largest eigenvalue. What if you want the smallest, or the one near a given number $\\mu$? Two facts about eigenvalues (they are on the page Eigenvalue Tables (#/math/eigenvalues/tables)) help. If $Av = \\lambda v$, then $A^{-1}v = \\lambda^{-1}v$, and $(A - \\mu I)v = (\\lambda - \\mu)v$. Combine them: $(A - \\mu I)^{-1}$ has the same eigenvectors as $A$ and eigenvalues $1/(\\lambda - \\mu)$. The dominant one of these belongs to the $\\lambda$ closest to $\\mu$, which makes it the biggest after inversion. So power iteration on $(A - \\mu I)^{-1}$ finds the eigenvalue of $A$ nearest $\\mu$. This is inverse iteration (with $\\mu = 0$ it gives the smallest eigenvalue, and with a shift $\\mu$ near $\\lambda$ it is the fast, standard way to polish an estimate)."
+    },
+    {
+      "type": "prose",
+      "text": "Example: $A = [[4, 1], [2, 3]]$ and $\\mu = 1.5$. Then $A - 1.5I = [[2.5, 1], [2, 1.5]]$ with determinant $3.75 - 2 = 1.75$ and inverse $\\tfrac{1}{1.75}[[1.5, -1], [-2, 2.5]] = [[0.857, -0.571], [-1.143, 1.429]]$. Its eigenvalues are $1/(5 - 1.5) = 0.286$ and $1/(2 - 1.5) = 2$. The ratio is $0.143$, much better than $0.4$, and the dominant eigenvector is $v_2 = (1, -2)$. From $(1, 0)$ the first step gives $(0.857, -1.143)$, direction $(0.6, -0.8)$, and the estimate $\\mu + 1/\\rho$ of the eigenvalue, with $\\rho$ the Rayleigh quotient of $(A - \\mu I)^{-1}$ at the new vector, is $1.989$; after 5 steps the direction is $(0.447, -0.894)$ and the estimate $1.99999$. In real code one never forms the inverse: each step solves $(A - \\mu I)x = w$ by elimination. A close shift makes the system nearly singular, but that is harmless, since the large answer is exactly the direction we want."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Problems"
+    },
+    {
+      "type": "problem",
+      "title": "Orbit and Rayleigh quotient by hand",
+      "text": "Take $A = [[2, 1], [1, 2]]$ and start from $v = (1, 0)$. Compute $Av$, $A^2v$ and $A^3v$ and the Rayleigh quotient of $A^3v$. How far is it from the true $\\lambda_1 = 3$, and how does this compare with the error after $A^2v$?",
+      "solution": [
+        "Each step: $Av = (2\\cdot 1 + 0,\\; 1\\cdot 1 + 0) = (2, 1)$. Then $A(2, 1) = (4 + 1,\\; 2 + 2) = (5, 4)$. Then $A(5, 4) = (10 + 4,\\; 5 + 8) = (14, 13)$.",
+        "For $w = (14, 13)$: $Aw = (28 + 13,\\; 14 + 26) = (41, 40)$. So $w \\cdot Aw = 14 \\cdot 41 + 13 \\cdot 40 = 574 + 520 = 1094$ and $w \\cdot w = 196 + 169 = 365$, giving $1094/365 = 2.9973$.",
+        "The error is $3 - 2.9973 = 0.0027$. For $A^2v = (5, 4)$: $Aw = (14, 13)$, $5 \\cdot 14 + 4 \\cdot 13 = 122$ and $25 + 16 = 41$, giving $2.9756$ and an error of $0.0244$. The ratio $0.0027/0.0244 \\approx 0.11 \\approx \\tfrac19$, the square of the eigenvalue ratio $\\tfrac13$, as the page claims for symmetric matrices."
+      ],
+      "answer": "$2.9973$; error $0.0027$, about one ninth of the previous error"
+    },
+    {
+      "type": "problem",
+      "title": "A steady state",
+      "text": "A chain has $A = [[0.6, 0.3], [0.4, 0.7]]$ (columns sum to 1). Find its steady state and the second eigenvalue, and the distribution after 3 steps starting from $(1, 0)$.",
+      "solution": [
+        "Solve $(A - I)p = 0$. $A - I = [[-0.4, 0.3], [0.4, -0.3]]$, and the first row says $-0.4p_1 + 0.3p_2 = 0$, so $p_2 = \\tfrac43 p_1$ and the direction is $(3, 4)$. Scale to sum 1: $p_{\\infty} = (3/7, 4/7) = (0.4286, 0.5714)$.",
+        "The trace is $1.3 = 1 + \\lambda_2$, so $\\lambda_2 = 0.3$, with eigenvector $(1, -1)$: $A(1, -1) = (0.3, -0.3)$.",
+        "Split $(1, 0) = a(3, 4) + b(1, -1)$: $3a + b = 1$ and $4a - b = 0$, so $7a = 1$, $a = \\tfrac17$ and $b = \\tfrac47$. After 3 steps: $\\tfrac17(3, 4) + \\tfrac47 (0.3)^3 (1, -1)$, where $\\tfrac47 \\cdot 0.027 = 0.01543$. This is $(0.4286 + 0.0154,\\; 0.5714 - 0.0154) = (0.444, 0.556)$.",
+        "Check by multiplying: $A(1, 0) = (0.6, 0.4)$; $A(0.6, 0.4) = (0.36 + 0.12,\\; 0.24 + 0.28) = (0.48, 0.52)$; $A(0.48, 0.52) = (0.288 + 0.156,\\; 0.192 + 0.364) = (0.444, 0.556)$."
+      ],
+      "answer": "$(3/7, 4/7)$, $\\lambda_2 = 0.3$, and $(0.444, 0.556)$ after 3 steps"
+    },
+    {
+      "type": "problem",
+      "title": "How many steps?",
+      "text": "For $A = [[4, 1], [2, 3]]$ started at $(1, 0)$, the angle from the $\\lambda_1$ line obeys $\\tan(\\text{angle}) = 3 \\cdot 2^k / (4 \\cdot 5^k - 2^k)$. How many steps until it is below $0.01°$?",
+      "solution": [
+        "$0.01° = 0.000175$ radians and the tangent is almost the same, $0.000175$. Use the approximation $\\tan \\approx \\tfrac34 (0.4)^k$ and ask when $0.75 \\cdot 0.4^k < 0.000175$, that is $0.4^k < 0.000233$.",
+        "Take logarithms: $k \\ln 0.4 < \\ln 0.000233$, that is $k \\cdot (-0.916) < -8.36$, so $k > 9.1$. Test the integers exactly: at $k = 9$ the formula gives $3 \\cdot 512/(4 \\cdot 1953125 - 512) = 1536/7811988 \\approx 0.000197$ and the angle is $0.0113°$, still too big; at $k = 10$ it gives $0.0045°$.",
+        "So 10 steps. Each step multiplies the angle by about $0.4$, i.e. it gains about $0.4$ of a decimal digit ($-\\log_{10} 0.4 = 0.398$) per step; 2 digits (from $0.44°$ at $k = 5$ down to $0.0045°$) takes 5 more steps."
+      ],
+      "answer": "10 steps"
+    },
+    {
+      "type": "problem",
+      "title": "A three-page web",
+      "text": "Three pages: 1 links only to 2, 2 links only to 1, and 3 links only to 1. Use damping $d = 0.85$. Find the PageRank of each page. (Page 3 has no incoming links.)",
+      "solution": [
+        "Page 3 receives only random jumps, so its rank is $r_3 = (1 - d)/3 = 0.15/3 = 0.05$.",
+        "Page 1 receives all of page 2's rank and all of page 3's (each links only to 1), plus its share of jumps: $r_1 = 0.85(r_2 + r_3) + 0.05$. Page 2 receives all of page 1's rank: $r_2 = 0.85\\,r_1 + 0.05$.",
+        "Substitute: $r_1 = 0.85(0.85r_1 + 0.05 + 0.05) + 0.05 = 0.7225r_1 + 0.085 + 0.05$. So $0.2775r_1 = 0.135$ and $r_1 = 0.4865$. Then $r_2 = 0.85 \\cdot 0.4865 + 0.05 = 0.4635$.",
+        "Check: $0.4865 + 0.4635 + 0.05 = 1.0000$. Page 1 wins because it gets a link from both of the others."
+      ],
+      "answer": "$(0.4865, 0.4635, 0.05)$"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gilbert Strang, Introduction to Linear Algebra, 5th edition (Wellesley-Cambridge Press, 2016), chapter 6, Eigenvalues and Eigenvectors.",
+        "Lloyd N. Trefethen and David Bau III, Numerical Linear Algebra (SIAM, 1997)., the lectures on the Rayleigh quotient, inverse iteration and the QR algorithm.",
+        "Gene H. Golub and Charles F. Van Loan, Matrix Computations, 4th edition (Johns Hopkins University Press, 2013)., the sections on the power method.",
+        "Sergey Brin and Lawrence Page, 'The anatomy of a large-scale hypertextual Web search engine', Computer Networks and ISDN Systems 30 (1998), 107–117.",
+        "The page Markov Chains (#/probability/processes/markov-chains) for the same chains from the probability side."
+      ]
+    }
+  ]
+}

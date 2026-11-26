@@ -277,3 +277,23 @@ export function sfmt(x, d = 3) {
   const v = Math.abs(x) < 0.5 * 10 ** -d ? 0 : x;
   return String(Number(v.toFixed(d))).replace("-", "−");
 }
+
+/**
+ * A monic polynomial as text, highest power first: coeffs [c_{n−1}, …, c_0] of
+ * λⁿ + c_{n−1}λⁿ⁻¹ + … + c_0. Zero terms are dropped, unit coefficients
+ * written as λ, signs folded: polyText([-6, 10, -4]) = "λ³ − 6λ² + 10λ − 4".
+ */
+export function polyText(coeffs) {
+  const n = coeffs.length;
+  const pow = (k) => (k === 0 ? "" : k === 1 ? "λ" : `λ${"⁰¹²³⁴⁵⁶⁷⁸⁹"[k]}`);
+  let out = pow(n);
+  coeffs.forEach((c, i) => {
+    const k = n - 1 - i;
+    const r = Number(c.toFixed(3));
+    if (Math.abs(r) < 5e-4) return;
+    const mag = Math.abs(r);
+    const body = k > 0 && Math.abs(mag - 1) < 5e-4 ? pow(k) : `${sfmt(mag)}${pow(k)}`;
+    out += `${r < 0 ? " − " : " + "}${body}`;
+  });
+  return out;
+}
