@@ -363,7 +363,7 @@
       "items": [
         "Step 1. Target contraction: $c^5=0.1$ gives $c=10^{-1/5}=0.631$, so $-\\ln c=0.46$.",
         "Step 2. For a single qubit the population deviation decays as $e^{-\\gamma\\Delta t}$, so $\\gamma\\Delta t=0.46$ and $\\gamma=0.46/3=0.15$.",
-        "Step 3. Compare with the sweep: $\\gamma=0.1$ gave MC $1.33$ and $\\gamma=0.3$ gave $1.57$; the best was above the rule's value by a factor 2. The rule picks the right order of magnitude, and the best value lies higher, which is plausible because the rule uses one qubit's decay and ignores how the couplings and the readout trade memory against signal strength; I did not test the reason.",
+        "Step 3. Compare with the sweep: $\\gamma=0.1$ gave MC $1.33$ and $\\gamma=0.3$ gave $1.57$; the best was above the rule's value by a factor 2. The rule picks the right order of magnitude, and the best value lies higher. A plausible reason, not tested here, is that the rule uses one qubit's decay and ignores how the couplings and the readout trade memory against signal strength.",
         "Step 4. Washout: at $\\gamma=0.1$ the distance after 60 steps is $1.1\\times10^{-9}$, so $c=(1.1\\times10^{-9})^{1/60}=0.71$ and $10^{-6}$ is reached in about 40 steps; at $\\gamma=0.03$ it needs about 96. Use at least that many, plus a margin."
       ]
     },
@@ -395,27 +395,28 @@
     },
     {
       "type": "problem",
-      "title": "Washout from a measured contraction",
-      "text": "Two copies of a reservoir started in orthogonal states have trace distance $1$ at the start and $1.8\\times10^{-4}$ after 60 steps. Assuming geometric contraction, what is the per-step factor, and how many steps of washout bring the distance to $10^{-6}$?",
-      "hint": "Take the 60th root, then solve $c^N=10^{-6}$.",
+      "title": "Horizon and washout from one measurement",
+      "text": "Two copies of a reservoir started in orthogonal states have trace distance $1$ at the start and $0.02$ after 30 steps. Assuming geometric contraction, find the per-step factor $c$, the memory horizon $1/\\ln(1/c)$, and the washout that brings the distance to $10^{-5}$.",
+      "hint": "Take the 30th root; then use $N=\\ln\\epsilon/\\ln c$.",
       "solution": [
-        "Per step: $c=(1.8\\times10^{-4})^{1/60}=e^{\\ln(1.8\\times10^{-4})/60}=e^{-8.62/60}=e^{-0.144}\\approx0.866$.",
-        "Steps to $10^{-6}$: $N=\\ln10^{-6}/\\ln c=-13.8/-0.144\\approx96$.",
-        "So discard about 100 steps before training (here $\\gamma=0.03$, $\\Delta t=3$ in the sample)."
+        "$c=0.02^{1/30}=e^{\\ln0.02/30}=e^{-3.912/30}=e^{-0.1304}=0.878$.",
+        "Memory horizon: $1/0.1304=7.7$ steps: inputs older than about 8 steps are attenuated by a factor $e$ or more.",
+        "Washout: $N=\\ln10^{-5}/\\ln c=-11.51/-0.1304=88.3$, so discard about 90 steps."
       ],
-      "answer": "$c\\approx0.866$ per step; about 96 steps"
+      "answer": "$c\\approx0.878$; horizon about 7.7 steps; washout about 89 steps"
     },
     {
       "type": "problem",
-      "title": "Depolarising memory half-life",
-      "text": "A reservoir step includes a global depolarising channel with $p=0.05$. After how many steps has the trace distance between two copies halved, and what happens to a feature $\\langle Z_1\\rangle$ that the last input set to $0.8$ if no further input moved it?",
-      "hint": "Depolarising noise scales $\\rho-I/D$ by $1-p$.",
+      "title": "Unital or not?",
+      "text": "Apply each single-qubit channel to the maximally mixed state $I/2$ and say whether it is unital: (a) bit flip, $\\rho\\mapsto(1-p)\\rho+pX\\rho X$; (b) amplitude damping for a time with $\\gamma\\Delta t=0.9$; (c) reset to $\\vert0\\rangle$ with probability $q$, $\\rho\\mapsto(1-q)\\rho+q\\vert0\\rangle\\langle0\\vert$. Which could make a reservoir started at $I/D$ respond to its input?",
+      "hint": "Unital means $I/2\\mapsto I/2$. For amplitude damping use $\\langle Z\\rangle(t)=1-(1-\\langle Z\\rangle_0)e^{-\\gamma t}$ with $\\langle Z\\rangle_0=0$.",
       "solution": [
-        "Each step multiplies differences, and traceless expectations, by $1-p=0.95$.",
-        "Half-life: $N=\\ln2/(-\\ln0.95)=0.693/0.0513\\approx13.5$ steps.",
-        "The same factor applies to $\\langle Z_1\\rangle$: after 13.5 steps it is $0.4$, after 27 it is $0.2$."
+        "(a) $X(I/2)X=I/2$, so $I/2\\mapsto(1-p)I/2+pI/2=I/2$: unital.",
+        "(b) $\\langle Z\\rangle$ goes from 0 to $1-e^{-0.9}=1-0.407=0.593$: the state is no longer $I/2$, so the channel is not unital.",
+        "(c) $I/2\\mapsto(1-q)I/2+q\\vert0\\rangle\\langle0\\vert$, with $\\langle Z\\rangle=q$: not unital.",
+        "Only (b) and (c) move the state away from $I/D$, so only they (combined with an input-dependent unitary) can make a reservoir started at $I/D$ respond. A unital channel such as (a) leaves $I/D$ fixed, exactly like the depolarising channel above."
       ],
-      "answer": "About 13.5 steps; $\\langle Z_1\\rangle$ halves on the same schedule"
+      "answer": "(a) unital; (b) and (c) not unital, and only they can help"
     },
     {
       "type": "problem",

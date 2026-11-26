@@ -80,7 +80,7 @@
       "type": "list",
       "items": [
         "Local magnetisations $\\langle Z_i\\rangle$. $n$ features, the standard choice.",
-        "Two-point correlators $\\langle Z_iZ_j\\rangle$. $n(n-1)/2$ more features from the same shots. They are quadratic in the state's coordinates, so they add information that single-qubit averages do not contain (in the example, $\\langle Z_1Z_2\\rangle=0.4$ is not determined by $0.4$ and $0.2$).",
+        "Two-point correlators $\\langle Z_iZ_j\\rangle$. $n(n-1)/2$ more features from the same shots. They are further linear functions of the state, independent of the single-qubit averages, so they add information those averages do not contain (in the example, $\\langle Z_1Z_2\\rangle=0.4$ is not determined by $0.4$ and $0.2$).",
         "Higher $Z$-strings. Up to $2^n-1$ from the same shots, but in a scrambled state a weight-$w$ string is typically small, and costs as many shots as any other to resolve. In practice only low weights are used.",
         "Other bases. $\\langle X_i\\rangle$ or full local tomography multiply the number of settings, up to $3^n$ settings for all Pauli bases (81 for $n=4$)."
       ]
@@ -305,7 +305,7 @@
     },
     {
       "type": "prose",
-      "text": "The honest reading of this table. Exact features: MC $3.75$ for small $\\lambda$, falling as $\\lambda$ grows ($1.51$ at $\\lambda=100$). With 1000 shots: $2.88$, and no $\\lambda$ in the scan improves it (best is the smallest); with 100 shots: $2.02$ at small $\\lambda$ and $2.03$ at $\\lambda=1$, a gain of $0.01$. So here ridge is nearly useless against shot noise: the noise is not larger than the useful variation in the features, it is spread over all directions, and every direction that carries signal also carries noise. What helps is more shots, more training steps (the readout averages noise over the training window) or fewer needless features. A regularisation parameter should still be chosen on a validation window and not set to nearly zero blindly, as in Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge); but do not expect it to repair a measurement budget that is too small."
+      "text": "The honest reading of this table. Exact features: MC $3.75$ for small $\\lambda$, falling as $\\lambda$ grows ($1.51$ at $\\lambda=100$). With 1000 shots: $2.88$, and no $\\lambda$ in the scan improves it (best is the smallest); with 100 shots: $2.02$ at small $\\lambda$ and $2.03$ at $\\lambda=1$, a gain of $0.01$. So here ridge is nearly useless against shot noise. The reason is the one derived in Measurement Back-Action and Shot Noise (#/qrc/hardware/measurement-back-action): the readout is fitted on features that already contain the noise, and noise on the training features acts as a ridge penalty of its own, so an extra $\\lambda$ adds little. (On that page $\\lambda$ matters a great deal in the other case, weights fitted on exact features and then used on noisy ones.) And the noise is spread over all directions, so every direction that carries signal also carries noise. What helps is more shots, more training steps (the readout averages noise over the training window) or fewer needless features. A regularisation parameter should still be chosen on a validation window and not set to nearly zero blindly, as in Linear Regression and the Ridge Readout (#/qrc/start/linear-regression-and-ridge); but do not expect it to repair a measurement budget that is too small."
     },
     {
       "type": "problem",
@@ -386,37 +386,39 @@
     },
     {
       "type": "problem",
-      "title": "Feature count with correlators",
-      "text": "A 10-qubit reservoir is read in the computational basis after each of $V=4$ virtual-node steps; the readout uses all $\\langle Z_i\\rangle$ and $\\langle Z_iZ_j\\rangle$. How many features per input?",
-      "hint": "Binomial coefficient for pairs.",
+      "title": "Features and runs with three-body strings",
+      "text": "A 6-qubit reservoir is read in the computational basis after each of $V=3$ virtual-node steps, and the readout uses every $Z$-string of weight 1, 2 and 3. How many features per input? If each virtual node is a separate experiment with $S=500$ shots, how many runs does one input cost?",
+      "hint": "Count $\\binom{6}{1}+\\binom62+\\binom63$ per readout time.",
       "solution": [
-        "Per readout: $10+\\binom{10}{2}=10+45=55$.",
-        "Per input: $55\\times4=220$, all from the same bitstrings at each sub-step."
+        "Per readout time: $6+15+20=41$ strings, all from the same bitstrings.",
+        "Per input: $41\\times3=123$ features.",
+        "Runs: $S$ shots for each of the $V$ readout times, $500\\times3=1500$ per input. The weight-3 strings add 20 features per readout time at no extra runs, but they are typically small and noisy."
       ],
-      "answer": "220"
+      "answer": "123 features; 1500 runs per input"
     },
     {
       "type": "problem",
-      "title": "Shots for a target precision",
-      "text": "A feature with $\\langle Z\\rangle\\approx0$ is estimated from 1000 shots. What is its standard error, and how many shots would bring it to $0.001$?",
-      "hint": "$\\epsilon=1/\\sqrt S$.",
+      "title": "Shots for a feature away from zero",
+      "text": "A feature has $\\langle Z\\rangle=0.8$. What is the standard error of a 400-shot estimate, and how many shots bring it to $0.01$? Compare with a feature at $\\langle Z\\rangle=0$.",
+      "hint": "$\\operatorname{Var}=(1-\\langle Z\\rangle^2)/S$.",
       "solution": [
-        "$\\sqrt{(1-0)/1000}\\approx0.0316$.",
-        "For $0.001$: $S=1/0.001^2=10^6$ shots, a thousand times more for about 30 times the precision."
+        "Single-shot variance $1-0.64=0.36$, so the standard error is $\\sqrt{0.36/400}=0.6/20=0.03$.",
+        "For $0.01$: $S=0.36/0.01^2=3600$ shots.",
+        "At $\\langle Z\\rangle=0$ the variance is 1, so $S=1/0.01^2=10{,}000$: features near $\\pm1$ are cheaper to estimate than features near 0."
       ],
-      "answer": "0.032; 1,000,000 shots"
+      "answer": "0.03; 3600 shots (against 10,000 at zero)"
     },
     {
       "type": "problem",
-      "title": "Correlators or virtual nodes",
-      "text": "From the table, which costs fewer distinct measurement times per input to reach NARMA2 NMSE near $0.14$: virtual nodes with $\\langle Z_i\\rangle$ or correlators at $V=1$?",
-      "hint": "Count readout times.",
+      "title": "Memory per feature",
+      "text": "Using the comparison table, compute the memory capacity per feature for each of the five readouts. Which gives the most per feature and which the least, and what does that say about adding features?",
+      "hint": "Divide each MC by its number of features.",
       "solution": [
-        "$\\langle Z_i\\rangle$ with $V=5$ gives $0.138$ using 5 readout times per input.",
-        "$\\langle Z_i\\rangle+\\langle Z_iZ_j\\rangle$ with $V=1$ gives $0.143$ using 1 readout time.",
-        "Correlators at $V=1$: five times fewer readouts for the same error."
+        "$\\langle Z_i\\rangle$, $V=1$: $1.42/4=0.355$. $\\langle Z_i\\rangle$, $V=5$: $3.75/20=0.188$. With correlators, $V=1$: $2.82/10=0.282$. With correlators, $V=5$: $5.48/50=0.110$. Two reservoirs: $5.30/40=0.133$.",
+        "Most per feature: the smallest readout, $\\langle Z_i\\rangle$ at $V=1$. Least: correlators with $V=5$, although it has the largest total.",
+        "Each added feature brings less new memory than the one before: totals keep rising but with diminishing returns, so on hardware the shot cost of each extra feature has to be weighed against a shrinking gain."
       ],
-      "answer": "Correlators at V = 1"
+      "answer": "Most: Z_i at V = 1 (0.355); least: correlators at V = 5 (0.110)"
     },
     {
       "type": "problem",
