@@ -1,0 +1,410 @@
+{
+  "title": "Transfer Functions and Realisations",
+  "intro": "The state equations look inside the system; the transfer function $G(s)$ looks only at what goes in and what comes out. This page derives $G(s) = C(sI - A)^{-1}B + D$, shows where its poles and zeros come from, and runs the other way: building a state-space model from a given $G(s)$, which can be done in many ways.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From the state equations to G(s)"
+    },
+    {
+      "type": "prose",
+      "text": "The Laplace transform turns derivatives into multiplication by $s$ (see The Laplace Transform (#/math/laplace-transform) and Solving Differential Equations (#/math/laplace-transform/differential-equations)). A transfer function relates the transformed input to the transformed output when the system starts at rest, so we take $x(0) = 0$. Transform $x' = Ax + Bu$ and $y = Cx + Du$, with $X(s)$, $U(s)$, $Y(s)$ for the transforms:"
+    },
+    {
+      "type": "math",
+      "tex": "sX(s) = AX(s) + BU(s), \\qquad Y(s) = CX(s) + DU(s)"
+    },
+    {
+      "type": "prose",
+      "text": "Collect the $X$ terms: $(sI - A)X(s) = BU(s)$. Here $sI$, not $s$ alone, because $A$ is a matrix and $s$ a number. Multiply by the inverse of $sI - A$ (it exists for every $s$ that is not an eigenvalue of $A$), and put the result into the output equation:"
+    },
+    {
+      "type": "math",
+      "tex": "X(s) = (sI - A)^{-1}BU(s), \\qquad G(s) = \\frac{Y(s)}{U(s)} = C(sI - A)^{-1}B + D"
+    },
+    {
+      "type": "prose",
+      "text": "This is the transfer function. For one input and one output it is a ratio of polynomials in $s$. The inverse transform of $G(s)$ is the impulse response $Ce^{At}B$ found on the page Solving the State Equations (#/math/state-space/solving): the same fact, seen through the Laplace transform of $e^{At}$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked: the mass and the circuit"
+    },
+    {
+      "type": "prose",
+      "text": "For the light mass, $A = \\begin{pmatrix} 0 & 1 \\\\ -4 & -1 \\end{pmatrix}$, $B = (0, 1)^{\\top}$, $C = (1, 0)$, $D = 0$:"
+    },
+    {
+      "type": "math",
+      "tex": "sI - A = \\begin{pmatrix} s & -1 \\\\ 4 & s + 1 \\end{pmatrix}, \\qquad (sI - A)^{-1} = \\frac{1}{s^2 + s + 4}\\begin{pmatrix} s + 1 & 1 \\\\ -4 & s \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The determinant is $s(s + 1) - (-1)(4) = s^2 + s + 4$. The inverse of a $2 \\times 2$ matrix swaps the diagonal, negates the off-diagonal and divides by the determinant. Multiply by $B$: the column $(0, 1)$ picks the second column of the inverse, $\\frac{1}{s^2 + s + 4}(1, s)$. Then $C = (1, 0)$ picks the first entry, so"
+    },
+    {
+      "type": "math",
+      "tex": "G(s) = \\frac{1}{s^2 + s + 4}"
+    },
+    {
+      "type": "prose",
+      "text": "which is just the Laplace transform of $\\ddot p + \\dot p + 4p = u$ read as output over input. For the RLC circuit, $sI - A = \\begin{pmatrix} s & -2 \\\\ 1 & s + 2 \\end{pmatrix}$ has determinant $s(s + 2) + 2 = s^2 + 2s + 2$, and the inverse has second column $\\frac{1}{s^2 + 2s + 2}(2, s)$ (the second column of $\\mathrm{adj}$: the entries $-(-2) = 2$ and $s$). With $B = (0, 1)$ and $C = (1, 0)$ we read off the first entry: $G(s) = 2/(s^2 + 2s + 2)$. The steady-state gain is $G(0) = 2/2 = 1$: a constant voltage is passed through unchanged, which matches the resting point $(1, 0)$ on the previous page."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Poles are eigenvalues"
+    },
+    {
+      "type": "prose",
+      "text": "Every entry of the inverse of a matrix is a cofactor divided by the determinant: $(sI - A)^{-1} = \\mathrm{adj}(sI - A)/\\det(sI - A)$. The numerator is a matrix of polynomials of degree less than $n$ and the denominator is the characteristic polynomial of $A$. So"
+    },
+    {
+      "type": "math",
+      "tex": "G(s) = \\frac{C\\,\\mathrm{adj}(sI - A)\\,B + D\\det(sI - A)}{\\det(sI - A)}"
+    },
+    {
+      "type": "prose",
+      "text": "The denominator has degree $n$, and its roots are the eigenvalues of $A$. So the poles of $G(s)$ are among the eigenvalues. 'Among' is deliberate: if the numerator is also zero at an eigenvalue, the factor cancels and that eigenvalue is not a pole of $G$. The system still has the mode $e^{\\lambda t}$, but it never shows up in the relation from input to output. Which is exactly the situation of hidden modes."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Hidden modes: a preview"
+    },
+    {
+      "type": "prose",
+      "text": "Take $A = \\begin{pmatrix} -1 & 0 \\\\ 0 & -2 \\end{pmatrix}$, $B = (1, 0)^{\\top}$, $C = (1, 1)$. The matrix is diagonal, so $(sI - A)^{-1} = \\mathrm{diag}\\left(\\frac{1}{s+1},\\ \\frac{1}{s+2}\\right)$, and"
+    },
+    {
+      "type": "math",
+      "tex": "G(s) = \\begin{pmatrix} 1 & 1 \\end{pmatrix}\\begin{pmatrix} \\frac{1}{s+1} & 0 \\\\ 0 & \\frac{1}{s+2} \\end{pmatrix}\\begin{pmatrix} 1 \\\\ 0 \\end{pmatrix} = \\frac{1}{s + 1} = \\frac{s + 2}{(s + 1)(s + 2)}"
+    },
+    {
+      "type": "prose",
+      "text": "The system has two eigenvalues, $-1$ and $-2$, but $G(s)$ has only one pole. The input $B = (1, 0)$ pushes only the first state; the second never moves, so the mode $e^{-2t}$ is never excited. The viewer prints the unreduced form $(s + 2)/(s^2 + 3s + 2)$, with a pole and a zero both at $-2$ sitting on top of each other. The other preset has $B = (1, 1)$, $C = (1, 0)$: the input excites both states, but the output reads only the first, so again $G = 1/(s + 1)$. The names of the two situations, not controllable and not observable, and the rank tests for them are on the page Controllability and Observability (#/math/state-space/controllability-observability)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "Two states, one pole",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "hidden mode: the input misses one"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "unit step"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The System is 'hidden mode: the input misses one', Input unit step, $x(0) = 0$. In the time plot the amber $x_2$ stays on zero for ever; the blue $x_1$ and the thick red $y$ (the same here, since $y = x_1 + x_2$) rise to $1$. The readout says 'Not controllable, observable' and ends 'At t = 5 s: x = (0.99, 0.00), y = 0.993', which is $1 - e^{-5}$, the step response of $1/(s + 1)$. In the pole-zero plot bottom right there are two poles at $-1$ and $-2$ and a zero at $-2$ on top of the second pole. Step 7 of the walk-through (Next step ▶) says the pole 'cancels against a zero and G looks first order'. Now switch System to 'hidden mode: the output misses one': $x_2$ now rises to $0.5$ but $y$ is the same curve as before."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Zeros"
+    },
+    {
+      "type": "prose",
+      "text": "The poles come from $A$ alone. The zeros, the roots of the numerator, depend on $B$ and $C$ as well, so choosing what to measure moves them. Keep the mass but measure position plus velocity, $C = (1, 1)$: the row $(1, 1)$ times the column $\\frac{1}{s^2 + s + 4}(1, s)$ gives $(1 + s)/(s^2 + s + 4)$. The poles are the same $-0.5 \\pm 1.936j$, but there is now a zero at $s = -1$. A zero is a value of $s$ at which the system blocks an input of the form $e^{st}$. Here the numerator $s + 1$ means the output responds to the rate of change of the input as well as to its size. See the page Pole Positions and the Time Signal (#/math/laplace-transform/poles-and-time) for how poles and zeros shape a response."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From G(s) back to state space"
+    },
+    {
+      "type": "prose",
+      "text": "Given a transfer function, can you find $(A, B, C, D)$? Yes, in many ways. Take the strictly proper second-order case"
+    },
+    {
+      "type": "math",
+      "tex": "G(s) = \\frac{b_1 s + b_0}{s^2 + a_1 s + a_0}"
+    },
+    {
+      "type": "prose",
+      "text": "First method. Introduce an intermediate signal $\\xi$ with $\\xi'' + a_1\\xi' + a_0\\xi = u$, so that $\\Xi(s) = U(s)/(s^2 + a_1s + a_0)$, and build the output as $y = b_1\\xi' + b_0\\xi$, whose transform is $(b_1s + b_0)\\Xi$, which is $G(s)U(s)$. Take $x_1 = \\xi$ and $x_2 = \\xi'$: the same recipe as the page States and the State Equations (#/math/state-space/state-equations) gives $x_1' = x_2$, $x_2' = -a_0x_1 - a_1x_2 + u$, and the output reads $y = b_0x_1 + b_1x_2$:"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\begin{pmatrix} 0 & 1 \\\\ -a_0 & -a_1 \\end{pmatrix}, \\quad B = \\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}, \\quad C = \\begin{pmatrix} b_0 & b_1 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "This is the controllable canonical form, also called the companion form. All the coefficients of the denominator are in the last row of $A$, all those of the numerator in $C$. Second method: transpose everything. Take $A^{\\top}$, put $C^{\\top}$ in the place of $B$ and $B^{\\top}$ in the place of $C$ (the transfer function of a single-input single-output system does not change when you transpose it, since a $1 \\times 1$ number equals its own transpose):"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\begin{pmatrix} 0 & -a_0 \\\\ 1 & -a_1 \\end{pmatrix}, \\quad B = \\begin{pmatrix} b_0 \\\\ b_1 \\end{pmatrix}, \\quad C = \\begin{pmatrix} 0 & 1 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "This is the observable canonical form. Worked example: $G(s) = \\dfrac{2s + 3}{s^2 + 3s + 2}$, so $a_1 = 3$, $a_0 = 2$, $b_1 = 2$, $b_0 = 3$. Controllable form: $A = \\begin{pmatrix} 0 & 1 \\\\ -2 & -3 \\end{pmatrix}$, $B = (0, 1)^{\\top}$, $C = (3, 2)$. Check by computing $C(sI - A)^{-1}B$: with $A$ as the heavy mass, $(sI - A)^{-1}B = \\frac{1}{s^2 + 3s + 2}(1, s)$ from the previous computation, and $C = (3, 2)$ gives $(3 + 2s)/(s^2 + 3s + 2)$. Correct. Observable form: $A = \\begin{pmatrix} 0 & -2 \\\\ 1 & -3 \\end{pmatrix}$, $B = (3, 2)^{\\top}$, $C = (0, 1)$. Check: $sI - A = \\begin{pmatrix} s & 2 \\\\ -1 & s + 3 \\end{pmatrix}$, its inverse is $\\frac{1}{s^2 + 3s + 2}\\begin{pmatrix} s + 3 & -2 \\\\ 1 & s \\end{pmatrix}$, and $C$ picks the second row $(1, s)$; times $B = (3, 2)$ gives $3 + 2s$. Correct again."
+    },
+    {
+      "type": "prose",
+      "text": "These two models are different matrices describing the same input-output behaviour. In general, a change of state $z = Tx$ (the page States and the State Equations (#/math/state-space/state-equations)) gives $(TAT^{-1}, TB, CT^{-1})$, and the transfer function does not change: $CT^{-1}(sI - TAT^{-1})^{-1}TB = CT^{-1}\\,T(sI - A)^{-1}T^{-1}\\,TB = C(sI - A)^{-1}B$, because $sI - TAT^{-1} = T(sI - A)T^{-1}$. And there are realisations of different sizes, too: the hidden-mode presets realise $1/(s + 1)$ with two states, where one state is enough. A realisation with the fewest possible states is called minimal. Every $G(s)$ has one, and a given realisation is minimal exactly when no mode is hidden, that is, when it is both controllable and observable, as the page Controllability and Observability (#/math/state-space/controllability-observability) explains."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Frequency response and steady-state gain"
+    },
+    {
+      "type": "prose",
+      "text": "Put $s = j\\omega$ in $G(s)$ and you get the frequency response (see The Imaginary Axis and Frequency Response (#/math/laplace-transform/imaginary-axis)): a stable system driven by $\\cos\\omega t$ ends up oscillating at the same frequency, scaled by $|G(j\\omega)|$ and shifted by the phase of $G(j\\omega)$. For the light mass at $\\omega = 2$, the natural frequency, $G(2j) = 1/(-4 + 2j + 4) = 1/(2j) = -0.5j$: size $0.5$ and phase $-90^\\circ$. At $\\omega = 0$ we get the steady-state gain, which in state-space terms is"
+    },
+    {
+      "type": "math",
+      "tex": "G(0) = -CA^{-1}B + D"
+    },
+    {
+      "type": "prose",
+      "text": "(Put $s = 0$ in $C(sI - A)^{-1}B$: $(0 - A)^{-1} = -A^{-1}$.) This is the same $-CA^{-1}B$ as the output at the resting point on the page Solving the State Equations (#/math/state-space/solving): mass $0.25$, RLC $1$, two tanks $2$. When $A$ is singular, $G(0)$ is infinite: that is a pole at $s = 0$, which is the DC motor."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "The motor: a pole at zero",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "DC motor, angle and speed"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "unit step"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The System is the DC motor, Input unit step. The readout gives $G(s) = (2)/(s^2 + 2s)$: the denominator is $s(s + 2)$, with poles $0$ and $-2$ marked in the pole-zero plot bottom right, one of them on the boundary of the shaded right half. There is no zero (the numerator is the constant 2), and there is no red +, because there is no resting point: $G(0)$ would be $2/0$. In the time plot the thick red $y$ (the angle) ends at 7.5 at $t = 8$ s, still climbing. The pole at $0$ is an integrator: the angle is the running sum of the speed."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "Transfer function of the tanks",
+      "text": "Find $G(s)$ for the two tanks, $A = \\begin{pmatrix} -1 & 0 \\\\ 1 & -0.5 \\end{pmatrix}$, $B = (1, 0)^{\\top}$, $C = (0, 1)$, and the steady-state gain.",
+      "solution": [
+        "$sI - A = \\begin{pmatrix} s + 1 & 0 \\\\ -1 & s + 0.5 \\end{pmatrix}$ with determinant $(s + 1)(s + 0.5) = s^2 + 1.5s + 0.5$. Its inverse is $\\frac{1}{(s+1)(s+0.5)}\\begin{pmatrix} s + 0.5 & 0 \\\\ 1 & s + 1 \\end{pmatrix}$.",
+        "$B = (1, 0)$ picks the first column, $(s + 0.5,\\ 1)$ over the determinant; $C = (0, 1)$ picks the second entry, $1$. So $G(s) = 1/(s^2 + 1.5s + 0.5)$.",
+        "$G(0) = 1/0.5 = 2$, the level of tank 2 for a unit inflow, as found by the resting point $(1, 2)$."
+      ],
+      "answer": "$G(s) = 1/(s^2 + 1.5s + 0.5)$, poles $-1$ and $-0.5$; $G(0) = 2$."
+    },
+    {
+      "type": "problem",
+      "title": "Both canonical forms",
+      "text": "Write the controllable and the observable canonical forms for $G(s) = \\dfrac{s + 1}{s^2 + 2s + 5}$ and find its poles and zero.",
+      "solution": [
+        "Here $a_1 = 2$, $a_0 = 5$, $b_1 = 1$, $b_0 = 1$.",
+        "Controllable form: $A = \\begin{pmatrix} 0 & 1 \\\\ -5 & -2 \\end{pmatrix}$, $B = (0, 1)^{\\top}$, $C = (1, 1)$.",
+        "Observable form: $A = \\begin{pmatrix} 0 & -5 \\\\ 1 & -2 \\end{pmatrix}$, $B = (1, 1)^{\\top}$, $C = (0, 1)$.",
+        "The poles are the roots of $s^2 + 2s + 5$: $s = -1 \\pm \\sqrt{1 - 5} = -1 \\pm 2j$. The zero is $s = -1$. No cancellation, since $-1$ is not a pole."
+      ],
+      "answer": "Controllable: $A = \\begin{pmatrix} 0 & 1 \\\\ -5 & -2 \\end{pmatrix}$, $B = (0,1)^{\\top}$, $C = (1,1)$. Observable: transposed arrangement above. Poles $-1 \\pm 2j$, zero $-1$."
+    },
+    {
+      "type": "problem",
+      "title": "A hidden pole",
+      "text": "For $A = \\begin{pmatrix} -1 & 0 \\\\ 0 & -2 \\end{pmatrix}$, $B = (1, 1)^{\\top}$, $C = (1, 0)$, find $G(s)$ and say what the state $x_2$ does when $u = 1$.",
+      "solution": [
+        "Diagonal $A$ again, so $(sI - A)^{-1} = \\mathrm{diag}(1/(s+1),\\ 1/(s+2))$. Then $C(sI - A)^{-1}B$ picks the first diagonal entry times $B_1 = 1$: $G(s) = 1/(s + 1)$.",
+        "The second state obeys $x_2' = -2x_2 + u$, which with $u = 1$ goes to $0.5$. It does move, but the output never sees it: $y = x_1$ obeys $x_1' = -x_1 + u$ by itself. This is the preset 'hidden mode: the output misses one', and the readout prints 'x = (0.99, 0.50), y = 0.993' at $t = 5$ s."
+      ],
+      "answer": "$G(s) = 1/(s + 1)$; $x_2 \\to 0.5$ but is invisible in $y$."
+    },
+    {
+      "type": "problem",
+      "title": "Frequency response of the circuit",
+      "text": "For the RLC circuit, $G(s) = 2/(s^2 + 2s + 2)$. Find $|G(j\\omega)|$ and the phase at $\\omega = 1$.",
+      "solution": [
+        "Put $s = j$: $s^2 = -1$, so the denominator is $-1 + 2j + 2 = 1 + 2j$ and $G(j) = 2/(1 + 2j)$.",
+        "Multiply top and bottom by the conjugate: $2(1 - 2j)/(1 + 4) = 0.4 - 0.8j$.",
+        "The size is $\\sqrt{0.16 + 0.64} = 0.894$, and the phase is $\\arctan(-0.8/0.4) = -63.4^\\circ$ (the output lags the input). The gain is below the DC gain $1$ because the circuit passes slow signals better than fast ones."
+      ],
+      "answer": "$|G(j)| = 0.894$, phase $-63.4^\\circ$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Katsuhiko Ogata, Modern Control Engineering, 5th edition (Prentice Hall, 2010). Chapter 9 treats the transfer function and state space together, including canonical forms.",
+        "Chi-Tsong Chen, Linear System Theory and Design, 4th edition (Oxford University Press, 2013). Chapter 4 covers state-space solutions and realisations.",
+        "Gene F. Franklin, J. David Powell and Abbas Emami-Naeini, Feedback Control of Dynamic Systems, 7th edition (Pearson, 2015). Chapter 7 covers state-space models and the canonical forms used for design.",
+        "Karl Johan Åström and Richard M. Murray, Feedback Systems: An Introduction for Scientists and Engineers, 2nd edition (Princeton University Press, 2021). Its chapter on transfer functions shows how a transfer function follows from the state equations."
+      ]
+    }
+  ]
+}

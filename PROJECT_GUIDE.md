@@ -754,6 +754,28 @@ in `MATRIX3_OPTIONS`), `around`, `up` (the probe's direction), `k`, `azimuth`,
 `elevation`. Adding a preset is one line in `MATRICES2` or `MATRICES3`. Tests:
 `tests/src/widgets/eigen.test.js` checks every eigenpair against Av = λv.
 
+### 7.8 The state-space widgets
+
+`state-plane` (`src/widgets/types/state-plane.js`, maths in
+`src/widgets/sims/statespace.js`, example page `math/state-space`) shows a
+system with two states, x′ = Ax + Bu, y = Cx + Du: the state plane with the
+velocity arrows, the path from x(0) (a dot every second) and the real
+eigen-directions through the resting point; x₁, x₂ and y against time; and the
+poles (×) and zeros (○) in the s-plane. Sampled (`time` = "sampled every T
+seconds") it uses x[k+1] = Φx[k] + Γu[k] with exact zero-order-hold Φ and Γ,
+the samples as dots on the faint continuous path, and the z-plane. Feedback
+gains k₁, k₂ close u = −Kx + r; the faint × are the poles without feedback.
+Keys, in order: `system` (a name in `SYSTEM2_OPTIONS`), `time`, `T`, `input`
+(a name in `INPUTS`), `x1`, `x2`, `k1`, `k2`. Choosing a system sets the gains
+to 0. Next step ▶ walks through eight steps (its feedback step uses Ackermann's
+formula for the preset's `place` polynomial); Play ▶ draws the motion in time.
+`state-3d` does the same for three states in space (path, floor shadow,
+eigen-lines, an amber disc for the plane of a complex pair) with keys `system`
+(`SYSTEM3_OPTIONS`), `input`, `x1`, `x2`, `x3`, `azimuth`, `elevation`; drag
+to turn. Adding a system is one entry in `SYSTEMS2` or `SYSTEMS3`. Tests:
+`tests/src/widgets/statespace.test.js` checks simulations against e^(At),
+transfer functions against C(sI − A)⁻¹B, and the placed poles.
+
 ## 8. Optional: serving over a static server (the `file://` tip)
 
 The site is designed to open straight from disk, but page content is loaded via

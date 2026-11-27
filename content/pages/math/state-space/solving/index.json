@@ -1,0 +1,552 @@
+{
+  "title": "Solving the State Equations",
+  "intro": "The state equation $x' = Ax + Bu$ can be solved exactly. The answer is built from one object, the matrix exponential $e^{At}$: it carries the starting state forward in time, and, folded together with the input, it gives the response to a push. This page derives it, computes it three ways for real examples, and uses it to get the step and impulse responses.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Start with one state"
+    },
+    {
+      "type": "prose",
+      "text": "If there is a single state, the equation is $x' = ax + bu$ with numbers $a$ and $b$. With no input, $x' = ax$ has the solution $x(t) = e^{at}x(0)$: the state is multiplied by $e^{at}$, which decays if $a < 0$ and grows if $a > 0$. You can check it by differentiating, since $\\frac{d}{dt}e^{at} = a e^{at}$."
+    },
+    {
+      "type": "prose",
+      "text": "With an input there is a neat trick. Multiply the whole equation by $e^{-at}$ and move the $ax$ term to the left: $e^{-at}(x' - ax) = e^{-at}bu$. The left side is exactly the derivative of the product $e^{-at}x$ (product rule: $e^{-at}x' - a e^{-at}x$). So"
+    },
+    {
+      "type": "math",
+      "tex": "\\frac{d}{dt}\\left(e^{-at}x(t)\\right) = e^{-at}\\,b\\,u(t)"
+    },
+    {
+      "type": "prose",
+      "text": "Integrate from $0$ to $t$, and then multiply by $e^{at}$ to get $x$ alone:"
+    },
+    {
+      "type": "math",
+      "tex": "x(t) = e^{at}x(0) + \\int_0^t e^{a(t-\\tau)}\\,b\\,u(\\tau)\\,d\\tau"
+    },
+    {
+      "type": "prose",
+      "text": "The first term is what the starting state does by itself. The second says: each small push $b\\,u(\\tau)\\,d\\tau$ given at time $\\tau$ is carried on to time $t$ by the factor $e^{a(t-\\tau)}$, and the pushes are added up. It is a convolution of the input with $e^{at}b$, as met on the page Impulse Response and LTI Systems (#/math/convolution/impulse-response). The whole job on this page is to do the same for a state with $n$ numbers."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The matrix exponential"
+    },
+    {
+      "type": "prose",
+      "text": "The scalar exponential has the series $e^{at} = 1 + at + \\tfrac12 (at)^2 + \\tfrac16 (at)^3 + \\cdots$. The same series makes sense with a square matrix in place of the number $a$, and that is the definition:"
+    },
+    {
+      "type": "math",
+      "tex": "e^{At} = I + At + \\frac{A^2t^2}{2!} + \\frac{A^3t^3}{3!} + \\cdots"
+    },
+    {
+      "type": "prose",
+      "text": "It always converges. Differentiate term by term: the derivative of $A^k t^k/k!$ is $A \\cdot A^{k-1}t^{k-1}/(k-1)!$, so $\\frac{d}{dt}e^{At} = Ae^{At}$. This is the whole reason it works: $x(t) = e^{At}x(0)$ satisfies $x' = Ax$, and at $t = 0$ the series gives $e^{A \\cdot 0} = I$, so $x(0)$ is right. Two more properties follow, and one warning."
+    },
+    {
+      "type": "list",
+      "items": [
+        "$e^{A(t+s)} = e^{At}e^{As}$: running for time $t$ then for time $s$ is the same as running for $t + s$. In particular $e^{At}$ is always invertible, with inverse $e^{-At}$.",
+        "$e^{A+B} = e^Ae^B$ is true only when $AB = BA$. For matrices that do not commute it is false in general. Example: $A = \\begin{pmatrix} 0 & 1 \\\\ 0 & 0 \\end{pmatrix}$ and $B = \\begin{pmatrix} 0 & 0 \\\\ 1 & 0 \\end{pmatrix}$ have $AB \\ne BA$, and $e^Ae^B = \\begin{pmatrix} 2 & 1 \\\\ 1 & 1 \\end{pmatrix}$ but $e^{A+B} = \\begin{pmatrix} \\cosh 1 & \\sinh 1 \\\\ \\sinh 1 & \\cosh 1 \\end{pmatrix} \\approx \\begin{pmatrix} 1.543 & 1.175 \\\\ 1.175 & 1.543 \\end{pmatrix}$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "In practice nobody sums the series by hand for a big $t$. We want a closed form, and there are three routes, all shown here for real systems."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Route 1: diagonalise"
+    },
+    {
+      "type": "prose",
+      "text": "If $A = PDP^{-1}$ with $D$ diagonal, then $A^k = PD^kP^{-1}$ (the inner $P^{-1}P$ cancel), so the series gives $e^{At} = P\\,e^{Dt}P^{-1}$, and $e^{Dt}$ is just the diagonal matrix of $e^{\\lambda_i t}$. This is the idea of Diagonalisation and Powers (#/math/eigenvalues/diagonalisation). Take the heavily damped mass, $A = \\begin{pmatrix} 0 & 1 \\\\ -2 & -3 \\end{pmatrix}$, whose characteristic polynomial is $\\lambda^2 + 3\\lambda + 2 = (\\lambda + 1)(\\lambda + 2)$."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Eigenvalue $\\lambda = -1$: solve $(A + I)v = 0$, which is $v_2 = -v_1$ from the first row $(1, 1)$. So $v = (1, -1)$.",
+        "Eigenvalue $\\lambda = -2$: $(A + 2I)v = 0$ has the first row $(2, 1)$, so $v_2 = -2v_1$ and $v = (1, -2)$.",
+        "Put the eigenvectors in the columns of $P = \\begin{pmatrix} 1 & 1 \\\\ -1 & -2 \\end{pmatrix}$. Its determinant is $-2 + 1 = -1$, so $P^{-1} = \\dfrac{1}{-1}\\begin{pmatrix} -2 & -1 \\\\ 1 & 1 \\end{pmatrix} = \\begin{pmatrix} 2 & 1 \\\\ -1 & -1 \\end{pmatrix}$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Now multiply $P\\,\\mathrm{diag}(e^{-t}, e^{-2t})$ first, which scales the columns of $P$, and then by $P^{-1}$:"
+    },
+    {
+      "type": "math",
+      "tex": "e^{At} = \\begin{pmatrix} e^{-t} & e^{-2t} \\\\ -e^{-t} & -2e^{-2t} \\end{pmatrix}\\begin{pmatrix} 2 & 1 \\\\ -1 & -1 \\end{pmatrix} = \\begin{pmatrix} 2e^{-t} - e^{-2t} & e^{-t} - e^{-2t} \\\\ -2e^{-t} + 2e^{-2t} & -e^{-t} + 2e^{-2t} \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Check two things. At $t = 0$ the matrix is $\\begin{pmatrix} 1 & 0 \\\\ 0 & 1 \\end{pmatrix}$, as it must be. And its derivative at $t = 0$ should be $A$: the top row gives $(-2 + 2,\\ -1 + 2) = (0, 1)$ and the bottom row $(2 - 4,\\ 1 - 4) = (-2, -3)$, which is $A$. At $t = 1$ it equals $\\begin{pmatrix} 0.600 & 0.233 \\\\ -0.465 & -0.097 \\end{pmatrix}$: the mass released from $(1, 0)$ is, one second later, at $x(1) = (0.600, -0.465)$, the first column."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Route 2: the Laplace transform"
+    },
+    {
+      "type": "prose",
+      "text": "Take the Laplace transform of $x' = Ax$ (see Solving Differential Equations (#/math/laplace-transform/differential-equations)): $sX(s) - x(0) = AX(s)$, so $(sI - A)X(s) = x(0)$ and $X(s) = (sI - A)^{-1}x(0)$. Comparing with $x(t) = e^{At}x(0)$ shows that $e^{At}$ and $(sI - A)^{-1}$ are a Laplace pair. For a $2 \\times 2$ matrix the inverse is easy: swap the diagonal, negate the off-diagonal, divide by the determinant. For the same heavy mass,"
+    },
+    {
+      "type": "math",
+      "tex": "sI - A = \\begin{pmatrix} s & -1 \\\\ 2 & s + 3 \\end{pmatrix}, \\qquad (sI - A)^{-1} = \\frac{1}{s^2 + 3s + 2}\\begin{pmatrix} s + 3 & 1 \\\\ -2 & s \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The determinant is $s(s+3) + 2 = s^2 + 3s + 2 = (s+1)(s+2)$. Take the top right entry, $\\frac{1}{(s+1)(s+2)} = \\frac{1}{s+1} - \\frac{1}{s+2}$ (partial fractions: at $s = -1$ the residue is $1/(-1 + 2) = 1$, at $s = -2$ it is $1/(-2+1) = -1$). Its inverse transform is $e^{-t} - e^{-2t}$, which is the top right entry above. The poles of $(sI - A)^{-1}$ are the eigenvalues, so the exponents in $e^{At}$ are always the eigenvalues. This is the same method as Pole Positions and the Time Signal (#/math/laplace-transform/poles-and-time), entry by entry."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Route 3: complex eigenvalues, the RLC circuit"
+    },
+    {
+      "type": "prose",
+      "text": "For $A = \\begin{pmatrix} 0 & 2 \\\\ -1 & -2 \\end{pmatrix}$ the eigenvalues are $-1 \\pm j$. You could diagonalise with complex numbers, but there is a shortcut. Write $A = -I + N$ with $N = \\begin{pmatrix} 1 & 2 \\\\ -1 & -1 \\end{pmatrix}$. The identity commutes with everything, so $e^{At} = e^{-t}e^{Nt}$. Now square $N$: the entries of $N^2$ are $1 - 2 = -1$ and $2 - 2 = 0$ in the first row, $-1 + 1 = 0$ and $-2 + 1 = -1$ in the second. So $N^2 = -I$, which makes $N$ behave like the imaginary unit. The series for $e^{Nt}$ then splits into the series of cosine and sine:"
+    },
+    {
+      "type": "math",
+      "tex": "e^{Nt} = \\cos t\\; I + \\sin t\\; N, \\qquad e^{At} = e^{-t}\\begin{pmatrix} \\cos t + \\sin t & 2\\sin t \\\\ -\\sin t & \\cos t - \\sin t \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "In general a complex pair $\\sigma \\pm j\\omega$ gives terms $e^{\\sigma t}\\cos\\omega t$ and $e^{\\sigma t}\\sin\\omega t$: a rotation, shrinking at rate $\\sigma$ (see Complex Eigenvalues and Rotation (#/math/eigenvalues/complex-eigenvalues)). Here $\\sigma = -1$ and $\\omega = 1$. At $t = 1$ the matrix is $\\begin{pmatrix} 0.508 & 0.619 \\\\ -0.310 & -0.111 \\end{pmatrix}$."
+    },
+    {
+      "type": "prose",
+      "text": "The fourth case, a repeated eigenvalue without enough eigenvectors, adds a factor of $t$: $e^{At} = e^{\\lambda t}\\begin{pmatrix} 1 & t \\\\ 0 & 1 \\end{pmatrix}$ for the block $\\begin{pmatrix} \\lambda & 1 \\\\ 0 & \\lambda \\end{pmatrix}$, so the terms are $te^{\\lambda t}$ (see Repeated Eigenvalues and Defective Matrices (#/math/eigenvalues/repeated-eigenvalues))."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The full solution"
+    },
+    {
+      "type": "prose",
+      "text": "Now repeat the scalar trick with matrices. Multiply $x' = Ax + Bu$ by $e^{-At}$ on the left. Because $\\frac{d}{dt}\\left(e^{-At}x\\right) = e^{-At}x' - e^{-At}Ax = e^{-At}(x' - Ax)$, the equation becomes $\\frac{d}{dt}\\left(e^{-At}x\\right) = e^{-At}Bu$. Integrate from $0$ to $t$, multiply by $e^{At}$, and use $e^{At}e^{-A\\tau} = e^{A(t-\\tau)}$:"
+    },
+    {
+      "type": "math",
+      "tex": "x(t) = e^{At}x(0) + \\int_0^t e^{A(t-\\tau)}B\\,u(\\tau)\\,d\\tau, \\qquad y(t) = Cx(t) + Du(t)"
+    },
+    {
+      "type": "prose",
+      "text": "The first term is the zero-input response (what the starting state does alone). The second is the zero-state response (what the input does from rest). The system is linear, so the two simply add: this is superposition. That is the whole answer to the question 'what does the system do?': every response, in any state-space model, is this formula."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The step response and the resting point"
+    },
+    {
+      "type": "prose",
+      "text": "Give the input a constant value $u = 1$ from $t = 0$ (a unit step) and start from rest, $x(0) = 0$. The integral becomes $\\int_0^t e^{A(t-\\tau)}B\\,d\\tau = \\int_0^t e^{As}B\\,ds$. When $A$ is invertible, $\\int_0^t e^{As}ds = A^{-1}(e^{At} - I)$, so"
+    },
+    {
+      "type": "math",
+      "tex": "x(t) = A^{-1}\\left(e^{At} - I\\right)B = \\left(I - e^{At}\\right)\\left(-A^{-1}B\\right)"
+    },
+    {
+      "type": "prose",
+      "text": "If the system is stable, $e^{At} \\to 0$ and the state settles at $x_{\\mathrm{rest}} = -A^{-1}B$. This is also the point where the velocity is zero: $0 = Ax + B$. The viewer draws it as the red + labelled 'rest'. Three examples."
+    },
+    {
+      "type": "list",
+      "items": [
+        "The light mass, $A = \\begin{pmatrix} 0 & 1 \\\\ -4 & -1 \\end{pmatrix}$, $B = (0, 1)$: $A x + B = 0$ gives $x_2 = 0$ from the first row and $-4x_1 + 1 = 0$ from the second, so $x_{\\mathrm{rest}} = (0.25, 0)$ and $y = 0.25$.",
+        "The RLC circuit: $0 = 2x_2$ and $0 = -x_1 - 2x_2 + 1$, so $x_{\\mathrm{rest}} = (1, 0)$ and $y = 1$. In steady state the current is zero and the capacitor charges to the source voltage.",
+        "The two tanks: $0 = -x_1 + 1$ and $0 = x_1 - 0.5x_2$, so $x_1 = 1$ and $x_2 = 2$. Tank 2 settles at level $2$, because its outflow rate $0.5x_2$ must equal the inflow $1$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The output settles at $y = Cx_{\\mathrm{rest}} = -CA^{-1}B$, the steady-state gain (the DC gain). If $A$ is singular the formula fails, and with good reason. The DC motor has $A = \\begin{pmatrix} 0 & 1 \\\\ 0 & -2 \\end{pmatrix}$ with determinant $0$: there is no resting point for a unit step. The speed $x_2$ settles to $1$ (from $x_2' = -2x_2 + 2$) but the angle $x_1$, whose rate is $x_2$, keeps growing."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "Step response of the heavily damped mass",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "mass on a spring, heavy damping"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "unit step"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The System is the heavily damped mass, Input unit step, $x(0) = (0, 0)$. The red + labelled 'rest' sits at $(0.5, 0)$, which is $-A^{-1}B$. Watch the path: it leaves the origin straight up along the $x_2$ axis (a push gives velocity first), bulges to the right and creeps into the + without any loop. The poles are real, so there is no oscillation, and the dashed eigen-lines for $\\lambda = -1$ and $\\lambda = -2$ are drawn through the + as well. The readout ends 'At t = 5 s: x = (0.49, 0.01), y = 0.493'. Step 6 of the walk-through (Next step ▶) sets exactly this input and explains the + in words."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The impulse response"
+    },
+    {
+      "type": "prose",
+      "text": "Feed in a very short, very hard push $u = \\delta(t)$ from rest. The integral in the full solution then picks out the value at $\\tau = 0$: $x(t) = e^{At}B$ for $t > 0$, and $y(t) = Ce^{At}B$. The impulse makes the state jump from $0$ to $B$ at once, and then the free motion takes over from there. The output $Ce^{At}B$ is the impulse response of the system, the function whose convolution with any input gives the output (see Impulse Response and LTI Systems (#/math/convolution/impulse-response) and Convolution (#/math/convolution))."
+    },
+    {
+      "type": "prose",
+      "text": "For the heavy mass, $B = (0, 1)$ picks the second column of $e^{At}$, so $e^{At}B = (e^{-t} - e^{-2t},\\ -e^{-t} + 2e^{-2t})$, and $C$ picks the first entry: $y(t) = e^{-t} - e^{-2t}$. For the RLC circuit, $e^{At}B$ is the second column, $e^{-t}(2\\sin t,\\ \\cos t - \\sin t)$, so $y(t) = 2e^{-t}\\sin t$. The step response is the integral of the impulse response, which gives a check on the heavy mass: $\\int_0^t (e^{-s} - e^{-2s})ds = \\tfrac12 - e^{-t} + \\tfrac12 e^{-2t}$, which tends to $0.5$, the steady-state gain above."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "Impulse into the RLC circuit",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "RLC circuit"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "unit impulse"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The System is the RLC circuit, Input unit impulse, $x(0) = (0, 0)$. A dashed red line from the origin, labelled 'impulse: x jumps by B', goes to $(0, 1)$ (the inductor current jumps, because the voltage across an inductor is allowed to be huge for an instant). The path then spirals back to the origin, because the poles $-1 \\pm j$ are a decaying oscillation. In the time plot the thick red $y$ is the capacitor voltage $2e^{-t}\\sin t$: it rises to a peak of about 0.65, crosses zero at $t = \\pi \\approx 3.14$ s, dips slightly below zero and fades. The readout ends 'At t = 5 s: x = (−0.01, 0.01), y = −0.013'. With Input unit step instead, $y$ ends at 1.005 at $t = 5$ s, the steady-state gain 1 almost reached."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "The DC motor has no resting point",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "DC motor, angle and speed"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "unit step"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The System is the DC motor, Input unit step, $x(0) = (0, 0)$. There is no red + this time, because $A$ is singular. In the time plot the amber speed $x_2$ rises to 1 and stays; the blue angle $x_1$, with the thick red $y$ drawn under it, climbs along a straight line. The readout says 'Poles 0 and −2: on the edge' and ends 'At t = 8 s: x = (7.50, 1.00), y = 7.500'. The state plane is zoomed out to hold the whole path, which runs off to the right and never turns back."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How a computer finds $e^{At}$"
+    },
+    {
+      "type": "prose",
+      "text": "Summing the series directly is a poor method when $\\|At\\|$ is large: the terms grow huge before they shrink, and the rounding errors swamp the answer. The standard remedy, scaling and squaring, uses $e^{A} = \\left(e^{A/2^k}\\right)^{2^k}$: divide $A$ by a power of two until it is small, sum the series (or a close rational approximation) for the small matrix, then square the result $k$ times. Moler and Van Loan's paper, listed below, surveys these and other methods and explains why diagonalising is dangerous when the eigenvectors are nearly parallel. In Python, scipy.linalg.expm does exactly this."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "The tanks' matrix exponential",
+      "text": "Find $e^{At}$ for the two tanks, $A = \\begin{pmatrix} -1 & 0 \\\\ 1 & -0.5 \\end{pmatrix}$, by diagonalising, and find the free state at $t = 2$ from $x(0) = (1, 0)$.",
+      "solution": [
+        "The eigenvalues are the diagonal entries of the triangular matrix, $-1$ and $-0.5$. For $\\lambda = -1$: $(A + I)v = 0$ has rows $(0, 0)$ and $(1, 0.5)$, so $v_1 = -0.5v_2$ and $v = (1, -2)$ (check: $1 + 0.5(-2) = 0$). For $\\lambda = -0.5$: $(A + 0.5I)v = 0$ has the first row $(-0.5, 0)$, so $v_1 = 0$ and $v = (0, 1)$.",
+        "$P = \\begin{pmatrix} 1 & 0 \\\\ -2 & 1 \\end{pmatrix}$ and $P^{-1} = \\begin{pmatrix} 1 & 0 \\\\ 2 & 1 \\end{pmatrix}$ (check the product: second row $(-2 + 2,\\ 1) = (0, 1)$).",
+        "$P\\,\\mathrm{diag}(e^{-t}, e^{-0.5t}) = \\begin{pmatrix} e^{-t} & 0 \\\\ -2e^{-t} & e^{-0.5t} \\end{pmatrix}$. Times $P^{-1}$: the top row is $(e^{-t},\\ 0)$ and the bottom row is $(-2e^{-t} + 2e^{-0.5t},\\ e^{-0.5t})$. So $e^{At} = \\begin{pmatrix} e^{-t} & 0 \\\\ 2\\left(e^{-0.5t} - e^{-t}\\right) & e^{-0.5t} \\end{pmatrix}$. At $t = 0$ it is $I$ and the slope of the bottom left entry is $2(-0.5 + 1) = 1$, the entry of $A$: correct.",
+        "At $t = 2$ the first column is $(e^{-2},\\ 2(e^{-1} - e^{-2})) = (0.1353,\\ 2(0.3679 - 0.1353)) = (0.1353, 0.4651)$. Tank 1 has drained to $13.5\\%$ and tank 2 has gained $0.465$ of the water from it."
+      ],
+      "answer": "$e^{At} = \\begin{pmatrix} e^{-t} & 0 \\\\ 2(e^{-0.5t} - e^{-t}) & e^{-0.5t} \\end{pmatrix}$; $x(2) = (0.1353, 0.4651)$."
+    },
+    {
+      "type": "problem",
+      "title": "Step response by the formula",
+      "text": "For the two tanks with a unit step input and $x(0) = 0$, write $y(t)$ (the level of tank 2) and check the value at $t = 10$ against the viewer's 1.973.",
+      "solution": [
+        "The step input $u = 1$ enters as $B = (1, 0)$. The zero-state response is $x(t) = x_{\\mathrm{rest}} - e^{At}x_{\\mathrm{rest}}$ with $x_{\\mathrm{rest}} = (1, 2)$ (from the three worked resting points above).",
+        "Using $e^{At}$ from the previous problem, $e^{At}(1, 2)^{\\top}$ has the second entry $2(e^{-0.5t} - e^{-t})\\cdot 1 + e^{-0.5t}\\cdot 2 = 4e^{-0.5t} - 2e^{-t}$. So $y(t) = x_2(t) = 2 - 4e^{-0.5t} + 2e^{-t}$.",
+        "At $t = 0$ this is $2 - 4 + 2 = 0$, the starting level. At $t = 10$: $e^{-5} = 0.006738$ and $e^{-10} = 0.0000454$, so $y = 2 - 0.02695 + 0.00009 = 1.9731$. That is the viewer's 1.973."
+      ],
+      "answer": "$y(t) = 2 - 4e^{-0.5t} + 2e^{-t}$; $y(10) = 1.973$."
+    },
+    {
+      "type": "problem",
+      "title": "The motor's speed and angle",
+      "text": "For the DC motor with a unit step and $x(0) = 0$, solve the two equations directly and check the readout 'x = (7.50, 1.00)' at $t = 8$ s.",
+      "solution": [
+        "The speed equation stands alone: $x_2' = -2x_2 + 2$. With $x_2(0) = 0$ this is a first-order system with rest value $1$ and time constant $0.5$, so $x_2(t) = 1 - e^{-2t}$.",
+        "The angle rate is $x_1' = x_2 = 1 - e^{-2t}$. Integrate from $0$: $x_1(t) = t - \\tfrac12(1 - e^{-2t})$.",
+        "At $t = 8$: $e^{-16} \\approx 10^{-7}$, so $x_2 = 1.00$ and $x_1 = 8 - 0.5 = 7.50$. The angle grows like $t - \\tfrac12$: a ramp, with no resting point."
+      ],
+      "answer": "$x_2 = 1 - e^{-2t}$, $x_1 = t - \\tfrac12(1 - e^{-2t})$; $x(8) = (7.50, 1.00)$."
+    },
+    {
+      "type": "problem",
+      "title": "Impulse response of the RLC circuit",
+      "text": "Find the time at which $y(t) = 2e^{-t}\\sin t$ first crosses zero, and its first maximum.",
+      "solution": [
+        "$y = 0$ when $\\sin t = 0$, that is $t = \\pi \\approx 3.14$ s. The first crossing is at $t = \\pi$, since $y > 0$ for $0 < t < \\pi$.",
+        "The maximum is where $y' = 0$: $y' = 2e^{-t}(\\cos t - \\sin t) = 0$ gives $\\tan t = 1$, so $t = \\pi/4 = 0.785$ s. There $y = 2e^{-0.785}\\sin(0.785) = 2(0.4559)(0.7071) = 0.645$."
+      ],
+      "answer": "Zero at $t = \\pi \\approx 3.14$ s; maximum $0.645$ at $t = \\pi/4 \\approx 0.785$ s."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Katsuhiko Ogata, Modern Control Engineering, 5th edition (Prentice Hall, 2010). Chapter 9 solves the state equation and defines the state-transition matrix.",
+        "Chi-Tsong Chen, Linear System Theory and Design, 4th edition (Oxford University Press, 2013). Chapter 4 covers state-space solutions.",
+        "Cleve Moler and Charles Van Loan, 'Nineteen dubious ways to compute the exponential of a matrix, twenty-five years later', SIAM Review 45 (2003) 3–49.",
+        "Karl Johan Åström and Richard M. Murray, Feedback Systems: An Introduction for Scientists and Engineers, 2nd edition (Princeton University Press, 2021). Its chapter on linear systems covers the matrix exponential and the solution of the state equations."
+      ]
+    }
+  ]
+}

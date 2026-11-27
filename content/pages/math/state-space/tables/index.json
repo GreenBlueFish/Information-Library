@@ -1,0 +1,500 @@
+{
+  "title": "State-Space Tables",
+  "intro": "Reference tables: standard models, formulas for e^(At), transfer functions, tests, canonical forms and the presets' numbers. Everything here is explained on the pages of the topic; this page is for looking things up.",
+  "blocks": [
+    {
+      "type": "prose",
+      "text": "Throughout, $x' = Ax + Bu$ and $y = Cx + Du$ with $n$ states, and $D = 0$ unless stated. The tables follow the order of the topic. The sentence before each table names the pages that explain it, and the pages Three States and More (#/math/state-space/higher-order) and A Gallery of Systems (#/math/state-space/gallery) show the three-state and the preset systems at work."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Standard models"
+    },
+    {
+      "type": "prose",
+      "text": "The models that recur in the pages, with the states named. In every one, the output is the first state unless a row says otherwise. How each is derived is on States and the State Equations (#/math/state-space/state-equations)."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Model",
+        "States",
+        "$A$",
+        "$B$",
+        "$G(s)$"
+      ],
+      "rows": [
+        [
+          "Mass, spring $k$, damper $c$, mass $m$ (force in, position out)",
+          "$x_1 = $ position, $x_2 = $ velocity",
+          "$\\begin{pmatrix} 0 & 1 \\\\ -k/m & -c/m \\end{pmatrix}$",
+          "$\\begin{pmatrix} 0 \\\\ 1/m \\end{pmatrix}$",
+          "$\\dfrac{1}{ms^2 + cs + k}$"
+        ],
+        [
+          "Series RLC (source voltage in, capacitor voltage out)",
+          "$x_1 = $ capacitor voltage, $x_2 = $ inductor current",
+          "$\\begin{pmatrix} 0 & 1/C \\\\ -1/L & -R/L \\end{pmatrix}$",
+          "$\\begin{pmatrix} 0 \\\\ 1/L \\end{pmatrix}$",
+          "$\\dfrac{1}{LCs^2 + RCs + 1}$"
+        ],
+        [
+          "DC motor, simplified (voltage in, angle out): $\\omega' = -a\\omega + bu$",
+          "$x_1 = $ angle, $x_2 = $ speed",
+          "$\\begin{pmatrix} 0 & 1 \\\\ 0 & -a \\end{pmatrix}$",
+          "$\\begin{pmatrix} 0 \\\\ b \\end{pmatrix}$",
+          "$\\dfrac{b}{s(s + a)}$"
+        ],
+        [
+          "Two tanks in a row (inflow in, tank 2 out), drain rates $a_1, a_2$, unit areas",
+          "$x_1, x_2 = $ levels",
+          "$\\begin{pmatrix} -a_1 & 0 \\\\ a_1 & -a_2 \\end{pmatrix}$, $C = (0, 1)$",
+          "$\\begin{pmatrix} 1 \\\\ 0 \\end{pmatrix}$",
+          "$\\dfrac{a_1}{(s + a_1)(s + a_2)}$"
+        ],
+        [
+          "Pendulum linearised upright, $\\theta'' = (g/L)\\theta + u$",
+          "$x_1 = $ angle, $x_2 = $ angular velocity",
+          "$\\begin{pmatrix} 0 & 1 \\\\ g/L & 0 \\end{pmatrix}$",
+          "$\\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}$",
+          "$\\dfrac{1}{s^2 - g/L}$"
+        ],
+        [
+          "Chain of $n$ integrators, $y^{(n)} = u$",
+          "$x_k = y^{(k-1)}$",
+          "ones on the superdiagonal, zeros elsewhere; $C = (1, 0, \\ldots, 0)$",
+          "$(0, \\ldots, 0, 1)^{\\top}$",
+          "$\\dfrac{1}{s^n}$"
+        ],
+        [
+          "First-order lag, $x' = -ax + bu$, $y = x$",
+          "$x = $ the output",
+          "$-a$",
+          "$b$",
+          "$\\dfrac{b}{s + a}$"
+        ]
+      ],
+      "caption": "Standard models. The presets are $m = 1$, $k = 4$, $c = 1$ (or $2$ and $3$, heavy damping); $R = 2$, $L = 1$, $C = 0.5$; $a = 2$, $b = 2$; $a_1 = 1$, $a_2 = 0.5$; $g/L = 1$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Formulas"
+    },
+    {
+      "type": "prose",
+      "text": "The solution and the pieces it is built from, for the free response and the response to an input. The derivations are on Solving the State Equations (#/math/state-space/solving); the transfer function is on Transfer Functions and Realisations (#/math/state-space/transfer-functions) and the sampled quantities on Sampled and Discrete-Time Systems (#/math/state-space/discrete-time)."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Quantity",
+        "Formula",
+        "Notes"
+      ],
+      "rows": [
+        [
+          "Solution",
+          "$x(t) = e^{At}x(0) + \\int_0^t e^{A(t-\\tau)}Bu(\\tau)\\,d\\tau$",
+          "zero-input part plus zero-state part"
+        ],
+        [
+          "$e^{At}$, diagonal $A = \\mathrm{diag}(\\lambda_1, \\ldots, \\lambda_n)$",
+          "$\\mathrm{diag}(e^{\\lambda_1 t}, \\ldots, e^{\\lambda_n t})$",
+          "and $e^{At} = Pe^{\\Lambda t}P^{-1}$ if $A = P\\Lambda P^{-1}$"
+        ],
+        [
+          "$e^{At}$, Jordan block $\\begin{pmatrix} \\lambda & 1 \\\\ 0 & \\lambda \\end{pmatrix}$",
+          "$e^{\\lambda t}\\begin{pmatrix} 1 & t \\\\ 0 & 1 \\end{pmatrix}$",
+          "the factor $t$ of a repeated, defective pole; a $3 \\times 3$ block adds $t^2/2$"
+        ],
+        [
+          "$e^{At}$, complex pair $A = \\begin{pmatrix} \\sigma & -\\omega \\\\ \\omega & \\sigma \\end{pmatrix}$",
+          "$e^{\\sigma t}\\begin{pmatrix} \\cos\\omega t & -\\sin\\omega t \\\\ \\sin\\omega t & \\cos\\omega t \\end{pmatrix}$",
+          "poles $\\sigma \\pm j\\omega$; a rotation under an envelope"
+        ],
+        [
+          "$(sI - A)^{-1}$, $A = \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$",
+          "$\\dfrac{1}{s^2 - (a + d)s + (ad - bc)}\\begin{pmatrix} s - d & b \\\\ c & s - a \\end{pmatrix}$",
+          "denominator $= \\det(sI - A)$; and $e^{At} = \\mathcal{L}^{-1}\\{(sI - A)^{-1}\\}$"
+        ],
+        [
+          "Transfer function",
+          "$G(s) = C(sI - A)^{-1}B + D$",
+          "poles are the eigenvalues of $A$, unless cancelled"
+        ],
+        [
+          "Impulse response",
+          "$h(t) = Ce^{At}B$ (plus $D\\delta(t)$)",
+          "$G(s) = \\mathcal{L}\\{h\\}$"
+        ],
+        [
+          "Steady-state gain, resting point of a step",
+          "$G(0) = -CA^{-1}B + D$, $\\ x_{\\mathrm{rest}} = -A^{-1}B$",
+          "needs $A$ invertible (no pole at 0) and stability"
+        ],
+        [
+          "Sampling with a zero-order hold",
+          "$\\Phi = e^{AT}$, $\\ \\Gamma = \\int_0^T e^{A\\tau}\\,d\\tau\\,B = A^{-1}(\\Phi - I)B$",
+          "the second form needs $A$ invertible; $x[k+1] = \\Phi x[k] + \\Gamma u[k]$"
+        ],
+        [
+          "Sampled poles",
+          "$z = e^{sT}$",
+          "each eigenvalue of $A$ maps to an eigenvalue of $\\Phi$"
+        ],
+        [
+          "Euler step (an approximation)",
+          "$\\Phi \\approx I + AT$",
+          "can be unstable for large $T$ even when $A$ is stable"
+        ],
+        [
+          "Change of state $z = Tx$",
+          "$(TAT^{-1},\\ TB,\\ CT^{-1},\\ D)$",
+          "same $G(s)$ and same poles"
+        ]
+      ],
+      "caption": "Formulas. $T$ in the change of state is an invertible matrix, not the sample period."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stability tests"
+    },
+    {
+      "type": "prose",
+      "text": "What decides whether a system settles. The meaning of each is on Modes and Stability (#/math/state-space/modes-and-stability) and, for sampled systems, Sampled and Discrete-Time Systems (#/math/state-space/discrete-time)."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "System",
+        "Test",
+        "Meaning"
+      ],
+      "rows": [
+        [
+          "Continuous, any $n$",
+          "every eigenvalue has $\\mathrm{Re}\\,\\lambda < 0$",
+          "asymptotically stable: $x \\to 0$ from every start"
+        ],
+        [
+          "Continuous, edge",
+          "no $\\mathrm{Re}\\,\\lambda > 0$, some $\\mathrm{Re}\\,\\lambda = 0$, each with a full set of eigenvectors (a simple root always has one)",
+          "marginally stable: stays bounded, does not decay"
+        ],
+        [
+          "Continuous, unstable",
+          "some $\\mathrm{Re}\\,\\lambda > 0$, or a repeated root with $\\mathrm{Re}\\,\\lambda = 0$ that has too few eigenvectors (a Jordan block)",
+          "unstable: some starts grow"
+        ],
+        [
+          "Sampled ($x[k+1] = \\Phi x[k]$)",
+          "every eigenvalue has $|z| < 1$",
+          "asymptotically stable; $|z| = 1$ is the edge; same rules for repeats"
+        ],
+        [
+          "Continuous $2 \\times 2$",
+          "$\\mathrm{tr}A < 0$ and $\\det A > 0$",
+          "both eigenvalues in the left half-plane"
+        ],
+        [
+          "Sampled $2 \\times 2$, $z^2 + a_1z + a_0$",
+          "$|a_0| < 1$ and $|a_1| < 1 + a_0$",
+          "both roots inside the unit circle; $a_0 = \\det\\Phi$, $a_1 = -\\mathrm{tr}\\,\\Phi$"
+        ],
+        [
+          "Cubic $s^3 + a_2s^2 + a_1s + a_0$ (Routh–Hurwitz)",
+          "$a_2, a_1, a_0 > 0$ and $a_2a_1 > a_0$",
+          "all three roots in the left half-plane"
+        ],
+        [
+          "Lyapunov equation",
+          "$A^{\\top}P + PA = -Q$ has a solution $P = P^{\\top} > 0$ for some (every) $Q = Q^{\\top} > 0$",
+          "$\\Leftrightarrow$ $A$ stable"
+        ],
+        [
+          "Pole map",
+          "$s = \\dfrac{\\ln z}{T}$ (complex $z$: principal value)",
+          "the left half-plane maps into the unit circle"
+        ]
+      ],
+      "caption": "Stability tests. 'Stable' means asymptotically stable unless the row says otherwise."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Tests and designs"
+    },
+    {
+      "type": "prose",
+      "text": "The rank tests and the formulas for feedback and observer gains. They are derived on Controllability and Observability (#/math/state-space/controllability-observability), State Feedback and Pole Placement (#/math/state-space/state-feedback) and Observers: Estimating the State (#/math/state-space/observers)."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Quantity",
+        "Formula",
+        "Notes"
+      ],
+      "rows": [
+        [
+          "Controllability matrix",
+          "$\\mathcal{C} = \\begin{pmatrix} B & AB & \\cdots & A^{n-1}B \\end{pmatrix}$",
+          "controllable $\\Leftrightarrow$ $\\mathrm{rank}\\,\\mathcal{C} = n$"
+        ],
+        [
+          "Observability matrix",
+          "$\\mathcal{O} = \\begin{pmatrix} C \\\\ CA \\\\ \\vdots \\\\ CA^{n-1} \\end{pmatrix}$",
+          "observable $\\Leftrightarrow$ $\\mathrm{rank}\\,\\mathcal{O} = n$"
+        ],
+        [
+          "Duality",
+          "$(A, B)$ controllable $\\Leftrightarrow$ $(A^{\\top}, B^{\\top})$ observable",
+          "$\\mathcal{O}$ of $(A^{\\top}, B^{\\top})$ is $\\mathcal{C}^{\\top}$"
+        ],
+        [
+          "State feedback",
+          "$u = -Kx + r$, $\\ x' = (A - BK)x + Br$",
+          "sampled: $\\Phi - \\Gamma K$; zeros do not move"
+        ],
+        [
+          "Ackermann (pole placement)",
+          "$K = \\begin{pmatrix} 0 & \\cdots & 0 & 1 \\end{pmatrix}\\mathcal{C}^{-1}\\varphi(A)$",
+          "$\\varphi(s)$ the wanted closed-loop polynomial; single input"
+        ],
+        [
+          "Reference gain",
+          "$u = -Kx + Nr$, $\\ N = 1/\\left(C(BK - A)^{-1}B\\right)$",
+          "makes $y \\to r$ for a constant $r$; needs a non-zero gain"
+        ],
+        [
+          "Observer",
+          "$\\hat{x}' = A\\hat{x} + Bu + L(y - C\\hat{x})$",
+          "error $e = x - \\hat{x}$ obeys $e' = (A - LC)e$"
+        ],
+        [
+          "Observer gain (Ackermann on the dual)",
+          "$L = \\varphi(A)\\,\\mathcal{O}^{-1}\\begin{pmatrix} 0 \\\\ \\vdots \\\\ 0 \\\\ 1 \\end{pmatrix}$",
+          "$\\varphi$ the wanted observer polynomial; single output"
+        ],
+        [
+          "Separation principle",
+          "closed-loop poles $= \\mathrm{eig}(A - BK) \\cup \\mathrm{eig}(A - LC)$",
+          "with $u = -K\\hat{x}$; design $K$ and $L$ separately"
+        ]
+      ],
+      "caption": "Tests and designs for a single-input, single-output system."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Canonical forms"
+    },
+    {
+      "type": "prose",
+      "text": "Three ways to realise the same $G(s) = (b_1s + b_0)/(s^2 + a_1s + a_0)$, each with $D = 0$. The first two come from each other by transposing, and the third separates the modes when the poles are real and different. Realisations are on Transfer Functions and Realisations (#/math/state-space/transfer-functions)."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "Form",
+        "$A$",
+        "$B$",
+        "$C$"
+      ],
+      "rows": [
+        [
+          "Controllable (companion)",
+          "$\\begin{pmatrix} 0 & 1 \\\\ -a_0 & -a_1 \\end{pmatrix}$",
+          "$\\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}$",
+          "$\\begin{pmatrix} b_0 & b_1 \\end{pmatrix}$"
+        ],
+        [
+          "Observable",
+          "$\\begin{pmatrix} 0 & -a_0 \\\\ 1 & -a_1 \\end{pmatrix}$",
+          "$\\begin{pmatrix} b_0 \\\\ b_1 \\end{pmatrix}$",
+          "$\\begin{pmatrix} 0 & 1 \\end{pmatrix}$"
+        ],
+        [
+          "Modal, real poles $p_1 \\ne p_2$, $G = \\dfrac{r_1}{s - p_1} + \\dfrac{r_2}{s - p_2}$",
+          "$\\begin{pmatrix} p_1 & 0 \\\\ 0 & p_2 \\end{pmatrix}$",
+          "$\\begin{pmatrix} 1 \\\\ 1 \\end{pmatrix}$",
+          "$\\begin{pmatrix} r_1 & r_2 \\end{pmatrix}$"
+        ]
+      ],
+      "caption": "Canonical forms of a second-order $G(s)$. $r_1, r_2$ are the residues."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The presets, with two states"
+    },
+    {
+      "type": "prose",
+      "text": "Poles, transfer function, steady-state gain and the two rank tests for the ten systems of the state-plane viewer, as its readout prints them (the steady-state gain is $G(0)$, which only means a steady state when the system is stable). The system-by-system tour is A Gallery of Systems (#/math/state-space/gallery)."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "System",
+        "Poles",
+        "$G(s)$",
+        "$G(0)$",
+        "Controllable, observable"
+      ],
+      "rows": [
+        [
+          "Mass on a spring, light damping",
+          "$-0.5 \\pm 1.936j$",
+          "$\\dfrac{1}{s^2 + s + 4}$",
+          "$0.25$",
+          "yes, yes"
+        ],
+        [
+          "Mass on a spring, heavy damping",
+          "$-1$ and $-2$",
+          "$\\dfrac{1}{s^2 + 3s + 2}$",
+          "$0.5$",
+          "yes, yes"
+        ],
+        [
+          "RLC circuit",
+          "$-1 \\pm 1j$",
+          "$\\dfrac{2}{s^2 + 2s + 2}$",
+          "$1$",
+          "yes, yes"
+        ],
+        [
+          "Two tanks in a row",
+          "$-0.5$ and $-1$",
+          "$\\dfrac{1}{s^2 + 1.5s + 0.5}$",
+          "$2$",
+          "yes, yes"
+        ],
+        [
+          "DC motor, angle and speed",
+          "$0$ and $-2$",
+          "$\\dfrac{2}{s^2 + 2s}$",
+          "none (pole at 0)",
+          "yes, yes"
+        ],
+        [
+          "Pendulum balanced upright",
+          "$1$ and $-1$ (unstable)",
+          "$\\dfrac{1}{s^2 - 1}$",
+          "$-1$, but unstable",
+          "yes, yes"
+        ],
+        [
+          "Undamped oscillator",
+          "$\\pm 1j$ (edge)",
+          "$\\dfrac{1}{s^2 + 1}$",
+          "$1$, but never settles",
+          "yes, yes"
+        ],
+        [
+          "Negative damping, a growing swing",
+          "$0.15 \\pm 0.989j$ (unstable)",
+          "$\\dfrac{1}{s^2 - 0.3s + 1}$",
+          "$1$, but unstable",
+          "yes, yes"
+        ],
+        [
+          "Hidden mode: the input misses one",
+          "$-1$ and $-2$",
+          "$\\dfrac{s + 2}{s^2 + 3s + 2} = \\dfrac{1}{s + 1}$",
+          "$1$",
+          "no, yes"
+        ],
+        [
+          "Hidden mode: the output misses one",
+          "$-1$ and $-2$",
+          "$\\dfrac{s + 2}{s^2 + 3s + 2} = \\dfrac{1}{s + 1}$",
+          "$1$",
+          "yes, no"
+        ]
+      ],
+      "caption": "The ten two-state presets."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The presets, with three states"
+    },
+    {
+      "type": "prose",
+      "text": "The same for the six systems of the 3D viewer. The viewer prints the transfer function without cancelling, so the Lorenz row shows both forms. The systems are described on Three States and More (#/math/state-space/higher-order)."
+    },
+    {
+      "type": "table",
+      "columns": [
+        "System",
+        "Poles",
+        "$G(s)$",
+        "$G(0)$",
+        "Controllable, observable"
+      ],
+      "rows": [
+        [
+          "Spring with a slow actuator",
+          "$-0.2 \\pm 1.99j$ and $-5$",
+          "$\\dfrac{5}{s^3 + 5.4s^2 + 6s + 20}$",
+          "$0.25$",
+          "yes, yes"
+        ],
+        [
+          "DC motor with its current",
+          "$0$, $-1.219$ and $-3.281$",
+          "$\\dfrac{2}{s^3 + 4.5s^2 + 4s}$",
+          "none (pole at 0)",
+          "yes, yes"
+        ],
+        [
+          "Three tanks in a row",
+          "$-0.3$, $-0.6$ and $-1$",
+          "$\\dfrac{0.6}{s^3 + 1.9s^2 + 1.08s + 0.18}$",
+          "$3.333$",
+          "yes, yes"
+        ],
+        [
+          "Chain of three lags",
+          "$-1$, $-1$ and $-1$",
+          "$\\dfrac{1}{s^3 + 3s^2 + 3s + 1}$",
+          "$1$",
+          "yes, yes"
+        ],
+        [
+          "A spin about an axis, and a decay",
+          "$\\pm 1j$ and $-0.5$ (edge)",
+          "$\\dfrac{2s^2 + 0.5s + 1}{s^3 + 0.5s^2 + s + 0.5}$",
+          "$2$, but never settles",
+          "yes, yes"
+        ],
+        [
+          "Lorenz system near the origin",
+          "$11.828$, $-2.667$ and $-22.828$ (unstable)",
+          "$\\dfrac{s^2 + 3.667s + 2.667}{s^3 + 13.667s^2 - 240.667s - 720} = \\dfrac{s + 1}{s^2 + 11s - 270}$",
+          "$-0.0037$, but unstable",
+          "no, no"
+        ]
+      ],
+      "caption": "The six three-state presets."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Katsuhiko Ogata, Modern Control Engineering, 5th edition (Prentice Hall, 2010).",
+        "Gene F. Franklin, J. David Powell and Abbas Emami-Naeini, Feedback Control of Dynamic Systems, 7th edition (Pearson, 2015).",
+        "Chi-Tsong Chen, Linear System Theory and Design, 4th edition (Oxford University Press, 2013).",
+        "Karl Johan Åström and Richard M. Murray, Feedback Systems: An Introduction for Scientists and Engineers, 2nd edition (Princeton University Press, 2021)."
+      ]
+    }
+  ]
+}

@@ -1,0 +1,279 @@
+{
+  "title": "State-Space Systems",
+  "intro": "Many systems are easiest to describe by their state: the few numbers that, together with the input from now on, fix everything that happens next. A mass on a spring has a position and a velocity, a circuit has a capacitor voltage and an inductor current, a tank has a water level. Collect them in a vector x and the system's rule becomes one matrix equation, x′ = Ax + Bu. This topic shows what that equation means, how to solve it, how its eigenvalues decide whether the system settles or runs away, and how feedback changes them.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The idea in one picture"
+    },
+    {
+      "type": "prose",
+      "text": "Take a mass of 1 kg on a spring of stiffness 4 N/m with a damper of 1 N·s/m, pushed by a force $u$. Newton's law says $\\ddot{p} = -4p - \\dot{p} + u$ for the position $p$. That is one second-order equation. Call the position $x_1 = p$ and the velocity $x_2 = \\dot{p}$, and it becomes two first-order equations, $x_1' = x_2$ and $x_2' = -4x_1 - x_2 + u$, which fit in one line:"
+    },
+    {
+      "type": "math",
+      "tex": "\\begin{pmatrix} x_1' \\\\ x_2' \\end{pmatrix} = \\begin{pmatrix} 0 & 1 \\\\ -4 & -1 \\end{pmatrix} \\begin{pmatrix} x_1 \\\\ x_2 \\end{pmatrix} + \\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix} u, \\qquad y = \\begin{pmatrix} 1 & 0 \\end{pmatrix} \\begin{pmatrix} x_1 \\\\ x_2 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "This is the state-space form $x' = Ax + Bu$, $y = Cx + Du$. The matrix $A$ says how the state changes by itself, $B$ how the input pushes it, $C$ which combination of the states is measured as the output $y$, and $D$ how the input reaches the output directly (here $D = 0$). The state $x = (x_1, x_2)$ is a point in a plane, and the equation gives it a velocity at every point: the state just follows the arrows."
+    },
+    {
+      "type": "prose",
+      "text": "The eigenvalues of $A$ are $-0.5 \\pm 1.936j$. They are the system's poles, the same poles a Laplace transform would find: the real part $-0.5$ says the motion dies away like $e^{-0.5t}$, the imaginary part $1.936$ that it swings at 1.936 radians per second. Both facts can be read off the matrix, before solving anything."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The state-plane viewer"
+    },
+    {
+      "type": "prose",
+      "text": "The first viewer shows a system with two states. On the left is the state plane: each grey arrow shows which way the state moves from that point, the dark curve is the path from the start x(0) (the circle), with a small dot every second, and the dashed coloured lines are the eigen-directions, labelled with their eigenvalue. Top right are the same motion as signals against time: x₁ (blue), x₂ (amber) and the output y (thick red). Bottom right are the poles (×) and zeros (○) in the complex plane, with the unstable right half shaded. Press Next step ▶ for an eight-step walk-through, and Play ▶ to watch the state move."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "A system with two states",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "mass on a spring, light damping"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "list",
+      "items": [
+        "System picks one of ten systems: two masses on springs, an RLC circuit, two tanks, a DC motor, a pendulum balanced upright, an undamped and an unstable oscillator, and two systems with a hidden mode.",
+        "Time switches between continuous time and sampling every T seconds. Sampled, the arrows show where one step moves the state, the path becomes a string of dots, and the poles move to the z-plane, where the stable region is inside the unit circle.",
+        "Input chooses no input (the free response from x(0)), a unit step or a unit impulse. x₁(0) and x₂(0) set the starting state.",
+        "Feedback gain k₁ and k₂ close a loop $u = -k_1x_1 - k_2x_2 + r$. The poles move as you drag them; the faint × marks where they were without feedback.",
+        "The readout below lists A, B, C, the poles, the transfer function G(s), whether the system is controllable and observable, and the state at the end of the plot."
+      ]
+    },
+    {
+      "type": "callout",
+      "text": "The default is the lightly damped mass, started at $x(0) = (1, 0)$: pulled 1 m to the side and let go. The path spirals in to the origin, and the poles sit at $-0.5 \\pm 1.936j$, to the left of the imaginary axis. Drag Feedback gain k₂ to 3: the extra damping turns the characteristic polynomial into $s^2 + 4s + 4$, both poles land together at $-2$, and the spiral is gone: the path curves in to the origin without swinging round it. Set k₁ to 4 as well and the poles move to $-2 \\pm 2j$: a quick, well-damped swing that is over in about two seconds."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The 3D viewer"
+    },
+    {
+      "type": "prose",
+      "text": "The second viewer does the same for a system with three states, so the state is a point in space. The dark curve is its path, the faint curve its shadow on the floor, the dashed lines are the real eigen-directions and an amber disc marks the plane in which a complex pair of eigenvalues makes the state turn. Below are the signals against time and the poles. Drag the view to turn it."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-3d",
+        "title": "A system with three states",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "spring with a slow actuator",
+              "DC motor with its current",
+              "three tanks in a row",
+              "chain of three lags 1/(s + 1)³",
+              "a spin about an axis, and a decay",
+              "Lorenz system near the origin"
+            ],
+            "default": "spring with a slow actuator"
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x3",
+            "label": "x₃(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -35
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 25
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The default is a spring driven through a slow actuator, with poles $-5$ and $-0.2 \\pm 1.99j$. Started at $x(0) = (1, 0, 1)$, the path first drops quickly towards the amber plane, because the mode with $\\lambda = -5$ dies away within about a second, and then spirals slowly inside it. The poles nearest the imaginary axis dominate the motion."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Pages in this topic"
+    },
+    {
+      "type": "list",
+      "items": [
+        "States and the State Equations (#/math/state-space/state-equations): what a state is, and how a differential equation becomes x′ = Ax + Bu, y = Cx + Du: springs, circuits, tanks and motors.",
+        "Solving the State Equations (#/math/state-space/solving): the matrix exponential e^(At), free and forced responses, and the convolution integral, worked with numbers.",
+        "Modes and Stability (#/math/state-space/modes-and-stability): eigenvectors as modes, the shapes of the state plane (nodes, saddles, spirals, centres), and when a system returns to rest.",
+        "Transfer Functions and Realisations (#/math/state-space/transfer-functions): from state space to G(s) = C(sI − A)⁻¹B + D and back: poles, zeros, canonical forms and changes of state.",
+        "Sampled and Discrete-Time Systems (#/math/state-space/discrete-time): x[k+1] = Φx[k] + Γu[k]: sampling with a zero-order hold, z = e^(sT), and stability inside the unit circle.",
+        "Controllability and Observability (#/math/state-space/controllability-observability): can the input reach every mode, and can the output see every mode? Rank tests, hidden modes and cancelled poles.",
+        "State Feedback and Pole Placement (#/math/state-space/state-feedback): u = −Kx + r moves the poles of A − BK: Ackermann's formula, balancing a pendulum, and setting the steady-state gain.",
+        "Observers: Estimating the State (#/math/state-space/observers): when only y is measured: the Luenberger observer, choosing L, the separation principle, and a word on the Kalman filter.",
+        "Three States and More (#/math/state-space/higher-order): a 3D view of third-order systems: fast and slow modes, dominant poles, repeated poles, and a first look at the Lorenz system.",
+        "A Gallery of Systems (#/math/state-space/gallery): every system in the two viewers, and what each one teaches.",
+        "State-Space Tables (#/math/state-space/tables): reference tables: standard models, formulas for e^(At), transfer functions, tests, canonical forms and the presets' numbers."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What you need first"
+    },
+    {
+      "type": "prose",
+      "text": "Matrices and eigenvalues: Eigenvalues and Eigenvectors (#/math/eigenvalues) covers what is needed, and its page Eigenvalues in Practice (#/math/eigenvalues/applications) already meets $x' = Ax$. The links to transfer functions use The Laplace Transform (#/math/laplace-transform), the sampled systems use The Z-Transform (#/math/z-transform), and the forced response is a Convolution (#/math/convolution)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Katsuhiko Ogata, Modern Control Engineering, 5th edition (Prentice Hall, 2010).",
+        "Gene F. Franklin, J. David Powell and Abbas Emami-Naeini, Feedback Control of Dynamic Systems, 7th edition (Pearson, 2015).",
+        "Chi-Tsong Chen, Linear System Theory and Design, 4th edition (Oxford University Press, 2013).",
+        "Karl Johan Åström and Richard M. Murray, Feedback Systems: An Introduction for Scientists and Engineers, 2nd edition (Princeton University Press, 2021)."
+      ]
+    }
+  ]
+}

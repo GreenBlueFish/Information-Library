@@ -1,0 +1,692 @@
+{
+  "title": "Sampled and Discrete-Time Systems",
+  "intro": "A computer does not see a signal, it sees samples taken every $T$ seconds, and it holds its output steady between them. This page works out what the state equation becomes under that arrangement, $x[k+1] = \\Phi x[k] + \\Gamma u[k]$, why each pole $s$ turns into $z = e^{sT}$, where an extra zero comes from, and what goes wrong when the sampling is slow or the approximation is crude.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why a different equation"
+    },
+    {
+      "type": "prose",
+      "text": "Everything so far has run in continuous time: the state $x(t)$ exists at every instant and obeys $x' = Ax + Bu$. A digital controller works differently. An analogue-to-digital converter reads the output $y$ at the instants $0, T, 2T, \\ldots$, a program computes a new input value, and a digital-to-analogue converter puts that value on the wire and keeps it there, constant, until the next instant. The plant is still continuous, but the controller only ever sees and sets it at the sampling instants. So the natural question is: if I only look at the state at those instants, and the input is constant in between, how does one sample lead to the next?"
+    },
+    {
+      "type": "prose",
+      "text": "The answer is a very pleasant surprise. Because the plant is linear and the input is constant between samples, the state at the next instant is an exact linear function of the state now and the input now. There is no approximation. The result looks just like the continuous equation but with the derivative replaced by a step: $x[k+1] = \\Phi x[k] + \\Gamma u[k]$, where $x[k]$ means $x(kT)$ and $u[k]$ is the held input value on the interval from $kT$ to $(k+1)T$. This is the state equation of a discrete-time system, and its mathematics is that of The Z-Transform (#/math/z-transform) rather than The Laplace Transform (#/math/laplace-transform)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Holding the input: the zero-order hold"
+    },
+    {
+      "type": "prose",
+      "text": "The device that keeps the input constant between samples is the zero-order hold (ZOH). 'Zero-order' says that it extrapolates with a polynomial of degree zero, a constant. It is by far the most common arrangement, because it is what a converter does without being asked. (A first-order hold would continue the line through the last two samples. It is rarely used.) So the input to the plant is a staircase: $u(t) = u[k]$ for $kT \\le t < (k+1)T$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Deriving $\\Phi$ and $\\Gamma$"
+    },
+    {
+      "type": "prose",
+      "text": "Start from the exact solution of the state equation, found on Solving the State Equations (#/math/state-space/solving). Starting at time $t_0$ with state $x(t_0)$, the state at a later time $t$ is"
+    },
+    {
+      "type": "math",
+      "tex": "x(t) = e^{A(t - t_0)}\\,x(t_0) + \\int_{t_0}^{t} e^{A(t - \\tau)} B\\,u(\\tau)\\,d\\tau"
+    },
+    {
+      "type": "prose",
+      "text": "Now take $t_0 = kT$ and $t = (k+1)T$, one sampling period later. Over that interval the input is the constant $u[k]$, so it can be taken out of the integral, and $t - t_0 = T$:"
+    },
+    {
+      "type": "math",
+      "tex": "x[k+1] = e^{AT}\\,x[k] + \\left( \\int_{kT}^{(k+1)T} e^{A((k+1)T - \\tau)}\\,d\\tau \\right) B\\,u[k]"
+    },
+    {
+      "type": "prose",
+      "text": "In the integral, change the variable to $\\sigma = (k+1)T - \\tau$. When $\\tau = kT$, $\\sigma = T$; when $\\tau = (k+1)T$, $\\sigma = 0$; and $d\\tau = -d\\sigma$, which flips the limits back. The integral becomes $\\int_0^T e^{A\\sigma}\\,d\\sigma$, with no trace of $k$ left, so it is the same every step. That is why the sampled system is time-invariant. We name the two constant pieces:"
+    },
+    {
+      "type": "math",
+      "tex": "\\Phi = e^{AT}, \\qquad \\Gamma = \\int_0^T e^{A\\sigma}\\,d\\sigma\\; B, \\qquad x[k+1] = \\Phi\\,x[k] + \\Gamma\\,u[k], \\quad y[k] = C\\,x[k] + D\\,u[k]"
+    },
+    {
+      "type": "prose",
+      "text": "The output equation is unchanged: $y$ at a sampling instant is $C$ times the state at that instant. Only $\\Phi$ and $\\Gamma$ are new, and both come from the matrix exponential, so everything on Solving the State Equations (#/math/state-space/solving) about computing $e^{AT}$ applies. When $A$ has an inverse, the integral can be done in closed form: $\\int_0^T e^{A\\sigma}d\\sigma = A^{-1}(e^{AT} - I)$, so $\\Gamma = A^{-1}(\\Phi - I)B$. (If $A$ has a zero eigenvalue, as for the DC motor, $A^{-1}$ does not exist and you integrate the series term by term instead.)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked: the mass at $T = 0.2$ s"
+    },
+    {
+      "type": "prose",
+      "text": "Take the lightly damped mass of the viewers, $A = \\begin{pmatrix} 0 & 1 \\\\ -4 & -1 \\end{pmatrix}$, $B = (0, 1)$, and sample every $T = 0.2$ s. We build $e^{AT}$ from its series $I + AT + (AT)^2/2! + (AT)^3/3! + \\cdots$, which converges fast because $AT$ is small. First $AT$ itself, which is just each entry times 0.2, then its powers:"
+    },
+    {
+      "type": "math",
+      "tex": "AT = \\begin{pmatrix} 0 & 0.2 \\\\ -0.8 & -0.2 \\end{pmatrix}, \\qquad \\frac{(AT)^2}{2} = \\begin{pmatrix} -0.08 & -0.02 \\\\ 0.08 & -0.06 \\end{pmatrix}, \\qquad \\frac{(AT)^3}{6} = \\begin{pmatrix} 0.0053 & -0.0040 \\\\ 0.0160 & 0.0093 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The fourth term is smaller again, $\\begin{pmatrix} 0.0008 & 0.0005 \\\\ -0.0019 & 0.0003 \\end{pmatrix}$, and the fifth smaller still. Adding the identity and the terms up to the fourth power, entry by entry, gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\Phi = e^{AT} \\approx \\begin{pmatrix} 0.926 & 0.176 \\\\ -0.706 & 0.750 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "For $\\Gamma$ we use the closed form. $A^{-1} = \\begin{pmatrix} -0.25 & -0.25 \\\\ 1 & 0 \\end{pmatrix}$ (for a 2×2 matrix, swap the diagonal, negate the others and divide by the determinant, which is 4). Then $(\\Phi - I)B$ is the second column of $\\Phi - I$, namely $(0.1765, -0.2504)$, and"
+    },
+    {
+      "type": "math",
+      "tex": "\\Gamma = A^{-1}(\\Phi - I)B = \\begin{pmatrix} -0.25 \\cdot 0.1765 - 0.25 \\cdot (-0.2504) \\\\ 1 \\cdot 0.1765 + 0 \\end{pmatrix} = \\begin{pmatrix} 0.0185 \\\\ 0.1765 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "A sanity check on $\\Gamma$: a unit force acting for 0.2 s on a 1 kg mass gives it a velocity of roughly 0.2 m/s, less the loss to the spring and damper, and the second entry says 0.1765 m/s. The position gains only about $\\tfrac12 \\cdot 0.2^2 = 0.02$ m, and the first entry says 0.0185. Both are plausible."
+    },
+    {
+      "type": "prose",
+      "text": "The state-plane viewer prints exactly these numbers when you choose Time = sampled every T seconds with Sample period T (seconds) at 0.2: 'Φ = [[0.926, 0.176], [−0.706, 0.75]], Γ = (0.02, 0.18)', the readout rounding $\\Gamma$ to two places."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "The mass sampled every 0.2 s",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "mass on a spring, light damping"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "sampled every T seconds"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The controls are set to the lightly damped mass, sampled, T = 0.2 s, starting from $x(0) = (1, 0)$. The readout shows $\\Phi$ and $\\Gamma$ as above and the poles $0.838 \\pm 0.342j$. Press Next step ▶ twice to reach step 2, which says 'From x[0] = (1.00, 0.00) the next state is (0.93, −0.71)', which is the first column of $\\Phi$: $x[1] = \\Phi x[0] = (0.926, -0.706)$. Press Play ▶ and the dots appear one per sample, each placed on the faint continuous path, because $\\Phi = e^{AT}$ is the continuous motion over one period."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stepping forward: $x[k] = \\Phi^k x[0]$"
+    },
+    {
+      "type": "prose",
+      "text": "With no input, each step multiplies by $\\Phi$, so after $k$ steps $x[k] = \\Phi^k x[0]$. From $x[0] = (1, 0)$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$x[1] = \\Phi x[0] = (0.926,\\ -0.706)$: the first column of $\\Phi$.",
+        "$x[2] = \\Phi x[1] = (0.926 \\cdot 0.926 + 0.176 \\cdot (-0.706),\\ -0.706 \\cdot 0.926 + 0.750 \\cdot (-0.706)) = (0.733,\\ -1.183)$.",
+        "$x[3] = \\Phi x[2] = (0.470,\\ -1.404)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "These are the values of the continuous solution at $t = 0.2$, $0.4$ and $0.6$ s. Nothing was lost: the samples sit exactly on the curve. The velocity (second entry) is still growing in size at $x[3]$ because the mass has been accelerating towards the centre; later steps bring it back. Contrast this with Euler's method, which we come to below, where the samples would only be close to the curve."
+    },
+    {
+      "type": "prose",
+      "text": "With an input held at $u[k]$ the full recursion is $x[k+1] = \\Phi x[k] + \\Gamma u[k]$. For a unit step, $u[k] = 1$ for all $k$, and the state settles where it stops changing: $x = \\Phi x + \\Gamma$, so $x = (I - \\Phi)^{-1}\\Gamma$. For this mass the result is $(0.25, 0)$, the same $-A^{-1}B$ as in continuous time. This must be so, since a constant input held constant is the same input whether you sample it or not. In the viewer, set Input to unit step and x₁(0) to 0: the readout ends 'At t = 10 s: x = (0.25, 0.00), y = 0.248', still a hair short of 0.25 because the ringing has not quite died away."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Poles move to $z = e^{sT}$"
+    },
+    {
+      "type": "prose",
+      "text": "The eigenvalues of $\\Phi = e^{AT}$ follow from those of $A$. If $Av = sv$, then $A^n v = s^n v$ for every power, so $e^{AT}v = \\sum_n (sT)^n v / n! = e^{sT}v$. The same eigenvector, a new eigenvalue $z = e^{sT}$. The matrix $A$ in the example has $s = -0.5 \\pm 1.936j$ (the 1.936 is $\\sqrt{3.75}$). Each pole maps by $z = e^{sT}$ with $T = 0.2$:"
+    },
+    {
+      "type": "math",
+      "tex": "z = e^{-0.1}\\,e^{\\pm j\\,0.3873} = 0.9048\\,\\angle \\pm 22.2^\\circ = 0.838 \\pm 0.342j"
+    },
+    {
+      "type": "prose",
+      "text": "The real part of $s$ becomes the size $|z| = e^{-0.5 \\cdot 0.2} = 0.905$, and the imaginary part becomes the angle $1.936 \\cdot 0.2 = 0.387$ rad, or $22.2^\\circ$, by which each step turns the state. The check using the trace and determinant of $\\Phi$: the sum of the eigenvalues is $2 \\cdot 0.838 = 1.676$, and $0.926 + 0.750 = 1.676$; the product is $|z|^2 = e^{-0.2} = 0.8187$, and $\\det\\Phi = 0.926 \\cdot 0.750 - 0.176 \\cdot (-0.706) = 0.819$. Both agree."
+    },
+    {
+      "type": "prose",
+      "text": "What does stability look like? A continuous system is stable when every pole has $\\mathrm{Re}\\,s < 0$. Since $|e^{sT}| = e^{\\mathrm{Re}(s)\\,T}$, that is the same as $|z| < 1$. The left half-plane of $s$ maps into the inside of the unit circle of $z$; the imaginary axis maps onto the circle itself; the right half-plane maps outside. So the stability test of the discrete system is: every eigenvalue of $\\Phi$ strictly inside the unit circle. The consequences for the time signal are those of Pole Positions and the Time Signal (#/math/z-transform/poles-and-time): a real pole $z = 0.8$ decays by 0.8 each step, a negative real pole flips sign each step, a complex pair spirals, and the angle of the pair is how far the signal turns per sample. The unit circle also carries the frequency response, as on The Unit Circle and Frequency Response (#/math/z-transform/unit-circle)."
+    },
+    {
+      "type": "prose",
+      "text": "One thing sampling cannot change is stability: every continuous pole in the left half-plane maps inside the circle for every $T$, and every unstable one stays outside. A balanced pendulum, with poles $\\pm 1$, becomes $z = e^{0.5} = 1.649$ and $e^{-0.5} = 0.607$ at $T = 0.5$. Still one unstable pole. Sampling does not rescue it; feedback must."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Slower sampling, and what the poles do"
+    },
+    {
+      "type": "prose",
+      "text": "What changes as $T$ grows is where the poles sit. A real pole $s = -a$ becomes $z = e^{-aT}$, which slides towards 0 as $T$ increases. For the heavily damped mass, $s = -1$ and $-2$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "$T = 0.2$: $z = e^{-0.2} = 0.819$ and $e^{-0.4} = 0.670$.",
+        "$T = 0.5$: $z = 0.607$ and $0.368$.",
+        "$T = 1.5$: $z = 0.223$ and $0.050$. The state has been crushed by the second pole within one or two samples."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Try it: select the heavily damped mass in the System menu and move Sample period T (seconds). At T = 0.5 the readout prints 'Φ = [[0.845, 0.239], [−0.477, 0.129]]' and 'Poles 0.607 and 0.368', and at T = 1.5 'Poles 0.223 and 0.05'. As a check on $\\Phi$ at $T = 0.5$: the trace $0.845 + 0.129 = 0.974$ equals $0.607 + 0.368$, and the determinant $0.845 \\cdot 0.129 + 0.239 \\cdot 0.477 = 0.223$ equals $e^{-1.5} = 0.223$. In general $\\det e^{AT} = e^{\\mathrm{tr}(A)\\,T}$, and here $\\mathrm{tr}\\,A = -3$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "Heavy damping at slow sampling",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "mass on a spring, heavy damping"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "sampled every T seconds"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.5
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": -1
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Heavy damping, sampled every 0.5 s, starting from $x(0) = (1, -1)$, which lies on the slower eigen-line. The dashed line labelled 'z = 0.607' is the one the state follows; each dot is $0.607$ times the one before, a straight line of dots marching into the origin. Move Sample period T (seconds) to 1.5: the dots on that line shrink by a factor 0.223 per step, so there are only two or three dots before the origin swallows the path. The other line, 'z = 0.368' at $T = 0.5$ and 'z = 0.05' at $T = 1.5$, is the fast mode: at $T = 1.5$ it is cut to a twentieth per step."
+    },
+    {
+      "type": "prose",
+      "text": "The same loss of detail happens to oscillations. A pole pair at $s = \\pm j\\omega$ becomes $z = e^{\\pm j\\omega T}$, on the unit circle at the angle $\\omega T$: each step turns the state through $\\omega T$ radians. The undamped oscillator has $\\omega = 1$ and, at $T = 1.5$, turns $1.5$ rad $= 85.9^\\circ$ per step, so only $2\\pi/1.5 = 4.2$ samples cover one swing. Select the undamped oscillator, sampled, T = 1.5: the readout gives $\\Phi = \\begin{pmatrix} 0.071 & 0.997 \\\\ -0.997 & 0.071 \\end{pmatrix}$ (indeed $\\cos 1.5 = 0.071$), 'Poles 0.071 ± 0.997j: on the edge', and step 4 of the walk-through says 'angle 85.9°'. The dots go round a circle at about four per turn: a crude picture of a smooth motion, though each dot is exactly right."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "An oscillator seen four times per turn",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "undamped oscillator"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "sampled every T seconds"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 1.5
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Undamped oscillator, T = 1.5 s, $x(0) = (1, 0)$. The dots lie on a circle, about four per turn, and the faint continuous path behind them is the circle they are sampled from. In the z-plane (bottom right) the two poles sit on the unit circle at $0.071 \\pm 0.997j$. Now drag Sample period T (seconds) down to 0.3: the poles creep towards $z = 1$ (at 0.3 they are $0.955 \\pm 0.296j$), each step turns only $17^\\circ$, and the dots crowd along the circle like the continuous path itself."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Aliasing: the limit of the picture"
+    },
+    {
+      "type": "prose",
+      "text": "The map $z = e^{sT}$ is not one-to-one: $e^{j\\omega T}$ repeats whenever $\\omega T$ grows by $2\\pi$. Two frequencies $\\omega$ and $\\omega + 2\\pi/T$ give the same $z$, and so the same samples. This is aliasing, treated in Sampling and the DFT (#/math/fourier-transform/sampling-and-dft). For a pole at $s = 7j$ sampled with $T = 1$, $z = e^{7j} = e^{(7 - 2\\pi)j} = e^{0.717j}$, exactly what a slow oscillation at 0.717 rad/s would give. A discrete system cannot tell them apart. The safe range is $\\omega T < \\pi$, that is, more than two samples per cycle, and in practice you want many more."
+    },
+    {
+      "type": "prose",
+      "text": "A limitation of the viewer: Sample period T (seconds) runs only up to 1.5, and the fastest preset oscillation is the light mass at 1.936 rad/s, for which $\\omega T \\le 2.9 < \\pi$. So without feedback the viewer never reaches $\\omega T = \\pi$, and you cannot see a pole fold back in it. The arithmetic above is the demonstration."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A zero that sampling adds"
+    },
+    {
+      "type": "prose",
+      "text": "The continuous mass has no zeros: $G(s) = 1/(s^2 + s + 4)$. The sampled system does. The transfer function of the sampled system is $G(z) = C(zI - \\Phi)^{-1}\\Gamma + D$, found exactly as for continuous time (see Transfer Functions and Realisations (#/math/state-space/transfer-functions), with $z$ for $s$). For a 2×2 system, $(zI - \\Phi)^{-1} = \\mathrm{adj}(zI - \\Phi)/\\det(zI - \\Phi)$, and with $C = (1, 0)$ and the entries of $\\Phi$ written $\\phi_{ij}$:"
+    },
+    {
+      "type": "math",
+      "tex": "G(z) = \\frac{(z - \\phi_{22})\\,\\Gamma_1 + \\phi_{12}\\,\\Gamma_2}{z^2 - (\\mathrm{tr}\\,\\Phi)\\,z + \\det\\Phi} = \\frac{0.0185\\,z + 0.0173}{z^2 - 1.676\\,z + 0.819}"
+    },
+    {
+      "type": "prose",
+      "text": "Multiplying out, $\\phi_{22} = 0.7496$, $\\phi_{12} = 0.1765$ and $\\Gamma = (0.0185, 0.1765)$ give the numerator $0.0185\\,(z - 0.7496) + 0.1765 \\cdot 0.1765 = 0.0185\\,z + 0.0173$, which vanishes at $z = -0.935$. The denominator is $\\det(zI - \\Phi) = z^2 - (\\mathrm{tr}\\,\\Phi)\\,z + \\det\\Phi$ with $\\mathrm{tr}\\,\\Phi = 1.676$ and $\\det \\Phi = 0.819$, as checked above. The viewer prints the same: 'G(z) = (0.018z + 0.017) / (z² − 1.676z + 0.819)', and step 7 of its walk-through adds 'It has a zero at z = −0.935 (○), where G = 0'."
+    },
+    {
+      "type": "prose",
+      "text": "Why did a system with no zeros acquire one? Look at what one held unit of force, $u[0] = 1$ and nothing after, does to the position, sample by sample. Dividing out $G(z)$ in powers of $1/z$ gives exactly that response: $G(z) = y[1]\\,z^{-1} + y[2]\\,z^{-2} + \\cdots$. If the numerator were a constant $b$, then $G(z) = b/(z^2 - 1.676z + 0.819) = b\\,z^{-2} + \\cdots$, and the position would still be zero at the first sample. But the held force has already moved the mass by then: $y[1] = C\\Gamma = \\Gamma_1 = 0.0185$. So the numerator must contain a $z$ term, with coefficient exactly $0.0185$. One sample later the effect is $y[2] = \\phi_{11}\\Gamma_1 + \\phi_{12}\\Gamma_2 = 0.0483$, about 2.6 times larger, because the velocity the push created has been carrying the mass along; matching the $z^{-2}$ term fixes the constant, $0.0483 - 1.676 \\cdot 0.0185 = 0.0173$. A numerator of degree one has a root, so the sampled model has a zero. In continuous time the force reaches the position only through two integrations, which is why $G(s)$ falls like $1/s^2$ and has no zero; sampling with a hold turns those two integrations into a response that is already nonzero after one step. It sits close to $-1$ for fast sampling and moves right as $T$ grows. Computed from the formula for each period: $-0.983$ at $T = 0.05$, $-0.935$ at $T = 0.2$, $-0.842$ at $T = 0.5$ and $-0.497$ at $T = 1.5$, and you can watch the ○ in the z-plane panel move as you drag Sample period T (seconds). As $T \\to 0$ it tends to $z = -1$, the edge of the unit circle. A zero at $-1$ is harmless but not a thing to cancel with a controller; a zero outside the unit circle would be a serious matter. The general rule: if the denominator of $G(s)$ has degree $r$ more than its numerator (the input reaches the output through $r$ integrations), zero-order-hold sampling generally adds $r - 1$ zeros."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The shortcut that fails: Euler's method"
+    },
+    {
+      "type": "prose",
+      "text": "Rather than the exact $\\Phi$, one may be tempted to replace the derivative by a difference, $x' \\approx (x[k+1] - x[k])/T$, which gives $x[k+1] = x[k] + T(Ax[k] + Bu[k])$. That is $\\Phi_E = I + AT$ and $\\Gamma_E = BT$: the first two terms of the series for $e^{AT}$ and nothing more. It is cheap and, for small $T$, close. But it moves each pole to $z = 1 + sT$ instead of $e^{sT}$, and that changes the stability boundary."
+    },
+    {
+      "type": "prose",
+      "text": "For the mass with $T = 0.2$: $1 + sT = 1 + 0.2\\,(-0.5 \\pm 1.936j) = 0.9 \\pm 0.387j$, of size $0.980$. Stable, but it decays much more slowly than the true $0.905$ per step. At $T = 1.5$, $1 + sT = 0.25 \\pm 2.905j$, of size $2.915$: Euler says the mass explodes, whereas the true factor is $e^{-0.75} = 0.472$ per step. The Euler stable region is the disc of radius 1 centred on $-1$ in the $sT$ plane, a small part of the left half-plane."
+    },
+    {
+      "type": "prose",
+      "text": "Worse, the undamped oscillator (poles $\\pm j$) has $1 \\pm jT$, of size $\\sqrt{1 + T^2} > 1$ for every $T$. At $T = 0.2$ the size is $1.0198$ per step, and over the 31 steps that make one swing of 6.2 s the amplitude grows by $1.0198^{31} = 1.84$: a spiral outward where the real system just circles. The exact sampling of this page never does that, which you can see in the viewer: with the undamped oscillator at any T the dots stay on one circle. The viewer has no Euler setting, so the comparison is arithmetic. The lesson: use $e^{AT}$, which is exact for a held input, or a method whose own stability region you know."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Feedback on the samples"
+    },
+    {
+      "type": "prose",
+      "text": "A computer will close a loop by computing $u[k] = -Kx[k] + r[k]$ from the measured state at each sampling instant and holding it. Substituting into $x[k+1] = \\Phi x[k] + \\Gamma u[k]$ gives $x[k+1] = (\\Phi - \\Gamma K)x[k] + \\Gamma r[k]$: the same idea as $A - BK$, with $\\Phi - \\Gamma K$ in place. The poles to place are now eigenvalues of $\\Phi - \\Gamma K$, and the target is the unit disc. The page State Feedback and Pole Placement (#/math/state-space/state-feedback) does the design for the continuous case. For a sampled design you can choose the continuous target poles and map them by $z = e^{sT}$."
+    },
+    {
+      "type": "prose",
+      "text": "That is what step 8 of the viewer's walk-through does when sampling is on. For the mass at $T = 0.2$ it aims at the continuous poles $-2 \\pm 2j$, which map to $e^{(-2 \\pm 2j)\\,0.2} = e^{-0.4}\\,e^{\\pm 0.4j} = 0.617 \\pm 0.261j$, and it sets the gains (rounded to 0.1) to $K = (2.0, 2.3)$. The readout then shows 'Feedback K = (2.0, 2.3): Φ − ΓK = [[0.889, 0.134], [−1.059, 0.344]]' and the poles $0.616 \\pm 0.26j$, a hair from the target because of the rounding."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "Sampled feedback on the mass",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "mass on a spring, light damping"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "sampled every T seconds"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "unit step"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 2.0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 2.3
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Lightly damped mass, sampled every 0.2 s, unit step input from rest, gains set to $k_1 = 2.0$ and $k_2 = 2.3$. In the z-plane (bottom right) the faint × marks are the open-loop poles $0.838 \\pm 0.342j$; the bold × marks are the closed-loop poles $0.616 \\pm 0.26j$, nearer the origin. The red + 'rest' on the state plane is at $x = (0.17, 0)$ and the thick red $y$ curve settles at 0.167 within the plot, which spans 2.6 s here. Move Feedback gain k₂ back to 0 and k₁ to 0 and the faint poles are the only ones; the ringing returns and the settled value is 0.25. A reminder that feedback has changed the steady-state value: State Feedback and Pole Placement (#/math/state-space/state-feedback) deals with this."
+    },
+    {
+      "type": "prose",
+      "text": "The settled value is worth checking by hand. At rest $x = \\Phi x + \\Gamma$ with $u = 1 - Kx$ means $(I - \\Phi + \\Gamma K)x = \\Gamma$. Solving gives $x = (0.1667, 0)$. It equals $1/(4 + k_1) = 1/6$, the continuous answer for the closed loop $s^2 + (1 + k_2)s + (4 + k_1)$: the zero-order hold changes nothing about where a constant input leaves the state."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Check yourself"
+    },
+    {
+      "type": "problem",
+      "title": "Sample a first-order system",
+      "text": "A tank with level $x$ obeys $x' = -x + 1.5u$. It is sampled every $T = 1$ s with a zero-order hold. Find $\\Phi$ and $\\Gamma$, then the levels $x[1]$ and $x[2]$ after a unit step starting from $x[0] = 0$, and the level it settles at.",
+      "solution": [
+        "For a scalar, $A = -1$, $B = 1.5$. $\\Phi = e^{AT} = e^{-1} = 0.3679$.",
+        "$\\Gamma = A^{-1}(\\Phi - 1)B = (-1)^{-1}\\,(0.3679 - 1)\\,(1.5) = 0.9482$. (Equivalently $\\int_0^1 e^{-\\sigma}d\\sigma \\cdot 1.5 = 1.5\\,(1 - e^{-1})$.)",
+        "With $u[k] = 1$: $x[1] = 0.3679 \\cdot 0 + 0.9482 = 0.9482$ and $x[2] = 0.3679 \\cdot 0.9482 + 0.9482 = 1.2970$.",
+        "The settled value solves $x = 0.3679\\,x + 0.9482$, so $x = 0.9482 / 0.6321 = 1.5$, which is $-A^{-1}B$, as expected. Check against the continuous curve $1.5\\,(1 - e^{-t})$: at $t = 1$ it is $0.9482$ and at $t = 2$ it is $1.2970$. The samples sit on it."
+      ],
+      "answer": "$\\Phi = 0.368$, $\\Gamma = 0.948$; $x[1] = 0.948$, $x[2] = 1.297$; settles at $1.5$."
+    },
+    {
+      "type": "problem",
+      "title": "Where Euler goes wrong",
+      "text": "For $x' = -10x$ sampled with $T = 0.25$, compare the factor per step from Euler's method, $1 + AT$, with the exact $e^{AT}$. Which is stable?",
+      "solution": [
+        "$AT = -10 \\cdot 0.25 = -2.5$. Euler: $1 + AT = 1 - 2.5 = -1.5$. Exact: $e^{-2.5} = 0.0821$.",
+        "Euler's factor has size $1.5 > 1$ and alternates in sign, so each step overshoots past zero by more than it started: the numbers $1, -1.5, 2.25, -3.375, \\ldots$ grow without limit. The exact factor $0.0821$ is the decay the real tank-like system has: it falls to a twelfth of its value in one step.",
+        "Euler is stable only for $|1 - 10T| < 1$, that is $T < 0.2$."
+      ],
+      "answer": "Euler $-1.5$ (unstable); exact $0.0821$ (stable). Euler needs $T < 0.2$."
+    },
+    {
+      "type": "problem",
+      "title": "Poles under sampling",
+      "text": "A system has poles $s = -1 \\pm 2j$. Where are the poles of its zero-order-hold sampling with $T = 0.5$, and by how many degrees does the state turn each step?",
+      "solution": [
+        "$z = e^{sT} = e^{-0.5}\\,e^{\\pm 1j}$. The size is $e^{-0.5} = 0.6065$ and the angle is $2 \\cdot 0.5 = 1$ rad $= 57.3^\\circ$.",
+        "In rectangular form $z = 0.6065\\,(\\cos 1 \\pm j \\sin 1) = 0.328 \\pm 0.510j$. Inside the unit circle, so still stable."
+      ],
+      "answer": "$z = 0.328 \\pm 0.510j$ (size $0.607$, angle $57.3^\\circ$ per step)."
+    },
+    {
+      "type": "problem",
+      "title": "Folded frequency",
+      "text": "A system has poles $s = \\pm 4j$ and is sampled with $T = 1$ s. Find $z$. A discrete oscillation at what frequency (in rad/s, between $0$ and $\\pi$) has the same $z$?",
+      "solution": [
+        "$z = e^{\\pm 4j} = \\cos 4 \\pm j \\sin 4 = -0.654 \\mp 0.757j$.",
+        "The angle $4$ rad is more than $\\pi = 3.14$, so it is the same as $4 - 2\\pi = -2.283$ rad: $e^{4j} = e^{-2.283j}$. The sampled signal looks like an oscillation at $2.283$ rad/s going the other way round.",
+        "This is aliasing: only $\\omega T < \\pi$ can be told apart, and $4 > \\pi$."
+      ],
+      "answer": "$z = -0.654 \\mp 0.757j$, indistinguishable from an oscillation at $2\\pi - 4 = 2.283$ rad/s."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gene F. Franklin, J. David Powell and Michael Workman, Digital Control of Dynamic Systems, 3rd edition (Addison-Wesley, 1998). A standard book on digital control; it treats the zero-order-hold equivalent of a continuous plant.",
+        "Katsuhiko Ogata, Modern Control Engineering, 5th edition (Prentice Hall, 2010).",
+        "Chi-Tsong Chen, Linear System Theory and Design, 4th edition (Oxford University Press, 2013).",
+        "Gene F. Franklin, J. David Powell and Abbas Emami-Naeini, Feedback Control of Dynamic Systems, 7th edition (Pearson, 2015)."
+      ]
+    }
+  ]
+}

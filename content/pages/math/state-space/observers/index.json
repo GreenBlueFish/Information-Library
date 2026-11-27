@@ -1,0 +1,402 @@
+{
+  "title": "Observers: Estimating the State",
+  "intro": "State feedback needs the whole state, and a real system rarely lets you measure all of it: a position sensor, say, gives $x_1$ but not the velocity $x_2$. An observer is a model that runs alongside the plant, is nudged by the measured output, and so produces an estimate of the whole state. This page builds the Luenberger observer, shows that choosing its gain is pole placement again (by duality), works the mass through, and shows why the observer and the feedback can be designed separately.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The problem: only y is measured"
+    },
+    {
+      "type": "prose",
+      "text": "On the previous page $u = -Kx$ used both states. In practice you have the output $y = Cx$ and the input $u$ you applied, and you know $A$, $B$ and $C$. The task is to produce an estimate $\\hat{x}(t)$ that tracks the true $x(t)$, so that the feedback can use $u = -K\\hat{x}$. (This only makes sense for an observable system; see Controllability and Observability (#/math/state-space/controllability-observability).)"
+    },
+    {
+      "type": "prose",
+      "text": "The first idea is to run a copy of the model with the same input, $\\hat{x}' = A\\hat{x} + Bu$, started from a guess $\\hat{x}(0)$. The error $e = x - \\hat{x}$ then obeys $e' = (Ax + Bu) - (A\\hat{x} + Bu) = Ae$: the input cancels, and the error evolves by the plant's own dynamics. If $A$ is stable the error dies away by itself, but only at the plant's own slow rate. If $A$ is unstable it grows."
+    },
+    {
+      "type": "prose",
+      "text": "Take the balanced pendulum, with $A = \\begin{pmatrix} 0 & 1 \\\\ 1 & 0 \\end{pmatrix}$. A guess that is off by $e(0) = (0.5, 0)$ evolves as $e' = Ae$, which is exactly the pendulum's free response from $x(0) = (0.5, 0)$, growing like $e^{t}$. The viewer draws it directly."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "An open-loop copy of the pendulum drifts away",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "pendulum balanced upright"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0.5
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0.0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "This is the pendulum with no feedback, started at $(0.5, 0)$. Read it as the error of an open-loop copy that began half a unit wrong: the path leaves along the unstable direction and the readout ends 'At t = 3.4 s: x = (7.51, 7.49)'. The error has grown fifteenfold in 3.4 s, so the copy is worse than useless."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Using the measurement: the Luenberger observer"
+    },
+    {
+      "type": "prose",
+      "text": "The remedy is to correct the copy with the thing the copy cannot know, the real output. Compare the measured $y$ with the output the copy predicts, $C\\hat{x}$, and add a correction proportional to the difference, through a gain vector $L$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\hat{x}' = A\\hat{x} + Bu + L\\,(y - C\\hat{x})"
+    },
+    {
+      "type": "prose",
+      "text": "This is the Luenberger observer (Luenberger 1964). When the estimate is right, $y - C\\hat{x} = 0$ and the observer is the plain model. When it is wrong, the term $L(y - C\\hat{x})$ pushes the estimate towards one that agrees with the measurement. Now the error: substitute $y = Cx$ and subtract,"
+    },
+    {
+      "type": "math",
+      "tex": "e' = x' - \\hat{x}' = Ax + Bu - A\\hat{x} - Bu - LC(x - \\hat{x}) = (A - LC)\\,e"
+    },
+    {
+      "type": "prose",
+      "text": "The input cancelled again and so did $B$: whatever the plant is being asked to do, the error evolves by $e' = (A - LC)e$, with its own matrix. Its poles are the eigenvalues of $A - LC$, and they are the designer's to choose through $L$. Choose them to the left of the imaginary axis and the error dies away, whatever the plant does."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Choosing L: the dual of pole placement"
+    },
+    {
+      "type": "prose",
+      "text": "Compare $A - LC$ with the feedback matrix $A - BK$ of the last page. A matrix and its transpose have the same eigenvalues, and the transpose is $(A - LC)^{\\top} = A^{\\top} - C^{\\top}L^{\\top}$. That is a state-feedback matrix for the system $(A^{\\top}, C^{\\top})$ with gain $K = L^{\\top}$. So the whole design is Ackermann's formula (or the polynomial comparison) applied to $A^{\\top}$ and $C^{\\top}$: the duality of Controllability and Observability (#/math/state-space/controllability-observability). The condition for success is that $(A^{\\top}, C^{\\top})$ is controllable, which is exactly that $(A, C)$ is observable."
+    },
+    {
+      "type": "prose",
+      "text": "Worked for the mass. $A = \\begin{pmatrix} 0 & 1 \\\\ -4 & -1 \\end{pmatrix}$ and $C = (1, 0)$, so $LC$ puts $l_1$ and $l_2$ in the first column:"
+    },
+    {
+      "type": "math",
+      "tex": "A - LC = \\begin{pmatrix} -l_1 & 1 \\\\ -4 - l_2 & -1 \\end{pmatrix}, \\qquad \\det(sI - (A - LC)) = (s + l_1)(s + 1) + (4 + l_2) = s^2 + (1 + l_1)s + (l_1 + l_2 + 4)"
+    },
+    {
+      "type": "prose",
+      "text": "A rule of thumb is to make the observer several times faster than the feedback, so that the estimate has settled before the controller depends on it. The feedback poles were $-2 \\pm 2j$; take the observer poles at twice those, $-4 \\pm 4j$, which is $(s + 4)^2 + 16 = s^2 + 8s + 32$. Matching the coefficients: $1 + l_1 = 8$ gives $l_1 = 7$, and $l_1 + l_2 + 4 = 32$ gives $l_2 = 21$. So $L = (7, 21)$ and"
+    },
+    {
+      "type": "math",
+      "tex": "A - LC = \\begin{pmatrix} -7 & 1 \\\\ -25 & -1 \\end{pmatrix}, \\qquad \\text{trace } -8, \\quad \\det\\ 7 + 25 = 32"
+    },
+    {
+      "type": "prose",
+      "text": "Check by Ackermann on the dual pair. $A^{\\top} = \\begin{pmatrix} 0 & -4 \\\\ 1 & -1 \\end{pmatrix}$ and $C^{\\top} = (1, 0)$ give $A^{\\top}C^{\\top} = (0, 1)$, so the controllability matrix is the identity and its inverse's last row is $(0, 1)$. With $\\varphi(A^{\\top}) = (A^{\\top})^2 + 8A^{\\top} + 32I = \\begin{pmatrix} -4 & 4 \\\\ -1 & -3 \\end{pmatrix} + \\begin{pmatrix} 0 & -32 \\\\ 8 & -8 \\end{pmatrix} + \\begin{pmatrix} 32 & 0 \\\\ 0 & 32 \\end{pmatrix} = \\begin{pmatrix} 28 & -28 \\\\ 7 & 21 \\end{pmatrix}$, the bottom row $(7, 21)$ is $L^{\\top}$. It agrees."
+    },
+    {
+      "type": "prose",
+      "text": "What does the error do? Start the observer from $\\hat{x}(0) = (0, 0)$ while the plant is at $x(0) = (1, 0)$, so $e(0) = (1, 0)$. Because $\\mathrm{trace} = -8$, write $A - LC = -4I + N$ with $N = \\begin{pmatrix} -3 & 1 \\\\ -25 & 3 \\end{pmatrix}$, and note that $N^2 = -16I$ (compute: first entry $9 - 25 = -16$; off-diagonals $-3 + 3 = 0$ and $-75 + 75 = 0$; last entry $-25 + 9 = -16$). Then $e^{(A - LC)t} = e^{-4t}\\left(\\cos 4t\\; I + \\tfrac{\\sin 4t}{4}\\,N\\right)$ and with $Ne(0) = (-3, -25)$:"
+    },
+    {
+      "type": "math",
+      "tex": "e_1(t) = e^{-4t}\\,(\\cos 4t - 0.75 \\sin 4t), \\qquad e_2(t) = -6.25\\,e^{-4t}\\sin 4t"
+    },
+    {
+      "type": "prose",
+      "text": "At $t = 0.5$ s, $e_1 = e^{-2}(\\cos 2 - 0.75\\sin 2) = -0.149$ and $e_2 = -0.769$; at 1 s the error is $(-0.002, 0.087)$, and its size (the length of the vector $e$) stays below $0.05$ from 1.21 s on. For the open-loop copy ($L = 0$) the same error is $(0.607, -1.325)$ at 0.5 s, and its size does not stay below $0.05$ until 7.4 s: six times as long. Note also that $e_2$, the velocity error, grows to $-2.01$ at $t = 0.2$ s though it started at zero. The correction that cleans up the position error kicks the velocity estimate on the way; this peaking grows with the gains and is part of the price of a fast observer."
+    },
+    {
+      "type": "prose",
+      "text": "The viewer has no observer and no separate estimate $\\hat{x}$. There are two things it can still show. One is exact: an open-loop copy's error obeys $e' = Ae$, so any free response drawn by the viewer is the error of an open-loop copy, as in the pendulum above. The other is an analogy. For the pendulum, $A - LC = \\begin{pmatrix} -l_1 & 1 \\\\ 1 - l_2 & 0 \\end{pmatrix}$, and the position error obeys $e_1'' + l_1 e_1' + (l_2 - 1)e_1 = 0$. The pendulum under feedback $K = (k_1, k_2)$ has $x_1'' + k_2 x_1' + (k_1 - 1)x_1 = 0$. Same equation, with $l_1 \\leftrightarrow k_2$ and $l_2 \\leftrightarrow k_1$. So an observer with $L = (4, 9)$ has a position error that behaves exactly as the pendulum position does with $K = (9, 4)$, poles $-2 \\pm 2j$ (the other error component is not the same as the pendulum's velocity, so the analogy covers the first component only)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "The pendulum's error with observer poles at −2 ± 2j",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "pendulum balanced upright"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0.5
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0.0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 9.0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 4.0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The pendulum with $k_1 = 9.0$ and $k_2 = 4.0$, started at $(0.5, 0)$. Think of $x_1$ as the position error of an observer with $L = (4, 9)$, started with $e_1(0) = 0.5$ and $e_1'(0) = 0$, the same start as the pendulum's (for this observer that means $e(0) = (0.5, 2)$, since $e_1' = -l_1e_1 + e_2$). Readout: 'Feedback K = (9.0, 4.0): A − BK = [[0, 1], [−8, −4]]. Poles −2 ± 2j: stable'. The error that grew fifteenfold in the previous picture now dies away like $e^{-2t}$, and the bold × marks at $-2 \\pm 2j$ are the observer poles. Drag Feedback gain k₂ down to 0: the poles go to $\\pm 2.83j$ and the error would ring for ever, an observer with no damping term. The viewer has no observer, so this is an analogy for the error dynamics, not a picture of the observer itself."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why observability is exactly what is needed"
+    },
+    {
+      "type": "prose",
+      "text": "For the second hidden-mode preset, $A = \\mathrm{diag}(-1, -2)$ and $C = (1, 0)$, the output sees only $x_1$. Then $A - LC = \\begin{pmatrix} -1 - l_1 & 0 \\\\ -l_2 & -2 \\end{pmatrix}$, a lower triangular matrix whose eigenvalues are its diagonal entries: $-1 - l_1$, free to be chosen, and $-2$, which no $L$ can move. The error in the second state decays at the plant's own rate $e^{-2t}$ whatever you do, because the measurement carries no information about it. The pole at $-2$ is stable, so this system is detectable: the unmeasured part dies out by itself and the observer still works, only not faster than $e^{-2t}$. If that pole were unstable, no observer could exist."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The separation principle"
+    },
+    {
+      "type": "prose",
+      "text": "Does the observer disturb the feedback? Close the loop on the estimate: $u = -K\\hat{x}$. Use $\\hat{x} = x - e$:"
+    },
+    {
+      "type": "math",
+      "tex": "x' = Ax - BK\\hat{x} = (A - BK)\\,x + BK\\,e, \\qquad e' = (A - LC)\\,e"
+    },
+    {
+      "type": "prose",
+      "text": "In the coordinates $(x, e)$ the whole system is one matrix with a zero block, a block triangular form:"
+    },
+    {
+      "type": "math",
+      "tex": "\\begin{pmatrix} x' \\\\ e' \\end{pmatrix} = \\begin{pmatrix} A - BK & BK \\\\ 0 & A - LC \\end{pmatrix}\\begin{pmatrix} x \\\\ e \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The eigenvalues of a block triangular matrix are the eigenvalues of its diagonal blocks. So the closed-loop poles are those of $A - BK$ together with those of $A - LC$. This is the separation principle: design $K$ as if you had the true state, design $L$ for the error, and the poles come out as the union of the two sets, neither disturbing the other. For the mass with $K = (4, 3)$ and $L = (7, 21)$ the four-by-four matrix is"
+    },
+    {
+      "type": "math",
+      "tex": "\\begin{pmatrix} 0 & 1 & 0 & 0 \\\\ -8 & -4 & 4 & 3 \\\\ 0 & 0 & -7 & 1 \\\\ 0 & 0 & -25 & -1 \\end{pmatrix}, \\qquad \\text{poles } -2 \\pm 2j \\text{ and } -4 \\pm 4j"
+    },
+    {
+      "type": "prose",
+      "text": "(The second row is the second row of $A - BK$, $(-8, -4)$, followed by the second row of the top-right block $BK = \\begin{pmatrix} 0 & 0 \\\\ 4 & 3 \\end{pmatrix}$, $(4, 3)$.) While the error lasts it does drive $x$ through the $BK$ block, but it dies away at the observer's rate. The separation is a statement about poles for linear systems with a correct model. With a wrong model, or a plant that is not linear, the observer and controller do interact, and separately good designs need not give a good whole."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How fast, and the Kalman filter"
+    },
+    {
+      "type": "prose",
+      "text": "Faster observer poles correct errors sooner but need a large $L$, and a large $L$ amplifies the noise in $y$ straight into $\\hat{x}$. Slow ones are quiet but lag. The usual compromise is poles two to five times faster than the feedback poles, as above. A principled way to settle the compromise is the Kalman filter (Kalman 1960). It is an observer of exactly this form in which $L$ is computed from the sizes of the noise: how much random disturbance the model has, and how much noise the sensor has. A sensor that is accurate gets a large $L$ and a trusted measurement; a noisy one gets a small $L$ and leans on the model. The computation involves a Riccati equation (the one that also appears in LQR, with the roles of the two problems dual), and for a linear model with random noise of known strength the result is the linear observer with the smallest error variance. Kalman's original treatment was in discrete time. We do not derive it; the books cited below do."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Check yourself"
+    },
+    {
+      "type": "problem",
+      "title": "Observer gain for the motor",
+      "text": "For the DC motor, $A = \\begin{pmatrix} 0 & 1 \\\\ 0 & -2 \\end{pmatrix}$ and $C = (1, 0)$ (angle measured), find $L$ for observer poles $-3 \\pm 3j$.",
+      "solution": [
+        "$A - LC = \\begin{pmatrix} -l_1 & 1 \\\\ -l_2 & -2 \\end{pmatrix}$, so $\\det(sI - (A - LC)) = (s + l_1)(s + 2) + l_2 = s^2 + (2 + l_1)s + (2l_1 + l_2)$.",
+        "The wanted polynomial: $(s + 3)^2 + 9 = s^2 + 6s + 18$. So $2 + l_1 = 6$ gives $l_1 = 4$ and $2l_1 + l_2 = 18$ gives $l_2 = 10$.",
+        "Check: $A - LC = \\begin{pmatrix} -4 & 1 \\\\ -10 & -2 \\end{pmatrix}$ has trace $-6$ and determinant $8 + 10 = 18$."
+      ],
+      "answer": "$L = (4, 10)$."
+    },
+    {
+      "type": "problem",
+      "title": "An observer for the pendulum",
+      "text": "The pendulum has $A = \\begin{pmatrix} 0 & 1 \\\\ 1 & 0 \\end{pmatrix}$, $C = (1, 0)$. Find $L$ for poles $-3 \\pm 3j$, and the poles of the whole closed loop if $K = (3, 2)$ is used with the estimate.",
+      "solution": [
+        "$A - LC = \\begin{pmatrix} -l_1 & 1 \\\\ 1 - l_2 & 0 \\end{pmatrix}$ has polynomial $s(s + l_1) - (1 - l_2) = s^2 + l_1 s + (l_2 - 1)$.",
+        "Wanted $s^2 + 6s + 18$: $l_1 = 6$ and $l_2 - 1 = 18$, so $l_2 = 19$. $L = (6, 19)$.",
+        "By separation, the closed-loop poles are those of $A - BK$, which are $-1 \\pm j$ (the polynomial is $s^2 + 2s + 2$), together with $-3 \\pm 3j$. Four poles in all, all in the left half-plane."
+      ],
+      "answer": "$L = (6, 19)$; poles $-1 \\pm j$ and $-3 \\pm 3j$."
+    },
+    {
+      "type": "problem",
+      "title": "An error that cannot be sped up",
+      "text": "For $A = \\mathrm{diag}(-1, -2)$, $C = (1, 0)$, show that the observer poles cannot be placed freely, and say which pole is stuck.",
+      "solution": [
+        "$LC = \\begin{pmatrix} l_1 & 0 \\\\ l_2 & 0 \\end{pmatrix}$, so $A - LC = \\begin{pmatrix} -1 - l_1 & 0 \\\\ -l_2 & -2 \\end{pmatrix}$, lower triangular.",
+        "The eigenvalues of a triangular matrix are its diagonal entries, $-1 - l_1$ and $-2$. The first can be put anywhere, the second not at all. The observability matrix has rank 1, which is the algebraic way of seeing the same thing. The stuck pole is stable, so the system is detectable."
+      ],
+      "answer": "The pole at $-2$ is stuck for every $L$."
+    },
+    {
+      "type": "problem",
+      "title": "Peaking",
+      "text": "For the mass observer above ($L = (7, 21)$, $e(0) = (1, 0)$) the velocity error is $e_2(t) = -6.25\\,e^{-4t}\\sin 4t$. Find where $|e_2|$ is largest.",
+      "solution": [
+        "Differentiate $f(t) = e^{-4t}\\sin 4t$: $f' = e^{-4t}(4\\cos 4t - 4\\sin 4t)$. It vanishes when $\\tan 4t = 1$, so $4t = \\pi/4$ and $t = \\pi/16 = 0.196$ s.",
+        "There $\\sin 4t = 0.7071$ and $e^{-4t} = e^{-0.785} = 0.456$, so $e_2 = -6.25 \\cdot 0.456 \\cdot 0.7071 = -2.01$. The velocity error reaches 2 though it started at zero: faster observers correct the position at the price of this overshoot."
+      ],
+      "answer": "At $t = 0.196$ s, where $e_2 = -2.01$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "D. G. Luenberger, \"Observing the state of a linear system\", IEEE Transactions on Military Electronics 8 (1964) 74–80.",
+        "R. E. Kalman, \"A new approach to linear filtering and prediction problems\", Journal of Basic Engineering 82 (1960) 35–45.",
+        "R. E. Kalman and R. S. Bucy, \"New results in linear filtering and prediction theory\", Journal of Basic Engineering 83 (1961). The continuous-time version.",
+        "Karl Johan Åström and Richard M. Murray, Feedback Systems: An Introduction for Scientists and Engineers, 2nd edition (Princeton University Press, 2021). The chapters on output feedback treat observability, observers and the Kalman filter.",
+        "Gene F. Franklin, J. David Powell and Abbas Emami-Naeini, Feedback Control of Dynamic Systems, 7th edition (Pearson, 2015).",
+        "Katsuhiko Ogata, Modern Control Engineering, 5th edition (Prentice Hall, 2010).",
+        "Chi-Tsong Chen, Linear System Theory and Design, 4th edition (Oxford University Press, 2013)."
+      ]
+    }
+  ]
+}
