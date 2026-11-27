@@ -22,8 +22,12 @@ import * as music from "./music.js";
 import * as qrc from "./qrc.js";
 import * as quantum from "./quantum.js";
 import * as probability from "./probability.js";
+import * as calculus from "./calculus.js";
 
 export const SIMS = {
+  "limit-band": calculus.limitBand,
+  secant: calculus.secant,
+  riemann: calculus.riemann,
   "esn-memory": qrc.esnMemory,
   "qrc-memory": qrc.qrcMemory,
   "qrc-phase": qrc.qrcPhase,
