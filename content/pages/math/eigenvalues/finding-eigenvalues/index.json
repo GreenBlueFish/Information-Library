@@ -1,0 +1,517 @@
+{
+  "title": "Finding Eigenvalues and Eigenvectors",
+  "intro": "Guessing eigenvectors only works for neat matrices. This page gets a method that always works: turn $Av = \\lambda v$ into a question about a determinant, solve the resulting polynomial for $\\lambda$, then solve for $v$. It is done in full for a 2×2 matrix and for a 3×3 matrix, with the checks that catch mistakes.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From a guess to an equation"
+    },
+    {
+      "type": "prose",
+      "text": "We want a number $\\lambda$ and a non-zero vector $v$ with $Av = \\lambda v$. The trouble is that $\\lambda$ and $v$ are both unknown and they are multiplied together. The first move is to get all the $v$'s on one side. Since $\\lambda v = \\lambda I v$, where $I$ is the identity matrix that leaves every vector alone, we can move it across:"
+    },
+    {
+      "type": "math",
+      "tex": "Av - \\lambda I v = 0 \\qquad\\Leftrightarrow\\qquad (A - \\lambda I)\\,v = 0"
+    },
+    {
+      "type": "prose",
+      "text": "Now the question is about one matrix, $A - \\lambda I$, which is $A$ with $\\lambda$ subtracted from each diagonal entry. We want it to send a non-zero vector $v$ to zero. Think of what that means for the map. If a matrix is invertible, it can be undone, so different vectors always go to different vectors, and only $0$ goes to $0$. The only solution of $(A - \\lambda I)v = 0$ would then be $v = 0$, which we have excluded. So we need the opposite: $A - \\lambda I$ must squash some non-zero vector to zero, so it is singular, with no inverse. Geometrically a singular 2×2 matrix flattens the whole plane onto a line (or a point), and the determinant, which is the factor by which it scales area, is zero. That gives the condition we can compute:"
+    },
+    {
+      "type": "math",
+      "tex": "\\det(A - \\lambda I) = 0"
+    },
+    {
+      "type": "prose",
+      "text": "This is the characteristic equation. Written out it is a polynomial in $\\lambda$, the characteristic polynomial, and its roots are the eigenvalues (older books call them characteristic roots, or latent roots). The plan has two stages: first find the $\\lambda$'s from the polynomial, then, for each $\\lambda$, solve $(A - \\lambda I)v = 0$ for $v$. The second stage always has a non-zero solution, because the first made the matrix singular."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The 2×2 case in full"
+    },
+    {
+      "type": "prose",
+      "text": "Let $A = \\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}$. Then $A - \\lambda I = \\begin{pmatrix} a - \\lambda & b \\\\ c & d - \\lambda \\end{pmatrix}$, and its determinant is the product of the diagonal minus the product of the off-diagonal:"
+    },
+    {
+      "type": "math",
+      "tex": "(a - \\lambda)(d - \\lambda) - bc = \\lambda^2 - (a + d)\\,\\lambda + (ad - bc)"
+    },
+    {
+      "type": "prose",
+      "text": "The coefficients have names. $a + d$ is the trace of $A$, the sum of its diagonal entries, and $ad - bc$ is its determinant. So for every 2×2 matrix,"
+    },
+    {
+      "type": "math",
+      "tex": "\\lambda^2 - (\\operatorname{tr} A)\\,\\lambda + \\det A = 0, \\qquad \\lambda = \\frac{\\operatorname{tr} A \\pm \\sqrt{(\\operatorname{tr} A)^2 - 4\\det A}}{2}"
+    },
+    {
+      "type": "prose",
+      "text": "The second formula is just the quadratic formula. What sits under the square root, the discriminant $(\\operatorname{tr} A)^2 - 4\\det A$, decides how many eigenvalues there are, and what they look like."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Discriminant positive: two different real eigenvalues, two different eigen-directions. The matrix $\\begin{pmatrix} 4 & 1 \\\\ 2 & 3 \\end{pmatrix}$ has trace 7, determinant 10 and discriminant $49 - 40 = 9$.",
+        "Discriminant zero: one repeated real eigenvalue $\\lambda = \\operatorname{tr}A / 2$. The shear $\\begin{pmatrix} 1 & 1 \\\\ 0 & 1 \\end{pmatrix}$ has trace 2, determinant 1, discriminant $4 - 4 = 0$, so $\\lambda = 1$ twice. There may then be one eigen-direction or every direction (see Repeated Eigenvalues and Defective Matrices (#/math/eigenvalues/repeated-eigenvalues)).",
+        "Discriminant negative: no real eigenvalues, a complex conjugate pair. A rotation by 30° has trace $2\\cos 30° = 1.732$, determinant 1 and discriminant $3 - 4 = -1$. The square root of a negative number is imaginary, so the eigenvalues are $0.866 \\pm 0.5j$, and the matrix turns every real vector (see Complex Eigenvalues and Rotation (#/math/eigenvalues/complex-eigenvalues))."
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Solving for the vector"
+    },
+    {
+      "type": "prose",
+      "text": "Once $\\lambda$ is known, $A - \\lambda I$ is a specific singular matrix, and its two rows are multiples of each other: they say the same thing twice. So the system $(A - \\lambda I)v = 0$ is really a single equation, and one unknown is free. Take the top row: $(a - \\lambda)x + b\\,y = 0$. Choose $x = b$ and then $y = -(a - \\lambda) = \\lambda - a$, giving the eigenvector"
+    },
+    {
+      "type": "math",
+      "tex": "v = \\begin{pmatrix} b \\\\ \\lambda - a \\end{pmatrix} \\qquad (\\text{if } b \\ne 0)"
+    },
+    {
+      "type": "prose",
+      "text": "This is a handy shortcut for 2×2 matrices, and it works because $(a - \\lambda)\\,b + b\\,(\\lambda - a) = 0$. If $b = 0$ use the bottom row instead, $c\\,x + (d - \\lambda)y = 0$, which gives $v = (\\lambda - d,\\ c)$. (If $b = c = 0$ the matrix is diagonal and its eigenvectors are simply $(1, 0)$ and $(0, 1)$.) For anything bigger, or if you prefer, do the row reduction by hand as in the examples below."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A full example: the matrix with eigenvalues 5 and 2"
+    },
+    {
+      "type": "prose",
+      "text": "Take $A = \\begin{pmatrix} 4 & 1 \\\\ 2 & 3 \\end{pmatrix}$, the preset called not symmetric in the viewer."
+    },
+    {
+      "type": "prose",
+      "text": "Step 1, the polynomial. The trace is $4 + 3 = 7$ and the determinant is $4 \\cdot 3 - 1 \\cdot 2 = 10$, so $\\lambda^2 - 7\\lambda + 10 = 0$. This factors, since $5 + 2 = 7$ and $5 \\times 2 = 10$: $(\\lambda - 5)(\\lambda - 2) = 0$. The eigenvalues are $\\lambda_1 = 5$ and $\\lambda_2 = 2$. (The formula agrees: $(7 \\pm \\sqrt{9})/2 = 5$ and $2$.)"
+    },
+    {
+      "type": "prose",
+      "text": "Step 2, the vector for $\\lambda = 5$. Subtract 5 from the diagonal:"
+    },
+    {
+      "type": "math",
+      "tex": "A - 5I = \\begin{pmatrix} -1 & 1 \\\\ 2 & -2 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The rows are multiples of each other (the second is $-2$ times the first), as promised. The first row says $-x + y = 0$, so $y = x$ and the eigenvector is $(1, 1)$. (The shortcut agrees: $(b, \\lambda - a) = (1, 5 - 4) = (1, 1)$.) Check it against the original equation: $A(1, 1) = (4 + 1,\\ 2 + 3) = (5, 5) = 5\\,(1, 1)$. Good."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3, the vector for $\\lambda = 2$:"
+    },
+    {
+      "type": "math",
+      "tex": "A - 2I = \\begin{pmatrix} 2 & 1 \\\\ 2 & 1 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Both rows say $2x + y = 0$, so $y = -2x$ and the eigenvector is $(1, -2)$ (shortcut: $(1, 2 - 4) = (1, -2)$). Check: $A(1, -2) = (4 - 2,\\ 2 - 6) = (2, -4) = 2\\,(1, -2)$. Good."
+    },
+    {
+      "type": "prose",
+      "text": "The directions are the line at 45° and the line through $(1, -2)$, at about $-63.4°$. The angle between the lines is $45° + 63.4° = 108.4°$, or $71.6°$ if measured the other way, so they are not perpendicular. That is typical for a matrix that is not symmetric. The viewer prints the second vector as $(-0.45, 0.89)$, which is $(1, -2)$ scaled to unit length and flipped to point the other way: the same line."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-plane",
+        "title": "Finding the eigenvalues of [[4, 1], [2, 3]]",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "stretch: diag(2, 0.5)",
+              "symmetric [[2, 1], [1, 2]]",
+              "not symmetric [[4, 1], [2, 3]]",
+              "a negative eigenvalue [[1, 2], [2, −2]]",
+              "Fibonacci [[1, 1], [1, 0]]",
+              "Markov chain [[0.9, 0.2], [0.1, 0.8]]",
+              "reflection across y = x [[0, 1], [1, 0]]",
+              "projection onto the x-axis [[1, 0], [0, 0]]",
+              "shear [[1, 1], [0, 1]]",
+              "scaling 1.5I [[1.5, 0], [0, 1.5]]",
+              "rotation by 30°",
+              "rotate and grow [[1, −1], [1, 1]]",
+              "spiral in [[0.8, −0.3], [0.3, 0.8]]",
+              "your own (use the sliders a, b, c, d)"
+            ],
+            "default": "not symmetric [[4, 1], [2, 3]]"
+          },
+          {
+            "key": "a",
+            "label": "a (top left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "b",
+            "label": "b (top right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "c",
+            "label": "c (bottom left)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 1
+          },
+          {
+            "key": "d",
+            "label": "d (bottom right)",
+            "control": "range",
+            "min": -5,
+            "max": 5,
+            "step": 0.05,
+            "default": 2
+          },
+          {
+            "key": "theta",
+            "label": "Direction of v (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 1,
+            "default": 20
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Press Next step ▶ through the walk-through. Step 4 sets Direction of v to the first eigenvector, 45°, and the readout shows $Av$ lying on the blue line with length 5. Step 5 moves it to the second eigenvector (rounded to 117°, so the readout shows length 1.993 and a turn of 0.7°: very nearly $Av = 2v$), and the step text says the two directions are 71.6° apart, not perpendicular. Step 6, The characteristic polynomial, highlights the bottom right panel: $p(\\lambda) = \\lambda^2 - 7\\lambda + 10$, a parabola crossing zero at 2 and 5, the two eigenvalues. In the top right panel the red sideways curve crosses zero at those two angles while the green along curve reads 5 and 2. At the start, with $v$ at 20°, the readout gives $Av = (4.10, 2.91)$, length 5.026, turned 15.3°."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Trace and determinant: a check, and a shortcut"
+    },
+    {
+      "type": "prose",
+      "text": "In that example the eigenvalues add up to $5 + 2 = 7$, the trace, and multiply to $5 \\times 2 = 10$, the determinant. This is no accident. If $\\lambda_1$ and $\\lambda_2$ are the two roots of the characteristic polynomial then it factors as $(\\lambda - \\lambda_1)(\\lambda - \\lambda_2) = \\lambda^2 - (\\lambda_1 + \\lambda_2)\\lambda + \\lambda_1\\lambda_2$. Comparing with $\\lambda^2 - (\\operatorname{tr}A)\\lambda + \\det A$ gives"
+    },
+    {
+      "type": "math",
+      "tex": "\\lambda_1 + \\lambda_2 = \\operatorname{tr} A, \\qquad \\lambda_1 \\lambda_2 = \\det A"
+    },
+    {
+      "type": "prose",
+      "text": "This holds for matrices of every size: the sum of the eigenvalues is the trace and their product is the determinant (counting a repeated root as many times as it repeats, and complex roots too). For the determinant the reason is this. The polynomial is $p(\\lambda) = \\det(\\lambda I - A) = \\prod (\\lambda - \\lambda_i)$; setting $\\lambda = 0$ gives $\\det(-A) = \\prod(-\\lambda_i)$, and pulling out the $n$ minus signs on both sides leaves $\\det A = \\prod \\lambda_i$. It also explains the earlier remark: a zero eigenvalue means a zero determinant, a singular matrix."
+    },
+    {
+      "type": "prose",
+      "text": "These two facts are the quickest checks on an answer, and for 2×2 matrices they are also a method: find two numbers with the right sum and product. For $B = \\begin{pmatrix} 1 & 2 \\\\ 2 & -2 \\end{pmatrix}$ the trace is $-1$ and the determinant is $-2 - 4 = -6$. Two numbers adding to $-1$ and multiplying to $-6$ are $-3$ and $2$. The eigenvalues are $-3$ and $2$, matching the viewer's preset a negative eigenvalue, and the negative product $-6$ is the sign that one of them is negative."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Triangular matrices: read them off"
+    },
+    {
+      "type": "prose",
+      "text": "If all entries below the diagonal are zero (an upper triangular matrix), or all above it, the eigenvalues are the diagonal entries. Take"
+    },
+    {
+      "type": "math",
+      "tex": "T = \\begin{pmatrix} 2 & 1 & 0 \\\\ 0 & 3 & 1 \\\\ 0 & 0 & 1 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Then $T - \\lambda I$ is still triangular with diagonal $2 - \\lambda$, $3 - \\lambda$, $1 - \\lambda$, and the determinant of a triangular matrix is the product of its diagonal. So $\\det(T - \\lambda I) = (2 - \\lambda)(3 - \\lambda)(1 - \\lambda)$ and the eigenvalues are 2, 3 and 1, with no work at all. Their sum 6 is the trace and their product 6 is the determinant. The vectors still need solving. For $\\lambda = 2$: $(T - 2I)v = 0$ reads $y = 0$, $y + z = 0$, $-z = 0$, so $(1, 0, 0)$. For $\\lambda = 3$: $-x + y = 0$, $z = 0$, so $(1, 1, 0)$. For $\\lambda = 1$: $x + y = 0$, $2y + z = 0$, so $y = -x$, $z = 2x$ and $(1, -1, 2)$. Check the last: $T(1, -1, 2) = (2 - 1,\\ -3 + 2,\\ 2) = (1, -1, 2)$. Good. The eigenvectors are not all perpendicular, because $T$ is not symmetric: $(1, 0, 0) \\cdot (1, 1, 0) = 1$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A 3×3 example in full"
+    },
+    {
+      "type": "prose",
+      "text": "Take the symmetric matrix"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\begin{pmatrix} 2 & 1 & 0 \\\\ 1 & 2 & 1 \\\\ 0 & 1 & 2 \\end{pmatrix}, \\qquad A - \\lambda I = \\begin{pmatrix} 2-\\lambda & 1 & 0 \\\\ 1 & 2-\\lambda & 1 \\\\ 0 & 1 & 2-\\lambda \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "Step 1, the determinant. Write $s = 2 - \\lambda$ to keep the algebra short. Expanding along the first row, the determinant is $s \\cdot (s \\cdot s - 1 \\cdot 1) - 1 \\cdot (1 \\cdot s - 1 \\cdot 0) + 0$. The first term is the entry $s$ times the determinant of what remains when its row and column are removed; the second is the entry 1 times its leftover determinant, with a minus sign because it is in an odd position. So"
+    },
+    {
+      "type": "math",
+      "tex": "\\det(A - \\lambda I) = s(s^2 - 1) - s = s^3 - 2s = s\\,(s^2 - 2)"
+    },
+    {
+      "type": "prose",
+      "text": "Already it factors, but follow the standard route first and expand in $\\lambda$. With $s = 2 - \\lambda$: $s^3 = 8 - 12\\lambda + 6\\lambda^2 - \\lambda^3$ and $2s = 4 - 2\\lambda$, so $s^3 - 2s = -\\lambda^3 + 6\\lambda^2 - 10\\lambda + 4$. The characteristic polynomial, with the usual sign convention $\\det(\\lambda I - A)$, is"
+    },
+    {
+      "type": "math",
+      "tex": "\\lambda^3 - 6\\lambda^2 + 10\\lambda - 4 = 0"
+    },
+    {
+      "type": "prose",
+      "text": "Look at the coefficients: $-6$ is minus the trace ($2 + 2 + 2 = 6$); $+10$ is the sum of the three 2×2 determinants made by deleting one row and its column, $(4 - 1) + (4 - 0) + (4 - 1) = 10$; and $-4$ is minus the determinant, $2(4 - 1) - 1(2 - 0) = 4$. For a 3×3 matrix the polynomial is always $\\lambda^3 - (\\text{trace})\\lambda^2 + (\\text{sum of those minors})\\lambda - \\det$. The viewer below prints exactly this cubic."
+    },
+    {
+      "type": "prose",
+      "text": "Step 2, a root. There is no simple formula for a cubic, but whole-number roots must divide the constant 4. Try $\\lambda = 2$: $8 - 24 + 20 - 4 = 0$. It works. (This agrees with $s = 0$ above.) Divide it out: $\\lambda^3 - 6\\lambda^2 + 10\\lambda - 4 = (\\lambda - 2)(\\lambda^2 - 4\\lambda + 2)$, which you can check by multiplying out. The quadratic factor gives $\\lambda = (4 \\pm \\sqrt{16 - 8})/2 = 2 \\pm \\sqrt{2}$. So the eigenvalues are"
+    },
+    {
+      "type": "math",
+      "tex": "\\lambda = 2 + \\sqrt{2} \\approx 3.414, \\qquad \\lambda = 2, \\qquad \\lambda = 2 - \\sqrt{2} \\approx 0.586"
+    },
+    {
+      "type": "prose",
+      "text": "Their sum is 6 (the trace) and their product is $2 \\,(4 - 2) = 4$ (the determinant). Both match."
+    },
+    {
+      "type": "prose",
+      "text": "Step 3, the vectors. For $\\lambda = 2$, $A - 2I = \\begin{pmatrix} 0 & 1 & 0 \\\\ 1 & 0 & 1 \\\\ 0 & 1 & 0 \\end{pmatrix}$. The first row says $y = 0$ and the second says $x + z = 0$, so $v = (1, 0, -1)$. For $\\lambda = 2 + \\sqrt{2}$ the rows are $-\\sqrt{2}\\,x + y = 0$, $x - \\sqrt{2}\\,y + z = 0$, $y - \\sqrt{2}\\,z = 0$. The first gives $y = \\sqrt{2}\\,x$. The second gives $z = \\sqrt{2}\\,y - x = 2x - x = x$. The third checks: $y - \\sqrt{2}\\,z = \\sqrt{2}\\,x - \\sqrt{2}\\,x = 0$. So $v = (1, \\sqrt{2}, 1)$. The same steps with $-\\sqrt{2}$ in place of $\\sqrt{2}$ give $(1, -\\sqrt{2}, 1)$ for $\\lambda = 2 - \\sqrt{2}$. As a last check, the three vectors are perpendicular, as they must be for a symmetric matrix: $(1, \\sqrt{2}, 1) \\cdot (1, 0, -1) = 0$, $(1, \\sqrt{2}, 1) \\cdot (1, -\\sqrt{2}, 1) = 1 - 2 + 1 = 0$, and $(1, 0, -1) \\cdot (1, -\\sqrt{2}, 1) = 0$. Scaled to unit length they are $(0.50, 0.71, 0.50)$, $(0.71, 0.00, -0.71)$ and, up to sign, $(0.50, -0.71, 0.50)$, which is what the viewer prints."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-3d",
+        "title": "Eigenvalues of the 3×3 matrix by hand",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "diagonal diag(2, 1, 0.5)",
+              "symmetric [[2, 1, 0], [1, 2, 1], [0, 1, 2]]",
+              "masses on springs [[2, −1, 0], [−1, 2, −1], [0, −1, 2]]",
+              "covariance of a data cloud",
+              "upper triangular [[2, 1, 0], [0, 3, 1], [0, 0, 1]]",
+              "three-state Markov chain",
+              "rotation by 60° about the z-axis",
+              "cyclic shift (x, y, z) → (z, x, y)",
+              "projection onto the plane x + y + z = 0",
+              "shear chain [[1, 1, 0], [0, 1, 1], [0, 0, 1]]"
+            ],
+            "default": "symmetric [[2, 1, 0], [1, 2, 1], [0, 1, 2]]"
+          },
+          {
+            "key": "around",
+            "label": "v: direction around (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 5,
+            "default": 30
+          },
+          {
+            "key": "up",
+            "label": "v: direction up (degrees)",
+            "control": "range",
+            "min": -90,
+            "max": 90,
+            "step": 5,
+            "default": 25
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -35
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 25
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The cubic under the picture reads $\\lambda^3 - 6\\lambda^2 + 10\\lambda - 4$, and the graph crosses zero at three points, 0.586, 2 and 3.414, marked on the axis. The readout lists $\\lambda = 3.414$ along $(0.50, 0.71, 0.50)$, $\\lambda = 2$ along $(0.71, 0.00, -0.71)$ and $\\lambda = 0.586$ along $(-0.50, 0.71, -0.50)$, the vectors found above (the last one has its signs flipped, the same line). The numbers panel prints trace 6, minors 10, det 4. Turn the view by dragging: the three dashed lines are perpendicular and they are the axes of the green ellipsoid. In the walk-through press Next step ▶ to step 4, The characteristic polynomial, then step 6 for trace and determinant."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "eigen-3d",
+        "title": "A triangular matrix: eigenvalues on the diagonal",
+        "params": [
+          {
+            "key": "matrix",
+            "label": "Matrix A",
+            "control": "select",
+            "options": [
+              "diagonal diag(2, 1, 0.5)",
+              "symmetric [[2, 1, 0], [1, 2, 1], [0, 1, 2]]",
+              "masses on springs [[2, −1, 0], [−1, 2, −1], [0, −1, 2]]",
+              "covariance of a data cloud",
+              "upper triangular [[2, 1, 0], [0, 3, 1], [0, 0, 1]]",
+              "three-state Markov chain",
+              "rotation by 60° about the z-axis",
+              "cyclic shift (x, y, z) → (z, x, y)",
+              "projection onto the plane x + y + z = 0",
+              "shear chain [[1, 1, 0], [0, 1, 1], [0, 0, 1]]"
+            ],
+            "default": "upper triangular [[2, 1, 0], [0, 3, 1], [0, 0, 1]]"
+          },
+          {
+            "key": "around",
+            "label": "v: direction around (degrees)",
+            "control": "range",
+            "min": 0,
+            "max": 360,
+            "step": 5,
+            "default": 30
+          },
+          {
+            "key": "up",
+            "label": "v: direction up (degrees)",
+            "control": "range",
+            "min": -90,
+            "max": 90,
+            "step": 5,
+            "default": 25
+          },
+          {
+            "key": "k",
+            "label": "Powers shown, k",
+            "control": "range",
+            "min": 0,
+            "max": 10,
+            "step": 1,
+            "default": 0
+          },
+          {
+            "key": "azimuth",
+            "label": "Turn (degrees)",
+            "control": "range",
+            "min": -180,
+            "max": 180,
+            "step": 5,
+            "default": -35
+          },
+          {
+            "key": "elevation",
+            "label": "Tilt (degrees)",
+            "control": "range",
+            "min": 5,
+            "max": 85,
+            "step": 5,
+            "default": 25
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Here the readout lists $\\lambda = 3$, $2$ and $1$, the diagonal entries (ordered by size). The three vectors it prints are $(0.71, 0.71, 0.00)$, $(1.00, 0.00, 0.00)$ and $(0.41, -0.41, 0.82)$: the lines of $(1, 1, 0)$, $(1, 0, 0)$ and $(1, -1, 2)$ found above. The numbers panel says not symmetric, and step 5 of the walk-through gives the angles between the three directions: 45°, 90° and 65.9°. Only the pair $(1, 1, 0)$ and $(1, -1, 2)$ happens to be perpendicular, and the dashed lines are not the axes of the green ellipsoid."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Why nobody solves the polynomial for big matrices"
+    },
+    {
+      "type": "prose",
+      "text": "The recipe above is the right way to understand eigenvalues and the right way to do 2×2 and 3×3 examples. For a 10×10 matrix it is hopeless: the characteristic polynomial has degree 10, and for degree five and higher there is provably no formula for the roots in terms of the usual operations and radicals. Worse, tiny errors in the polynomial's coefficients can move its roots a great deal. Computers find eigenvalues by other routes that work directly on the matrix, by repeated multiplication or by a sequence of simple changes of basis. Power Iteration and Markov Chains (#/math/eigenvalues/power-iteration) shows the first idea in action, and Eigenvalues in Practice (#/math/eigenvalues/applications) outlines how real programs do it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "2×2 in full",
+      "text": "Find the eigenvalues and eigenvectors of $B = \\begin{pmatrix} 1 & 2 \\\\ 2 & -2 \\end{pmatrix}$ and check them.",
+      "solution": [
+        "Trace $= -1$, determinant $= 1 \\cdot (-2) - 2 \\cdot 2 = -6$. The polynomial is $\\lambda^2 + \\lambda - 6 = (\\lambda + 3)(\\lambda - 2)$, so $\\lambda = -3$ and $\\lambda = 2$.",
+        "For $\\lambda = -3$: $B + 3I = \\begin{pmatrix} 4 & 2 \\\\ 2 & 1 \\end{pmatrix}$. Row one: $4x + 2y = 0$, so $y = -2x$ and $v = (1, -2)$. For $\\lambda = 2$: $B - 2I = \\begin{pmatrix} -1 & 2 \\\\ 2 & -4 \\end{pmatrix}$. Row one: $-x + 2y = 0$, so $x = 2y$ and $v = (2, 1)$.",
+        "Check: $B(1, -2) = (1 - 4,\\ 2 + 4) = (-3, 6) = -3(1, -2)$ and $B(2, 1) = (2 + 2,\\ 4 - 2) = (4, 2) = 2(2, 1)$. The sum of the eigenvalues is $-1$, the trace; the product is $-6$, the determinant. The vectors are perpendicular, $(1, -2) \\cdot (2, 1) = 0$, as they must be for a symmetric matrix."
+      ],
+      "answer": "$\\lambda = -3$ with $(1, -2)$; $\\lambda = 2$ with $(2, 1)$."
+    },
+    {
+      "type": "problem",
+      "title": "Using the shortcut",
+      "text": "Find the eigenvalues of $K = \\begin{pmatrix} 1 & 3 \\\\ 2 & 2 \\end{pmatrix}$ from its trace and determinant, then the eigenvectors with the shortcut $v = (b, \\lambda - a)$.",
+      "solution": [
+        "Trace 3, determinant $2 - 6 = -4$. Numbers with sum 3 and product $-4$: $4$ and $-1$. So $\\lambda = 4$ and $\\lambda = -1$.",
+        "Here $a = 1$, $b = 3$. For $\\lambda = 4$: $v = (3, 4 - 1) = (3, 3)$, the line of $(1, 1)$. Check: $K(1, 1) = (4, 4)$. For $\\lambda = -1$: $v = (3, -1 - 1) = (3, -2)$. Check: $K(3, -2) = (3 - 6,\\ 6 - 4) = (-3, 2) = -1 \\cdot (3, -2)$."
+      ],
+      "answer": "$\\lambda = 4$ with $(1, 1)$; $\\lambda = -1$ with $(3, -2)$."
+    },
+    {
+      "type": "problem",
+      "title": "A zero eigenvalue",
+      "text": "Find the eigenvalues of $\\begin{pmatrix} 1 & 2 \\\\ 3 & 6 \\end{pmatrix}$ and say what the zero one means.",
+      "solution": [
+        "Trace 7, determinant $6 - 6 = 0$. The polynomial is $\\lambda^2 - 7\\lambda = \\lambda(\\lambda - 7)$, so $\\lambda = 0$ and $\\lambda = 7$. Zero is an eigenvalue exactly when the determinant is zero, so the matrix is singular. Its eigenvector is $(b, \\lambda - a) = (2, -1)$: indeed the matrix applied to $(2, -1)$ gives $(2 - 2,\\ 6 - 6) = (0, 0)$. The matrix squashes the plane onto a line. For $\\lambda = 7$ the vector is $(2, 6)$, the line of $(1, 3)$, which is that line: the second column, $(2, 6)$, is 2 times the first, $(1, 3)$, and $A(1, 3) = (7, 21) = 7(1, 3)$."
+      ],
+      "answer": "$\\lambda = 0$ with $(2, -1)$ and $\\lambda = 7$ with $(1, 3)$; the matrix is singular."
+    },
+    {
+      "type": "problem",
+      "title": "A 3×3 with a block",
+      "text": "Find the eigenvalues of $Q = \\begin{pmatrix} 2 & 0 & 0 \\\\ 0 & 3 & 4 \\\\ 0 & 4 & 9 \\end{pmatrix}$.",
+      "solution": [
+        "Expand along the first row, which has only one non-zero entry: $\\det(Q - \\lambda I) = (2 - \\lambda)\\,[(3 - \\lambda)(9 - \\lambda) - 16]$. The bracket is $\\lambda^2 - 12\\lambda + 27 - 16 = \\lambda^2 - 12\\lambda + 11 = (\\lambda - 1)(\\lambda - 11)$. The eigenvalues are 2, 1 and 11.",
+        "Check: the sum is $14 = 2 + 3 + 9$, the trace, and the product is $22 = 2 \\cdot (27 - 16)$, the determinant. Eigenvector for 2: $(1, 0, 0)$. For 1 and 11 solve the 2×2 block: $\\lambda = 1$ gives $2y + 4z = 0$, so $(0, 2, -1)$; $\\lambda = 11$ gives $-8y + 4z = 0$, so $(0, 1, 2)$. Check $Q(0, 1, 2) = (0,\\ 3 + 8,\\ 4 + 18) = (0, 11, 22)$."
+      ],
+      "answer": "$\\lambda = 2, 1, 11$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Gilbert Strang, Introduction to Linear Algebra, 5th edition (Wellesley-Cambridge Press, 2016), chapter 6, Eigenvalues and Eigenvectors. Sections 6.1 and 6.2.",
+        "Sheldon Axler, Linear Algebra Done Right, 3rd edition (Springer, 2015). Chapter 5.",
+        "Lloyd N. Trefethen and David Bau III, Numerical Linear Algebra (SIAM, 1997), the lectures on eigenvalue problems, for why the polynomial route is avoided."
+      ]
+    }
+  ]
+}

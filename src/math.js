@@ -116,11 +116,13 @@ function parseRow(p, end) {
   for (;;) {
     skipWs(p);
     if (p.i >= p.s.length) {
+      if (end === "env") throw new TexError("missing \\end");
       if (end) throw new TexError(`missing "${end === "}" ? "}" : "\\right"}"`);
       break;
     }
     if (end === "}" && p.s[p.i] === "}") break;
     if (end === "right" && p.s.startsWith("\\right", p.i)) break;
+    if (end === "env" && (p.s[p.i] === "&" || p.s.startsWith("\\\\", p.i) || p.s.startsWith("\\end", p.i))) break;
     if (p.s[p.i] === "}") throw new TexError(`unmatched "}" at ${p.i}`);
     if (p.s[p.i] === "^" || p.s[p.i] === "_") {
       // A script with nothing before it attaches to an empty base.
@@ -256,6 +258,39 @@ function parseAtom(p) {
   return { t: "mo", v: cp };
 }
 
+/** Matrix-like environments: name -> [open, close, column alignment]. */
+const ENVS = {
+  matrix: ["", "", "center"], pmatrix: ["(", ")", "center"], bmatrix: ["[", "]", "center"],
+  Bmatrix: ["{", "}", "center"], vmatrix: ["|", "|", "center"], Vmatrix: ["‖", "‖", "center"],
+  cases: ["{", "", "left"],
+};
+
+/** After \begin: read {name}, then cells split by & and rows by \\, up to \end{name}. */
+function parseEnv(p) {
+  const name = readBraced(p);
+  if (!(name in ENVS)) throw new TexError(`unknown environment ${name}`);
+  const rows = [];
+  let row = [];
+  for (;;) {
+    row.push(parseRow(p, "env"));
+    if (p.s[p.i] === "&") { p.i++; continue; }
+    rows.push(row);
+    row = [];
+    if (p.s.startsWith("\\\\", p.i)) {
+      p.i += 2;
+      skipWs(p);
+      if (p.s.startsWith("\\end", p.i)) break; // a trailing \\ adds no row
+      continue;
+    }
+    break;
+  }
+  p.i += "\\end".length;
+  const close = readBraced(p);
+  if (close !== name) throw new TexError(`\\begin{${name}} ended by \\end{${close}}`);
+  const [open, shut, align] = ENVS[name];
+  return { t: "table", rows, open, close: shut, align };
+}
+
 function parseCommand(p) {
   const s = p.s;
   p.i++; // the backslash
@@ -309,6 +344,10 @@ function parseCommand(p) {
     }
     case "right":
       throw new TexError("\\right without \\left");
+    case "begin":
+      return parseEnv(p);
+    case "end":
+      throw new TexError("\\end without \\begin");
     case "big": case "Big": case "bigg": case "Bigg": case "bigl": case "bigr": case "Bigl": case "Bigr": {
       const d = readDelim(p);
       return { t: "mo", v: d, size: { big: 1.2, bigl: 1.2, bigr: 1.2, Big: 1.6, Bigl: 1.6, Bigr: 1.6, bigg: 2.0, Bigg: 2.4 }[name] };
@@ -378,6 +417,16 @@ function build(doc, n, variant) {
       return n.under
         ? mml(doc, "munder", [build(doc, n.b, variant), mml(doc, "mo", n.a, { stretchy: "true" })], { accentunder: "true" })
         : mml(doc, "mover", [build(doc, n.b, variant), mml(doc, "mo", n.a, { stretchy: "true" })], { accent: "true" });
+    case "table": {
+      const trs = n.rows.map((r) => mml(doc, "mtr", r.map((c) => mml(doc, "mtd", [build(doc, c, variant)]))));
+      const tbl = mml(doc, "mtable", trs, { columnalign: n.align === "left" ? "left" : undefined, columnspacing: n.align === "left" ? "1em" : "0.8em", rowspacing: "0.3em" });
+      if (!n.open && !n.close) return tbl;
+      const kids = [];
+      if (n.open) kids.push(mml(doc, "mo", n.open, { fence: "true", stretchy: "true", symmetric: "true" }));
+      kids.push(tbl);
+      if (n.close) kids.push(mml(doc, "mo", n.close, { fence: "true", stretchy: "true", symmetric: "true" }));
+      return mml(doc, "mrow", kids);
+    }
     case "fenced": {
       const kids = [];
       if (n.open) kids.push(mml(doc, "mo", n.open, { fence: "true", stretchy: "true" }));
