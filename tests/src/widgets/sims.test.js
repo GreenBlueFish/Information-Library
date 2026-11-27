@@ -415,3 +415,14 @@ describe("widgets/sims (PLL building blocks)", () => {
     expect(Math.abs(vcoL(1e5, 2.4e9, 1, 190, 1e5) - vcoL(1e5, 2.4e9, 1, 190, 0) - 10 * Math.log10(2)) < 1e-9).toBe(true);
   });
 });
+
+describe("widgets/sims (calculus)", () => {
+  it("riemann: left and right sums of x^2 on [0, 2] bracket 8/3 and close on it", () => {
+    const sum = (n, i) => Number(SIMS.riemann({}, { n })[i].label.split(" ").pop());
+    expect([sum(4, 1), sum(4, 2)]).toEqual([1.75, 3.75]);
+    expect(sum(100, 1) < 8 / 3 && sum(100, 2) > 8 / 3 && sum(100, 2) - sum(100, 1) < 0.09).toBe(true);
+  });
+  it("secant: the slope is 2a + h", () => {
+    expect(SIMS.secant({}, { a: 1, h: 0.5 })[1].label).toBe("secant, slope 2.50");
+  });
+});
