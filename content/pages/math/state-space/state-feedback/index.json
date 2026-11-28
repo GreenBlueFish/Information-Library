@@ -1,0 +1,533 @@
+{
+  "title": "State Feedback and Pole Placement",
+  "intro": "If you can measure the whole state, you can feed it back through a gain: $u = -Kx + r$. The poles of the closed loop are the eigenvalues of $A - BK$, and when the system is controllable, $K$ puts them wherever you ask. This page works it out for the mass and the balanced pendulum, derives Ackermann's formula, and then deals with what the textbook picture leaves out: the steady-state value, the zeros, and the price of fast poles.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Closing the loop"
+    },
+    {
+      "type": "prose",
+      "text": "An open-loop system takes the input you choose and does what its dynamics dictate. A closed-loop system measures something about its own state and chooses the input from it. The simplest rule that uses the whole state is a linear one: each state is multiplied by a gain and the results are added, $u = -k_1x_1 - k_2x_2 + r$, or $u = -Kx + r$ with $K = (k_1, k_2)$ and $r$ a reference signal added on. Put this into $x' = Ax + Bu$:"
+    },
+    {
+      "type": "math",
+      "tex": "x' = Ax + B(-Kx + r) = (A - BK)\\,x + Br"
+    },
+    {
+      "type": "prose",
+      "text": "The system has a new matrix, $A - BK$. Everything the earlier pages said about a matrix, such as eigenvalues, stability and the shape of the state plane, now holds for $A - BK$. The poles of the closed loop are its eigenvalues. $K$ is yours to choose, so the poles are yours to choose, within limits we come to. Choosing $K$ to put the closed-loop poles at chosen places is pole placement."
+    },
+    {
+      "type": "prose",
+      "text": "For the mass the rule has a concrete meaning. With $x_1$ the position and $x_2$ the velocity, $u = -k_1x_1 - k_2x_2$ is a force proportional to displacement and to velocity: a spring of stiffness $k_1$ and a damper of coefficient $k_2$, built in software and added to the mass's own spring and damper. The new stiffness is $4 + k_1$ and the new damping $1 + k_2$. Let us see it in the algebra."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Worked: the mass, and the polynomial that adds up"
+    },
+    {
+      "type": "prose",
+      "text": "$A = \\begin{pmatrix} 0 & 1 \\\\ -4 & -1 \\end{pmatrix}$ and $B = (0, 1)$, so $BK$ has a zero first row and second row $(k_1, k_2)$:"
+    },
+    {
+      "type": "math",
+      "tex": "A - BK = \\begin{pmatrix} 0 & 1 \\\\ -4 - k_1 & -1 - k_2 \\end{pmatrix}, \\qquad \\det(sI - (A - BK)) = s(s + 1 + k_2) + (4 + k_1) = s^2 + (1 + k_2)s + (4 + k_1)"
+    },
+    {
+      "type": "prose",
+      "text": "The gains simply add onto the coefficients of the characteristic polynomial: $k_2$ onto the $s$ coefficient (damping) and $k_1$ onto the constant (stiffness). This happens whenever the matrix is in companion form, with ones above the diagonal and the coefficients $-a_0, -a_1$ in the last row, and the input enters only the last state, $B = (0, 1)$; then $K = (p_0 - a_0, p_1 - a_1)$ gives $s^2 + p_1 s + p_0$ with no further work. Suppose we want the poles at $-2 \\pm 2j$, which is $(s + 2 - 2j)(s + 2 + 2j) = (s + 2)^2 + 4 = s^2 + 4s + 8$. Comparing coefficients: $1 + k_2 = 4$ gives $k_2 = 3$ and $4 + k_1 = 8$ gives $k_1 = 4$. So $K = (4, 3)$ and"
+    },
+    {
+      "type": "math",
+      "tex": "A - BK = \\begin{pmatrix} 0 & 1 \\\\ -8 & -4 \\end{pmatrix}, \\qquad \\text{trace } -4,\\ \\det 8,\\ s^2 + 4s + 8 = 0 \\Rightarrow s = -2 \\pm 2j"
+    },
+    {
+      "type": "prose",
+      "text": "Compare the old poles $-0.5 \\pm 1.936j$, with a decay rate of 0.5 per second and a settling time of about $4/0.5 = 8$ s, to the new decay rate 2 and settling time about $4/2 = 2$ s. The swing frequency is almost unchanged, 2 rad/s against 1.94. The extra damping did the work."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "Placing the mass poles at −2 ± 2j",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "mass on a spring, light damping"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 4.0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 3.0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The lightly damped mass, started at $x(0) = (1, 0)$, with the gains set to $k_1 = 4.0$ and $k_2 = 3.0$: step 8 of the walk-through sets exactly these. In the s-plane panel the faint × marks are the old poles, $-0.5 \\pm 1.936j$, and the bold × marks sit at $-2 \\pm 2j$. The readout shows 'Feedback K = (4.0, 3.0): A − BK = [[0, 1], [−8, −4]]. Poles −2 ± 2j: stable'. The path spirals in far quicker: by the end of the plot, 2.5 s, the readout shows $x = (0.00, 0.03)$. Now drag Feedback gain k₂ back to 0 with $k_1$ still at 4: the polynomial is $s^2 + s + 8$ and the poles go to $-0.5 \\pm 2.784j$, the old damping with a faster swing. Drag Feedback gain k₁ and the frequency of the swing changes while the real part stays at $-(1 + k_2)/2$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Balancing a pendulum"
+    },
+    {
+      "type": "prose",
+      "text": "The balanced pendulum $x_1' = x_2$, $x_2' = x_1 + u$ has $A = \\begin{pmatrix} 0 & 1 \\\\ 1 & 0 \\end{pmatrix}$, the poles $\\pm 1$, and is unstable: the $+1$ pole means any small lean grows as $e^{t}$ (doubling every $\\ln 2 = 0.69$ s). Feedback can hold it up. The same calculation gives"
+    },
+    {
+      "type": "math",
+      "tex": "A - BK = \\begin{pmatrix} 0 & 1 \\\\ 1 - k_1 & -k_2 \\end{pmatrix}, \\qquad s^2 + k_2 s + (k_1 - 1)"
+    },
+    {
+      "type": "prose",
+      "text": "Aim at the poles $-1 \\pm j$, that is $s^2 + 2s + 2$. Then $k_2 = 2$ and $k_1 - 1 = 2$, so $k_1 = 3$: $K = (3, 2)$. Read the sign of the first gain: $k_1$ pushes back against the lean (position), $k_2$ against the speed of the lean. The condition $k_1 > 1$ is needed. The pendulum falls over by itself with a strength of $+1$, so the corrective stiffness has to beat that before it becomes a restoring force at all. Stability of $s^2 + k_2 s + (k_1 - 1)$ requires both coefficients positive: $k_2 > 0$ and $k_1 > 1$."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "Balancing the pendulum",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "pendulum balanced upright"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 1
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 3.0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 2.0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The pendulum, started leaning at $x(0) = (1, 0)$, with $k_1 = 3.0$ and $k_2 = 2.0$. Readout: 'Feedback K = (3.0, 2.0): A − BK = [[0, 1], [−2, −2]]. Poles −1 ± 1j: stable', and the bold × marks sit at $-1 \\pm j$ with the faint ones at $+1$ and $-1$ on the real axis. The path curls into the origin and the time plot settles within about 5 s. Now drag Feedback gain k₂ to 0.0: the readout says 'Poles ±1.414j: on the edge' (the polynomial is $s^2 + 2$, with $\\pm j\\sqrt{2}$) and the pendulum swings for ever without settling, as a mass with a spring and no friction would. The plot now spans 13.33 s, three periods. Next set Feedback gain k₁ to 0.5 with k₂ = 2: the polynomial is $s^2 + 2s - 0.5$, with roots $0.225$ and $-2.225$, and the pendulum still falls: the spring is too weak."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Ackermann's formula"
+    },
+    {
+      "type": "prose",
+      "text": "The companion-form trick needs the matrix in a special form. Most systems are not. Ackermann's formula does the same for any controllable system, with one calculation. For two states, call the wanted characteristic polynomial $\\varphi(s) = s^2 + p_1 s + p_0$. The idea is to apply it to $A$ itself: $\\varphi(A) = A^2 + p_1 A + p_0 I$. A derivation for two states follows."
+    },
+    {
+      "type": "prose",
+      "text": "By the Cayley–Hamilton theorem the closed-loop matrix satisfies its own characteristic polynomial: $\\varphi(A - BK) = 0$. Write $A_c = A - BK$ and expand $A_c^2 = A^2 - ABK - BKA_c$. Then"
+    },
+    {
+      "type": "math",
+      "tex": "0 = \\varphi(A_c) = A_c^2 + p_1 A_c + p_0 I = \\varphi(A) - AB\\,K - B\\,(KA_c + p_1 K)"
+    },
+    {
+      "type": "prose",
+      "text": "Here $\\varphi(A) = A^2 + p_1A + p_0I$ again. Rearranged: $\\varphi(A) = B\\,(KA_c + p_1K) + AB\\,K$. Each term is a column of $B$ or $AB$ times a row, so this is the matrix product"
+    },
+    {
+      "type": "math",
+      "tex": "\\varphi(A) = \\begin{pmatrix} B & AB \\end{pmatrix}\\begin{pmatrix} KA_c + p_1 K \\\\ K \\end{pmatrix} = \\mathcal{C}\\begin{pmatrix} KA_c + p_1 K \\\\ K \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "If the system is controllable, $\\mathcal{C}$ is invertible (the rank condition of Controllability and Observability (#/math/state-space/controllability-observability)), so $\\mathcal{C}^{-1}\\varphi(A)$ is the stack of two rows, and the bottom row is $K$. Writing 'the bottom row' as multiplication by $(0\\ \\ 1)$ from the left gives Ackermann's formula, in general (for $n$ states, $\\varphi$ of degree $n$ and a row of zeros ending in one):"
+    },
+    {
+      "type": "math",
+      "tex": "K = \\begin{pmatrix} 0 & \\cdots & 0 & 1 \\end{pmatrix}\\,\\mathcal{C}^{-1}\\,\\varphi(A)"
+    },
+    {
+      "type": "prose",
+      "text": "Worked for the mass, to see that it agrees with the coefficient comparison. $\\mathcal{C} = \\begin{pmatrix} 0 & 1 \\\\ 1 & -1 \\end{pmatrix}$ has determinant $-1$, and for a $2 \\times 2$ matrix the inverse swaps the diagonal, negates the off-diagonal and divides by the determinant, which gives $\\mathcal{C}^{-1} = \\begin{pmatrix} 1 & 1 \\\\ 1 & 0 \\end{pmatrix}$ (check: the product with $\\mathcal{C}$ is the identity). Its last row is $(1, 0)$. Next $A^2 = \\begin{pmatrix} -4 & -1 \\\\ 4 & -3 \\end{pmatrix}$, and with $\\varphi(s) = s^2 + 4s + 8$:"
+    },
+    {
+      "type": "math",
+      "tex": "\\varphi(A) = A^2 + 4A + 8I = \\begin{pmatrix} -4 & -1 \\\\ 4 & -3 \\end{pmatrix} + \\begin{pmatrix} 0 & 4 \\\\ -16 & -4 \\end{pmatrix} + \\begin{pmatrix} 8 & 0 \\\\ 0 & 8 \\end{pmatrix} = \\begin{pmatrix} 4 & 3 \\\\ -12 & 1 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "and $K = (1, 0)\\,\\varphi(A) = (4, 3)$, the first row. The same answer. Ackermann's method, published in 1972, is neat for hand work and fine for small systems; for large ones numerical programs use other methods, since powers of $A$ in $\\varphi(A)$ and the inverse of $\\mathcal{C}$ become inaccurate."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Where the poles cannot go"
+    },
+    {
+      "type": "prose",
+      "text": "The derivation needed $\\mathcal{C}^{-1}$. When the system is not controllable, there is no such $K$ in general, and the preset in the viewer shows what takes its place. For the first hidden-mode preset, $A - BK$ has the eigenvalues $-1 - k_1$ and $-2$, whatever $k_1$ and $k_2$: the second pole is fixed. Choose that preset in the viewer, set the gains with step 8 of the walk-through (it chooses $K = (2, 0)$) and the walk-through says 'One pole has not moved and cannot: the input never reaches that mode.' See Controllability and Observability (#/math/state-space/controllability-observability)."
+    },
+    {
+      "type": "prose",
+      "text": "Feedback also cannot move the zeros. The closed-loop transfer function from $r$ to $y$ is $C(sI - A + BK)^{-1}B$, and the numerator stays the numerator of the open loop; only the denominator changes to $\\det(sI - A + BK)$. In the viewer, step 8 ends with the sentence 'The zeros stay where they were', and in sampled mode the ○ stays at $-0.935$ for the mass. If a zero is in the right half-plane there is a limit to how well any feedback can do."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Getting the steady state right"
+    },
+    {
+      "type": "prose",
+      "text": "A pole placement design is judged by its transient, and its steady state is a separate matter. With a constant reference $r$ the closed loop settles where $0 = (A - BK)x + Br$, so $x = -(A - BK)^{-1}Br$ and $y = C(BK - A)^{-1}B\\,r$. For the mass with $K = (4, 3)$, $A - BK = \\begin{pmatrix} 0 & 1 \\\\ -8 & -4 \\end{pmatrix}$ has determinant 8 and inverse $\\tfrac{1}{8}\\begin{pmatrix} -4 & -1 \\\\ 8 & 0 \\end{pmatrix}$. Multiply by $B = (0, 1)$: $(A - BK)^{-1}B = (-\\tfrac18, 0)$, so $x = (0.125, 0)$ and $y = 0.125\\,r$."
+    },
+    {
+      "type": "prose",
+      "text": "A unit step of $r$ gives only $0.125$ and not $1$: the feedback stiffened the spring to $8$ N/m, so the same force moves the mass less. (Before feedback, the steady state was $1/4 = 0.25$.) The fix is a reference gain: use $u = -Kx + Nr$, with $N = 1/(C(BK - A)^{-1}B)$. Here $N = 8$, and then $y$ settles at $r$. In the viewer, the 'unit step' is $r = 1$ with $N = 1$, so you see the 0.125 and not the corrected value."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "The steady state after feedback",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "mass on a spring, light damping"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "unit step"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 4.0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 3.0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The mass with $K = (4, 3)$ and a unit step input from rest. The red + 'rest' sits at $(0.125, 0)$, the path curls into it, and the thick red $y$ settles at $0.125$ (the readout at 2.5 s shows 'x = (0.13, 0.00), y = 0.126'), eight times too low for a reference of 1, and well below what the open-loop mass gave (0.25). Moving Feedback gain k₁ up lowers it further: $y_\\infty = 1/(4 + k_1)$ here. Pole placement set the dynamics, not the final value."
+    },
+    {
+      "type": "prose",
+      "text": "A reference gain relies on knowing the plant exactly. When the model is off by a few percent the steady-state error follows. The usual cure is an integrator, adding the state $\\int (r - y)\\,dt$, which is itself a state to feed back and which forces $y = r$ at rest without needing exact numbers. That is a design topic of its own; the books cited below cover it."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "How far to push the poles"
+    },
+    {
+      "type": "prose",
+      "text": "Nothing in the algebra stops you choosing poles at $-50 \\pm 50j$, so why not? Because gains cost something. Compare three designs for the mass, started at $x(0) = (1, 0)$. At $t = 0$ the control is $u = -Kx(0) = -k_1$:"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Poles $-2 \\pm 2j$, $K = (4, 3)$: settling in about $4/2 = 2$ s. First push $u(0) = -4$.",
+        "Poles $-2.5 \\pm 2.5j$, $K = (8.5, 4)$ (the readout shows A − BK = [[0, 1], [−12.5, −5]]): settling in about 1.6 s. First push $u(0) = -8.5$.",
+        "Poles $-5 \\pm 5j$, $s^2 + 10s + 50$, $K = (46, 9)$: settling in about 0.8 s, first push $-46$. The slider range of the viewer stops at 10, so you cannot set this one."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "Doubling the speed of the poles multiplies the target coefficient $p_0$ by 4 (it is the square of the speed) and $p_1$ by 2, and the gains follow: $k_1$ grows roughly fourfold and $k_2$ twofold once the plant's own coefficients are small beside them. Real actuators saturate, a motor has a maximum torque and a valve a maximum opening; large gains also amplify every error in the measurement of $x_1$ by $k_1$, and they excite the dynamics that the model left out. The choice of how fast is thus a trade-off, and a standard way to make it systematically is optimal control: choose $K$ to minimise a cost $\\int (x^{\\top}Qx + u^{\\top}Ru)\\,dt$ that charges for state error and for effort, with the weights $Q$ and $R$ expressing the trade. The solution is still a state feedback $u = -Kx$, found from a matrix Riccati equation. That is the linear quadratic regulator (LQR), and we only name it here."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sampled feedback"
+    },
+    {
+      "type": "prose",
+      "text": "With a sampled system, Ackermann's formula applies unchanged to $(\\Phi, \\Gamma)$ and a polynomial in $z$, as on Sampled and Discrete-Time Systems (#/math/state-space/discrete-time). The viewer does this when Time is 'sampled every T seconds': step 8 maps the targets by $z = e^{sT}$. At $T = 0.5$ the targets $-2 \\pm 2j$ become $e^{-1}\\,e^{\\pm j}= 0.199 \\pm 0.310j$, and the exact $K$ is $(0.078, 1.441)$, which the sliders round to $(0.1, 1.4)$ with closed-loop poles $0.205 \\pm 0.33j$ (the rounding at work)."
+    },
+    {
+      "type": "prose",
+      "text": "A sampled system can do something no continuous one can: put all the poles at $z = 0$, a deadbeat design. Then $(\\Phi - \\Gamma K)^2 = 0$, so the state is exactly zero after two samples. For the mass at $T = 0.2$ this takes $K = (23.95, 6.99)$ (Ackermann with $\\varphi(z) = z^2$). From $x[0] = (1, 0)$: $x[1] = (0.483, -4.933)$ and $x[2] = (0, 0)$. The price is visible in the numbers: $u[0] = -23.95$ and $u[1] = 22.89$, and the velocity swings to $-4.9$. That is the trade-off of the last section in its extreme form. (These gains lie outside the slider range, so the viewer cannot show it.)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Check yourself"
+    },
+    {
+      "type": "problem",
+      "title": "Place the poles of a motor",
+      "text": "The DC motor has $A = \\begin{pmatrix} 0 & 1 \\\\ 0 & -2 \\end{pmatrix}$ and $B = (0, 2)$. Find $K$ for the poles $-3 \\pm 2j$.",
+      "solution": [
+        "$A - BK = \\begin{pmatrix} 0 & 1 \\\\ -2k_1 & -2 - 2k_2 \\end{pmatrix}$, since $BK$ has second row $2(k_1, k_2)$. Its polynomial is $s^2 + (2 + 2k_2)s + 2k_1$.",
+        "The wanted polynomial is $(s + 3)^2 + 4 = s^2 + 6s + 13$. So $2 + 2k_2 = 6$ gives $k_2 = 2$, and $2k_1 = 13$ gives $k_1 = 6.5$.",
+        "Check in the viewer: DC motor, $k_1 = 6.5$, $k_2 = 2.0$: 'A − BK = [[0, 1], [−13, −6]]. Poles −3 ± 2j'. The trace is $-6$ and the determinant $13$."
+      ],
+      "answer": "$K = (6.5, 2)$."
+    },
+    {
+      "type": "problem",
+      "title": "The same by Ackermann",
+      "text": "Repeat the motor with Ackermann's formula.",
+      "solution": [
+        "$AB = (1 \\cdot 2,\\ -2 \\cdot 2) = (2, -4)$, so $\\mathcal{C} = \\begin{pmatrix} 0 & 2 \\\\ 2 & -4 \\end{pmatrix}$, determinant $-4$, and $\\mathcal{C}^{-1} = \\dfrac{1}{-4}\\begin{pmatrix} -4 & -2 \\\\ -2 & 0 \\end{pmatrix} = \\begin{pmatrix} 1 & 0.5 \\\\ 0.5 & 0 \\end{pmatrix}$. Last row: $(0.5, 0)$.",
+        "$A^2 = \\begin{pmatrix} 0 & -2 \\\\ 0 & 4 \\end{pmatrix}$, so $\\varphi(A) = A^2 + 6A + 13I = \\begin{pmatrix} 13 & 4 \\\\ 0 & 5 \\end{pmatrix}$.",
+        "$K = (0.5, 0)\\,\\varphi(A) = (0.5 \\cdot 13,\\ 0.5 \\cdot 4) = (6.5, 2)$."
+      ],
+      "answer": "$K = (6.5, 2)$, as before."
+    },
+    {
+      "type": "problem",
+      "title": "Which gains hold the pendulum?",
+      "text": "For the pendulum with $u = -k_1x_1 - k_2x_2$, for which $(k_1, k_2)$ is the closed loop stable? What happens at $k_1 = 3$, $k_2 = 0$?",
+      "solution": [
+        "The characteristic polynomial is $s^2 + k_2 s + (k_1 - 1)$. A quadratic with positive leading coefficient has both roots in the left half-plane exactly when both other coefficients are positive.",
+        "So the loop is stable for $k_1 > 1$ and $k_2 > 0$. At $k_1 = 3$, $k_2 = 0$ the polynomial is $s^2 + 2$, whose roots are $\\pm j\\sqrt{2} = \\pm 1.414j$: on the imaginary axis, so the swing neither dies nor grows (the viewer says 'on the edge')."
+      ],
+      "answer": "Stable for $k_1 > 1$, $k_2 > 0$; at $(3, 0)$ it oscillates for ever at $1.414$ rad/s."
+    },
+    {
+      "type": "problem",
+      "title": "The reference gain",
+      "text": "The two tanks of the viewer have $A = \\begin{pmatrix} -1 & 0 \\\\ 1 & -0.5 \\end{pmatrix}$, $B = (1, 0)$, $C = (0, 1)$. Find $K$ for poles $-2.5 \\pm 2j$, then the reference gain $N$ for a unit steady state at the output.",
+      "solution": [
+        "$A - BK = \\begin{pmatrix} -1 - k_1 & -k_2 \\\\ 1 & -0.5 \\end{pmatrix}$, with trace $-1.5 - k_1$ and determinant $0.5(1 + k_1) + k_2$. The polynomial is $s^2 + (1.5 + k_1)s + (0.5 + 0.5k_1 + k_2)$.",
+        "Wanted: $(s + 2.5)^2 + 4 = s^2 + 5s + 10.25$. So $1.5 + k_1 = 5$ gives $k_1 = 3.5$, and $0.5 + 1.75 + k_2 = 10.25$ gives $k_2 = 8$.",
+        "The closed-loop transfer function is $1/(s^2 + 5s + 10.25)$ (the numerator is untouched by feedback), with $G(0) = 1/10.25 = 0.0976$. The reference gain is $N = 10.25$. The viewer agrees: with $K = (3.5, 8.0)$ and a unit step it reads 'G(s) = (1) / (s² + 5s + 10.25)'."
+      ],
+      "answer": "$K = (3.5, 8)$ and $N = 10.25$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Karl Johan Åström and Richard M. Murray, Feedback Systems: An Introduction for Scientists and Engineers, 2nd edition (Princeton University Press, 2021). The chapters on state feedback treat reachability, pole placement and the reference gain.",
+        "Gene F. Franklin, J. David Powell and Abbas Emami-Naeini, Feedback Control of Dynamic Systems, 7th edition (Pearson, 2015). Its state-space design chapter covers pole placement and Ackermann's formula.",
+        "Katsuhiko Ogata, Modern Control Engineering, 5th edition (Prentice Hall, 2010). Pole placement and Ackermann's formula appear in the chapters on state-space design.",
+        "Chi-Tsong Chen, Linear System Theory and Design, 4th edition (Oxford University Press, 2013).",
+        "J. Ackermann, \"Der Entwurf linearer Regelungssysteme im Zustandsraum\", Regelungstechnik 20 (1972) 297–300.",
+        "Gene F. Franklin, J. David Powell and Michael Workman, Digital Control of Dynamic Systems, 3rd edition (Addison-Wesley, 1998)."
+      ]
+    }
+  ]
+}

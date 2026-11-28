@@ -1,0 +1,549 @@
+{
+  "title": "States and the State Equations",
+  "intro": "A differential equation of order $n$ can always be rewritten as $n$ first-order equations, and the list of the $n$ unknowns is the state. This page says what a state is, turns a mass on a spring, a circuit, two tanks, a motor and a pendulum into the form $x' = Ax + Bu$, $y = Cx + Du$, shows that the choice of state is not unique, and steps such a system forward in time by hand.",
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What a state is"
+    },
+    {
+      "type": "prose",
+      "text": "Suppose you must predict what a system does from now on. You will be told the input $u(t)$ for all future times. What else do you need to know about the present? That minimal list of numbers is the state, and its entries are the state variables. It is the memory of the system: everything about the past that still matters for the future, and nothing else. Two histories that leave the state the same lead to exactly the same future when the same input is applied."
+    },
+    {
+      "type": "prose",
+      "text": "For a mass on a spring it takes two numbers: where the mass is and how fast it is moving. Position alone is not enough, because a mass passing the centre at speed and a mass resting at the centre have the same position and very different futures. For an electrical circuit with one capacitor and one inductor the state is the capacitor voltage and the inductor current: the two places where energy is stored. For a water tank it is the water level. For two tanks it is two levels. In general the state holds one number for each independent store of energy, mass, charge or heat, and the number of them is the order $n$ of the system."
+    },
+    {
+      "type": "prose",
+      "text": "What the state does not include is the input. The input is what you do from now on; the state is what has happened so far. Also not included is anything that can be worked out from the state: the force in the spring is $4$ times the position, so it is not a new number."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "From one second-order equation to two first-order ones"
+    },
+    {
+      "type": "prose",
+      "text": "Newton's law for a mass of 1 kg on a spring of stiffness 4 N/m with a damper of 1 N·s/m, pushed by a force $u$ (position $p$), reads"
+    },
+    {
+      "type": "math",
+      "tex": "\\ddot{p} + \\dot{p} + 4p = u"
+    },
+    {
+      "type": "prose",
+      "text": "The recipe has three steps. First, name the state: $x_1 = p$ for the position and $x_2 = \\dot{p}$ for the velocity. Second, write the derivative of each state in terms of the states and the input. The first is free, because the derivative of position is velocity by definition: $x_1' = x_2$. The second is Newton's law solved for the acceleration: $x_2' = \\ddot{p} = -4p - \\dot{p} + u = -4x_1 - x_2 + u$. Third, say what you measure. If a sensor reads the position, then $y = x_1$. Stacked into matrices this is"
+    },
+    {
+      "type": "math",
+      "tex": "\\begin{pmatrix} x_1' \\\\ x_2' \\end{pmatrix} = \\begin{pmatrix} 0 & 1 \\\\ -4 & -1 \\end{pmatrix}\\begin{pmatrix} x_1 \\\\ x_2 \\end{pmatrix} + \\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix} u, \\qquad y = \\begin{pmatrix} 1 & 0 \\end{pmatrix}\\begin{pmatrix} x_1 \\\\ x_2 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The same trick works for any order. Take $y^{(n)} + a_{n-1}y^{(n-1)} + \\dots + a_0 y = u$ and let the states be $y$ and its first $n - 1$ derivatives. Every state's derivative is the next state, except the last, which is the equation itself solved for the top derivative. The matrix $A$ then has ones just above the diagonal and the negated coefficients $-a_0, \\dots, -a_{n-1}$ along the last row. It is called a companion matrix, and it returns on the page Transfer Functions and Realisations (#/math/state-space/transfer-functions)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The general form"
+    },
+    {
+      "type": "prose",
+      "text": "Every linear system with constant coefficients can be written, with the state $x$ (a column of $n$ numbers), the input $u$ and the output $y$, as"
+    },
+    {
+      "type": "math",
+      "tex": "x' = Ax + Bu, \\qquad y = Cx + Du"
+    },
+    {
+      "type": "prose",
+      "text": "The first line is the state equation and the second the output equation; together they are the state-space model of the system. Read them as a story. The state changes for two reasons. First, because of where it is: $Ax$ is the part of the velocity fixed by the present state (the spring pulls harder the further it is stretched). Second, because of what is done to it: $Bu$ is the push from the input. Then the output is whatever the sensors read: $Cx$ is a combination of the states, and $Du$ is the part of the input that passes straight through to the output without going through any memory. For most physical systems $D = 0$, as it is for every preset on this page."
+    },
+    {
+      "type": "prose",
+      "text": "The sizes are worth knowing. With $n$ states, $m$ inputs and $p$ outputs, $A$ is $n \\times n$, $B$ is $n \\times m$, $C$ is $p \\times n$ and $D$ is $p \\times m$. Here we work with one input and one output (single-input single-output, SISO), so $B$ is a column of $n$ numbers, $C$ a row of $n$ numbers, and $D$ a single number. Everything on these pages carries over to many inputs and outputs, with bigger matrices."
+    },
+    {
+      "type": "prose",
+      "text": "Look at the matrix $A$ above entry by entry. The first row $(0, 1)$ says $x_1' = 0 \\cdot x_1 + 1 \\cdot x_2$: position changes at the rate of velocity. The second row $(-4, -1)$ says velocity changes by $-4$ times the position (the spring) and $-1$ times the velocity (the damper). The column $B = (0, 1)$ says the force enters only the velocity equation. Every entry has a physical meaning, and that is the point of working in physical states."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "An electrical circuit: Kirchhoff's laws"
+    },
+    {
+      "type": "prose",
+      "text": "Take a source voltage $u$ driving a resistor $R = 2\\ \\Omega$, an inductor $L = 1$ H and a capacitor $C = 0.5$ F in series. The states are the two stored quantities: the capacitor voltage $v$ (call it $x_1$) and the inductor current $i$ (call it $x_2$). Each store has a law that gives the rate of change of its state."
+    },
+    {
+      "type": "list",
+      "items": [
+        "The capacitor: current into a capacitor charges it, $C\\,v' = i$. So $x_1' = i/C = 2x_2$.",
+        "The inductor: the voltage across it makes the current change, $L\\,i' = v_L$. Kirchhoff's voltage law around the loop says the source voltage is shared among the three parts, $u = Ri + v_L + v$, so $v_L = u - v - Ri$. Hence $x_2' = (u - x_1 - 2x_2)/1 = -x_1 - 2x_2 + u$."
+      ]
+    },
+    {
+      "type": "math",
+      "tex": "A = \\begin{pmatrix} 0 & 2 \\\\ -1 & -2 \\end{pmatrix}, \\quad B = \\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}, \\quad C = \\begin{pmatrix} 1 & 0 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "These are the numbers of the viewer's RLC circuit, where the output is the capacitor voltage. The two physical constants $C$ and $L$ appear as the $2$ (that is $1/C$) in the top row and the $1$ (that is $1/L$) multiplying the input, and the resistance sits in the $-2$ (that is $-R/L$). The trace of $A$ is $-2 = -R/L$ and the determinant is $2 = 1/(LC)$. The poles are the roots of $\\lambda^2 + 2\\lambda + 2$, which are $-1 \\pm j$."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Two tanks: mass balance"
+    },
+    {
+      "type": "prose",
+      "text": "Water flows into a first tank at a rate $u$, drains from it into a second tank, and drains from that into a drain. The state is the two water levels $x_1$ and $x_2$. The law is conservation of mass: the rate of change of the volume is what flows in minus what flows out. Take tanks of unit cross-section so that the volume equals the level, and let each outflow be proportional to the level: tank 1 loses water at the rate $1 \\cdot x_1$ and tank 2 at the rate $0.5\\,x_2$. Then"
+    },
+    {
+      "type": "math",
+      "tex": "x_1' = u - x_1, \\qquad x_2' = x_1 - 0.5\\,x_2, \\qquad A = \\begin{pmatrix} -1 & 0 \\\\ 1 & -0.5 \\end{pmatrix}, \\quad B = \\begin{pmatrix} 1 \\\\ 0 \\end{pmatrix}, \\quad C = \\begin{pmatrix} 0 & 1 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "The output is the level in the second tank. Notice the zero in the top right of $A$: tank 1 does not feel tank 2, since the water only runs one way. Then $A$ is triangular, and its eigenvalues are the diagonal entries $-1$ and $-0.5$. Both are real and negative: the tanks settle without ever overshooting. (A real tank outflow depends on the square root of the level; the straight-line version above is a linearisation, a topic taken up in the next topic in the Math list, Phase-Space Dynamics, which is planned.)"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "A DC motor and a balanced pendulum"
+    },
+    {
+      "type": "prose",
+      "text": "A motor turns a load. Let $x_1$ be the angle and $x_2$ the angular speed. Newton's law for rotation, with friction that pulls the speed down at the rate $2$ per second and a drive that adds $2$ units of acceleration per volt, gives $x_1' = x_2$ and $x_2' = -2x_2 + 2u$. So"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\begin{pmatrix} 0 & 1 \\\\ 0 & -2 \\end{pmatrix}, \\quad B = \\begin{pmatrix} 0 \\\\ 2 \\end{pmatrix}, \\quad C = \\begin{pmatrix} 1 & 0 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "There is a zero in the first column of $A$: the angle itself does not appear in either equation. Nothing pulls the shaft back to a particular angle, so the eigenvalue $0$ appears, and the motor has no resting point for a steady voltage: it just keeps turning. The other eigenvalue, $-2$, is the speed settling to a steady value, with a time constant of half a second."
+    },
+    {
+      "type": "prose",
+      "text": "A pendulum balanced upright, of length $L$ with the angle $\\theta$ measured from the vertical, obeys $\\ddot\\theta = (g/L)\\sin\\theta + u$, where $u$ is a torque (per unit moment of inertia). For small angles $\\sin\\theta \\approx \\theta$, and in units where $g/L = 1$ we get $\\ddot\\theta = \\theta + u$. With $x_1 = \\theta$ and $x_2 = \\dot\\theta$,"
+    },
+    {
+      "type": "math",
+      "tex": "A = \\begin{pmatrix} 0 & 1 \\\\ 1 & 0 \\end{pmatrix}, \\quad B = \\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}, \\quad C = \\begin{pmatrix} 1 & 0 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "This is a linearisation about the upright position: the true equation is nonlinear and only its small-angle version fits $x' = Ax + Bu$. The eigenvalues are $\\pm 1$, one of them positive, which is why a pendulum balanced upright falls: a small tilt grows like $e^{t}$. Linearisation as a method is for the next topic; here we just take the small-angle model as given."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "The state is not unique"
+    },
+    {
+      "type": "prose",
+      "text": "The choice $x_1 = $ position, $x_2 = $ velocity is natural, not forced. Any other pair of independent combinations would do as well. Take a new state $z = Tx$ with an invertible matrix $T$. Then $x = T^{-1}z$ and"
+    },
+    {
+      "type": "math",
+      "tex": "z' = Tx' = T(Ax + Bu) = TAT^{-1}z + TB\\,u, \\qquad y = Cx + Du = CT^{-1}z + Du"
+    },
+    {
+      "type": "prose",
+      "text": "So the same system is described by $(TAT^{-1},\\ TB,\\ CT^{-1},\\ D)$. Take the mass again and the new state $z_1 = x_1$, $z_2 = x_1 + x_2$ (position, and position plus velocity, which has no special meaning but is allowed):"
+    },
+    {
+      "type": "math",
+      "tex": "T = \\begin{pmatrix} 1 & 0 \\\\ 1 & 1 \\end{pmatrix}, \\quad T^{-1} = \\begin{pmatrix} 1 & 0 \\\\ -1 & 1 \\end{pmatrix}, \\quad TAT^{-1} = \\begin{pmatrix} -1 & 1 \\\\ -4 & 0 \\end{pmatrix}, \\quad TB = \\begin{pmatrix} 0 \\\\ 1 \\end{pmatrix}, \\quad CT^{-1} = \\begin{pmatrix} 1 & 0 \\end{pmatrix}"
+    },
+    {
+      "type": "prose",
+      "text": "To see how the product comes out, multiply $TA$ first: the rows of $T$ are $(1, 0)$ and $(1, 1)$, so the rows of $TA$ are $(0, 1)$ and $(0 - 4,\\ 1 - 1) = (-4, 0)$; then multiply by $T^{-1}$ on the right: $(0, 1)T^{-1} = (-1, 1)$ and $(-4, 0)T^{-1} = (-4, 0)$. The matrix is different, yet the trace is still $-1$ and the determinant still $0 \\cdot (-1) + 4 = 4$, so the characteristic polynomial $\\lambda^2 + \\lambda + 4$ and the poles $-0.5 \\pm 1.936j$ are unchanged. A change of state is a similarity transformation, as met on the page Diagonalisation and Powers (#/math/eigenvalues/diagonalisation), and similar matrices share their eigenvalues. This matters: poles are properties of the system, not of how we describe it. A good choice of $T$ makes $A$ simple, which is what the pages Solving the State Equations (#/math/state-space/solving) and Modes and Stability (#/math/state-space/modes-and-stability) exploit."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Stepping the equations forward"
+    },
+    {
+      "type": "prose",
+      "text": "How does the state equation produce a motion? The simplest answer is to take small steps. The state equation gives the velocity $x'$ at the present state, so after a short time $h$ the state has moved about $h\\,x'$: the Euler step is $x(t + h) \\approx x(t) + h\\,(Ax(t) + Bu(t))$. Do it for the free mass ($u = 0$) from $x(0) = (1, 0)$, pulled 1 m aside and released, with $h = 0.1$ s."
+    },
+    {
+      "type": "list",
+      "items": [
+        "Step 1: $Ax = (x_2,\\ -4x_1 - x_2) = (0, -4)$, so $x(0.1) \\approx (1, 0) + 0.1\\,(0, -4) = (1, -0.4)$.",
+        "Step 2: $Ax = (-0.4,\\ -4 + 0.4) = (-0.4, -3.6)$, so $x(0.2) \\approx (1 - 0.04,\\ -0.4 - 0.36) = (0.96, -0.76)$.",
+        "Steps 3 and 4 give $x(0.3) \\approx (0.884, -1.068)$ and $x(0.4) \\approx (0.7772, -1.3148)$."
+      ]
+    },
+    {
+      "type": "prose",
+      "text": "The exact answer at $t = 0.4$, computed with the matrix exponential of the next page, is $(0.7330, -1.1828)$. The steps are in the right direction but the Euler path drifts off the true one: it is $6\\%$ off in $x_1$ after only four steps, because it uses the velocity at the start of each step, and the velocity changes during the step. Halving $h$ halves the error, but at $h = 0.1$ by $t = 1$ the Euler path has $x_1 = -0.141$ when the exact value is $-0.071$. The method is the intuition behind every simulation, and the reason the state is a good idea: to take a step you need only the present state and the present input. The exact answer comes from solving the equation, which is the job of Solving the State Equations (#/math/state-space/solving)."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "A mass on a spring pushed by a unit step",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "mass on a spring, light damping"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "unit step"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "The system is the light mass, $x(0) = (0, 0)$, and the Input is a unit step: a constant force of 1 N from $t = 0$. In the state plane the arrows now swirl round a red + labelled 'rest' at $(0.25, 0)$, where the spring force $4 \\times 0.25 = 1$ balances the push. Follow the dark path: it spirals into that point instead of the origin. In the time plot the amber velocity $x_2$ goes up and down and dies away while the blue position $x_1$ (the thick red $y$ lies under it, because $y = x_1$) settles at $0.25$. The readout ends 'At t = 10 s: x = (0.25, 0.00), y = 0.248'. Now switch Input back to none: the red + disappears, because with no push the only resting point is the origin, and the same start $(0, 0)$ does not move at all."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "Two tanks filling",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "two tanks in a row"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "unit step"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Choose the two tanks with a unit step: inflow switched on at 1. Tank 1 fills first, towards level 1 (blue, in the time plot), and tank 2 follows more slowly towards 2 (amber, and the output $y$, in red). The path in the state plane climbs to the red + at $(1, 2)$ without spiralling, because both poles are real. The readout gives 'x = (1.00, 1.97), y = 1.973' at $t = 10$ s: tank 2 is still 0.027 short of its final level. Switch System to the RLC circuit and the path starts to circle: a complex pair of poles is oscillation."
+    },
+    {
+      "type": "widget",
+      "widget": {
+        "type": "state-plane",
+        "title": "The pendulum falls",
+        "params": [
+          {
+            "key": "system",
+            "label": "System",
+            "control": "select",
+            "options": [
+              "mass on a spring, light damping",
+              "mass on a spring, heavy damping",
+              "RLC circuit",
+              "two tanks in a row",
+              "DC motor, angle and speed",
+              "pendulum balanced upright",
+              "undamped oscillator",
+              "negative damping, a growing swing",
+              "hidden mode: the input misses one",
+              "hidden mode: the output misses one"
+            ],
+            "default": "pendulum balanced upright"
+          },
+          {
+            "key": "time",
+            "label": "Time",
+            "control": "select",
+            "options": [
+              "continuous time",
+              "sampled every T seconds"
+            ],
+            "default": "continuous time"
+          },
+          {
+            "key": "T",
+            "label": "Sample period T (seconds)",
+            "control": "range",
+            "min": 0.05,
+            "max": 1.5,
+            "step": 0.05,
+            "default": 0.2
+          },
+          {
+            "key": "input",
+            "label": "Input",
+            "control": "select",
+            "options": [
+              "none: free response from x(0)",
+              "unit step",
+              "unit impulse"
+            ],
+            "default": "none: free response from x(0)"
+          },
+          {
+            "key": "x1",
+            "label": "x₁(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0.1
+          },
+          {
+            "key": "x2",
+            "label": "x₂(0)",
+            "control": "range",
+            "min": -2,
+            "max": 2,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k1",
+            "label": "Feedback gain k₁",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          },
+          {
+            "key": "k2",
+            "label": "Feedback gain k₂",
+            "control": "range",
+            "min": -10,
+            "max": 10,
+            "step": 0.1,
+            "default": 0
+          }
+        ]
+      }
+    },
+    {
+      "type": "callout",
+      "text": "Pick the upright pendulum and set x₁(0) = 0.1: tilted a tenth of a radian, at rest. The poles are 1 and −1, and the readout says unstable. The path runs out along the diagonal dashed line, the one labelled $\\lambda = 1$: the state at the end of the plot, $t = 3.4$ s, is $(1.50, 1.50)$. The start splits as $(0.1, 0) = 0.05\\,(1, 1) + 0.05\\,(1, -1)$: the part $0.05\\,(1, 1)$ on the $\\lambda = 1$ line has grown $e^{3.4} \\approx 30$ times, to $(1.5, 1.5)$, while the other part has died away. A tenth of a radian has become one and a half radians, so the small-angle model is no longer a good description long before then. It tells you the balance is unstable, not how the fall ends."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "What comes next"
+    },
+    {
+      "type": "prose",
+      "text": "With the form $x' = Ax + Bu$ in hand there are four directions. Solving the State Equations (#/math/state-space/solving) finds the motion exactly. Modes and Stability (#/math/state-space/modes-and-stability) reads stability and the shape of the motion from the eigenvalues of $A$. Transfer Functions and Realisations (#/math/state-space/transfer-functions) connects this form to the transfer function $G(s)$ of the Laplace transform, and shows how one $G(s)$ can come from many different $(A, B, C)$. And Sampled and Discrete-Time Systems (#/math/state-space/discrete-time) turns the equation into steps for a computer. The Laplace side is in The Laplace Transform (#/math/laplace-transform)."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Practice"
+    },
+    {
+      "type": "problem",
+      "title": "From a third-order equation to states",
+      "text": "A system obeys $y^{(3)} + 6\\ddot{y} + 11\\dot{y} + 6y = 2u$ and the output is $y$. Choose the states $x_1 = y$, $x_2 = \\dot{y}$, $x_3 = \\ddot{y}$ and write $A$, $B$, $C$. Then check the eigenvalues.",
+      "solution": [
+        "The first two states are free: $x_1' = x_2$ and $x_2' = x_3$. The third is the equation solved for the highest derivative: $x_3' = y^{(3)} = -6y - 11\\dot{y} - 6\\ddot{y} + 2u = -6x_1 - 11x_2 - 6x_3 + 2u$.",
+        "Read the rows: $A = \\begin{pmatrix} 0 & 1 & 0 \\\\ 0 & 0 & 1 \\\\ -6 & -11 & -6 \\end{pmatrix}$, $B = (0, 0, 2)^{\\top}$, $C = (1, 0, 0)$, $D = 0$. The last row of $A$ holds the negated coefficients, 6, 11, 6, in increasing order of derivative.",
+        "The characteristic polynomial of a companion matrix is the left-hand side of the equation with $s$ for the derivative: $\\lambda^3 + 6\\lambda^2 + 11\\lambda + 6 = (\\lambda + 1)(\\lambda + 2)(\\lambda + 3)$. Check by expanding: $(\\lambda+1)(\\lambda+2) = \\lambda^2 + 3\\lambda + 2$, and times $(\\lambda + 3)$ gives $\\lambda^3 + 6\\lambda^2 + 11\\lambda + 6$. The eigenvalues are $-1, -2, -3$."
+      ],
+      "answer": "$A$ as above, $B = (0, 0, 2)^{\\top}$, $C = (1, 0, 0)$; eigenvalues $-1, -2, -3$."
+    },
+    {
+      "type": "problem",
+      "title": "A circuit with the other choice of output",
+      "text": "For the RLC circuit above, what are $C$ and $D$ if the output is the voltage across the resistor, $v_R = R\\,i$? What if it is the voltage across the inductor?",
+      "solution": [
+        "The resistor voltage is $2\\,x_2$ (since $R = 2$ and $i = x_2$), so $C = (0, 2)$ and $D = 0$.",
+        "The inductor voltage is $v_L = u - x_1 - 2x_2$, which contains the input itself: $C = (-1, -2)$ and $D = 1$. This is a case where $D \\ne 0$: the input reaches the output instantly, because for a sudden change of $u$ the current cannot change yet, so the whole change falls across the inductor. The state equation does not change in either case; only the output equation does."
+      ],
+      "answer": "Resistor: $C = (0, 2)$, $D = 0$. Inductor: $C = (-1, -2)$, $D = 1$."
+    },
+    {
+      "type": "problem",
+      "title": "A change of state",
+      "text": "For the mass, take the state $z_1 = x_1$, $z_2 = x_2 + 2x_1$. Find $T$, $T^{-1}$ and the new $A$, and check that its trace and determinant match.",
+      "solution": [
+        "$z = Tx$ with $T = \\begin{pmatrix} 1 & 0 \\\\ 2 & 1 \\end{pmatrix}$, and $T^{-1} = \\begin{pmatrix} 1 & 0 \\\\ -2 & 1 \\end{pmatrix}$ (check: $T T^{-1}$ has top row $(1, 0)$ and bottom row $(2 - 2,\\ 1) = (0, 1)$).",
+        "$TA$: the rows of $T$ are $(1, 0)$ and $(2, 1)$, so the rows of $TA$ are $(0, 1)$ and $(0 - 4,\\ 2 - 1) = (-4, 1)$. Then $TAT^{-1}$ has rows $(0, 1)T^{-1} = (-2, 1)$ and $(-4, 1)T^{-1} = (-4 - 2,\\ 1) = (-6, 1)$.",
+        "So the new $A$ is $\\begin{pmatrix} -2 & 1 \\\\ -6 & 1 \\end{pmatrix}$. Its trace is $-2 + 1 = -1$ and its determinant is $(-2)(1) - (1)(-6) = 4$, the same as the original, so the poles are the same."
+      ],
+      "answer": "$TAT^{-1} = \\begin{pmatrix} -2 & 1 \\\\ -6 & 1 \\end{pmatrix}$, trace $-1$, determinant $4$."
+    },
+    {
+      "type": "problem",
+      "title": "Tanks of different sizes",
+      "text": "Tank 1 has a cross-section of 2 m² and an outflow of $1 \\cdot h_1$ m³/s for a level $h_1$ (metres); inflow $q$ m³/s. What is the equation for $h_1$ and the time constant of that tank?",
+      "solution": [
+        "Mass balance: the volume is $2h_1$, so $2h_1' = q - h_1$, that is $h_1' = -0.5\\,h_1 + 0.5\\,q$. The state matrix is the single number $-0.5$.",
+        "A first-order system $h' = -h/\\tau + \\dots$ has time constant $\\tau$, so $\\tau = 1/0.5 = 2$ s. A larger tank holds more water for the same outflow and drains more slowly: the time constant is the cross-section divided by the outflow coefficient."
+      ],
+      "answer": "$h_1' = -0.5h_1 + 0.5q$; time constant 2 s."
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "text": "Sources and further reading"
+    },
+    {
+      "type": "list",
+      "items": [
+        "Katsuhiko Ogata, Modern Control Engineering, 5th edition (Prentice Hall, 2010). Chapter 9 treats the analysis of control systems in state space.",
+        "Gene F. Franklin, J. David Powell and Abbas Emami-Naeini, Feedback Control of Dynamic Systems, 7th edition (Pearson, 2015). Chapter 2 builds physical models; chapter 7 is on state-space design.",
+        "Karl Johan Åström and Richard M. Murray, Feedback Systems: An Introduction for Scientists and Engineers, 2nd edition (Princeton University Press, 2021). Its chapter on linear systems treats the state equations."
+      ]
+    }
+  ]
+}
